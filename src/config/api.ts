@@ -27,9 +27,15 @@ const getApiBaseUrl = (): string => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
+export const API_HEADERS = {
+  'Content-Type': 'application/json',
+  'ngrok-skip-browser-warning': 'true'
+};
+
 export const apiUrl = (path: string): string => {
-  // إزالة الـ slash الأول إذا كان موجوداً
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  return `${API_BASE_URL}/${cleanPath}`;
+  // إزالة '/api' من الـ path لو موجود لأن الـ API_BASE_URL فيه '/api' فعلياً
+  const finalPath = cleanPath.startsWith('api/') ? cleanPath.slice(4) : cleanPath;
+  return `${API_BASE_URL}/${finalPath}`;
 };
 
