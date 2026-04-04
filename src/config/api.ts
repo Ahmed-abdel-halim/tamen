@@ -21,9 +21,8 @@ const getApiBaseUrl = (): string => {
     return '/api';
   }
   
-  // في production، استخدم الـ domain المحدد
-  // Domain: https://con.primes.ly/
-  return 'https://mli.mli.ly/api';
+  // في production، استخدم رابط ngrok الحالي للتجربة
+  return 'https://nonmetallic-pa-unprojecting.ngrok-free.dev/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
