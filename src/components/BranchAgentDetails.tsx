@@ -93,7 +93,7 @@ export default function BranchAgentDetails() {
     iframe.style.right = '-9999px';
     iframe.style.width = '0';
     iframe.style.height = '0';
-    iframe.src = `/api/branches-agents/${id}/print`;
+    iframe.src = `/api/branches-agents/${id}/print?t=${new Date().getTime()}`;
     document.body.appendChild(iframe);
     
     iframe.onload = () => {

@@ -207,7 +207,7 @@ export default function BranchesAgentsList() {
                                 iframe.style.right = '-9999px';
                                 iframe.style.width = '0';
                                 iframe.style.height = '0';
-                                iframe.src = `/api/branches-agents/${branchAgent.id}/print`;
+                                iframe.src = `/api/branches-agents/${branchAgent.id}/print?t=${new Date().getTime()}`;
                                 document.body.appendChild(iframe);
                                 
                                 iframe.onload = () => {
@@ -309,7 +309,7 @@ export default function BranchesAgentsList() {
                             iframe.style.right = '-9999px';
                             iframe.style.width = '0';
                             iframe.style.height = '0';
-                            iframe.src = `/api/branches-agents/${branchAgent.id}/print`;
+                            iframe.src = `/api/branches-agents/${branchAgent.id}/print?t=${new Date().getTime()}`;
                             document.body.appendChild(iframe);
                             
                             iframe.onload = () => {

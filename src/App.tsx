@@ -134,10 +134,10 @@ function hasAccessToRoute(
 }
 
 // Component لحماية الصفحات بناءً على الصلاحيات
-function AuthorizedRoute({ 
-  children, 
-  requiredPath 
-}: { 
+function AuthorizedRoute({
+  children,
+  requiredPath
+}: {
   children: React.ReactNode;
   requiredPath: string;
 }) {
@@ -151,30 +151,30 @@ function AuthorizedRoute({
           setHasAccess(false);
           return;
         }
-        
+
         const user = JSON.parse(userStr);
         const isAdmin = user.is_admin || false;
         const authorizedDocs = user.authorized_documents || null;
         const branchAgentId = user.branch_agent_id ?? null;
-        
+
         setHasAccess(hasAccessToRoute(requiredPath, authorizedDocs, isAdmin, branchAgentId));
       } catch (error) {
         console.error('Error loading user permissions:', error);
         setHasAccess(false);
       }
     };
-    
+
     loadUserPermissions();
-    
+
     // استمع لتغييرات localStorage
     const handleStorageChange = () => {
       loadUserPermissions();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('userLoggedIn', handleStorageChange);
     window.addEventListener('userPermissionsUpdated', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('userLoggedIn', handleStorageChange);
@@ -227,11 +227,13 @@ const menuSections: SidebarSection[] = [
   {
     title: 'الإعدادات',
     items: [
-      { label: 'الإعدادات', icon: 'fa-solid fa-gear', children: [
-        { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
-        { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
-        { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
-      ]},
+      {
+        label: 'الإعدادات', icon: 'fa-solid fa-gear', children: [
+          { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
+          { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
+          { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
+        ]
+      },
     ],
   },
 ]
@@ -342,7 +344,7 @@ const createMenuSections = (
       icon: 'fa-solid fa-file-invoice-dollar',
       to: '/reports/branch-agent-account',
     };
-    
+
     // إضافة إلى reportsItems إذا لم يكن موجوداً بالفعل
     if (!reportsItems.some(item => item.to === '/reports/branch-agent-account')) {
       reportsItems.push(accountReportItem);
@@ -397,7 +399,7 @@ export default function App() {
           setIsAdmin(false);
           return;
         }
-        
+
         const user = JSON.parse(userStr);
         setIsAdmin(user.is_admin || false);
         setAuthorizedDocuments(user.authorized_documents || null);
@@ -409,21 +411,21 @@ export default function App() {
         setBranchAgentId(null);
       }
     };
-    
+
     loadUserPermissions();
-    
+
     // استمع لتغييرات localStorage (عند تسجيل الدخول/الخروج)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'user') {
         loadUserPermissions();
       }
     };
-    
+
     // استمع لتغييرات localStorage من نفس النافذة (عند تسجيل الدخول)
     const handleCustomStorageChange = () => {
       loadUserPermissions();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('userLoggedIn', handleCustomStorageChange);
     window.addEventListener('userPermissionsUpdated', handleCustomStorageChange);
@@ -433,12 +435,12 @@ export default function App() {
       setBranchAgentId(null);
       window.location.reload(); // إعادة تحميل الصفحة عند تسجيل الخروج
     });
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('userLoggedIn', handleCustomStorageChange);
       window.removeEventListener('userPermissionsUpdated', handleCustomStorageChange);
-      window.removeEventListener('userLoggedOut', () => {});
+      window.removeEventListener('userLoggedOut', () => { });
     };
   }, [])
 
@@ -486,16 +488,16 @@ export default function App() {
         <Route path="/website/branches-agents" element={<BranchesAgentsPage />} />
         <Route path="/insurances" element={<InsurancesPage />} />
         <Route path="/contact-us" element={<ContactUs />} />
-        
+
         {/* Admin Login */}
         <Route path="/login" element={<Login />} />
-        
+
         {/* Protected Admin Routes - all other paths */}
         <Route path="/*" element={
           <ProtectedRoute>
             <div className={`app-shell ${isSidebarOpen ? 'is-sidebar-open' : 'is-sidebar-closed'}`}>
-              <Sidebar 
-                sections={createMenuSections(authorizedDocuments, isAdmin, branchAgentId)} 
+              <Sidebar
+                sections={createMenuSections(authorizedDocuments, isAdmin, branchAgentId)}
                 LinkTag={Link}
                 onLinkClick={() => {
                   // إغلاق السايدبار عند النقر على رابط في الشاشات الصغيرة
@@ -515,7 +517,7 @@ export default function App() {
                   onClick={() => setIsSidebarOpen(false)}
                 />
               )}
-      <main className="main-area">
+              <main className="main-area">
                 <Topbar
                   onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
                   isSidebarOpen={isSidebarOpen}
@@ -552,7 +554,7 @@ export default function App() {
                   <Route path="/travel-insurance-documents/create" element={<AuthorizedRoute requiredPath="/travel-insurance-documents"><CreateTravelInsurance /></AuthorizedRoute>} />
                   <Route path="/travel-insurance-documents/:id" element={<AuthorizedRoute requiredPath="/travel-insurance-documents"><ViewTravelInsurance /></AuthorizedRoute>} />
                   <Route path="/travel-insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/travel-insurance-documents"><EditTravelInsurance /></AuthorizedRoute>} />
-                  
+
                   {/* إدارة وثائق تأمين الوافدين للمقيمين */}
                   <Route path="/resident-insurance-documents" element={<AuthorizedRoute requiredPath="/resident-insurance-documents"><ResidentInsuranceList /></AuthorizedRoute>} />
                   <Route path="/resident-insurance-documents/create" element={<AuthorizedRoute requiredPath="/resident-insurance-documents"><CreateResidentInsurance /></AuthorizedRoute>} />
@@ -581,8 +583,8 @@ export default function App() {
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
                   <Route path="/test-lifo-login" element={<TestLifoLogin />} />
                 </Routes>
-      </main>
-    </div>
+              </main>
+            </div>
           </ProtectedRoute>
         } />
       </Routes>
