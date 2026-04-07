@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { showToast } from "./Toast";
 
 type BranchAgent = {
   id: number;
@@ -36,14 +37,6 @@ export default function BranchAgentDetails() {
   const navigate = useNavigate();
   const [branchAgent, setBranchAgent] = useState<BranchAgent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     if (id) {
@@ -76,10 +69,10 @@ export default function BranchAgentDetails() {
       setBranchAgent(data);
     } catch (error: any) {
       console.error('Error fetching branch agent:', error);
-      setToast({ 
-        message: `حدث خطأ أثناء جلب التفاصيل: ${error.message || 'تأكد من أن الخادم يعمل'}`, 
-        type: 'error' 
-      });
+      showToast(
+        `حدث خطأ أثناء جلب التفاصيل: ${error.message || 'تأكد من أن الخادم يعمل'}`, 
+        'error' 
+      );
     } finally {
       setLoading(false);
     }
@@ -496,22 +489,6 @@ export default function BranchAgentDetails() {
           </div>
         </div>
       </div>
-
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

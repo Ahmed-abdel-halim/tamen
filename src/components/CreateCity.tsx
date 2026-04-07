@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { showToast } from "./Toast";
 
 export default function CreateCity() {
   const navigate = useNavigate();
@@ -9,7 +10,6 @@ export default function CreateCity() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -43,15 +43,12 @@ export default function CreateCity() {
         throw new Error(data.message || 'حدث خطأ أثناء إنشاء المدينة');
       }
 
-      setToast({ message: 'تم إنشاء المدينة بنجاح', type: 'success' });
+      showToast('تم إنشاء المدينة بنجاح', 'success');
       setTimeout(() => {
         navigate('/cities');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء إنشاء المدينة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء إنشاء المدينة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -69,12 +66,6 @@ export default function CreateCity() {
           العودة للقائمة
         </button>
       </div>
-
-      {toast && (
-        <div className={`toast ${toast.type}`}>
-          {toast.message}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="form-container">
         <div className="form-group">

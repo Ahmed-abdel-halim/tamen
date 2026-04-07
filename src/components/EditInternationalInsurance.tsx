@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
-
+import { showToast } from "./Toast";
 type VehicleType = {
   id: number;
   brand: string;
@@ -73,8 +73,6 @@ export default function EditInternationalInsurance() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   // Select2 states
   const [vehicleTypeSearch, setVehicleTypeSearch] = useState("");
   const [showVehicleTypeDropdown, setShowVehicleTypeDropdown] = useState(false);
@@ -91,12 +89,6 @@ export default function EditInternationalInsurance() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -191,7 +183,7 @@ export default function EditInternationalInsurance() {
 
       if (!res.ok) {
         if (res.status === 404) {
-          setToast({ message: 'الوثيقة غير موجودة', type: 'error' });
+          showToast('الوثيقة غير موجودة', 'error');
           setTimeout(() => navigate('/international-insurance-documents'), 2000);
           return;
         }
@@ -223,10 +215,10 @@ export default function EditInternationalInsurance() {
         total: typeof data.total === 'number' ? data.total : parseFloat(data.total) || 0,
       });
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء جلب البيانات: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(
+        `حدث خطأ أثناء جلب البيانات: ${error.message || ''}`,
+        'error',
+      );
     } finally {
       setLoading(false);
     }
@@ -293,15 +285,15 @@ export default function EditInternationalInsurance() {
         throw new Error(data.message || 'حدث خطأ أثناء تحديث الوثيقة');
       }
 
-      setToast({ message: 'تم تحديث الوثيقة بنجاح', type: 'success' });
+      showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/international-insurance-documents');
       }, 1500);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث الوثيقة',
-        type: 'error',
-      });
+      showToast(
+        error.message || 'حدث خطأ أثناء تحديث الوثيقة',
+        'error',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -804,21 +796,6 @@ export default function EditInternationalInsurance() {
         )}
       </div>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
+import { showToast } from "./Toast";
 
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
@@ -290,7 +291,6 @@ export default function EditPersonalAccidentInsurance() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Select2 states
   const [nationalitySearch, setNationalitySearch] = useState("");
@@ -307,12 +307,7 @@ export default function EditPersonalAccidentInsurance() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -369,10 +364,7 @@ export default function EditPersonalAccidentInsurance() {
         total: data.total ? (typeof data.total === 'number' ? data.total.toFixed(3) : parseFloat(String(data.total)).toFixed(3)) : '214.050',
       });
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء جلب الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء جلب الوثيقة', 'error');
     } finally {
       setLoading(false);
     }
@@ -494,15 +486,12 @@ export default function EditPersonalAccidentInsurance() {
         throw new Error(data.message || 'حدث خطأ أثناء إنشاء الوثيقة');
       }
 
-      setToast({ message: 'تم تحديث الوثيقة بنجاح', type: 'success' });
+      showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/personal-accident-insurance-documents');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء تحديث الوثيقة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -978,21 +967,6 @@ export default function EditPersonalAccidentInsurance() {
         )}
       </div>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

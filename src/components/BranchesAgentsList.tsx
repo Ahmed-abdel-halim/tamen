@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { showToast } from "./Toast";
 
 type BranchAgent = {
   id: number;
@@ -20,7 +21,6 @@ export default function BranchesAgentsList() {
   const [branchesAgents, setBranchesAgents] = useState<BranchAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<BranchAgent | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,12 +30,7 @@ export default function BranchesAgentsList() {
     fetchBranchesAgents();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -50,10 +45,7 @@ export default function BranchesAgentsList() {
       const data = await res.json();
       setBranchesAgents(data);
     } catch (error: any) {
-      setToast({ 
-        message: `حدث خطأ أثناء جلب الفروع والوكلاء: ${error.message}`, 
-        type: 'error' 
-      });
+      showToast(`حدث خطأ أثناء جلب الفروع والوكلاء: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -102,12 +94,12 @@ export default function BranchesAgentsList() {
       }
 
       const data = await res.json();
-      setToast({ message: data.message || 'تم حذف السجل بنجاح', type: 'success' });
+      showToast(data.message || 'تم حذف السجل بنجاح', 'success');
       setShowDeleteModal(null);
       fetchBranchesAgents();
     } catch (error: any) {
       console.error('Delete error:', error);
-      setToast({ message: error.message || 'حدث خطأ أثناء حذف السجل', type: 'error' });
+      showToast(error.message || 'حدث خطأ أثناء حذف السجل', 'error');
     } finally {
       setDeleting(false);
     }
@@ -410,21 +402,7 @@ export default function BranchesAgentsList() {
         )}
       </div>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+
 
       {showDeleteModal && (
         <div className="modal" onClick={(e) => {

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
-
+import { showToast } from "./Toast";
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
   { ar: 'مصري', en: 'Egyptian' },
@@ -237,7 +237,6 @@ export default function EditResidentInsurance() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const isDataLoadedRef = useRef(false);
 
   // Select2 states
@@ -315,10 +314,7 @@ export default function EditResidentInsurance() {
         isDataLoadedRef.current = true;
       }, 100);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء جلب البيانات',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء جلب البيانات', 'error');
       setTimeout(() => navigate('/resident-insurance-documents'), 2000);
     } finally {
       setLoading(false);
@@ -335,12 +331,6 @@ export default function EditResidentInsurance() {
     }
   }, [id, fetchDocument]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -924,15 +914,12 @@ export default function EditResidentInsurance() {
         throw new Error(data.message || 'حدث خطأ أثناء تحديث الوثيقة');
       }
 
-      setToast({ message: 'تم تحديث الوثيقة بنجاح', type: 'success' });
+      showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/resident-insurance-documents');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء تحديث الوثيقة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -1598,21 +1585,6 @@ export default function EditResidentInsurance() {
       </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

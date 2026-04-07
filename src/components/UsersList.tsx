@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { showToast } from "./Toast";
 
 type User = {
   id: number;
@@ -14,6 +15,7 @@ type User = {
     agency_name: string;
     agent_name: string;
   } | null;
+  salary?: number;
 };
 
 const INSURANCE_TYPES = [
@@ -52,26 +54,19 @@ export default function UsersList() {
     email: '',
     password: '',
     is_admin: false,
-    authorized_documents: [] as string[]
+    authorized_documents: [] as string[],
+    salary: '' as string | number
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<null | User>(null);
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -104,7 +99,7 @@ export default function UsersList() {
       }
     } catch (error: any) {
       console.error('Error fetching users:', error);
-      alert(`حدث خطأ أثناء جلب المستخدمين: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`);
+      showToast(`حدث خطأ أثناء جلب المستخدمين: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -118,7 +113,8 @@ export default function UsersList() {
         email: showForm.user.email || '',
         password: '',
         is_admin: showForm.user.is_admin || false,
-        authorized_documents: showForm.user.authorized_documents || []
+        authorized_documents: showForm.user.authorized_documents || [],
+        salary: showForm.user.salary || ''
       });
     } else {
       setFormData({
@@ -127,7 +123,8 @@ export default function UsersList() {
         email: '',
         password: '',
         is_admin: false,
-        authorized_documents: []
+        authorized_documents: [],
+        salary: ''
       });
     }
     setFormErrors({});
@@ -173,15 +170,12 @@ export default function UsersList() {
         throw new Error(`خطأ ${res.status}`);
       }
       setDeleteConfirmation(null);
-      setToast({ message: 'تم حذف المستخدم بنجاح', type: 'success' });
+      showToast('تم حذف المستخدم بنجاح', 'success');
       // إعادة جلب البيانات بعد الحذف
       await fetchUsers();
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      setToast({ 
-        message: `حدث خطأ أثناء حذف المستخدم: ${error.message || 'تأكد من أن الخادم يعمل'}`, 
-        type: 'error' 
-      });
+      showToast(`حدث خطأ أثناء حذف المستخدم: ${error.message || 'تأكد من أن الخادم يعمل'}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -235,6 +229,7 @@ export default function UsersList() {
         name: formData.name,
         email: formData.email || null,
         is_admin: formData.is_admin,
+        salary: formData.salary || null,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -283,16 +278,10 @@ export default function UsersList() {
       }
       
       setShowForm(null);
-      setFormData({ username: '', name: '', email: '', password: '', is_admin: false, authorized_documents: [] });
-      setToast({ 
-        message: showForm?.mode === 'add' ? 'تم إضافة المستخدم بنجاح' : 'تم تحديث المستخدم بنجاح', 
-        type: 'success' 
-      });
+      setFormData({ username: '', name: '', email: '', password: '', is_admin: false, authorized_documents: [], salary: '' });
+      showToast(showForm?.mode === 'add' ? 'تم إضافة المستخدم بنجاح' : 'تم تحديث المستخدم بنجاح', 'success');
     } catch (error: any) {
-      setToast({ 
-        message: error.message || 'حدث خطأ أثناء حفظ المستخدم', 
-        type: 'error' 
-      });
+      showToast(error.message || 'حدث خطأ أثناء حفظ المستخدم', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -340,6 +329,7 @@ export default function UsersList() {
                     <th>البريد الإلكتروني</th>
                     <th>حالة المستخدم</th>
                     <th>نوع المستخدم</th>
+                    <th>المرتب</th>
                     <th>الصلاحيات</th>
                     <th>معلومات إضافية</th>
                     <th>الإجراء</th>
@@ -379,6 +369,13 @@ export default function UsersList() {
                             <span className="type-badge user">
                               <i className="fa-solid fa-user"></i> مستخدم
                             </span>
+                          )}
+                        </td>
+                        <td>
+                          {u.salary ? (
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{Number(u.salary).toLocaleString()} د.ل</span>
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>-</span>
                           )}
                         </td>
                         <td>
@@ -647,6 +644,18 @@ export default function UsersList() {
               </div>
 
               <div className="form-group">
+                <label htmlFor="salary">المرتب (اختياري)</label>
+                <input
+                  type="number"
+                  id="salary"
+                  value={formData.salary}
+                  onChange={(e) => setFormData({...formData, salary: e.target.value})}
+                  className={formErrors.salary ? 'error' : ''}
+                  placeholder="أدخل قيمة المرتب"
+                />
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="email">البريد الإلكتروني</label>
                 <input
                   type="email"
@@ -862,21 +871,7 @@ export default function UsersList() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+
     </section>
   )
 }

@@ -132,6 +132,9 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     'تأمين الهياكل البحرية': { label: 'وثيقة تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', route: '/marine-structure-insurance-documents', color: 'green', statisticsKey: 'marine_structure_insurance_documents' },
     'تأمين المسؤولية المهنية (الطبية)': { label: 'المسؤوليه المهنيه (الطبيه)', icon: 'fa-solid fa-heart-pulse', route: '/professional-liability-insurance-documents', color: 'green', statisticsKey: 'professional_liability_insurance_documents' },
     'تأمين الحوادث الشخصية': { label: 'تأمين الحوادث الشخصيه', icon: 'fa-solid fa-user-injured', route: '/personal-accident-insurance-documents', color: 'green', statisticsKey: 'personal_accident_insurance_documents' },
+    'تأمين طلبة المدارس': { label: 'وثيقه تأمين حمايه طلاب المدارس', icon: 'fa-solid fa-graduation-cap', route: '/school-student-insurance', color: 'green', statisticsKey: 'school_student_insurance_documents' },
+    'تأمين نقل النقدية': { label: 'تأمين نقل النقديه (الأموال)', icon: 'fa-solid fa-money-bill-transfer', route: '/cash-in-transit-insurance', color: 'green', statisticsKey: 'cash_in_transit_insurance_documents' },
+    'تأمين البضائع': { label: 'وثيقه تأمين شحن البضائع', icon: 'fa-solid fa-truck', route: '/cargo-insurance', color: 'green', statisticsKey: 'cargo_insurance_documents' },
   };
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
@@ -199,26 +202,26 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     { 
       label: 'وثيقه تأمين حمايه طلاب المدارس', 
       icon: 'fa-solid fa-graduation-cap', 
-      route: '#', 
+      route: '/school-student-insurance', 
       color: 'green', 
-      statistics: '0' 
+      statistics: statistics.school_student_insurance_documents?.toString() || '0' 
     },
     { 
       label: 'تأمين نقل النقديه (الأموال)', 
       icon: 'fa-solid fa-money-bill-transfer', 
-      route: '#', 
+      route: '/cash-in-transit-insurance', 
       color: 'green', 
-      statistics: '0' 
+      statistics: statistics.cash_in_transit_insurance_documents?.toString() || '0' 
     },
     { 
       label: 'وثيقه تأمين شحن البضائع', 
       icon: 'fa-solid fa-truck', 
-      route: '#', 
+      route: '/cargo-insurance', 
       color: 'green', 
-      statistics: '0' 
+      statistics: statistics.cargo_insurance_documents?.toString() || '0' 
     },
     { label: 'كشف حساب للوكيل', icon: 'fa-solid fa-file-invoice', route: '/reports/branch-agent-account', color: 'blue' },
-    { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-days', route: '/reports/branch-agent-account', color: 'blue' },
+    { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-days', route: '/reports/monthly-account-closure', color: 'blue' },
   ];
 
   // تصفية الخدمات بناءً على الصلاحيات
@@ -265,11 +268,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
 
   const handleServiceClick = (service: ServiceCard) => {
     // الخدمات التي تحتاج مودال "قريباً"
-    const comingSoonServices = [
-      'تأمين نقل النقديه (الأموال)',
-      'وثيقه تأمين شحن البضائع',
-      'وثيقه تأمين حمايه طلاب المدارس'
-    ];
+    const comingSoonServices: string[] = [];
 
     if (comingSoonServices.includes(service.label)) {
       setShowComingSoonModal(true);

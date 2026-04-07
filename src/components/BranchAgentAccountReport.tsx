@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { showToast } from "./Toast";
 
 type BranchAgent = {
   id: number;
@@ -37,7 +38,6 @@ export default function BranchAgentAccountReport() {
   const [currentAgentId, setCurrentAgentId] = useState<number | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // توليد السنوات (من 2020 إلى السنة الحالية + 1)
   const currentYear = new Date().getFullYear();
@@ -54,12 +54,7 @@ export default function BranchAgentAccountReport() {
     }
   }, [currentAgentId, isAdmin, isLoadingUser]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -102,7 +97,7 @@ export default function BranchAgentAccountReport() {
       const data = await res.json();
       setAgents(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      setToast({ message: `حدث خطأ: ${error.message}`, type: 'error' });
+      showToast(`حدث خطأ: ${error.message}`, 'error');
     }
   };
 
@@ -133,12 +128,12 @@ export default function BranchAgentAccountReport() {
     const agentToUse = isAdmin ? selectedAgent : (selectedAgent || (currentAgentId ? agents.find(a => a.id === currentAgentId) : null));
     
     if (!agentToUse) {
-      setToast({ message: 'يرجى اختيار الوكيل', type: 'error' });
+      showToast('يرجى اختيار الوكيل', 'error');
       return;
     }
 
     if (reportType === 'monthly' && (!selectedYear || !selectedMonth)) {
-      setToast({ message: 'يرجى اختيار السنة والشهر', type: 'error' });
+      showToast('يرجى اختيار السنة والشهر', 'error');
       return;
     }
 
@@ -229,7 +224,7 @@ export default function BranchAgentAccountReport() {
         }
       }
     } catch (error: any) {
-      setToast({ message: `حدث خطأ: ${error.message}`, type: 'error' });
+      showToast(`حدث خطأ: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -243,25 +238,7 @@ export default function BranchAgentAccountReport() {
       </div>
 
       <div className="users-card">
-        {toast && (
-          <div
-            className={`toast ${toast.type}`}
-            style={{
-              position: 'fixed',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 10000,
-              padding: '12px 24px',
-              borderRadius: '8px',
-              background: toast.type === 'success' ? '#10b981' : '#ef4444',
-              color: '#fff',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            }}
-          >
-            {toast.message}
-          </div>
-        )}
+
 
         <div style={{ marginBottom: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '20px', fontWeight: 600 }}>نوع التقرير</h2>

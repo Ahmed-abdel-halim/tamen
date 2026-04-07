@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { showToast } from './Toast';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -12,7 +13,6 @@ export default function ProfilePage() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,12 +31,7 @@ export default function ProfilePage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   const fetchUserDetails = async (userId: number) => {
     try {
@@ -136,10 +131,10 @@ export default function ProfilePage() {
         }
       }
 
-      setToast({ message: 'تم تحديث البيانات بنجاح', type: 'success' });
+      showToast('تم تحديث البيانات بنجاح', 'success');
       setFormData({ ...formData, current_password: '', new_password: '', confirm_password: '' });
     } catch (error: any) {
-      setToast({ message: error.message || 'حدث خطأ أثناء التحديث', type: 'error' });
+      showToast(error.message || 'حدث خطأ أثناء التحديث', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -256,11 +251,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {toast && (
-            <div className={`profile-toast ${toast.type}`}>
-              {toast.message}
-            </div>
-          )}
+
 
           <div className="profile-form-actions">
             <button

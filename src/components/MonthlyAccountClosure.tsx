@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { enhanceAuthorizedDocuments } from "../utils/insuranceTypeHelper";
+import { showToast } from "./Toast";
 
 type BranchAgent = {
   id: number;
@@ -51,11 +52,10 @@ export default function MonthlyAccountClosure() {
   const [availableInsuranceTypes, setAvailableInsuranceTypes] = useState<string[]>([]);
   const [allDocuments, setAllDocuments] = useState<Document[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [summary, setSummary] = useState({ total_agent_amount: 0, total_company_amount: 0, due_amount: 0 });
+  const [summary, setSummary] = useState({ total_agent_amount: 0, total_company_amount: 0, due_amount: 0, paid_vouchers_amount: 0, total_vouchers_all_time: 0 });
   const [paidAmount, setPaidAmount] = useState<string>("");
   const [originalPaidAmount, setOriginalPaidAmount] = useState<number>(0); // القيمة المدفوعة الأصلية من جميع الوثائق
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // توليد السنوات (من 2020 إلى السنة الحالية + 1)
   const currentYear = new Date().getFullYear();
@@ -65,12 +65,7 @@ export default function MonthlyAccountClosure() {
     fetchAgents();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -91,7 +86,7 @@ export default function MonthlyAccountClosure() {
       const data = await res.json();
       setAgents(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      setToast({ message: `حدث خطأ: ${error.message}`, type: 'error' });
+      showToast(`حدث خطأ: ${error.message}`, 'error');
     }
   };
 
@@ -117,7 +112,7 @@ export default function MonthlyAccountClosure() {
   );
 
   // دالة لفلترة الوثائق حسب نوع التأمين
-  const filterDocumentsByInsuranceType = (docs: Document[], insuranceType: string, paidAmountValue: number = 0) => {
+  const filterDocumentsByInsuranceType = (docs: Document[], insuranceType: string, paidAmountValue: number = 0, vouchersData?: { monthly: number, allTime: number }) => {
     const totalCompanyAmountAll = docs.reduce((sum, doc) => sum + doc.company_amount, 0);
     
     if (insuranceType === "all") {
@@ -128,6 +123,8 @@ export default function MonthlyAccountClosure() {
         total_agent_amount: totalAgentAmount,
         total_company_amount: totalCompanyAmountAll,
         due_amount: totalCompanyAmountAll,
+        paid_vouchers_amount: vouchersData ? vouchersData.monthly : summary.paid_vouchers_amount,
+        total_vouchers_all_time: vouchersData ? vouchersData.allTime : summary.total_vouchers_all_time,
       });
       
       // إعادة تعيين المدفوع إلى القيمة الأصلية
@@ -207,6 +204,8 @@ export default function MonthlyAccountClosure() {
         total_agent_amount: totalAgentAmount,
         total_company_amount: totalCompanyAmount,
         due_amount: totalCompanyAmount,
+        paid_vouchers_amount: vouchersData ? vouchersData.monthly : summary.paid_vouchers_amount,
+        total_vouchers_all_time: vouchersData ? vouchersData.allTime : summary.total_vouchers_all_time,
       });
       
       // تحديث المدفوع بناءً على نسبة الوثائق المفلترة
@@ -227,14 +226,14 @@ export default function MonthlyAccountClosure() {
   // تحديث الوثائق عند تغيير نوع التأمين
   useEffect(() => {
     if (allDocuments.length > 0) {
-      filterDocumentsByInsuranceType(allDocuments, selectedInsuranceType, originalPaidAmount);
+      filterDocumentsByInsuranceType(allDocuments, selectedInsuranceType, originalPaidAmount, { monthly: summary.paid_vouchers_amount, allTime: summary.total_vouchers_all_time });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInsuranceType]);
 
   const handleSearch = async () => {
     if (!selectedAgent || !selectedYear || !selectedMonth) {
-      setToast({ message: 'يرجى اختيار الوكيل والسنة والشهر', type: 'error' });
+      showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
       return;
     }
 
@@ -265,20 +264,28 @@ export default function MonthlyAccountClosure() {
         const fetchedDocuments = data.documents || [];
         setAllDocuments(fetchedDocuments);
         
-        // حفظ القيمة المدفوعة الأصلية من جميع الوثائق
-        const paidAmountValue = (data.closure && data.closure.paid_amount > 0) ? data.closure.paid_amount : 0;
+        const vouchersMonthly = Number(data.summary.paid_vouchers_amount || 0);
+        const vouchersAllTime = Number(data.summary.total_vouchers_all_time || 0);
+        const closurePaid = data.closure ? Number(data.closure.paid_amount) : 0;
+        const paidAmountValue = Math.max(vouchersMonthly, closurePaid);
+        
         setOriginalPaidAmount(paidAmountValue);
         
         // فلترة البيانات حسب نوع التأمين المحدد (سيتم حساب summary و paidAmount تلقائياً)
-        // نمرر paidAmountValue مباشرة لتجنب مشكلة التوقيت
-        filterDocumentsByInsuranceType(fetchedDocuments, selectedInsuranceType, paidAmountValue);
+        filterDocumentsByInsuranceType(fetchedDocuments, selectedInsuranceType, paidAmountValue, { monthly: vouchersMonthly, allTime: vouchersAllTime });
       } else {
         throw new Error(data.message || 'حدث خطأ');
       }
     } catch (error: any) {
-      setToast({ message: `حدث خطأ: ${error.message}`, type: 'error' });
+      showToast(`حدث خطأ: ${error.message}`, 'error');
       setDocuments([]);
-      setSummary({ total_agent_amount: 0, total_company_amount: 0, due_amount: 0 });
+      setSummary({ 
+        total_agent_amount: 0, 
+        total_company_amount: 0, 
+        due_amount: 0,
+        paid_vouchers_amount: 0,
+        total_vouchers_all_time: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -286,12 +293,12 @@ export default function MonthlyAccountClosure() {
 
   const handleSave = async () => {
     if (!selectedAgent || !selectedYear || !selectedMonth) {
-      setToast({ message: 'يرجى اختيار الوكيل والسنة والشهر', type: 'error' });
+      showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
       return;
     }
 
     if (documents.length === 0) {
-      setToast({ message: 'لا توجد بيانات للحفظ', type: 'error' });
+      showToast('لا توجد بيانات للحفظ', 'error');
       return;
     }
 
@@ -324,12 +331,12 @@ export default function MonthlyAccountClosure() {
       }
 
       if (data.success) {
-        setToast({ message: 'تم حفظ البيانات بنجاح', type: 'success' });
+        showToast('تم حفظ البيانات بنجاح', 'success');
       } else {
         throw new Error(data.message || 'حدث خطأ');
       }
     } catch (error: any) {
-      setToast({ message: `حدث خطأ: ${error.message}`, type: 'error' });
+      showToast(`حدث خطأ: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -337,7 +344,7 @@ export default function MonthlyAccountClosure() {
 
   const handlePrint = () => {
     if (!selectedAgent || !selectedYear || !selectedMonth) {
-      setToast({ message: 'يرجى اختيار الوكيل والسنة والشهر', type: 'error' });
+      showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
       return;
     }
 
@@ -408,22 +415,7 @@ export default function MonthlyAccountClosure() {
       </div>
 
       <div className="users-card">
-        {/* Toast Notification */}
-        {toast && (
-          <div className={`toast toast-${toast.type}`}>
-            <div className="toast-content">
-              <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-              <span>{toast.message}</span>
-            </div>
-            <button
-              className="toast-close"
-              onClick={() => setToast(null)}
-              aria-label="إغلاق"
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Filters */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.5fr auto', gap: '20px', marginBottom: '24px', alignItems: 'flex-end' }}>
@@ -790,7 +782,7 @@ export default function MonthlyAccountClosure() {
                     placeholder="0.00"
                     style={{
                       width: '100%',
-                      padding: '10px 40px 10px 12px',
+                      padding: '10px 12px',
                       border: '1px solid var(--border)',
                       borderRadius: 8,
                       background: '#fff',
@@ -798,6 +790,18 @@ export default function MonthlyAccountClosure() {
                       minHeight: 42,
                     }}
                   />
+                  {summary.paid_vouchers_amount > 0 && (
+                    <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px', fontWeight: 500 }}>
+                      <i className="fa-solid fa-circle-info" style={{ marginLeft: '4px' }}></i>
+                      إيصالات الشهر: {formatCurrency(summary.paid_vouchers_amount)}
+                    </div>
+                  )}
+                  {summary.total_vouchers_all_time > 0 && summary.total_vouchers_all_time > summary.paid_vouchers_amount && (
+                    <div style={{ fontSize: '11px', color: '#10b981', marginTop: '2px', fontWeight: 500 }}>
+                      <i className="fa-solid fa-clock-rotate-left" style={{ marginLeft: '4px' }}></i>
+                      إجمالي المقبوضات التراكمي: {formatCurrency(summary.total_vouchers_all_time)}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

@@ -11,8 +11,200 @@
   --accent-dark: #0e751d;
   --sidebar: #014cb1;
   --sidebar-muted: #c4c9da;
+  --card-bg: #ffffff;
+  --input-bg: #f5f7fb;
+  --table-header: #f8fafc;
+  --hover-bg: rgba(1, 76, 177, 0.05);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+[data-theme='dark'] {
+  --bg: #0b0e14;
+  --panel: #11141d;
+  --border: #1e2330;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --sidebar: #11141d;
+  --sidebar-muted: #64748b;
+  --card-bg: #151926;
+  --input-bg: #1e2330;
+  --table-header: #1e2330;
+  --hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .topbar,
+[data-theme='dark'] .sidebar,
+[data-theme='dark'] .sidebar-footer,
+[data-theme='dark'] .modal-header,
+[data-theme='dark'] .form-actions,
+[data-theme='dark'] .modal-content,
+[data-theme='dark'] .user-menu {
+  background: var(--panel) !important;
+  background-color: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .latest-documents-table thead,
+[data-theme='dark'] table thead,
+[data-theme='dark'] .table-header {
+  background: var(--table-header) !important;
+}
+
+[data-theme='dark'] .latest-documents-table th,
+[data-theme='dark'] table th {
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+
+[data-theme='dark'] .latest-documents-table td,
+[data-theme='dark'] table td {
+  border-bottom-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea,
+[data-theme='dark'] .search-field {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .breadcrumbs,
+[data-theme='dark'] .section-title,
+[data-theme='dark'] .brand-subtitle,
+[data-theme='dark'] .user-role {
+  color: var(--muted);
+}
+
+[data-theme='dark'] .sidebar-section button {
+  color: var(--text);
+}
+
+[data-theme='dark'] .sidebar-section button:hover {
+  background: var(--hover-bg);
+}
+
+[data-theme='dark'] .latest-documents-table tbody tr:hover,
+[data-theme='dark'] table tbody tr:hover {
+  background: var(--hover-bg);
+}
+
+/* Global Overrides for components with inline styles */
+[data-theme='dark'] .users-breadcrumb,
+[data-theme='dark'] .users-card,
+[data-theme='dark'] .users-mobile-card {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .users-breadcrumb span,
+[data-theme='dark'] .form-group label {
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .form-group input,
+[data-theme='dark'] .form-group select,
+[data-theme='dark'] .form-group textarea {
+  background: var(--input-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme='dark'] .users-table thead tr,
+[data-theme='dark'] .table-wrapper thead tr,
+[data-theme='dark'] table thead tr {
+  background: var(--table-header) !important;
+}
+
+[data-theme='dark'] .icon-button.subtle {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .topbar button i {
+  color: var(--text) !important;
+}
+
+/* Fix for statistics and metric cards */
+[data-theme='dark'] .service-card,
+[data-theme='dark'] .financial-card,
+[data-theme='dark'] .metric-card,
+[data-theme='dark'] .dashboard-card,
+[data-theme='dark'] .summary-box {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .service-label,
+[data-theme='dark'] .service-statistics,
+[data-theme='dark'] .metric-label,
+[data-theme='dark'] .metric-value {
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .service-icon,
+[data-theme='dark'] .metric-icon {
+  color: var(--muted) !important;
+  opacity: 0.2;
+}
+
+[data-theme='dark'] .chart-container,
+[data-theme='dark'] .graph-box {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme='dark'] .main-area h1,
+[data-theme='dark'] .main-area h2,
+[data-theme='dark'] .main-area h3 {
+  color: var(--text) !important;
+}
+
+/* Force dark mode on ALL statistical containers and their components */
+[data-theme='dark'] .card-shadow,
+[data-theme='dark'] div[style*="background: #fff"],
+[data-theme='dark'] div[style*="background: rgb(255, 255, 255)"],
+[data-theme='dark'] .chart-container,
+[data-theme='dark'] .table-wrapper {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] svg circle {
+  fill: var(--panel) !important;
+}
+
+[data-theme='dark'] text {
+  fill: var(--text) !important;
+}
+
+[data-theme='dark'] line {
+  stroke: var(--border) !important;
+}
+
+/* Hardcoded Table Header fix */
+[data-theme='dark'] table thead,
+[data-theme='dark'] .users-table thead,
+[data-theme='dark'] thead,
+[data-theme='dark'] tr[style*="background: #f8fafc"],
+[data-theme='dark'] th {
+  background: var(--table-header) !important;
+  background-color: var(--table-header) !important;
+  color: var(--text) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+[data-theme='dark'] table th,
+[data-theme='dark'] .users-table th {
+  background: var(--table-header) !important;
+  color: var(--text) !important;
 }
 
 * {
@@ -458,6 +650,22 @@ button.ghost {
   font-weight: 600;
 }
 
+[data-theme='dark'] .user-trigger {
+  background: var(--panel);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}
+
+.topbar-user .user-menu {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.user-menu button:hover {
+  background: var(--hover-bg);
+}
+
 .user-trigger:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -734,7 +942,7 @@ button.ghost {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px 28px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Adjusted shadow for both modes */
 }
 
 .latest-documents-title {
@@ -985,10 +1193,10 @@ tbody tr:last-child td {
   gap: 24px;
   margin-bottom: 0;
   padding: 24px 28px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .dashboard-welcome {
@@ -1015,7 +1223,7 @@ tbody tr:last-child td {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #ffffff;
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px 20px;
@@ -1167,12 +1375,14 @@ tbody tr:last-child td {
 }
 
 .modal-content {
-  background: #fff;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 0;
   min-width: 300px;
   max-width: 95vw;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1180,6 +1390,44 @@ tbody tr:last-child td {
   position: relative;
   margin: auto;
   max-height: 95vh;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-actions {
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  display: flex;
+  justify-content: flex-end !important;
+  gap: 12px;
 }
 
 
@@ -1231,6 +1479,80 @@ tbody tr:last-child td {
 
 .sidebar-link.open span {
   font-weight: 700;
+}
+
+/* Pagination Styles for Dark and Light Modes */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-info {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-number {
+  min-width: 38px;
+  justify-content: center;
+  padding: 8px;
+}
+
+.pagination-number.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+[data-theme='dark'] .pagination-btn {
+  background: var(--input-bg);
+}
+
+[data-theme='dark'] .pagination-number.active {
+  background: var(--accent);
+  color: white;
+}
+
+.pagination-dots {
+  color: var(--muted);
+  padding: 0 4px;
 }
 
 /* جعل العناصر التي لديها children (dropdown) أكثر سماكة */
@@ -12385,4 +12707,155 @@ tbody tr:last-child td {
     height: 50px;
     font-size: 1.75rem;
   }
+}
+
+/* Utility Classes */
+.no-print {
+  display: block;
+}
+
+.print-only {
+  display: none;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    margin: 1cm;
+    size: auto;
+  }
+
+  /* Hide navigation and UI elements */
+  .no-print,
+  [class*="no-print"],
+  .sidebar,
+  .topbar,
+  .users-breadcrumb,
+  .export-buttons,
+  .form-group:has(select), /* Hide filter parents */
+  .branches-sidebar,
+  .toast,
+  nav,
+  header {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Reset main layout */
+  .app-shell {
+    display: block !important;
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .main-area {
+    padding: 0 !important;
+    margin: 40px !important; /* Margin for paper edges */
+    background: #fff !important;
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  .users-card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Table adjustments */
+  .users-table-wrapper,
+  .table-wrapper {
+    display: block !important;
+    width: 100% !important;
+    overflow: visible !important;
+    margin-top: 30px !important;
+  }
+
+  table.users-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 2px solid #000 !important;
+    table-layout: auto !important;
+  }
+
+  .users-table th,
+  .users-table td {
+    display: table-cell !important;
+    border: 1px solid #000 !important;
+    padding: 12px 6px !important;
+    font-size: 13px !important;
+    color: #000 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important; /* منع نزول السطر للمبالغ */
+  }
+
+  /* استثناء لخانة الوكيل للسماح بالتفاف النص إذا كان طويلاً جداً */
+  .users-table td:first-child,
+  .users-table th:first-child {
+    white-space: normal !important;
+    min-width: 200px !important;
+    text-align: right !important;
+    padding-right: 15px !important;
+  }
+
+  .users-table thead {
+    display: table-header-group !important;
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .users-table thead th {
+    font-weight: 900 !important;
+    background-color: #f0f0f0 !important;
+  }
+
+  /* Hide mobile version in print */
+  .users-mobile-cards {
+    display: none !important;
+  }
+
+  /* Summary section */
+  .users-card[style*="marginTop: '24px'"],
+  .users-card[style*="margin-top: 24px"] {
+    display: block !important;
+    margin-top: 20px !important;
+    border-top: 2px solid #000 !important;
+  }
+
+  /* Use simple text for inputs in print */
+  input[disabled], 
+  input[readonly] {
+    background: #fff !important;
+    color: #000 !important;
+    border: none !important;
+    padding: 0 !important;
+    border-bottom: 1px dashed #ccc !important;
+    border-radius: 0 !important;
+    min-height: auto !important;
+    font-weight: bold !important;
+  }
+
+  label {
+    font-weight: bold !important;
+    margin-bottom: 4px !important;
+    display: block !important;
+  }
+
+  /* Force display grid for summary rows */
+  .users-card div[style*="display: 'grid'"],
+  .users-card div[style*="display: grid"] {
+    display: flex !important;
+    gap: 30px !important;
+    justify-content: space-between !important;
+  }
+
+  /* Add a clear print title */
 }

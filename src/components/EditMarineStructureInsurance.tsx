@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
-
+import { showToast } from "./Toast";
 type Plate = {
   id: number;
   plate_number: string;
@@ -336,8 +336,6 @@ export default function EditMarineStructureInsurance() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   // Select2 states
   const [plateSearch, setPlateSearch] = useState("");
   const [showPlateDropdown, setShowPlateDropdown] = useState(false);
@@ -386,12 +384,6 @@ export default function EditMarineStructureInsurance() {
     }
   };
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -630,7 +622,7 @@ export default function EditMarineStructureInsurance() {
         setEngines(enginesData);
       }
     } catch (error: any) {
-      setToast({ message: error.message || 'حدث خطأ أثناء جلب بيانات الوثيقة', type: 'error' });
+      showToast(error.message || 'حدث خطأ أثناء جلب بيانات الوثيقة', 'error');
       setTimeout(() => navigate('/marine-structure-insurance-documents'), 2000);
     } finally {
       setLoading(false);
@@ -765,15 +757,15 @@ export default function EditMarineStructureInsurance() {
 
       await res.json();
 
-      setToast({ message: 'تم تحديث الوثيقة بنجاح', type: 'success' });
+      showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/marine-structure-insurance-documents');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث الوثيقة',
-        type: 'error',
-      });
+      showToast(
+        error.message || 'حدث خطأ أثناء تحديث الوثيقة',
+        'error',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -801,13 +793,13 @@ export default function EditMarineStructureInsurance() {
           if (res.ok) {
             // إعادة جلب جميع أنواع المحركات من API
             await fetchEngineModels();
-            setToast({ message: 'تم إضافة نوع المحرك بنجاح', type: 'success' });
+            showToast('تم إضافة نوع المحرك بنجاح', 'success');
           } else {
             const errorData = await res.json().catch(() => ({ message: 'حدث خطأ أثناء الإضافة' }));
-            setToast({ message: errorData.message || 'حدث خطأ أثناء إضافة نوع المحرك', type: 'error' });
+            showToast(errorData.message || 'حدث خطأ أثناء إضافة نوع المحرك', 'error');
           }
         } catch (error: any) {
-          setToast({ message: 'حدث خطأ أثناء إضافة نوع المحرك', type: 'error' });
+          showToast('حدث خطأ أثناء إضافة نوع المحرك', 'error');
         }
       }
       setNewEngineModel('');
@@ -1900,21 +1892,7 @@ export default function EditMarineStructureInsurance() {
       </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+
     </section>
   );
 }

@@ -21,6 +21,9 @@ import Login from './components/Login';
 import BranchAgentAccountReport from './components/BranchAgentAccountReport';
 import MonthlyAccountClosure from './components/MonthlyAccountClosure';
 import MonthlyAccountClosuresReport from './components/MonthlyAccountClosuresReport';
+import FinancialStatistics from './components/FinancialStatistics';
+import PaymentVouchers from './components/PaymentVouchers';
+import ExpenseManagement from './components/ExpenseManagement';
 import ProfilePage from './components/ProfilePage';
 import BranchesAgentsList from './components/BranchesAgentsList';
 import CreateBranchAgent from './components/CreateBranchAgent';
@@ -58,6 +61,21 @@ import PersonalAccidentInsuranceList from './components/PersonalAccidentInsuranc
 import CreatePersonalAccidentInsurance from './components/CreatePersonalAccidentInsurance';
 import ViewPersonalAccidentInsurance from './components/ViewPersonalAccidentInsurance';
 import EditPersonalAccidentInsurance from './components/EditPersonalAccidentInsurance';
+
+import SchoolStudentInsuranceList from './components/SchoolStudentInsuranceList';
+import CreateSchoolStudentInsurance from './components/CreateSchoolStudentInsurance';
+import ViewSchoolStudentInsurance from './components/ViewSchoolStudentInsurance';
+import EditSchoolStudentInsurance from './components/EditSchoolStudentInsurance';
+import CashInTransitInsuranceList from './components/CashInTransitInsuranceList';
+import CreateCashInTransitInsurance from './components/CreateCashInTransitInsurance';
+import ViewCashInTransitInsurance from './components/ViewCashInTransitInsurance';
+import EditCashInTransitInsurance from './components/EditCashInTransitInsurance';
+import CargoInsuranceList from './components/CargoInsuranceList';
+import CreateCargoInsurance from './components/CreateCargoInsurance';
+import ViewCargoInsurance from './components/ViewCargoInsurance';
+import EditCargoInsurance from './components/EditCargoInsurance';
+
+import ArchiveDashboard from './components/archive/ArchiveDashboard';
 import HomePage from './components/HomePage';
 import AboutUs from './components/AboutUs';
 import Management from './components/Management';
@@ -66,6 +84,12 @@ import InsurancesPage from './components/InsurancesPage';
 import ContactUs from './components/ContactUs';
 import TestCarInfoAPI from './components/TestCarInfoAPI';
 import TestLifoLogin from './components/TestLifoLogin';
+import CommissionManagement from './components/CommissionManagement';
+import BankReconciliation from './components/BankReconciliation';
+import FinancialArchive from './components/FinancialArchive';
+import OutstandingDebts from './components/OutstandingDebts';
+import InventoryManagement from './components/InventoryManagement';
+import { ToastContainer } from './components/Toast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const user = localStorage.getItem('user');
@@ -109,9 +133,13 @@ function hasAccessToRoute(
     'تأمين الهياكل البحرية': ['/marine-structure-insurance-documents'],
     'تأمين المسؤولية المهنية (الطبية)': ['/professional-liability-insurance-documents'],
     'تأمين الحوادث الشخصية': ['/personal-accident-insurance-documents'],
+    'تأمين حماية طلاب المدارس': ['/school-student-insurance'],
+    'تأمين نقل النقدية': ['/cash-in-transit-insurance'],
+    'تأمين شحن البضائع': ['/cargo-insurance'],
     'كشف حساب الوكيل': ['/reports/branch-agent-account'],
     'إغلاق حساب شهري': ['/reports/monthly-account-closure'],
     'كشف إغلاق الحساب الشهري': ['/reports/monthly-account-closures-report'],
+    'المخازن والعهدة': ['/reports/inventory'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -207,21 +235,33 @@ const menuSections: SidebarSection[] = [
       { label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', to: '/marine-structure-insurance-documents' },
       { label: 'تأمين المسؤولية المهنية (الطبية)', icon: 'fa-solid fa-stethoscope', to: '/professional-liability-insurance-documents' },
       { label: 'تأمين الحوادث الشخصية', icon: 'fa-solid fa-user-injured', to: '/personal-accident-insurance-documents' },
-      { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
+      { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
+      { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
+      { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
     ],
   },
   {
-    title: 'إدارة التقارير',
+    title: 'الشؤون الادارية',
     items: [
+      { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
+      { label: 'إدارة المستخدمين', icon: 'fa-solid fa-user-shield', to: '/users' },
+      { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    ],
+  },
+  {
+    title: 'الشؤون المالية',
+    items: [
+      { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+      { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
+      { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
+      { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+      { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
       { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
       { label: 'كشف إغلاق الحساب الشهري', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
-    ],
-  },
-  {
-    title: 'إدارة المستخدمين',
-    items: [
-      { label: 'إدارة المستخدمين', icon: 'fa-solid fa-user-shield', to: '/users' },
+      { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' },
+      { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
+      { label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', to: '/reports/expenses' },
     ],
   },
   {
@@ -263,9 +303,20 @@ const createMenuSections = (
     'تأمين الوافدين': { label: 'وثائق تأمين الوافدين للمقيمين', icon: 'fa-solid fa-user-check', to: '/resident-insurance-documents' },
     'تأمين المسؤولية المهنية (الطبية)': { label: 'تأمين المسؤولية المهنية (الطبية)', icon: 'fa-solid fa-stethoscope', to: '/professional-liability-insurance-documents' },
     'تأمين الحوادث الشخصية': { label: 'تأمين الحوادث الشخصية', icon: 'fa-solid fa-user-injured', to: '/personal-accident-insurance-documents' },
+    'تأمين حماية طلاب المدارس': { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
+    'تأمين نقل النقدية': { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
+    'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
     'كشف حساب الوكيل': { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
     'إغلاق حساب شهري': { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
     'كشف إغلاق الحساب الشهري': { label: 'كشف إغلاق الحساب الشهري', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+    'إيصالات القبض': { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+    'إدارة المصروفات': { label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', to: '/reports/expenses' },
+    'التسويات والعمولات': { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
+    'التحصيلات البنكية': { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' },
+    'الديون المستحقة': { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
+    'الأرشيف المالي': { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
+    'المخازن والعهدة': { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+    'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
   };
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
@@ -277,13 +328,25 @@ const createMenuSections = (
     '/marine-structure-insurance-documents',
     '/professional-liability-insurance-documents',
     '/personal-accident-insurance-documents',
+    '/school-student-insurance',
+    '/cash-in-transit-insurance',
+    '/cargo-insurance',
+    '/coming-soon',
   ];
 
   // ترتيب التقارير
   const reportsOrder: string[] = [
+    '/reports/financial-statistics',
+    '/reports/outstanding-debts',
+    '/reports/commissions',
+    '/reports/payment-vouchers',
+    '/reports/inventory',
     '/reports/branch-agent-account',
     '/reports/monthly-account-closure',
     '/reports/monthly-account-closures-report',
+    '/reports/bank-reconciliation',
+    '/reports/financial-archive',
+    '/reports/expenses',
   ];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -354,7 +417,7 @@ const createMenuSections = (
   // إضافة قسم التقارير إذا كان هناك تقارير مصرح بها
   if (reportsItems.length > 0) {
     sections.push({
-      title: 'إدارة التقارير',
+      title: 'الشؤون المالية',
       items: reportsItems,
     });
   }
@@ -480,6 +543,7 @@ export default function App() {
 
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         {/* Public Website Routes */}
         <Route path="/" element={<HomePage />} />
@@ -565,6 +629,19 @@ export default function App() {
                   <Route path="/marine-structure-insurance-documents/create" element={<AuthorizedRoute requiredPath="/marine-structure-insurance-documents"><CreateMarineStructureInsurance /></AuthorizedRoute>} />
                   <Route path="/marine-structure-insurance-documents/:id" element={<AuthorizedRoute requiredPath="/marine-structure-insurance-documents"><ViewMarineStructureInsurance /></AuthorizedRoute>} />
                   <Route path="/marine-structure-insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/marine-structure-insurance-documents"><EditMarineStructureInsurance /></AuthorizedRoute>} />
+                  
+                  {/* تأمين نقل النقدية */}
+                  <Route path="/cash-in-transit-insurance" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><CashInTransitInsuranceList /></AuthorizedRoute>} />
+                  <Route path="/cash-in-transit-insurance/create" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><CreateCashInTransitInsurance /></AuthorizedRoute>} />
+                  <Route path="/cash-in-transit-insurance/:id" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><ViewCashInTransitInsurance /></AuthorizedRoute>} />
+                  <Route path="/cash-in-transit-insurance/edit/:id" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><EditCashInTransitInsurance /></AuthorizedRoute>} />
+
+                  {/* تأمين شحن البضائع */}
+                  <Route path="/cargo-insurance" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CargoInsuranceList /></AuthorizedRoute>} />
+                  <Route path="/cargo-insurance/create" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CreateCargoInsurance /></AuthorizedRoute>} />
+                  <Route path="/cargo-insurance/:id" element={<AuthorizedRoute requiredPath="/cargo-insurance"><ViewCargoInsurance /></AuthorizedRoute>} />
+                  <Route path="/cargo-insurance/edit/:id" element={<AuthorizedRoute requiredPath="/cargo-insurance"><EditCargoInsurance /></AuthorizedRoute>} />
+
                   {/* إدارة تأمين المسؤولية المهنية (الطبية) */}
                   <Route path="/professional-liability-insurance-documents" element={<AuthorizedRoute requiredPath="/professional-liability-insurance-documents"><ProfessionalLiabilityInsuranceList /></AuthorizedRoute>} />
                   <Route path="/professional-liability-insurance-documents/create" element={<AuthorizedRoute requiredPath="/professional-liability-insurance-documents"><CreateProfessionalLiabilityInsurance /></AuthorizedRoute>} />
@@ -575,13 +652,39 @@ export default function App() {
                   <Route path="/personal-accident-insurance-documents/create" element={<AuthorizedRoute requiredPath="/personal-accident-insurance-documents"><CreatePersonalAccidentInsurance /></AuthorizedRoute>} />
                   <Route path="/personal-accident-insurance-documents/:id" element={<AuthorizedRoute requiredPath="/personal-accident-insurance-documents"><ViewPersonalAccidentInsurance /></AuthorizedRoute>} />
                   <Route path="/personal-accident-insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/personal-accident-insurance-documents"><EditPersonalAccidentInsurance /></AuthorizedRoute>} />
+                  
+                  {/* تأمين حماية طلاب المدارس */}
+                  <Route path="/school-student-insurance" element={<AuthorizedRoute requiredPath="/school-student-insurance"><SchoolStudentInsuranceList /></AuthorizedRoute>} />
+                  <Route path="/school-student-insurance/create" element={<AuthorizedRoute requiredPath="/school-student-insurance"><CreateSchoolStudentInsurance /></AuthorizedRoute>} />
+                  <Route path="/school-student-insurance/:id" element={<AuthorizedRoute requiredPath="/school-student-insurance"><ViewSchoolStudentInsurance /></AuthorizedRoute>} />
+                  <Route path="/school-student-insurance/edit/:id" element={<AuthorizedRoute requiredPath="/school-student-insurance"><EditSchoolStudentInsurance /></AuthorizedRoute>} />
+
+                  {/* تأمين نقل النقدية */}
+                  <Route path="/cash-in-transit-insurance" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><CashInTransitInsuranceList /></AuthorizedRoute>} />
+                  <Route path="/cash-in-transit-insurance/create" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><CreateCashInTransitInsurance /></AuthorizedRoute>} />
+
+                  {/* تأمين شحن البضائع */}
+                  <Route path="/cargo-insurance" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CargoInsuranceList /></AuthorizedRoute>} />
+                  <Route path="/cargo-insurance/create" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CreateCargoInsurance /></AuthorizedRoute>} />
+
                   {/* تقارير */}
+                  <Route path="/reports/financial-statistics" element={<FinancialStatistics />} />
                   <Route path="/reports/branch-agent-account" element={<BranchAgentAccountReport />} />
                   <Route path="/reports/monthly-account-closure" element={<MonthlyAccountClosure />} />
                   <Route path="/reports/monthly-account-closures-report" element={<MonthlyAccountClosuresReport />} />
+                  <Route path="/reports/payment-vouchers" element={<PaymentVouchers />} />
+                  <Route path="/reports/commissions" element={<CommissionManagement />} />
+                  <Route path="/reports/bank-reconciliation" element={<BankReconciliation />} />
+                  <Route path="/reports/outstanding-debts" element={<OutstandingDebts />} />
+                  <Route path="/reports/financial-archive" element={<FinancialArchive />} />
+                  <Route path="/reports/inventory" element={<InventoryManagement />} />
+                  <Route path="/reports/expenses" element={<ExpenseManagement />} />
                   {/* اختبار API */}
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
                   <Route path="/test-lifo-login" element={<TestLifoLogin />} />
+                  {/* الأرشيف */}
+                  <Route path="/archive" element={<ArchiveDashboard />} />
+                  <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />
                 </Routes>
               </main>
             </div>

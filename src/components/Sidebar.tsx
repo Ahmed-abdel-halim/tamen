@@ -64,10 +64,10 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
               <img src="/img/logo3.png" alt="المدار الليبي للتأميـن" style={{ height: '100%', width: 'auto' }} />
             </div>
             <div className="logo-text" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <span className="logo-title" style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', lineHeight: '1.2' }}>
+              <span className="logo-title" style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', lineHeight: '1.2' }}>
                 المدار الليبـي للتأميـن
               </span>
-              <span className="logo-subtitle" style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', lineHeight: '1.2' }}>
+              <span className="logo-subtitle" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--muted)', lineHeight: '1.2' }}>
                 Al Madar Libyan Insurance
               </span>
             </div>
@@ -113,12 +113,12 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                         <ul style={{ 
                           paddingRight: '1px', 
                           marginTop: '4px',
-                          background: '#f8fafc',
+                          background: 'var(--input-bg)',
                           borderRadius: '8px',
                           padding: '4px 0',
                           marginLeft: '8px',
                           marginRight: '8px',
-                          border: '1px solid #e2e8f0'
+                          border: '1px solid var(--border)'
                         }}>
                           {item.children.map((child) => (
                             <li key={child.label} style={{ marginBottom: '0px' }}>
@@ -151,12 +151,12 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                     <ul style={{ 
                                       paddingRight: '1px', 
                                       marginTop: '4px',
-                                      background: '#f1f5f9',
+                                      background: 'var(--bg)',
                                       borderRadius: '6px',
                                       padding: '4px 0',
                                       marginLeft: '12px',
                                       marginRight: '4px',
-                                      border: '1px solid #e2e8f0'
+                                      border: '1px solid var(--border)'
                                     }}>
                                       {child.children.map((grandchild) => (
                                         <li key={grandchild.label} style={{ marginBottom: '0px' }}>

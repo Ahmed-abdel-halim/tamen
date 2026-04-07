@@ -14,6 +14,16 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
   const [userName, setUserName] = useState('المستخدم')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  }
 
   useEffect(() => {
     const loadUser = () => {
@@ -124,6 +134,16 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
             aria-hidden="true"
           />
         </a>
+
+        <button
+          className="icon-button subtle theme-toggle"
+          type="button"
+          aria-label={theme === 'light' ? 'تفعيل النمط الليلي' : 'تفعيل النمط النهاري'}
+          title={theme === 'light' ? 'النمط الليلي' : 'النمط النهاري'}
+          onClick={toggleTheme}
+        >
+          <i className={`fa-solid ${theme === 'light' ? 'fa-moon' : 'fa-sun'}`} aria-hidden="true" />
+        </button>
 
         <button
           className="icon-button subtle sync-toggle"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { showToast } from "./Toast";
 
 type ProfessionalLiabilityInsuranceDocument = {
   id: number;
@@ -13,12 +14,11 @@ type ProfessionalLiabilityInsuranceDocument = {
   agency_name?: string; // اسم الوكالة (يظهر للادمن فقط)
 };
 
-export default function ProfessionalLiabilityInsuranceList() {
+export default function ProfessionalLiabilityInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<ProfessionalLiabilityInsuranceDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<ProfessionalLiabilityInsuranceDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,12 +42,7 @@ export default function ProfessionalLiabilityInsuranceList() {
     }
   };
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -63,17 +58,15 @@ export default function ProfessionalLiabilityInsuranceList() {
         headers['X-User-Id'] = userId.toString();
       }
       
-      const res = await fetch('/api/professional-liability-insurance-documents', {
+      const url = `/api/professional-liability-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      const res = await fetch(url, {
         headers
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       setDocuments(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -107,14 +100,11 @@ export default function ProfessionalLiabilityInsuranceList() {
         throw new Error(errorData.message || 'حدث خطأ أثناء الحذف');
       }
 
-      setToast({ message: 'تم حذف الوثيقة بنجاح', type: 'success' });
+      showToast('تم حذف الوثيقة بنجاح', 'success');
       setShowDeleteModal(null);
       fetchDocuments();
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء حذف الوثيقة: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء حذف الوثيقة: ${error.message || ''}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -123,7 +113,7 @@ export default function ProfessionalLiabilityInsuranceList() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span> تأمين المسؤولية المهنية (الطبية) / قائمة الوثائق</span>
+        <span>{isArchive ? 'الأرشيف / تأمين المسؤولية المهنية (الطبية)' : ' تأمين المسؤولية المهنية (الطبية) / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">
@@ -140,13 +130,15 @@ export default function ProfessionalLiabilityInsuranceList() {
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
           </div>
-          <button
-            className="primary add-user-btn"
-            onClick={() => navigate('/professional-liability-insurance-documents/create')}
-          >
-            <i className="fa-solid fa-plus"></i>
-            إضافة وثيقة
-          </button>
+          {!isArchive && (
+            <button
+              className="primary add-user-btn"
+              onClick={() => navigate('/professional-liability-insurance-documents/create')}
+            >
+              <i className="fa-solid fa-plus"></i>
+              إضافة وثيقة
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -439,11 +431,7 @@ export default function ProfessionalLiabilityInsuranceList() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          {toast.message}
-        </div>
-      )}
+
     </section>
   );
 }

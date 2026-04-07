@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
+import { showToast } from "./Toast";
 
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
@@ -239,7 +240,6 @@ export default function EditProfessionalLiabilityInsurance() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Select2 states
   const [nationalitySearch, setNationalitySearch] = useState("");
@@ -279,12 +279,7 @@ export default function EditProfessionalLiabilityInsurance() {
     fetchProfessions();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -344,10 +339,7 @@ export default function EditProfessionalLiabilityInsurance() {
         total: data.total ? (typeof data.total === 'number' ? data.total.toFixed(3) : parseFloat(data.total).toFixed(3)) : '224.050',
       });
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء جلب الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء جلب الوثيقة', 'error');
     } finally {
       setLoading(false);
     }
@@ -435,13 +427,13 @@ export default function EditProfessionalLiabilityInsurance() {
         setNewProfessionName('');
         setShowAddProfession(false);
         setShowProfessionDropdown(false);
-        setToast({ message: 'تم إضافة المهنة بنجاح', type: 'success' });
+        showToast('تم إضافة المهنة بنجاح', 'success');
       } else {
         const data = await res.json();
-        setToast({ message: data.message || 'حدث خطأ أثناء إضافة المهنة', type: 'error' });
+        showToast(data.message || 'حدث خطأ أثناء إضافة المهنة', 'error');
       }
     } catch (error: any) {
-      setToast({ message: 'حدث خطأ أثناء إضافة المهنة', type: 'error' });
+      showToast('حدث خطأ أثناء إضافة المهنة', 'error');
     }
   };
 
@@ -469,14 +461,14 @@ export default function EditProfessionalLiabilityInsurance() {
         if (formData.profession === showDeleteProfessionModal.name) {
           setFormData({ ...formData, profession: '' });
         }
-        setToast({ message: 'تم حذف المهنة بنجاح', type: 'success' });
+        showToast('تم حذف المهنة بنجاح', 'success');
         setShowDeleteProfessionModal(null);
       } else {
         const data = await res.json();
-        setToast({ message: data.message || 'حدث خطأ أثناء حذف المهنة', type: 'error' });
+        showToast(data.message || 'حدث خطأ أثناء حذف المهنة', 'error');
       }
     } catch (error: any) {
-      setToast({ message: 'حدث خطأ أثناء حذف المهنة', type: 'error' });
+      showToast('حدث خطأ أثناء حذف المهنة', 'error');
     } finally {
       setDeletingProfession(false);
     }
@@ -551,15 +543,12 @@ export default function EditProfessionalLiabilityInsurance() {
         throw new Error(data.message || 'حدث خطأ أثناء تحديث الوثيقة');
       }
 
-      setToast({ message: 'تم تحديث الوثيقة بنجاح', type: 'success' });
+      showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/professional-liability-insurance-documents');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء تحديث الوثيقة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -1158,21 +1147,7 @@ export default function EditProfessionalLiabilityInsurance() {
         )}
       </div>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+
 
       {showDeleteProfessionModal && (
         <div className="modal-overlay" onClick={() => !deletingProfession && setShowDeleteProfessionModal(null)}>

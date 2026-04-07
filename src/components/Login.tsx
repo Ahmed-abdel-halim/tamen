@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../config/api';
+import { showToast } from './Toast';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -9,7 +10,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<null | { message: string; type: 'success' | 'error' }>(null);
   
   // Math CAPTCHA state
   const [captchaNum1, setCaptchaNum1] = useState(0);
@@ -95,7 +95,7 @@ export default function Login() {
       }
       
       const data = await res.json();
-      setToast({ message: 'تم تسجيل الدخول بنجاح!', type: 'success' });
+      showToast('تم تسجيل الدخول بنجاح!', 'success');
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token || '');
       // إرسال event لتحديث الصلاحيات في App.tsx
@@ -104,19 +104,12 @@ export default function Login() {
         window.location.href = '/dashboard'; // التوجيه إلى لوحة التحكم
       }, 1300);
     } catch (e: any) {
-      setToast({ message: e.message, type: 'error'});
+      showToast(e.message, 'error');
       setError(e.message);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   return (
     <main className="login-page">
@@ -199,14 +192,6 @@ export default function Login() {
           </button>
           {error && <div className="login-error">{error}</div>}
         </form>
-        {toast && (
-          <div className={`toast toast-${toast.type} login-toast`}>
-            <div className="toast-content">
-              <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-              <span>{toast.message}</span>
-            </div>
-          </div>
-        )}
       </section>
     </main>
   );

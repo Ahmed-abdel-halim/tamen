@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
-
+import { showToast } from "./Toast";
 type Plate = {
   id: number;
   plate_number: string;
@@ -61,7 +61,6 @@ export default function TransferOwnershipInsuranceDocument() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Select2 states
   const [plateSearch, setPlateSearch] = useState("");
@@ -75,12 +74,6 @@ export default function TransferOwnershipInsuranceDocument() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -126,10 +119,7 @@ export default function TransferOwnershipInsuranceDocument() {
         driving_license_number: data.driving_license_number || '',
       });
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء جلب الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء جلب الوثيقة', 'error');
     } finally {
       setLoading(false);
     }
@@ -204,15 +194,12 @@ export default function TransferOwnershipInsuranceDocument() {
         throw new Error(data.message || 'حدث خطأ أثناء نقل الملكية');
       }
 
-      setToast({ message: 'تم نقل الملكية بنجاح', type: 'success' });
+      showToast('تم نقل الملكية بنجاح', 'success');
       setTimeout(() => {
         navigate(`/insurance-documents/${id}`);
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء نقل الملكية',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء نقل الملكية', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -646,22 +633,6 @@ export default function TransferOwnershipInsuranceDocument() {
           </form>
         </div>
       </div>
-
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

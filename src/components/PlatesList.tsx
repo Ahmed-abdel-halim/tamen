@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { showToast } from "./Toast";
 
 type City = {
   id: number;
@@ -26,7 +27,6 @@ export default function PlatesList() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<null | Plate>(null);
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 10;
 
@@ -41,14 +41,7 @@ export default function PlatesList() {
     fetchCities();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -94,10 +87,7 @@ export default function PlatesList() {
       setPlates(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Error fetching plates:', error);
-      setToast({ 
-        message: `حدث خطأ أثناء جلب اللوحات: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 
-        type: 'error' 
-      });
+      showToast(`حدث خطأ أثناء جلب اللوحات: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -154,13 +144,10 @@ export default function PlatesList() {
       }
       setPlates(plates.filter(p => p.id !== deleteConfirmation.id));
       setDeleteConfirmation(null);
-      setToast({ message: 'تم حذف اللوحة بنجاح', type: 'success' });
+      showToast('تم حذف اللوحة بنجاح', 'success');
     } catch (error: any) {
       console.error('Error deleting plate:', error);
-      setToast({ 
-        message: `حدث خطأ أثناء حذف اللوحة: ${error.message || 'تأكد من أن الخادم يعمل'}`, 
-        type: 'error' 
-      });
+      showToast(`حدث خطأ أثناء حذف اللوحة: ${error.message || 'تأكد من أن الخادم يعمل'}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -221,15 +208,9 @@ export default function PlatesList() {
       await fetchPlates();
       setShowForm(null);
       setFormData({ plate_number: '', city_id: '' });
-      setToast({ 
-        message: showForm?.mode === 'add' ? 'تم إضافة اللوحة بنجاح' : 'تم تحديث اللوحة بنجاح', 
-        type: 'success' 
-      });
+      showToast(showForm?.mode === 'add' ? 'تم إضافة اللوحة بنجاح' : 'تم تحديث اللوحة بنجاح', 'success');
     } catch (error: any) {
-      setToast({ 
-        message: error.message || 'حدث خطأ أثناء حفظ اللوحة', 
-        type: 'error' 
-      });
+      showToast(error.message || 'حدث خطأ أثناء حفظ اللوحة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -473,15 +454,16 @@ export default function PlatesList() {
                     padding: '10px 12px',
                     border: formErrors.city_id ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
-                    background: '#fff',
+                    background: 'var(--input-bg)',
                     cursor: 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     minHeight: 42,
+                    color: 'var(--text)'
                   }}
                 >
-                  <span style={{ color: formData.city_id ? '#111827' : '#9ca3af' }}>
+                  <span style={{ color: formData.city_id ? 'var(--text)' : 'var(--muted)' }}>
                     {selectedCity ? `${selectedCity.name_ar} - ${selectedCity.name_en}` : 'اختر المدينة...'}
                   </span>
                   <i
@@ -496,14 +478,14 @@ export default function PlatesList() {
                       top: '100%',
                       left: 0,
                       right: 0,
-                      background: '#fff',
+                      background: 'var(--panel)',
                       border: '1px solid var(--border)',
                       borderRadius: 8,
                       marginTop: '4px',
                       maxHeight: '300px',
                       overflowY: 'auto',
                       zIndex: 1000,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
                     }}
                   >
                     <div style={{ padding: '8px' }}>
@@ -519,6 +501,8 @@ export default function PlatesList() {
                           border: '1px solid var(--border)',
                           borderRadius: 6,
                           marginBottom: '8px',
+                          background: 'var(--input-bg)',
+                          color: 'var(--text)'
                         }}
                       />
                     </div>
@@ -539,12 +523,13 @@ export default function PlatesList() {
                             style={{
                               padding: '10px 12px',
                               cursor: 'pointer',
-                              borderBottom: '1px solid #f3f4f6',
-                              backgroundColor: formData.city_id === city.id.toString() ? '#f3f4f6' : 'transparent',
+                              borderBottom: '1px solid var(--border)',
+                              backgroundColor: formData.city_id === city.id.toString() ? 'var(--hover-bg)' : 'transparent',
+                              color: 'var(--text)'
                             }}
                             onMouseEnter={(e) => {
                               if (formData.city_id !== city.id.toString()) {
-                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                                e.currentTarget.style.backgroundColor = 'var(--hover-bg)';
                               }
                             }}
                             onMouseLeave={(e) => {
@@ -553,8 +538,8 @@ export default function PlatesList() {
                               }
                             }}
                           >
-                            <div style={{ fontWeight: 500 }}>{city.name_ar}</div>
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{city.name_en}</div>
+                            <div style={{ fontWeight: 500, color: 'var(--text)' }}>{city.name_ar}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{city.name_en}</div>
                           </div>
                         ))
                       )}
@@ -620,21 +605,6 @@ export default function PlatesList() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

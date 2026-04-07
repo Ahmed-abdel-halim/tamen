@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { showToast } from "./Toast";
 
 type Custody = {
   description: string;
@@ -94,7 +95,6 @@ export default function EditBranchAgent() {
   const [existingContractPhoto, setExistingContractPhoto] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const personalPhotoRef = useRef<HTMLInputElement>(null);
   const identityPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
@@ -196,7 +196,7 @@ export default function EditBranchAgent() {
       setExistingIdentityPhoto(data.identity_photo || null);
       setExistingContractPhoto(data.contract_photo || null);
     } catch (error: any) {
-      setToast({ message: error.message || 'حدث خطأ أثناء جلب البيانات', type: 'error' });
+      showToast(error.message || 'حدث خطأ أثناء جلب البيانات', 'error');
     } finally {
       setLoading(false);
     }
@@ -308,7 +308,7 @@ export default function EditBranchAgent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      setToast({ message: 'يرجى تصحيح الأخطاء في النموذج', type: 'error' });
+      showToast('يرجى تصحيح الأخطاء في النموذج', 'error');
       return;
     }
 
@@ -402,12 +402,12 @@ export default function EditBranchAgent() {
         // لا نوقف العملية إذا فشل تحديث localStorage
       }
 
-      setToast({ message: 'تم تحديث السجل بنجاح', type: 'success' });
+      showToast('تم تحديث السجل بنجاح', 'success');
       setTimeout(() => {
         navigate(`/branches-agents/${id}`);
       }, 1000);
     } catch (error: any) {
-      setToast({ message: error.message || 'حدث خطأ أثناء تحديث السجل', type: 'error' });
+      showToast(error.message || 'حدث خطأ أثناء تحديث السجل', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -933,33 +933,16 @@ export default function EditBranchAgent() {
             </div>
 
             <div className="form-actions">
-              <button type="button" onClick={() => navigate(`/branches-agents/${id}`)} className="btn-cancel">
+              <button type="button" onClick={() => navigate('/branches-agents')} className="btn-cancel">
                 إلغاء
               </button>
               <button type="submit" className="btn-submit" disabled={submitting}>
-                {submitting ? 'جاري الحفظ...' : 'تحديث السجل'}
+                {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }
-

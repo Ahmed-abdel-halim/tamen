@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
+import { showToast } from "./Toast";
 type TravelInsurancePassenger = {
   id: number;
   is_main_passenger: boolean;
@@ -41,7 +41,6 @@ export default function ViewTravelInsurance() {
   const navigate = useNavigate();
   const [document, setDocument] = useState<TravelInsuranceDocument | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -49,12 +48,6 @@ export default function ViewTravelInsurance() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   const fetchDocument = async () => {
     try {
@@ -65,7 +58,7 @@ export default function ViewTravelInsurance() {
 
       if (!res.ok) {
         if (res.status === 404) {
-          setToast({ message: 'الوثيقة غير موجودة', type: 'error' });
+          showToast('الوثيقة غير موجودة', 'error');
           setTimeout(() => navigate('/travel-insurance-documents'), 2000);
           return;
         }
@@ -75,10 +68,7 @@ export default function ViewTravelInsurance() {
       const data = await res.json();
       setDocument(data);
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء جلب البيانات: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء جلب البيانات: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -424,21 +414,6 @@ export default function ViewTravelInsurance() {
         </div>
       </div>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

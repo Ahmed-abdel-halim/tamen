@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import { showToast } from "./Toast";
 
 type VehicleType = {
   id: number;
@@ -151,7 +152,6 @@ export default function CreateInternationalInsurance() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Select2 states
   const [vehicleTypeSearch, setVehicleTypeSearch] = useState("");
@@ -728,13 +728,6 @@ export default function CreateInternationalInsurance() {
   };
 
   useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (vehicleTypeDropdownRef.current && !vehicleTypeDropdownRef.current.contains(event.target as Node)) {
         setShowVehicleTypeDropdown(false);
@@ -949,10 +942,7 @@ export default function CreateInternationalInsurance() {
           ? `تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي. رقم الوثيقة: ${policyNumber}`
           : 'تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي';
         
-        setToast({ 
-          message: successMessage, 
-          type: 'success' 
-        });
+        showToast(successMessage, 'success');
         
         console.log('✅ تم حفظ الوثيقة محلياً وإرسالها إلى النظام الخارجي بنجاح');
         console.log('📄 رقم الوثيقة المحلية:', data.id || data.data?.id);
@@ -979,10 +969,10 @@ export default function CreateInternationalInsurance() {
         console.log('═══════════════════════════════════════════════════════');
         
         // عرض رسالة تحذيرية بدلاً من خطأ
-        setToast({ 
-          message: `تم إنشاء الوثيقة محلياً بنجاح. تحذير: فشل المزامنة مع النظام الخارجي - ${externalError.message}`, 
-          type: 'error' 
-        });
+        showToast(
+          `تم إنشاء الوثيقة محلياً بنجاح. تحذير: فشل المزامنة مع النظام الخارجي - ${externalError.message}`, 
+          'error' 
+        );
       } finally {
         setSyncingExternal(false);
       }
@@ -996,10 +986,7 @@ export default function CreateInternationalInsurance() {
       console.error('خطأ:', error.message);
       console.error('═══════════════════════════════════════════════════════');
       
-      setToast({
-        message: error.message || 'حدث خطأ أثناء إنشاء الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء إنشاء الوثيقة', 'error');
     } finally {
       setSubmitting(false);
       setSyncingExternal(false);
@@ -2068,22 +2055,6 @@ export default function CreateInternationalInsurance() {
           </div>
         )}
       </div>
-
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import { showToast } from "./Toast";
 
 type Custody = {
   description: string;
@@ -89,7 +90,6 @@ export default function CreateBranchAgent() {
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const personalPhotoRef = useRef<HTMLInputElement>(null);
   const identityPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
@@ -241,7 +241,7 @@ export default function CreateBranchAgent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      setToast({ message: 'يرجى تصحيح الأخطاء في النموذج', type: 'error' });
+      showToast('يرجى تصحيح الأخطاء في النموذج', 'error');
       return;
     }
 
@@ -316,12 +316,12 @@ export default function CreateBranchAgent() {
       }
 
       const branchAgent = await res.json();
-      setToast({ message: 'تم إنشاء السجل بنجاح', type: 'success' });
+      showToast('تم إنشاء السجل بنجاح', 'success');
       setTimeout(() => {
         navigate(`/branches-agents/${branchAgent.id}`);
       }, 1000);
     } catch (error: any) {
-      setToast({ message: error.message || 'حدث خطأ أثناء إنشاء السجل', type: 'error' });
+      showToast(error.message || 'حدث خطأ أثناء إنشاء السجل', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -804,23 +804,6 @@ export default function CreateBranchAgent() {
           </form>
         </div>
       </div>
-
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }
-

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
+import { showToast } from "./Toast";
 
 type Plate = {
   id: number;
@@ -141,7 +142,6 @@ export default function EditInsuranceDocument() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -217,12 +217,7 @@ export default function EditInsuranceDocument() {
     }
   }, [formData.vehicle_type_id, vehicleTypes]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -305,10 +300,7 @@ export default function EditInsuranceDocument() {
         setSelectedCategory(data.vehicle_type.category);
       }
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء جلب الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء جلب الوثيقة', 'error');
     } finally {
       setLoading(false);
     }
@@ -1191,14 +1183,13 @@ export default function EditInsuranceDocument() {
         // إبقاء الماركة لتسهيل إضافة أكثر من فئة
         setNewVehicleTypeCategory('');
         setShowAddVehicleType(true);
-        setShowVehicleTypeDropdown(true);
-        setToast({ message: 'تم إضافة نوع السيارة بنجاح', type: 'success' });
+        showToast('تم إضافة نوع السيارة بنجاح', 'success');
       } else {
         const data = await res.json();
-        setToast({ message: data.message || 'حدث خطأ أثناء إضافة نوع السيارة', type: 'error' });
+        showToast(data.message || 'حدث خطأ أثناء إضافة نوع السيارة', 'error');
       }
     } catch (error: any) {
-      setToast({ message: 'حدث خطأ أثناء إضافة نوع السيارة', type: 'error' });
+      showToast('حدث خطأ أثناء إضافة نوع السيارة', 'error');
     }
   };
 
@@ -1226,13 +1217,13 @@ export default function EditInsuranceDocument() {
           setSelectedCategory('');
         }
         setShowDeleteVehicleTypeModal(null);
-        setToast({ message: 'تم حذف نوع السيارة بنجاح', type: 'success' });
+        showToast('تم حذف نوع السيارة بنجاح', 'success');
       } else {
         const data = await res.json();
-        setToast({ message: data.message || 'حدث خطأ أثناء حذف نوع السيارة', type: 'error' });
+        showToast(data.message || 'حدث خطأ أثناء حذف نوع السيارة', 'error');
       }
     } catch (error: any) {
-      setToast({ message: 'حدث خطأ أثناء حذف نوع السيارة', type: 'error' });
+      showToast('حدث خطأ أثناء حذف نوع السيارة', 'error');
     } finally {
       setDeletingVehicleType(false);
     }
@@ -1260,13 +1251,13 @@ export default function EditInsuranceDocument() {
         setNewColorName('');
         setShowAddColor(false);
         setShowColorDropdown(false);
-        setToast({ message: 'تم إضافة اللون بنجاح', type: 'success' });
+        showToast('تم إضافة اللون بنجاح', 'success');
       } else {
         const data = await res.json();
-        setToast({ message: data.message || 'حدث خطأ أثناء إضافة اللون', type: 'error' });
+        showToast(data.message || 'حدث خطأ أثناء إضافة اللون', 'error');
       }
     } catch (error: any) {
-      setToast({ message: 'حدث خطأ أثناء إضافة اللون', type: 'error' });
+      showToast('حدث خطأ أثناء إضافة اللون', 'error');
     }
   };
 
@@ -1294,13 +1285,13 @@ export default function EditInsuranceDocument() {
           setFormData({ ...formData, color: '' });
         }
         setShowDeleteColorModal(null);
-        setToast({ message: 'تم حذف اللون بنجاح', type: 'success' });
+        showToast('تم حذف اللون بنجاح', 'success');
       } else {
         const data = await res.json();
-        setToast({ message: data.message || 'حدث خطأ أثناء حذف اللون', type: 'error' });
+        showToast(data.message || 'حدث خطأ أثناء حذف اللون', 'error');
       }
     } catch (error: any) {
-      setToast({ message: 'حدث خطأ أثناء حذف اللون', type: 'error' });
+      showToast('حدث خطأ أثناء حذف اللون', 'error');
     } finally {
       setDeletingColor(false);
     }
@@ -1436,15 +1427,12 @@ export default function EditInsuranceDocument() {
         throw new Error(data.message || 'حدث خطأ أثناء تحديث الوثيقة');
       }
 
-      setToast({ message: 'تم تحديث الوثيقة بنجاح', type: 'success' });
+      showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/insurance-documents');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء تحديث الوثيقة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -2831,21 +2819,6 @@ export default function EditInsuranceDocument() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

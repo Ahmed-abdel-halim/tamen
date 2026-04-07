@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { showToast } from "./Toast";
 
 type City = {
   id: number;
@@ -19,7 +20,6 @@ export default function CitiesList() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<null | City>(null);
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 10;
 
@@ -27,14 +27,7 @@ export default function CitiesList() {
     fetchCities();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -54,10 +47,7 @@ export default function CitiesList() {
       setCities(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Error fetching cities:', error);
-      setToast({ 
-        message: `حدث خطأ أثناء جلب المدن: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 
-        type: 'error' 
-      });
+      showToast(`حدث خطأ أثناء جلب المدن: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -109,13 +99,10 @@ export default function CitiesList() {
       }
       setCities(cities.filter(c => c.id !== deleteConfirmation.id));
       setDeleteConfirmation(null);
-      setToast({ message: 'تم حذف المدينة بنجاح', type: 'success' });
+      showToast('تم حذف المدينة بنجاح', 'success');
     } catch (error: any) {
       console.error('Error deleting city:', error);
-      setToast({ 
-        message: `حدث خطأ أثناء حذف المدينة: ${error.message || 'تأكد من أن الخادم يعمل'}`, 
-        type: 'error' 
-      });
+      showToast(`حدث خطأ أثناء حذف المدينة: ${error.message || 'تأكد من أن الخادم يعمل'}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -176,15 +163,9 @@ export default function CitiesList() {
       await fetchCities();
       setShowForm(null);
       setFormData({ name_ar: '', name_en: '' });
-      setToast({ 
-        message: showForm?.mode === 'add' ? 'تم إضافة المدينة بنجاح' : 'تم تحديث المدينة بنجاح', 
-        type: 'success' 
-      });
+      showToast(showForm?.mode === 'add' ? 'تم إضافة المدينة بنجاح' : 'تم تحديث المدينة بنجاح', 'success');
     } catch (error: any) {
-      setToast({ 
-        message: error.message || 'حدث خطأ أثناء حفظ المدينة', 
-        type: 'error' 
-      });
+      showToast(error.message || 'حدث خطأ أثناء حفظ المدينة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -478,21 +459,7 @@ export default function CitiesList() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+
     </section>
   );
 }

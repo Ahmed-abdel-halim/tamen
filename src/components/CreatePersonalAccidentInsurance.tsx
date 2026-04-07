@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import { showToast } from "./Toast";
 
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
@@ -262,7 +263,6 @@ export default function CreatePersonalAccidentInsurance() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Select2 states
   const [nationalitySearch, setNationalitySearch] = useState("");
@@ -273,12 +273,7 @@ export default function CreatePersonalAccidentInsurance() {
   const [showProfessionDropdown, setShowProfessionDropdown] = useState(false);
   const professionDropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -424,15 +419,12 @@ export default function CreatePersonalAccidentInsurance() {
         throw new Error(data.message || 'حدث خطأ أثناء إنشاء الوثيقة');
       }
 
-      setToast({ message: 'تم إنشاء الوثيقة بنجاح', type: 'success' });
+      showToast('تم إنشاء الوثيقة بنجاح', 'success');
       setTimeout(() => {
         navigate('/personal-accident-insurance-documents');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء إنشاء الوثيقة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء إنشاء الوثيقة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -910,21 +902,6 @@ export default function CreatePersonalAccidentInsurance() {
         </div>
       </div>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

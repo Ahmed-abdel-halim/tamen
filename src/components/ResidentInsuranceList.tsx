@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { showToast } from "./Toast";
 
 type ResidentInsurancePassenger = {
   id: number;
@@ -18,12 +19,11 @@ type ResidentInsuranceDocument = {
   agency_name?: string; // اسم الوكالة (يظهر للادمن فقط)
 };
 
-export default function ResidentInsuranceList() {
+export default function ResidentInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<ResidentInsuranceDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<ResidentInsuranceDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,12 +47,7 @@ export default function ResidentInsuranceList() {
     }
   };
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -68,17 +63,15 @@ export default function ResidentInsuranceList() {
         headers['X-User-Id'] = userId.toString();
       }
       
-      const res = await fetch('/api/resident-insurance-documents', {
+      const url = `/api/resident-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      const res = await fetch(url, {
         headers
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       setDocuments(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -115,14 +108,11 @@ export default function ResidentInsuranceList() {
         throw new Error(errorData.message || 'حدث خطأ أثناء الحذف');
       }
 
-      setToast({ message: 'تم حذف الوثيقة بنجاح', type: 'success' });
+      showToast('تم حذف الوثيقة بنجاح', 'success');
       setShowDeleteModal(null);
       fetchDocuments();
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء حذف الوثيقة: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء حذف الوثيقة: ${error.message || ''}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -131,7 +121,7 @@ export default function ResidentInsuranceList() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>وثائق تأمين الوافدين للمقيمين / قائمة الوثائق</span>
+        <span>{isArchive ? 'الأرشيف / وثائق تأمين الوافدين للمقيمين' : 'وثائق تأمين الوافدين للمقيمين / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">
@@ -148,13 +138,15 @@ export default function ResidentInsuranceList() {
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
           </div>
-          <button
-            className="primary add-user-btn"
-            onClick={() => navigate('/resident-insurance-documents/create')}
-          >
-            <i className="fa-solid fa-plus"></i>
-            إضافة وثيقة
-          </button>
+          {!isArchive && (
+            <button
+              className="primary add-user-btn"
+              onClick={() => navigate('/resident-insurance-documents/create')}
+            >
+              <i className="fa-solid fa-plus"></i>
+              إضافة وثيقة
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -494,21 +486,7 @@ export default function ResidentInsuranceList() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+
     </section>
   );
 }

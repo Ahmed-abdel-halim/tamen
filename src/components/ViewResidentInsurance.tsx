@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
+import { showToast } from "./Toast";
 type ResidentInsurancePassenger = {
   id: number;
   is_main_passenger: boolean;
@@ -39,8 +39,6 @@ export default function ViewResidentInsurance() {
   const navigate = useNavigate();
   const [document, setDocument] = useState<ResidentInsuranceDocument | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   const fetchDocument = useCallback(async () => {
     try {
       setLoading(true);
@@ -50,7 +48,7 @@ export default function ViewResidentInsurance() {
 
       if (!res.ok) {
         if (res.status === 404) {
-          setToast({ message: 'الوثيقة غير موجودة', type: 'error' });
+          showToast('الوثيقة غير موجودة', 'error');
           setTimeout(() => navigate('/resident-insurance-documents'), 2000);
           return;
         }
@@ -60,10 +58,7 @@ export default function ViewResidentInsurance() {
       const data = await res.json();
       setDocument(data);
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء جلب البيانات: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء جلب البيانات: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -75,12 +70,7 @@ export default function ViewResidentInsurance() {
     }
   }, [id, fetchDocument]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   const handlePrint = () => {
     const iframe = window.document.createElement('iframe');
@@ -405,22 +395,6 @@ export default function ViewResidentInsurance() {
           )}
         </div>
       </div>
-
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          <div className="toast-content">
-            <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-            <span>{toast.message}</span>
-          </div>
-          <button
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="إغلاق"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
     </section>
   );
 }

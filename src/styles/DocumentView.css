@@ -1,0 +1,103 @@
+
+.document-view-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.view-header h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.5rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.header-actions button {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-back { background: #64748b; color: #fff; }
+.btn-print { background: #3b82f6; color: #fff; }
+.btn-edit { background: #10b981; color: #fff; }
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.detail-section {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.detail-section h3 {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    color: #3b82f6;
+    border-bottom: 2px solid #eff6ff;
+    padding-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #f1f5f9;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.detail-item span {
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.premium-value {
+    color: #10b981 !important;
+    font-weight: 800 !important;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.active { background: #dcfce7; color: #166534; }
+
+@media print {
+    .view-header .header-actions { display: none; }
+    .document-view-container { padding: 0; background: #fff; }
+    .detail-section { box-shadow: none; border: 1px solid #e2e8f0; }
+}

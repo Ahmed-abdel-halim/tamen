@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { showToast } from "./Toast";
 
 type MonthlyAccountClosure = {
   id: number;
@@ -40,18 +41,12 @@ export default function MonthlyAccountClosuresReport() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [closures, setClosures] = useState<MonthlyAccountClosure[]>([]);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // توليد السنوات (من 2020 إلى السنة الحالية + 1)
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2019 + 2 }, (_, i) => (2020 + i).toString());
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+
 
   useEffect(() => {
     fetchReport();
@@ -80,7 +75,7 @@ export default function MonthlyAccountClosuresReport() {
         throw new Error(data.message || 'حدث خطأ');
       }
     } catch (error: any) {
-      setToast({ message: `حدث خطأ: ${error.message}`, type: 'error' });
+      showToast(`حدث خطأ: ${error.message}`, 'error');
       setClosures([]);
     } finally {
       setLoading(false);
@@ -104,40 +99,178 @@ export default function MonthlyAccountClosuresReport() {
     }
   };
 
-  const totalDue = closures.reduce((sum, closure) => sum + closure.due_amount, 0);
-  const totalPaid = closures.reduce((sum, closure) => sum + closure.paid_amount, 0);
-  const totalRemaining = closures.reduce((sum, closure) => sum + closure.remaining_amount, 0);
+  // حساب الإجماليات بدقة
+  const totalDue = closures.reduce((sum, closure) => sum + (Number(closure.due_amount) || 0), 0);
+  const totalPaid = closures.reduce((sum, closure) => sum + (Number(closure.paid_amount) || 0), 0);
+  const totalRemaining = closures.reduce((sum, closure) => sum + (Number(closure.remaining_amount) || 0), 0);
+
+  const handleExportExcel = () => {
+    if (closures.length === 0) return;
+
+    // Headers
+    const headers = ["الوكيل", "رقم الوكيل", "السنة", "الشهر", "القيمة المستحقة", "المدفوع", "المتبقي", "تاريخ الإغلاق"];
+    
+    // Rows
+    const rows = closures.map(closure => [
+      `"${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}"`,
+      `"${closure.branch_agent.code}"`,
+      `"${closure.year}"`,
+      `"${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}"`,
+      `"${closure.due_amount}"`,
+      `"${closure.paid_amount}"`,
+      `"${closure.remaining_amount}"`,
+      `"${formatDate(closure.created_at)}"`
+    ]);
+
+    // Summary Row
+    rows.push([]);
+    rows.push([`"الإجمالي"`, `""`, `""`, `""`, `"${totalDue}"`, `"${totalPaid}"`, `"${totalRemaining}"`, `""`]);
+
+    // Combine to CSV with semicolon for better Excel compatibility in common regional settings
+    const csvContent = "\uFEFF" + [headers.map(h => `"${h}"`), ...rows].map(e => e.join(";")).join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `تقرير_إغلاق_الحسابات_${selectedYear}_${selectedMonth || 'الكل'}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <section className="users-management">
-      <div className="users-breadcrumb">
-        <span>كشف إغلاق الحساب الشهري</span>
+      <div className="users-breadcrumb no-print" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        padding: '15px 20px',
+        background: 'var(--panel)',
+        borderRadius: '12px',
+        marginBottom: '20px',
+        border: '1px solid var(--border)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      }}>
+        <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text)' }}>
+          <i className="fa-solid fa-file-invoice-dollar" style={{ marginLeft: '10px', color: '#139625' }}></i>
+          كشف إغلاق الحساب الشهري
+        </span>
+        <div className="export-buttons" style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            onClick={handleExportExcel} 
+            disabled={closures.length === 0}
+            className="btn-submit no-print" 
+            style={{ 
+              background: '#139625', 
+              color: '#fff',
+              fontSize: '14px', 
+              padding: '8px 18px', 
+              minHeight: 'auto',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              border: 'none',
+              cursor: closures.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: closures.length === 0 ? 0.6 : 1,
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <i className="fa-solid fa-file-excel"></i>
+            تصدير إكسيل
+          </button>
+          <button 
+            onClick={handlePrint} 
+            className="btn-primary no-print" 
+            style={{ 
+              background: '#003173', 
+              color: '#fff',
+              fontSize: '14px', 
+              padding: '8px 18px', 
+              minHeight: 'auto',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <i className="fa-solid fa-print"></i>
+            طباعة التقرير
+          </button>
+        </div>
+      </div>
+
+      {/* تقرير فقط للطباعة (Print Header) */}
+      <div className="print-only" style={{ marginBottom: '40px', borderBottom: '3px double #000', paddingBottom: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', direction: 'rtl' }}>
+          {/* الجانب الأيمن (في RTL): اللوجو */}
+          <div style={{ flex: 1, textAlign: 'right' }}>
+            <img 
+              src="/img/logo3.png" 
+              alt="Logo" 
+              style={{ maxHeight: '110px', width: 'auto' }} 
+            />
+            <p style={{ margin: '8px 0 0', fontSize: '13px', fontWeight: 'bold', color: '#003173' }}>شركة المدار الليبي للتأمين</p>
+            <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#666' }}>Al Madar Libyan Insurance</p>
+          </div>
+
+          {/* المنتصف: العناوين */}
+          <div style={{ flex: 2, textAlign: 'center' }}>
+            <h1 style={{ margin: '0 0 10px', fontSize: '26px', color: '#003173', fontWeight: 900 }}>كشف إغلاق الحسابات الشهرية</h1>
+            <div style={{ 
+              display: 'inline-block', 
+              padding: '8px 30px', 
+              backgroundColor: '#f3f4f6',
+              border: '1px solid #139625', 
+              borderRadius: '25px',
+              fontSize: '15px',
+              fontWeight: 700,
+              color: '#139625'
+            }}>
+              الفترة: {selectedYear} / {selectedMonth ? MONTHS.find(m => m.value === selectedMonth)?.label : 'جميع الأشهر'}
+            </div>
+          </div>
+
+          {/* الجانب الأيسر (في RTL): QR Code */}
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ 
+              width: '100px', 
+              height: '100px', 
+              border: '2px solid #000', 
+              padding: '5px',
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              backgroundColor: '#fff',
+              marginLeft: '0',
+              marginRight: 'auto'
+            }}>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=AlMadarReport_${new Date().getTime()}`} 
+                alt="QR Code" 
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#000', fontWeight: 'bold' }}>رقم التقرير: {new Date().getTime().toString().slice(-8)}</p>
+            <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#666' }}>تاريخ الطباعة: {new Date().toLocaleDateString('ar-LY')}</p>
+          </div>
+        </div>
       </div>
 
       <div className="users-card">
-        {/* Toast Notification */}
-        {toast && (
-          <div
-            className={`toast ${toast.type}`}
-            style={{
-              position: 'fixed',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 10000,
-              padding: '12px 24px',
-              borderRadius: '8px',
-              background: toast.type === 'success' ? '#10b981' : '#ef4444',
-              color: '#fff',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            }}
-          >
-            {toast.message}
-          </div>
-        )}
+
 
         {/* Filters */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+        <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
           {/* السنة */}
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>السنة</label>

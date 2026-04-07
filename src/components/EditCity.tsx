@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { showToast } from "./Toast";
 
 export default function EditCity() {
   const navigate = useNavigate();
@@ -11,7 +12,6 @@ export default function EditCity() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -31,10 +31,7 @@ export default function EditCity() {
         name_en: data.name_en || "",
       });
     } catch (error: any) {
-      setToast({
-        message: `حدث خطأ أثناء جلب البيانات: ${error.message || ''}`,
-        type: 'error',
-      });
+      showToast(`حدث خطأ أثناء جلب البيانات: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -72,15 +69,12 @@ export default function EditCity() {
         throw new Error(data.message || 'حدث خطأ أثناء تحديث المدينة');
       }
 
-      setToast({ message: 'تم تحديث المدينة بنجاح', type: 'success' });
+      showToast('تم تحديث المدينة بنجاح', 'success');
       setTimeout(() => {
         navigate('/cities');
       }, 1000);
     } catch (error: any) {
-      setToast({
-        message: error.message || 'حدث خطأ أثناء تحديث المدينة',
-        type: 'error',
-      });
+      showToast(error.message || 'حدث خطأ أثناء تحديث المدينة', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -106,12 +100,6 @@ export default function EditCity() {
           العودة للقائمة
         </button>
       </div>
-
-      {toast && (
-        <div className={`toast ${toast.type}`}>
-          {toast.message}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="form-container">
         <div className="form-group">
