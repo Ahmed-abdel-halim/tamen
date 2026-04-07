@@ -132,7 +132,7 @@ export default function SchoolStudentInsuranceList() {
                     <td>{doc.student_name}</td>
                     <td>{doc.school_name}</td>
                     <td>{parseFloat(String(doc.premium_amount)).toFixed(3)} د.ل</td>
-                    {isAdmin && <td>{doc.agency_name || doc.branch_agent?.agency_name || '-'}</td>}
+                    {isAdmin && <td>{doc.agency_name || (doc as any).branch_agent?.agency_name || '-'}</td>}
                     <td>
                       <div className="action-buttons">
                         <button

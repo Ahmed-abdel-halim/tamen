@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 
@@ -39,20 +39,11 @@ export default function CommissionManagement() {
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  
   // Filters & Form State
   const [selectedAgent, setSelectedAgent] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
-  // New Settlement Form
-  const [settlementData, setSettlementData] = useState({
-    agent_id: '',
-    amount: '',
-    payment_method: 'نقدي',
-    notes: ''
-  });
 
   useEffect(() => {
     fetchAgents();

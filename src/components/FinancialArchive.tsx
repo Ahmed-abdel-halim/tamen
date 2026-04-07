@@ -69,7 +69,7 @@ export default function FinancialArchive() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.file) return showToast('يرجى اختيار ملف', 'warning');
+    if (!formData.file) return showToast('يرجى اختيار ملف', 'error');
 
     const data = new FormData();
     data.append('document_name', formData.document_name);

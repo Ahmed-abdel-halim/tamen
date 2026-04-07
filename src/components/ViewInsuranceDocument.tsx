@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 
@@ -612,7 +613,7 @@ export default function ViewInsuranceDocument() {
                     </tr>
                   </thead>
                   <tbody>
-                    {ownershipTransfers.map((transfer) => (
+                    {ownershipTransfers.map((transfer: OwnershipTransfer) => (
                       <tr key={transfer.id}>
                         <td>
                           {new Date(transfer.transferred_at).toLocaleString('ar-LY', {

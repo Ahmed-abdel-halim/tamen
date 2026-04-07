@@ -164,7 +164,7 @@ export default function ExpenseManagement() {
     }
   };
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <section className="users-management">

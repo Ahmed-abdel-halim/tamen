@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import InsuranceDocumentsList from '../InsuranceDocumentsList';
 import InternationalInsuranceList from '../InternationalInsuranceList';
 import TravelInsuranceList from '../TravelInsuranceList';
