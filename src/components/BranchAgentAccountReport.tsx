@@ -8,26 +8,53 @@ type BranchAgent = {
   code: string;
 };
 
-const MONTHS = [
-  { value: '1', label: 'يناير - 1' },
-  { value: '2', label: 'فبراير - 2' },
-  { value: '3', label: 'مارس - 3' },
-  { value: '4', label: 'أبريل - 4' },
-  { value: '5', label: 'مايو - 5' },
-  { value: '6', label: 'يونيو - 6' },
-  { value: '7', label: 'يوليو - 7' },
-  { value: '8', label: 'أغسطس - 8' },
-  { value: '9', label: 'سبتمبر - 9' },
-  { value: '10', label: 'أكتوبر - 10' },
-  { value: '11', label: 'نوفمبر - 11' },
-  { value: '12', label: 'ديسمبر - 12' },
-];
+type DatePreset = 'today' | 'yesterday' | 'last7' | 'thisMonth' | 'lastMonth' | 'custom';
+
+const toInputDate = (date: Date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetRange = (preset: DatePreset) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+
+  switch (preset) {
+    case 'today':
+      break;
+    case 'yesterday':
+      start.setDate(start.getDate() - 1);
+      end.setDate(end.getDate() - 1);
+      break;
+    case 'last7':
+      start.setDate(start.getDate() - 6);
+      break;
+    case 'thisMonth':
+      start.setDate(1);
+      break;
+    case 'lastMonth':
+      start.setMonth(start.getMonth() - 1, 1);
+      end.setDate(0);
+      break;
+    default:
+      break;
+  }
+
+  return { from: toInputDate(start), to: toInputDate(end) };
+};
 
 export default function BranchAgentAccountReport() {
-  const [reportType, setReportType] = useState<'monthly' | 'full'>('monthly');
+  const [reportType, setReportType] = useState<'range' | 'full'>('range');
   const [selectedAgent, setSelectedAgent] = useState<BranchAgent | null>(null);
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const initialRange = getPresetRange('today');
+  const [dateFrom, setDateFrom] = useState<string>(initialRange.from);
+  const [dateTo, setDateTo] = useState<string>(initialRange.to);
   
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [agentSearch, setAgentSearch] = useState("");
@@ -39,13 +66,17 @@ export default function BranchAgentAccountReport() {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // توليد السنوات (من 2020 إلى السنة الحالية + 1)
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 2019 + 2 }, (_, i) => (2020 + i).toString());
-
   useEffect(() => {
     loadUserPermissions();
   }, []);
+
+  useEffect(() => {
+    if (datePreset !== 'custom') {
+      const range = getPresetRange(datePreset);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+  }, [datePreset]);
 
   useEffect(() => {
     // جلب الوكلاء بعد تحميل معلومات المستخدم
@@ -132,8 +163,13 @@ export default function BranchAgentAccountReport() {
       return;
     }
 
-    if (reportType === 'monthly' && (!selectedYear || !selectedMonth)) {
-      showToast('يرجى اختيار السنة والشهر', 'error');
+    if (reportType === 'range' && (!dateFrom || !dateTo)) {
+      showToast('يرجى تحديد نطاق التاريخ', 'error');
+      return;
+    }
+
+    if (reportType === 'range' && dateFrom > dateTo) {
+      showToast('تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية', 'error');
       return;
     }
 
@@ -142,10 +178,11 @@ export default function BranchAgentAccountReport() {
       let url = `/api/branches-agents/${agentToUse.id}/account-report`;
       const params = new URLSearchParams();
       
-      if (reportType === 'monthly') {
-        params.append('type', 'monthly');
-        params.append('year', selectedYear);
-        params.append('month', selectedMonth);
+      if (reportType === 'range') {
+        params.append('type', 'range');
+        params.append('from_date', dateFrom);
+        params.append('to_date', dateTo);
+        params.append('preset', datePreset);
       } else {
         params.append('type', 'full');
       }
@@ -247,12 +284,12 @@ export default function BranchAgentAccountReport() {
               <input
                 type="radio"
                 name="reportType"
-                value="monthly"
-                checked={reportType === 'monthly'}
-                onChange={(e) => setReportType(e.target.value as 'monthly')}
+                value="range"
+                checked={reportType === 'range'}
+                onChange={(e) => setReportType(e.target.value as 'range')}
                 style={{ marginLeft: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
               />
-              <span>كشف حساب شهري</span>
+              <span>كشف حسب فترة زمنية</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <input
@@ -393,13 +430,13 @@ export default function BranchAgentAccountReport() {
           </div>
           ) : null}
 
-          {/* السنة (فقط لكشف حساب شهري) */}
-          {reportType === 'monthly' && (
+          {/* اختيار الفترة الذكية */}
+          {reportType === 'range' && (
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>السنة</label>
+              <label>فترة سريعة</label>
               <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                value={datePreset}
+                onChange={(e) => setDatePreset(e.target.value as DatePreset)}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -410,22 +447,27 @@ export default function BranchAgentAccountReport() {
                   minHeight: 42,
                 }}
               >
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
+                <option value="today">اليوم</option>
+                <option value="yesterday">أمس</option>
+                <option value="last7">آخر 7 أيام</option>
+                <option value="thisMonth">هذا الشهر</option>
+                <option value="lastMonth">الشهر السابق</option>
+                <option value="custom">تحديد مخصص</option>
               </select>
             </div>
           )}
 
-          {/* الشهر (فقط لكشف حساب شهري) */}
-          {reportType === 'monthly' && (
+          {/* من تاريخ */}
+          {reportType === 'range' && (
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>الشهر</label>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
+              <label>من تاريخ</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  if (datePreset !== 'custom') setDatePreset('custom');
+                }}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -435,13 +477,31 @@ export default function BranchAgentAccountReport() {
                   fontSize: 14,
                   minHeight: 42,
                 }}
-              >
-                {MONTHS.map((month) => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
+              />
+            </div>
+          )}
+
+          {/* إلى تاريخ */}
+          {reportType === 'range' && (
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>إلى تاريخ</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  if (datePreset !== 'custom') setDatePreset('custom');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  background: '#fff',
+                  fontSize: 14,
+                  minHeight: 42,
+                }}
+              />
             </div>
           )}
         </div>
@@ -449,14 +509,14 @@ export default function BranchAgentAccountReport() {
         <div style={{ marginTop: '24px' }}>
           <button
             onClick={handlePrint}
-            disabled={loading || !selectedAgent || (reportType === 'monthly' && (!selectedYear || !selectedMonth))}
+            disabled={loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo))}
             className="btn-submit"
             style={{
               padding: '12px 24px',
               fontSize: '16px',
               fontWeight: 600,
-              opacity: loading || !selectedAgent || (reportType === 'monthly' && (!selectedYear || !selectedMonth)) ? 0.6 : 1,
-              cursor: loading || !selectedAgent || (reportType === 'monthly' && (!selectedYear || !selectedMonth)) ? 'not-allowed' : 'pointer',
+              opacity: loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo)) ? 0.6 : 1,
+              cursor: loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo)) ? 'not-allowed' : 'pointer',
             }}
           >
             {loading ? (

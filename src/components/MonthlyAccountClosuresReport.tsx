@@ -21,6 +21,9 @@ type MonthlyAccountClosure = {
   };
 };
 
+type FilterMode = 'monthly' | 'range';
+type DatePreset = 'today' | 'yesterday' | 'last7' | 'thisMonth' | 'lastMonth' | 'custom';
+
 const MONTHS = [
   { value: '1', label: 'يناير' },
   { value: '2', label: 'فبراير' },
@@ -36,9 +39,52 @@ const MONTHS = [
   { value: '12', label: 'ديسمبر' },
 ];
 
+const toInputDate = (date: Date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetRange = (preset: DatePreset) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+
+  switch (preset) {
+    case 'today':
+      break;
+    case 'yesterday':
+      start.setDate(start.getDate() - 1);
+      end.setDate(end.getDate() - 1);
+      break;
+    case 'last7':
+      start.setDate(start.getDate() - 6);
+      break;
+    case 'thisMonth':
+      start.setDate(1);
+      break;
+    case 'lastMonth':
+      start.setMonth(start.getMonth() - 1, 1);
+      end.setDate(0);
+      break;
+    default:
+      break;
+  }
+
+  return { from: toInputDate(start), to: toInputDate(end) };
+};
+
 export default function MonthlyAccountClosuresReport() {
+  const [filterMode, setFilterMode] = useState<FilterMode>('range');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
+  const defaultRange = getPresetRange('thisMonth');
+  const [dateFrom, setDateFrom] = useState<string>(defaultRange.from);
+  const [dateTo, setDateTo] = useState<string>(defaultRange.to);
   const [closures, setClosures] = useState<MonthlyAccountClosure[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -49,15 +95,29 @@ export default function MonthlyAccountClosuresReport() {
 
 
   useEffect(() => {
+    if (datePreset !== 'custom') {
+      const range = getPresetRange(datePreset);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+  }, [datePreset]);
+
+  useEffect(() => {
     fetchReport();
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, filterMode, dateFrom, dateTo]);
 
   const fetchReport = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedYear) params.append('year', selectedYear);
-      if (selectedMonth) params.append('month', selectedMonth);
+      if (filterMode === 'monthly') {
+        if (selectedYear) params.append('year', selectedYear);
+        if (selectedMonth) params.append('month', selectedMonth);
+      } else {
+        params.append('type', 'range');
+        if (dateFrom) params.append('from_date', dateFrom);
+        if (dateTo) params.append('to_date', dateTo);
+      }
 
       const res = await fetch(`/api/branches-agents/monthly-account-closures-report?${params}`, {
         headers: { 'Accept': 'application/json' }
@@ -133,7 +193,10 @@ export default function MonthlyAccountClosuresReport() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `تقرير_إغلاق_الحسابات_${selectedYear}_${selectedMonth || 'الكل'}.csv`);
+    const reportLabel = filterMode === 'monthly'
+      ? `${selectedYear}_${selectedMonth || 'الكل'}`
+      : `${dateFrom || 'من'}_${dateTo || 'إلى'}`;
+    link.setAttribute("download", `تقرير_إغلاق_الحسابات_${reportLabel}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -236,7 +299,10 @@ export default function MonthlyAccountClosuresReport() {
               fontWeight: 700,
               color: '#139625'
             }}>
-              الفترة: {selectedYear} / {selectedMonth ? MONTHS.find(m => m.value === selectedMonth)?.label : 'جميع الأشهر'}
+              الفترة: {filterMode === 'monthly'
+                ? `${selectedYear} / ${selectedMonth ? MONTHS.find(m => m.value === selectedMonth)?.label : 'جميع الأشهر'}`
+                : `${dateFrom || '-'} إلى ${dateTo || '-'}`
+              }
             </div>
           </div>
 
@@ -270,7 +336,20 @@ export default function MonthlyAccountClosuresReport() {
 
 
         {/* Filters */}
+        <div className="no-print" style={{ marginBottom: '14px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input type="radio" name="closureReportType" value="range" checked={filterMode === 'range'} onChange={(e) => setFilterMode(e.target.value as FilterMode)} style={{ marginLeft: '8px' }} />
+            <span>فترة زمنية</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input type="radio" name="closureReportType" value="monthly" checked={filterMode === 'monthly'} onChange={(e) => setFilterMode(e.target.value as FilterMode)} style={{ marginLeft: '8px' }} />
+            <span>سنة/شهر</span>
+          </label>
+        </div>
+
         <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+          {filterMode === 'monthly' ? (
+            <>
           {/* السنة */}
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>السنة</label>
@@ -319,6 +398,41 @@ export default function MonthlyAccountClosuresReport() {
               ))}
             </select>
           </div>
+            </>
+          ) : (
+            <>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>فترة سريعة</label>
+                <select
+                  value={datePreset}
+                  onChange={(e) => setDatePreset(e.target.value as DatePreset)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    background: '#fff',
+                    fontSize: 14,
+                    minHeight: 42,
+                  }}
+                >
+                  <option value="today">اليوم</option>
+                  <option value="yesterday">أمس</option>
+                  <option value="last7">آخر 7 أيام</option>
+                  <option value="thisMonth">هذا الشهر</option>
+                  <option value="lastMonth">الشهر السابق</option>
+                  <option value="custom">تحديد مخصص</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>من - إلى</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                  <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Table */}

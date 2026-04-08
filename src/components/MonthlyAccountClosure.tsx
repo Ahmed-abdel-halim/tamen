@@ -23,6 +23,9 @@ type Document = {
   date: string;
 };
 
+type FilterMode = 'monthly' | 'range';
+type DatePreset = 'today' | 'yesterday' | 'last7' | 'thisMonth' | 'lastMonth' | 'custom';
+
 const MONTHS = [
   { value: '1', label: 'يناير' },
   { value: '2', label: 'فبراير' },
@@ -38,10 +41,53 @@ const MONTHS = [
   { value: '12', label: 'ديسمبر' },
 ];
 
+const toInputDate = (date: Date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetRange = (preset: DatePreset) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+
+  switch (preset) {
+    case 'today':
+      break;
+    case 'yesterday':
+      start.setDate(start.getDate() - 1);
+      end.setDate(end.getDate() - 1);
+      break;
+    case 'last7':
+      start.setDate(start.getDate() - 6);
+      break;
+    case 'thisMonth':
+      start.setDate(1);
+      break;
+    case 'lastMonth':
+      start.setMonth(start.getMonth() - 1, 1);
+      end.setDate(0);
+      break;
+    default:
+      break;
+  }
+
+  return { from: toInputDate(start), to: toInputDate(end) };
+};
+
 export default function MonthlyAccountClosure() {
+  const [filterMode, setFilterMode] = useState<FilterMode>('range');
   const [selectedAgent, setSelectedAgent] = useState<BranchAgent | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const initialRange = getPresetRange('today');
+  const [dateFrom, setDateFrom] = useState<string>(initialRange.from);
+  const [dateTo, setDateTo] = useState<string>(initialRange.to);
   const [selectedInsuranceType, setSelectedInsuranceType] = useState<string>("all");
   
   const [agents, setAgents] = useState<BranchAgent[]>([]);
@@ -64,6 +110,14 @@ export default function MonthlyAccountClosure() {
   useEffect(() => {
     fetchAgents();
   }, []);
+
+  useEffect(() => {
+    if (datePreset !== 'custom') {
+      const range = getPresetRange(datePreset);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+  }, [datePreset]);
 
 
 
@@ -232,8 +286,20 @@ export default function MonthlyAccountClosure() {
   }, [selectedInsuranceType]);
 
   const handleSearch = async () => {
-    if (!selectedAgent || !selectedYear || !selectedMonth) {
-      showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
+    if (!selectedAgent) {
+      showToast('يرجى اختيار الوكيل', 'error');
+      return;
+    }
+    if (filterMode === 'monthly' && (!selectedYear || !selectedMonth)) {
+      showToast('يرجى اختيار السنة والشهر', 'error');
+      return;
+    }
+    if (filterMode === 'range' && (!dateFrom || !dateTo)) {
+      showToast('يرجى تحديد من/إلى تاريخ', 'error');
+      return;
+    }
+    if (filterMode === 'range' && dateFrom > dateTo) {
+      showToast('تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية', 'error');
       return;
     }
 
@@ -241,9 +307,16 @@ export default function MonthlyAccountClosure() {
     try {
       const params = new URLSearchParams({
         branch_agent_id: selectedAgent.id.toString(),
-        year: selectedYear,
-        month: selectedMonth,
       });
+      if (filterMode === 'monthly') {
+        params.append('type', 'monthly');
+        params.append('year', selectedYear);
+        params.append('month', selectedMonth);
+      } else {
+        params.append('type', 'range');
+        params.append('from_date', dateFrom);
+        params.append('to_date', dateTo);
+      }
       
       // إضافة نوع التأمين إذا كان محدداً
       if (selectedInsuranceType && selectedInsuranceType !== "all") {
@@ -292,6 +365,10 @@ export default function MonthlyAccountClosure() {
   };
 
   const handleSave = async () => {
+    if (filterMode !== 'monthly') {
+      showToast('الحفظ متاح في وضع الإغلاق الشهري فقط', 'error');
+      return;
+    }
     if (!selectedAgent || !selectedYear || !selectedMonth) {
       showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
       return;
@@ -343,22 +420,36 @@ export default function MonthlyAccountClosure() {
   };
 
   const handlePrint = () => {
-    if (!selectedAgent || !selectedYear || !selectedMonth) {
-      showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
+    if (!selectedAgent) {
+      showToast('يرجى اختيار الوكيل', 'error');
+      return;
+    }
+    if (filterMode === 'monthly' && (!selectedYear || !selectedMonth)) {
+      showToast('يرجى اختيار السنة والشهر', 'error');
+      return;
+    }
+    if (filterMode === 'range' && (!dateFrom || !dateTo)) {
+      showToast('يرجى تحديد من/إلى تاريخ', 'error');
       return;
     }
 
-    const params = new URLSearchParams({
-      year: selectedYear,
-      month: selectedMonth,
-    });
+    const params = new URLSearchParams();
+    let url = '';
+    if (filterMode === 'monthly') {
+      params.append('year', selectedYear);
+      params.append('month', selectedMonth);
+      url = `/api/branches-agents/${selectedAgent.id}/monthly-account-closure-print?${params.toString()}`;
+    } else {
+      params.append('type', 'range');
+      params.append('from_date', dateFrom);
+      params.append('to_date', dateTo);
+      url = `/api/branches-agents/${selectedAgent.id}/account-report?${params.toString()}`;
+    }
     
     // إضافة نوع التأمين إذا كان محدداً
     if (selectedInsuranceType && selectedInsuranceType !== "all") {
       params.append('insurance_type', selectedInsuranceType);
     }
-
-    const url = `/api/branches-agents/${selectedAgent.id}/monthly-account-closure-print?${params.toString()}`;
 
     // إنشاء iframe مخفي للطباعة
     const iframe = document.createElement('iframe');
@@ -418,6 +509,31 @@ export default function MonthlyAccountClosure() {
 
 
         {/* Filters */}
+        <div style={{ marginBottom: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="filterMode"
+              value="range"
+              checked={filterMode === 'range'}
+              onChange={(e) => setFilterMode(e.target.value as FilterMode)}
+              style={{ marginLeft: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>فترة زمنية</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="filterMode"
+              value="monthly"
+              checked={filterMode === 'monthly'}
+              onChange={(e) => setFilterMode(e.target.value as FilterMode)}
+              style={{ marginLeft: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>إغلاق شهري</span>
+          </label>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.5fr auto', gap: '20px', marginBottom: '24px', alignItems: 'flex-end' }}>
           {/* الوكيل (select2) */}
           <div
@@ -541,53 +657,88 @@ export default function MonthlyAccountClosure() {
             )}
           </div>
 
-          {/* السنة */}
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>السنة</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                background: '#fff',
-                fontSize: 14,
-                minHeight: 42,
-              }}
-            >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* الشهر */}
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>الشهر</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                background: '#fff',
-                fontSize: 14,
-                minHeight: 42,
-              }}
-            >
-              {MONTHS.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* السنة / الشهر في الوضع الشهري */}
+          {filterMode === 'monthly' ? (
+            <>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>السنة</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    background: '#fff',
+                    fontSize: 14,
+                    minHeight: 42,
+                  }}
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>الشهر</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    background: '#fff',
+                    fontSize: 14,
+                    minHeight: 42,
+                  }}
+                >
+                  {MONTHS.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>فترة سريعة</label>
+                <select
+                  value={datePreset}
+                  onChange={(e) => setDatePreset(e.target.value as DatePreset)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    background: '#fff',
+                    fontSize: 14,
+                    minHeight: 42,
+                  }}
+                >
+                  <option value="today">اليوم</option>
+                  <option value="yesterday">أمس</option>
+                  <option value="last7">آخر 7 أيام</option>
+                  <option value="thisMonth">هذا الشهر</option>
+                  <option value="lastMonth">الشهر السابق</option>
+                  <option value="custom">تحديد مخصص</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>من - إلى</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                  <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* نوع التأمين */}
           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -620,15 +771,15 @@ export default function MonthlyAccountClosure() {
           <div style={{ marginBottom: 0 }}>
             <button
               onClick={handleSearch}
-              disabled={loading || !selectedAgent || !selectedYear || !selectedMonth}
+              disabled={loading || !selectedAgent || (filterMode === 'monthly' ? (!selectedYear || !selectedMonth) : (!dateFrom || !dateTo))}
               className="btn-submit"
               style={{
                 padding: '10px 24px',
                 fontSize: '16px',
                 fontWeight: 600,
                 minHeight: 42,
-                opacity: loading || !selectedAgent || !selectedYear || !selectedMonth ? 0.6 : 1,
-                cursor: loading || !selectedAgent || !selectedYear || !selectedMonth ? 'not-allowed' : 'pointer',
+                opacity: loading || !selectedAgent || (filterMode === 'monthly' ? (!selectedYear || !selectedMonth) : (!dateFrom || !dateTo)) ? 0.6 : 1,
+                cursor: loading || !selectedAgent || (filterMode === 'monthly' ? (!selectedYear || !selectedMonth) : (!dateFrom || !dateTo)) ? 'not-allowed' : 'pointer',
               }}
             >
               {loading ? (
@@ -867,11 +1018,14 @@ export default function MonthlyAccountClosure() {
               <button
                 onClick={handleSave}
                 className="btn-submit"
+                disabled={filterMode !== 'monthly'}
                 style={{
                   padding: '12px 24px',
                   fontSize: '16px',
                   fontWeight: 600,
                   backgroundColor: '#10b981',
+                  opacity: filterMode !== 'monthly' ? 0.6 : 1,
+                  cursor: filterMode !== 'monthly' ? 'not-allowed' : 'pointer',
                 }}
               >
                 <i className="fa-solid fa-save" style={{ marginLeft: '8px' }}></i>
@@ -900,7 +1054,7 @@ export default function MonthlyAccountClosure() {
             padding: '40px',
             color: 'var(--muted)',
           }}>
-            اختر الوكيل والسنة والشهر واضغط على بحث لعرض البيانات
+            اختر الوكيل وحدد فترة البحث ثم اضغط على "بحث" لعرض البيانات
           </div>
         )}
       </div>
