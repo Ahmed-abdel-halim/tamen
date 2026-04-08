@@ -73,6 +73,26 @@
   color: var(--text) !important;
 }
 
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: var(--muted) !important;
+  opacity: 1;
+}
+
+/* Prevent browser autofill from forcing light background in dark mode */
+[data-theme='dark'] input:-webkit-autofill,
+[data-theme='dark'] input:-webkit-autofill:hover,
+[data-theme='dark'] input:-webkit-autofill:focus,
+[data-theme='dark'] textarea:-webkit-autofill,
+[data-theme='dark'] select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text) !important;
+  box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+  caret-color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 [data-theme='dark'] .breadcrumbs,
 [data-theme='dark'] .section-title,
 [data-theme='dark'] .brand-subtitle,
@@ -4030,11 +4050,42 @@ tbody tr:last-child td {
 }
 
 .permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
   direction: rtl;
+}
+
+.permissions-grid-scrollable {
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .permissions-grid label {
   user-select: none;
+}
+
+.permissions-grid span {
+  font-size: 0.875rem;
+}
+
+.permission-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  color: var(--text);
+}
+
+.permission-option:hover {
+  background: var(--hover-bg);
 }
 
 .permissions-grid input[type="checkbox"] {
@@ -4047,6 +4098,18 @@ tbody tr:last-child td {
 .permissions-grid input[type="checkbox"]:checked+span {
   font-weight: 600;
   color: #014cb1;
+}
+
+.permissions-section-title {
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.admin-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  margin-bottom: 0;
 }
 
 .modal-header {

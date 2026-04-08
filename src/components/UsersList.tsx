@@ -694,7 +694,7 @@ export default function UsersList() {
                   />
                   <span>مدير النظام (Admin)</span>
                 </label>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.5rem', marginBottom: 0 }}>
+                <p className="admin-note">
                   المدير لديه صلاحيات كاملة على جميع أجزاء النظام
                 </p>
               </div>
@@ -702,32 +702,14 @@ export default function UsersList() {
               {!formData.is_admin && (
                 <>
                   <div className="form-group">
-                    <label style={{ marginBottom: '1rem', display: 'block' }}>
+                    <label className="permissions-section-title">
                       أنواع التأمين المصرح بها <span className="required">*</span>
                     </label>
-                    <div className="permissions-grid" style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(2, 1fr)', 
-                      gap: '0.75rem',
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      padding: '1rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      backgroundColor: '#f8fafc',
-                      direction: 'rtl'
-                    }}>
+                    <div className="permissions-grid permissions-grid-scrollable">
                       {INSURANCE_TYPES.map((type) => (
                         <label 
                           key={type} 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem', 
-                            cursor: 'pointer',
-                            padding: '0.5rem',
-                            borderRadius: '6px'
-                          }}
+                          className="permission-option"
                         >
                           <input
                             type="checkbox"
@@ -747,40 +729,21 @@ export default function UsersList() {
                             }}
                             style={{ width: 'auto', cursor: 'pointer' }}
                           />
-                          <span style={{ fontSize: '0.875rem' }}>{type}</span>
+                          <span>{type}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label style={{ marginBottom: '1rem', display: 'block' }}>
+                    <label className="permissions-section-title">
                       التقارير المصرح بها
                     </label>
-                    <div className="permissions-grid" style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(2, 1fr)', 
-                      gap: '0.75rem',
-                      padding: '1rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      backgroundColor: '#f8fafc',
-                      direction: 'rtl'
-                    }}>
+                    <div className="permissions-grid">
                       {REPORT_PERMISSIONS.map((permission) => (
                         <label 
                           key={permission} 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem', 
-                            cursor: 'pointer',
-                            padding: '0.5rem',
-                            borderRadius: '6px',
-                            transition: 'background-color 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          className="permission-option"
                         >
                           <input
                             type="checkbox"
@@ -800,7 +763,7 @@ export default function UsersList() {
                             }}
                             style={{ width: 'auto', cursor: 'pointer' }}
                           />
-                          <span style={{ fontSize: '0.875rem' }}>{permission}</span>
+                          <span>{permission}</span>
                         </label>
                       ))}
                     </div>

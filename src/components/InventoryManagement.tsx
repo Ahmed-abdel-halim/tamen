@@ -4,8 +4,10 @@ import { showToast } from "./Toast";
 interface StoreItem {
   id: number;
   name: string;
-  category: 'paper' | 'electronic' | 'furniture' | 'other';
+  category: string;
   unit: string;
+  price?: number;
+  unit_price?: number;
   min_threshold: number;
   stocks: { quantity: number; warehouse_location: string }[];
 }
@@ -24,6 +26,13 @@ interface Custody {
   notes?: string;
 }
 
+const DEFAULT_CATEGORY_OPTIONS = [
+  { value: 'paper', label: 'مطبوعات ودفاتر (Paper)' },
+  { value: 'electronic', label: 'أجهزة إلكترونية (Devices)' },
+  { value: 'furniture', label: 'أثاث ومعدات (Furniture)' },
+];
+const FALLBACK_CATEGORY_OPTION = { value: 'other', label: 'أخرى (Other)' };
+
 export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState<'store' | 'custody' | 'assign' | 'log'>('store');
   const [items, setItems] = useState<StoreItem[]>([]);
@@ -33,11 +42,21 @@ export default function InventoryManagement() {
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showStockModal, setShowStockModal] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
   // Form states
-  const [newItem, setNewItem] = useState({ name: '', category: 'paper', unit: 'قطعة', min_threshold: 5 });
-  const [stockUpdate, setStockUpdate] = useState({ item_id: '', quantity: 0, location: '' });
+  const getDefaultItemForm = () => ({
+    name: '',
+    category: 'paper',
+    unit: 'قطعة',
+    price: '',
+    min_threshold: 5,
+    quantity: 0,
+    location: '',
+  });
+  const [newItem, setNewItem] = useState(getDefaultItemForm());
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   const [assignment, setAssignment] = useState({
     item_id: '',
     recipient_id: '',
@@ -60,7 +79,7 @@ export default function InventoryManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const itemsRes = await fetch('/api/inventory/items');
+      const itemsRes = await fetch(`/api/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
       const itemsData = await itemsRes.json();
       setItems(Array.isArray(itemsData) ? itemsData : []);
 
@@ -85,48 +104,121 @@ export default function InventoryManagement() {
     }
   };
 
-  const handleCreateItem = async (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fetch('/api/inventory/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newItem)
-      });
-      if (res.ok) {
-        setNewItem({ name: '', category: 'paper', unit: 'قطعة', min_threshold: 5 });
-        setShowAddModal(false);
-        fetchData();
-        showToast('تم إضافة الصنف بنجاح', 'success');
+      const selectedCategory = showCustomCategoryInput
+        ? customCategory.trim()
+        : newItem.category;
+      if (!selectedCategory) {
+        showToast('يرجى إدخال اسم التصنيف الجديد', 'error');
+        setSubmitting(false);
+        return;
       }
+
+      const payload = {
+        name: newItem.name,
+        category: selectedCategory,
+        unit: newItem.unit,
+        min_threshold: Number(newItem.min_threshold) || 0,
+        price: newItem.price === '' ? null : Number(newItem.price),
+      };
+      const isEditMode = editingItemId !== null;
+      const itemRes = await fetch(isEditMode ? `/api/inventory/items/${editingItemId}` : '/api/inventory/items', {
+        method: isEditMode ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!itemRes.ok) {
+        throw new Error('فشل حفظ بيانات الصنف');
+      }
+
+      let targetItemId = editingItemId;
+      if (!isEditMode) {
+        try {
+          const created = await itemRes.json();
+          targetItemId = created?.id ?? targetItemId;
+        } catch {
+          targetItemId = null;
+        }
+      }
+
+      if (targetItemId) {
+        const originalItem = items.find((item) => item.id === targetItemId);
+        const originalQty = originalItem?.stocks?.[0]?.quantity ?? 0;
+        const originalLocation = originalItem?.stocks?.[0]?.warehouse_location ?? '';
+        const newQty = Number(newItem.quantity) || 0;
+        const qtyDelta = isEditMode ? newQty - originalQty : newQty;
+        const locationChanged = isEditMode ? newItem.location !== originalLocation : !!newItem.location;
+
+        if (qtyDelta !== 0 || locationChanged) {
+          const stockRes = await fetch('/api/inventory/update-stock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_id: String(targetItemId),
+              quantity: qtyDelta,
+              location: newItem.location,
+            }),
+          });
+          if (!stockRes.ok) {
+            throw new Error('فشل تحديث الكمية أو موقع التخزين');
+          }
+        }
+      }
+
+      setNewItem(getDefaultItemForm());
+      setCustomCategory('');
+      setShowCustomCategoryInput(false);
+      setEditingItemId(null);
+      setShowAddModal(false);
+      await fetchData();
+      showToast(isEditMode ? 'تم تعديل الصنف بنجاح' : 'تم إضافة الصنف بنجاح', 'success');
     } catch (error) {
-      console.error('Error creating item:', error);
-      showToast('حدث خطأ', 'error');
+      console.error('Error saving item:', error);
+      showToast('حدث خطأ أثناء حفظ الصنف', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleUpdateStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const openAddItemModal = () => {
+    setEditingItemId(null);
+    setNewItem(getDefaultItemForm());
+    setCustomCategory('');
+    setShowCustomCategoryInput(false);
+    setShowAddModal(true);
+  };
+
+  const openEditItemModal = (item: StoreItem) => {
+    const isDefaultCategory = DEFAULT_CATEGORY_OPTIONS.some((opt) => opt.value === item.category);
+    setEditingItemId(item.id);
+    setNewItem({
+      name: item.name ?? '',
+      category: isDefaultCategory ? (item.category ?? 'other') : 'other',
+      unit: item.unit ?? 'قطعة',
+      price: String(item.price ?? item.unit_price ?? ''),
+      min_threshold: item.min_threshold ?? 0,
+      quantity: item.stocks?.[0]?.quantity ?? 0,
+      location: item.stocks?.[0]?.warehouse_location ?? '',
+    });
+    setCustomCategory(isDefaultCategory ? '' : (item.category ?? ''));
+    setShowCustomCategoryInput(!isDefaultCategory);
+    setShowAddModal(true);
+  };
+
+  const handleDeleteItem = async (item: StoreItem) => {
+    if (!window.confirm(`هل تريد حذف الصنف "${item.name}"؟`)) return;
     try {
-      const res = await fetch('/api/inventory/update-stock', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stockUpdate)
-      });
-      if (res.ok) {
-        setStockUpdate({ item_id: '', quantity: 0, location: '' });
-        setShowStockModal(false);
-        fetchData();
-        showToast('تم تحديث المخزون بنجاح', 'success');
-      }
+      const res = await fetch(`/api/inventory/items/${item.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('فشل الحذف');
+      showToast('تم حذف الصنف بنجاح', 'success');
+      await fetchData();
     } catch (error) {
-      showToast('حدث خطأ أثناء تحديث المخزون', 'error');
-    } finally {
-      setSubmitting(false);
+      console.error('Error deleting item:', error);
+      showToast('تعذر حذف الصنف، تأكد أنه غير مرتبط بحركات عهدة', 'error');
     }
   };
 
@@ -296,6 +388,23 @@ export default function InventoryManagement() {
   };
 
   const filteredItems = items.filter(i => i.name.includes(searchTerm));
+  const categoryOptions = [
+    ...DEFAULT_CATEGORY_OPTIONS,
+    ...Array.from(
+      new Set(
+        items
+          .map((i) => i.category)
+          .filter((cat) => !!cat && cat !== FALLBACK_CATEGORY_OPTION.value && !DEFAULT_CATEGORY_OPTIONS.some((opt) => opt.value === cat))
+      )
+    ).map((cat) => ({ value: cat, label: cat })),
+    FALLBACK_CATEGORY_OPTION,
+  ];
+  const getItemPrice = (item: StoreItem) => {
+    const value = item.price ?? item.unit_price;
+    if (value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
 
   // Custom inline styles to fit gracefully with the dark/light theme logic using variables
   const tabBtnStyle = (isActive: boolean) => ({
@@ -360,7 +469,7 @@ export default function InventoryManagement() {
               </div>
               <button 
                 className="primary add-user-btn" 
-                onClick={() => setShowAddModal(true)}
+                onClick={openAddItemModal}
               >
                 <i className="fa-solid fa-plus"></i> إضافة صنف 
               </button>
@@ -376,16 +485,17 @@ export default function InventoryManagement() {
                       <th>#</th>
                       <th>الصنف</th>
                       <th>التصنيف</th>
+                      <th>سعر الصنف</th>
                       <th>الكمية المتوفرة</th>
                       <th>الوحدة</th>
                       <th>موقع التخزين</th>
-                      <th>إجراءات المخزون</th>
+                      <th>الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredItems.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                        <td colSpan={8} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
                           <i className="fa-solid fa-box-open" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
                           لا توجد أصناف في المخزن تناسب بحثك
                         </td>
@@ -396,6 +506,15 @@ export default function InventoryManagement() {
                           <td>{index + 1}</td>
                           <td style={{ fontWeight: 'bold' }}>{item.name}</td>
                           <td>{getCategoryName(item.category)}</td>
+                          <td>
+                            {getItemPrice(item) !== null ? (
+                              <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                                {Number(getItemPrice(item)).toLocaleString()} د.ل
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--muted)' }}>-</span>
+                            )}
+                          </td>
                           <td>
                             <span style={{ 
                               padding: '4px 12px', 
@@ -410,17 +529,24 @@ export default function InventoryManagement() {
                           <td>{item.unit}</td>
                           <td>{item.stocks?.[0]?.warehouse_location || '-'}</td>
                           <td>
-                             <button 
-                                className="action-btn edit" 
-                                onClick={() => {
-                                  setStockUpdate({...stockUpdate, item_id: item.id.toString()});
-                                  setShowStockModal(true);
-                                }}
-                                title="تعديل المخزون للمتوفر"
-                                style={{ display: 'flex', gap: '6px', alignItems: 'center', width: 'auto', padding: '6px 12px', borderRadius: '8px' }}
+                            <div className="action-buttons">
+                              <button
+                                className="action-btn edit"
+                                onClick={() => openEditItemModal(item)}
+                                title="تعديل الصنف"
+                                aria-label="تعديل الصنف"
                               >
-                                <i className="fa-solid fa-pen-to-square"></i> الرصيد
+                                <i className="fa-solid fa-pen-to-square"></i>
                               </button>
+                              <button
+                                className="action-btn delete"
+                                onClick={() => handleDeleteItem(item)}
+                                title="حذف الصنف"
+                                aria-label="حذف الصنف"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -636,13 +762,13 @@ export default function InventoryManagement() {
         <div className="modal" onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}>
           <div className="modal-content user-form-modal">
             <div className="modal-header">
-              <h3>إضافة صنف جديد لتعريفة المخزن</h3>
+              <h3>{editingItemId ? 'تعديل بيانات الصنف' : 'إضافة صنف جديد لتعريفة المخزن'}</h3>
               <button className="modal-close" onClick={() => setShowAddModal(false)} aria-label="إغلاق">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
             
-            <form onSubmit={handleCreateItem} className="user-form">
+            <form onSubmit={handleSaveItem} className="user-form">
               <div className="form-group">
                 <label>اسم الصنف (مثال: دفاتر تأمين اجباري، جهاز بصمة) <span className="required">*</span></label>
                 <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
@@ -650,13 +776,32 @@ export default function InventoryManagement() {
               
               <div className="form-group">
                 <label>التصنيف <span className="required">*</span></label>
-                <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value as any})}>
-                  <option value="paper">مطبوعات ودفاتر (Paper)</option>
-                  <option value="electronic">أجهزة إلكترونية (Devices)</option>
-                  <option value="furniture">أثاث ومعدات (Furniture)</option>
-                  <option value="other">أخرى (Other)</option>
+                <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
+                  {categoryOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
+                <button
+                  type="button"
+                  className="btn-submit"
+                  style={{ width: 'fit-content', marginTop: '8px' }}
+                  onClick={() => setShowCustomCategoryInput((prev) => !prev)}
+                >
+                  {showCustomCategoryInput ? 'إلغاء إضافة تصنيف جديد' : '+ إضافة تصنيف جديد'}
+                </button>
               </div>
+
+              {showCustomCategoryInput && (
+                <div className="form-group">
+                  <label>اسم التصنيف الجديد <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="مثال: أدوات مكتبية"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
@@ -664,46 +809,47 @@ export default function InventoryManagement() {
                   <input type="text" placeholder="مثال: قطعة، دفتر" value={newItem.unit} onChange={e => setNewItem({...newItem, unit: e.target.value})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
+                  <label>سعر الصنف (اختياري)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="مثال: 150"
+                    value={newItem.price}
+                    onChange={e => setNewItem({...newItem, price: e.target.value})}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
                   <label>حد الإنذار للنواقص <span className="required">*</span></label>
                   <input type="number" value={newItem.min_threshold} onChange={e => setNewItem({...newItem, min_threshold: parseInt(e.target.value)})} />
                 </div>
               </div>
 
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>الكمية الحالية بالمخزن</label>
+                  <input
+                    type="number"
+                    value={newItem.quantity}
+                    onChange={e => setNewItem({...newItem, quantity: parseInt(e.target.value || '0')})}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>موقع التخزين</label>
+                  <input
+                    type="text"
+                    placeholder="مثلاً: الطابق الثاني - الرف 4"
+                    value={newItem.location}
+                    onChange={e => setNewItem({...newItem, location: e.target.value})}
+                  />
+                </div>
+              </div>
+
               <div className="form-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)} disabled={submitting}>إلغاء</button>
-                <button type="submit" className="btn-submit" disabled={submitting}>{submitting ? 'إضافة...' : 'حفظ الصنف'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Update Stock Modal */}
-      {showStockModal && (
-        <div className="modal" onClick={(e) => { if (e.target === e.currentTarget) setShowStockModal(false); }}>
-          <div className="modal-content user-form-modal">
-            <div className="modal-header">
-              <h3>تعديل الرصيد المتوفر في المخزن الرئيسي</h3>
-              <button className="modal-close" onClick={() => setShowStockModal(false)} aria-label="إغلاق">
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-            
-            <form onSubmit={handleUpdateStock} className="user-form">
-              <div className="form-group">
-                <label>الكمية المدخلة أو المخصومة <span className="required">*</span></label>
-                <input type="number" required placeholder="أضف رقماً بالموجب للإضافة وبالسالب للخصم" value={stockUpdate.quantity || ''} onChange={e => setStockUpdate({...stockUpdate, quantity: parseInt(e.target.value)})} />
-                <span className="error-message" style={{ color: 'var(--muted)', fontSize: '0.8rem', display: 'block', marginTop: '5px' }}>أضف رقماً موجباً (+10) للإضافة للمخزن، أو سالباً (-5) للتسوية السلبية</span>
-              </div>
-              
-              <div className="form-group">
-                <label>موقع التخزين (اختياري)</label>
-                <input type="text" placeholder="مثلاً: الطابق الثاني - الرف 4" value={stockUpdate.location} onChange={e => setStockUpdate({...stockUpdate, location: e.target.value})} />
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn-cancel" onClick={() => setShowStockModal(false)} disabled={submitting}>إلغاء</button>
-                <button type="submit" className="btn-submit" disabled={submitting}>{submitting ? 'جاري التعديل...' : 'تحديث الكمية'}</button>
+                <button type="submit" className="btn-submit" disabled={submitting}>
+                  {submitting ? 'جاري الحفظ...' : (editingItemId ? 'حفظ التعديلات' : 'حفظ الصنف')}
+                </button>
               </div>
             </form>
           </div>
