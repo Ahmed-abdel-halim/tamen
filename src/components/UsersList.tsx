@@ -37,6 +37,26 @@ const REPORT_PERMISSIONS = [
   'كشف حساب الوكيل',
   'إغلاق حساب شهري',
   'كشف إغلاق الحساب الشهري',
+  'إيصالات القبض',
+  'إدارة المصروفات',
+  'التسويات والعمولات',
+  'الديون المستحقة',
+  'الأرشيف المالي',
+  'المخازن والعهدة',
+  'الإحصائيات المالية',
+  'مرتبات الموظفين',
+];
+
+const ADMIN_SECTION_PERMISSIONS = [
+  'إدارة الفروع والوكلاء',
+  'إدارة الموظفين',
+  'الأرشيف',
+];
+
+const SETTINGS_PERMISSIONS = [
+  'قائمة المدن',
+  'قائمة اللوحات',
+  'أنواع السيارات',
 ];
 
 export default function UsersList() {
@@ -72,14 +92,11 @@ export default function UsersList() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage]);
-
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const url = `/api/users?page=${currentPage}&per_page=${perPage}`;
+      // Fetch a large page once, then paginate الموظفين locally to avoid empty pages after excluding agents.
+      const url = `/api/users?page=1&per_page=1000`;
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -130,26 +147,27 @@ export default function UsersList() {
     setFormErrors({});
   }, [showForm]);
 
-  // فلترة المستخدمين محلياً (client-side filtering)
-  const filteredUsers = users.filter(u => 
+  // عرض الموظفين فقط (استبعاد الوكلاء/الفروع من شاشة إدارة الموظفين)
+  const employeesOnly = users.filter((u) => {
+    const userType = (u.user_type || '').trim();
+    const isAgentByType = userType.includes('وكيل');
+    const isLinkedToBranchAgent = !!u.branch_agent_info;
+    return !isAgentByType && !isLinkedToBranchAgent;
+  });
+
+  // فلترة الموظفين محلياً (client-side filtering)
+  const filteredUsers = employeesOnly.filter(u =>
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // إذا كان هناك بحث، نستخدم client-side pagination
-  // وإلا نستخدم server-side pagination
-  const useClientPagination = searchQuery.trim() !== '';
-  const displayUsers = useClientPagination ? filteredUsers : users;
-  const displayTotalUsers = useClientPagination ? filteredUsers.length : totalUsers;
-  const displayTotalPages = useClientPagination 
-    ? (filteredUsers.length > 0 ? Math.ceil(filteredUsers.length / perPage) : 1)
-    : totalPages;
-  
-  const startIndex = useClientPagination ? (currentPage - 1) * perPage : 0;
-  const endIndex = useClientPagination ? startIndex + perPage : displayUsers.length;
-  const paginatedUsers = useClientPagination 
-    ? filteredUsers.slice(startIndex, endIndex)
-    : displayUsers;
+  const displayUsers = filteredUsers;
+  const displayTotalUsers = filteredUsers.length;
+  const displayTotalPages = filteredUsers.length > 0 ? Math.ceil(filteredUsers.length / perPage) : 1;
+
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + perPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   const handleDeleteClick = (user: User) => {
     setDeleteConfirmation(user);
@@ -198,14 +216,10 @@ export default function UsersList() {
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = 'البريد الإلكتروني غير صحيح';
     }
-    // التحقق من الصلاحيات فقط للمستخدمين غير المديرين
-    // يجب اختيار نوع تأمين واحد على الأقل أو تقرير واحد على الأقل
+    // التحقق من اختيار صلاحية واحدة على الأقل لغير المدير
     if (!formData.is_admin) {
-      const hasInsurance = formData.authorized_documents.some(doc => INSURANCE_TYPES.includes(doc));
-      const hasReport = formData.authorized_documents.some(doc => REPORT_PERMISSIONS.includes(doc));
-      
-      if (!hasInsurance && !hasReport) {
-        errors.authorized_documents = 'يجب اختيار نوع تأمين واحد على الأقل أو تقرير واحد على الأقل';
+      if (formData.authorized_documents.length === 0) {
+        errors.authorized_documents = 'يجب اختيار صلاحية واحدة على الأقل';
       }
     }
     setFormErrors(errors);
@@ -279,9 +293,9 @@ export default function UsersList() {
       
       setShowForm(null);
       setFormData({ username: '', name: '', email: '', password: '', is_admin: false, authorized_documents: [], salary: '' });
-      showToast(showForm?.mode === 'add' ? 'تم إضافة المستخدم بنجاح' : 'تم تحديث المستخدم بنجاح', 'success');
+      showToast(showForm?.mode === 'add' ? 'تم إضافة الموظف بنجاح' : 'تم تحديث بيانات الموظف بنجاح', 'success');
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ أثناء حفظ المستخدم', 'error');
+      showToast(error.message || 'حدث خطأ أثناء حفظ بيانات الموظف', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -290,7 +304,7 @@ export default function UsersList() {
   return (
     <section className="users-management font-cairo">
       <div className="users-breadcrumb">
-        <span>إدارة المستخدمين / قائمة المستخدمين</span>
+        <span>إدارة الموظفين / قائمة الموظفين</span>
       </div>
       
       <div className="users-card">
@@ -312,7 +326,7 @@ export default function UsersList() {
             onClick={() => setShowForm({ mode: 'add' })}
           >
             <i className="fa-solid fa-plus"></i>
-            إضافة مستخدم
+            إضافة موظف
           </button>
         </div>
 
@@ -345,7 +359,7 @@ export default function UsersList() {
                   ) : (
                     paginatedUsers.map((u, index) => (
                       <tr key={u.id}>
-                        <td>{useClientPagination ? startIndex + index + 1 : (currentPage - 1) * perPage + index + 1}</td>
+                        <td>{startIndex + index + 1}</td>
                         <td>{u.name}</td>
                         <td>{u.email || '-'}</td>
                         <td>
@@ -443,7 +457,7 @@ export default function UsersList() {
                     <div className="user-mobile-header">
                       <div>
                         <h4 className="user-mobile-title">{u.name}</h4>
-                        <span className="user-mobile-number">#{useClientPagination ? startIndex + index + 1 : (currentPage - 1) * perPage + index + 1}</span>
+                        <span className="user-mobile-number">#{startIndex + index + 1}</span>
                       </div>
                     </div>
                     <div className="user-mobile-body">
@@ -540,9 +554,9 @@ export default function UsersList() {
             {displayTotalPages > 1 && (
               <div className="pagination-wrapper">
                 <div className="pagination-info">
-                  عرض {useClientPagination ? startIndex + 1 : (currentPage - 1) * perPage + 1}
+                  عرض {startIndex + 1}
                   {' إلى '}
-                  {useClientPagination ? Math.min(endIndex, displayTotalUsers) : Math.min(currentPage * perPage, displayTotalUsers)}
+                  {Math.min(endIndex, displayTotalUsers)}
                   {' من '}
                   {displayTotalUsers}
                   {' مستخدم'}
@@ -606,7 +620,7 @@ export default function UsersList() {
         }}>
           <div className="modal-content user-form-modal">
             <div className="modal-header">
-              <h3>{showForm.mode === 'add' ? 'إضافة مستخدم جديد' : 'تعديل مستخدم'}</h3>
+              <h3>{showForm.mode === 'add' ? 'إضافة موظف جديد' : 'تعديل بيانات موظف'}</h3>
               <button 
                 className="modal-close" 
                 onClick={() => setShowForm(null)}
@@ -737,9 +751,9 @@ export default function UsersList() {
 
                   <div className="form-group">
                     <label className="permissions-section-title">
-                      التقارير المصرح بها
+                      التقارير والأقسام المالية
                     </label>
-                    <div className="permissions-grid">
+                    <div className="permissions-grid permissions-grid-scrollable">
                       {REPORT_PERMISSIONS.map((permission) => (
                         <label 
                           key={permission} 
@@ -769,10 +783,71 @@ export default function UsersList() {
                     </div>
                   </div>
 
-                  {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).length === 0 && 
-                   formData.authorized_documents.filter(doc => REPORT_PERMISSIONS.includes(doc)).length === 0 && (
+                  <div className="form-group">
+                    <label className="permissions-section-title">
+                      الأقسام الإدارية
+                    </label>
+                    <div className="permissions-grid">
+                      {ADMIN_SECTION_PERMISSIONS.map((permission) => (
+                        <label key={permission} className="permission-option">
+                          <input
+                            type="checkbox"
+                            checked={formData.authorized_documents.includes(permission)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  authorized_documents: [...formData.authorized_documents, permission]
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  authorized_documents: formData.authorized_documents.filter(doc => doc !== permission)
+                                });
+                              }
+                            }}
+                            style={{ width: 'auto', cursor: 'pointer' }}
+                          />
+                          <span>{permission}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="permissions-section-title">
+                      الإعدادات
+                    </label>
+                    <div className="permissions-grid">
+                      {SETTINGS_PERMISSIONS.map((permission) => (
+                        <label key={permission} className="permission-option">
+                          <input
+                            type="checkbox"
+                            checked={formData.authorized_documents.includes(permission)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  authorized_documents: [...formData.authorized_documents, permission]
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  authorized_documents: formData.authorized_documents.filter(doc => doc !== permission)
+                                });
+                              }
+                            }}
+                            style={{ width: 'auto', cursor: 'pointer' }}
+                          />
+                          <span>{permission}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {formData.authorized_documents.length === 0 && (
                     <span className="error-message" style={{ display: 'block', marginTop: '0.5rem' }}>
-                      يجب اختيار نوع تأمين واحد على الأقل أو تقرير واحد على الأقل
+                      يجب اختيار صلاحية واحدة على الأقل
                     </span>
                   )}
                 </>

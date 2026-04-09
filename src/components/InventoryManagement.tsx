@@ -402,6 +402,7 @@ export default function InventoryManagement() {
 
         <p><strong>تاريخ وتوقيت الصرف:</strong> ${main.assigned_at}</p>
         <p><strong>الرقم المرجعي لتسجيل العهدة:</strong> #${main.id.toString().padStart(5, '0')}</p>
+        <p><strong>نوع العهدة:</strong> ${getInventoryTypeName(main.item.inventory_type)}</p>
         <p><strong>الجهة المستلمة:</strong> ${main.recipient.agency_name || main.recipient.name}</p>
 
         <table>

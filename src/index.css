@@ -330,6 +330,115 @@ html, body {
   }
 }
 
+/* Employee salaries — professional filter toolbar */
+.ep-payroll-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ep-payroll-toolbar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.ep-payroll-toolbar-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.ep-payroll-toolbar-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.ep-payroll-fields {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.6fr) minmax(96px, 0.75fr) minmax(128px, 1fr) minmax(128px, 1fr);
+  gap: 14px 16px;
+  align-items: end;
+}
+
+.ep-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ep-field label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.ep-field input,
+.ep-field select {
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.ep-field input:focus,
+.ep-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.ep-payroll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-top: 16px;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.ep-payroll-actions .btn-submit {
+  min-height: 42px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .ep-payroll-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .ep-payroll-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .ep-payroll-actions .btn-submit {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 140px;
+  }
+}
+
 body,
 body * {
   caret-color: transparent !important;

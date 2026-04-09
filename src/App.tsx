@@ -89,6 +89,7 @@ import BankReconciliation from './components/BankReconciliation';
 import FinancialArchive from './components/FinancialArchive';
 import OutstandingDebts from './components/OutstandingDebts';
 import InventoryManagement from './components/InventoryManagement';
+import EmployeeSalaries from './components/EmployeeSalaries';
 import { ToastContainer } from './components/Toast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -140,6 +141,7 @@ function hasAccessToRoute(
     'إغلاق حساب شهري': ['/reports/monthly-account-closure'],
     'كشف إغلاق الحساب الشهري': ['/reports/monthly-account-closures-report'],
     'المخازن والعهدة': ['/reports/inventory'],
+    'مرتبات الموظفين': ['/reports/employee-salaries'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -223,6 +225,8 @@ function AuthorizedRoute({
   return <>{children}</>;
 }
 
+const SHOW_BANK_RECONCILIATION = false;
+
 const menuSections: SidebarSection[] = [
   {
     title: 'القائمة الرئيسية',
@@ -244,7 +248,7 @@ const menuSections: SidebarSection[] = [
     title: 'الشؤون الادارية',
     items: [
       { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
-      { label: 'إدارة المستخدمين', icon: 'fa-solid fa-user-shield', to: '/users' },
+      { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' },
       { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
   },
@@ -256,10 +260,13 @@ const menuSections: SidebarSection[] = [
       { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
       { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+      { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
       { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
       { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
       { label: 'كشف إغلاق الحساب الشهري', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
-      { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' },
+      ...(SHOW_BANK_RECONCILIATION
+        ? [{ label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const }]
+        : []),
       { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
       { label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', to: '/reports/expenses' },
     ],
@@ -317,6 +324,13 @@ const createMenuSections = (
     'الأرشيف المالي': { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
     'المخازن والعهدة': { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
     'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+    'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
+    'إدارة الفروع والوكلاء': { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
+    'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' },
+    'الأرشيف': { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
+    'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
+    'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
   };
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
@@ -341,17 +355,22 @@ const createMenuSections = (
     '/reports/commissions',
     '/reports/payment-vouchers',
     '/reports/inventory',
+    '/reports/employee-salaries',
     '/reports/branch-agent-account',
     '/reports/monthly-account-closure',
     '/reports/monthly-account-closures-report',
-    '/reports/bank-reconciliation',
+    ...(SHOW_BANK_RECONCILIATION ? ['/reports/bank-reconciliation'] : []),
     '/reports/financial-archive',
     '/reports/expenses',
   ];
+  const adminOrder: string[] = ['/branches-agents', '/users', '/archive'];
+  const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
   const insuranceItemsMap = new Map<string, SidebarItem>(); // لتجنب إضافة نفس الرابط مرتين
   const reportsItemsMap = new Map<string, SidebarItem>(); // للتقارير
+  const adminItemsMap = new Map<string, SidebarItem>(); // للإدارة
+  const settingsItemsMap = new Map<string, SidebarItem>(); // للإعدادات
 
   if (authorizedDocs && authorizedDocs.length > 0) {
     authorizedDocs.forEach((docType) => {
@@ -361,6 +380,22 @@ const createMenuSections = (
         if (itemInfo.to.startsWith('/reports/')) {
           if (!reportsItemsMap.has(itemInfo.to)) {
             reportsItemsMap.set(itemInfo.to, {
+              label: itemInfo.label,
+              icon: itemInfo.icon,
+              to: itemInfo.to,
+            });
+          }
+        } else if (adminOrder.includes(itemInfo.to)) {
+          if (!adminItemsMap.has(itemInfo.to)) {
+            adminItemsMap.set(itemInfo.to, {
+              label: itemInfo.label,
+              icon: itemInfo.icon,
+              to: itemInfo.to,
+            });
+          }
+        } else if (settingsOrder.includes(itemInfo.to)) {
+          if (!settingsItemsMap.has(itemInfo.to)) {
+            settingsItemsMap.set(itemInfo.to, {
               label: itemInfo.label,
               icon: itemInfo.icon,
               to: itemInfo.to,
@@ -388,6 +423,12 @@ const createMenuSections = (
   const reportsItems: SidebarItem[] = reportsOrder
     .filter(route => reportsItemsMap.has(route))
     .map(route => reportsItemsMap.get(route)!);
+  const adminItems: SidebarItem[] = adminOrder
+    .filter(route => adminItemsMap.has(route))
+    .map(route => adminItemsMap.get(route)!);
+  const settingsItems: SidebarItem[] = settingsOrder
+    .filter(route => settingsItemsMap.has(route))
+    .map(route => settingsItemsMap.get(route)!);
 
   // إنشاء القائمة المصفاة
   const sections: SidebarSection[] = [
@@ -415,6 +456,13 @@ const createMenuSections = (
   }
 
   // إضافة قسم التقارير إذا كان هناك تقارير مصرح بها
+  if (adminItems.length > 0) {
+    sections.push({
+      title: 'الشؤون الادارية',
+      items: adminItems,
+    });
+  }
+
   if (reportsItems.length > 0) {
     sections.push({
       title: 'الشؤون المالية',
@@ -422,8 +470,21 @@ const createMenuSections = (
     });
   }
 
+  if (settingsItems.length > 0) {
+    sections.push({
+      title: 'الإعدادات',
+      items: [
+        {
+          label: 'الإعدادات',
+          icon: 'fa-solid fa-gear',
+          children: settingsItems,
+        },
+      ],
+    });
+  }
+
   // إذا كان فرع/وكيل، أضف إعدادات أنواع السيارات فقط
-  if (branchAgentId) {
+  if (branchAgentId && !settingsItems.some(item => item.to === '/vehicle-types')) {
     sections.push({
       title: 'الإعدادات',
       items: [
@@ -678,6 +739,7 @@ export default function App() {
                   <Route path="/reports/outstanding-debts" element={<OutstandingDebts />} />
                   <Route path="/reports/financial-archive" element={<FinancialArchive />} />
                   <Route path="/reports/inventory" element={<InventoryManagement />} />
+                  <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
                   <Route path="/reports/expenses" element={<ExpenseManagement />} />
                   {/* اختبار API */}
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
