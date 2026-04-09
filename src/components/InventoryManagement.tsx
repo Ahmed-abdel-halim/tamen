@@ -28,6 +28,28 @@ interface Custody {
   notes?: string;
 }
 
+interface InventoryMovement {
+  id: number;
+  type: 'issue' | 'return' | 'loss' | 'damage';
+  quantity: number;
+  notes?: string;
+  created_at: string;
+  item: {
+    id?: number;
+    name?: string;
+    inventory_type?: 'fixed' | 'consumable';
+  };
+  recipient: {
+    id?: number;
+    type: 'agent' | 'employee';
+    name: string;
+  };
+  processor: {
+    id?: number;
+    name: string;
+  };
+}
+
 const DEFAULT_CATEGORY_OPTIONS = [
   { value: 'paper', label: 'مطبوعات ودفاتر (Paper)' },
   { value: 'electronic', label: 'أجهزة إلكترونية (Devices)' },
@@ -49,6 +71,14 @@ export default function InventoryManagement() {
   const [custodyFilterRecipientType, setCustodyFilterRecipientType] = useState<'all' | 'agent' | 'employee'>('all');
   const [custodyFilterRecipient, setCustodyFilterRecipient] = useState('');
   const [custodyFilterItem, setCustodyFilterItem] = useState('');
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+  const [movementFilterType, setMovementFilterType] = useState<'all' | 'issue' | 'return' | 'loss' | 'damage'>('all');
+  const [movementFilterRecipientType, setMovementFilterRecipientType] = useState<'all' | 'agent' | 'employee'>('all');
+  const [movementFilterFromDate, setMovementFilterFromDate] = useState('');
+  const [movementFilterToDate, setMovementFilterToDate] = useState('');
+  const [movementFilterItem, setMovementFilterItem] = useState('');
+  const [movementFilterRecipient, setMovementFilterRecipient] = useState('');
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -111,6 +141,11 @@ export default function InventoryManagement() {
       const custodyData = await custodyRes.json();
       setCustodies(Array.isArray(custodyData) ? custodyData : []);
 
+      setMovementsLoading(true);
+      const movementsRes = await fetch('/api/inventory/movements');
+      const movementsData = await movementsRes.json();
+      setMovements(Array.isArray(movementsData) ? movementsData : []);
+
       // Fetch agents and employees
       const agentsRes = await fetch('/api/branches-agents');
       const agentsData = await agentsRes.json();
@@ -127,6 +162,7 @@ export default function InventoryManagement() {
       console.error('Error fetching inventory data:', error);
       showToast('حدث خطأ أثناء جلب البيانات', 'error');
     } finally {
+      setMovementsLoading(false);
       setLoading(false);
     }
   };
@@ -461,6 +497,16 @@ export default function InventoryManagement() {
   const getInventoryTypeName = (inventoryType?: string) => {
     return inventoryType === 'fixed' ? 'مخزون ثابت' : 'مخزون مستهلك';
   };
+  const getMovementTypeName = (type: InventoryMovement['type']) => {
+    const labels: Record<InventoryMovement['type'], string> = {
+      issue: 'صرف عهدة',
+      return: 'استرجاع عهدة',
+      loss: 'فقد',
+      damage: 'تلف',
+    };
+    return labels[type] || type;
+  };
+  const getRecipientTypeName = (type: 'agent' | 'employee') => (type === 'agent' ? 'وكيل / فرع' : 'موظف عام');
   const assignableItems = items.filter((i) => (i.inventory_type ?? 'consumable') === assignInventoryType);
 
   const filteredItems = items.filter((i) => {
@@ -502,6 +548,24 @@ export default function InventoryManagement() {
     const matchesRecipient = !recipientQuery || recipientName.includes(recipientQuery);
     const matchesItem = !itemQuery || itemNames.includes(itemQuery);
     return matchesType && matchesStatus && matchesRecipientType && matchesRecipient && matchesItem;
+  });
+  const filteredMovements = movements.filter((row) => {
+    const rowDate = row.created_at ? new Date(row.created_at) : null;
+    const fromDate = movementFilterFromDate ? new Date(`${movementFilterFromDate}T00:00:00`) : null;
+    const toDate = movementFilterToDate ? new Date(`${movementFilterToDate}T23:59:59`) : null;
+    const itemName = (row.item?.name || '').toLowerCase();
+    const recipientName = (row.recipient?.name || '').toLowerCase();
+    const itemQuery = movementFilterItem.trim().toLowerCase();
+    const recipientQuery = movementFilterRecipient.trim().toLowerCase();
+
+    const matchesType = movementFilterType === 'all' || row.type === movementFilterType;
+    const matchesRecipientType = movementFilterRecipientType === 'all' || row.recipient?.type === movementFilterRecipientType;
+    const matchesItem = !itemQuery || itemName.includes(itemQuery);
+    const matchesRecipient = !recipientQuery || recipientName.includes(recipientQuery);
+    const matchesFrom = !fromDate || (rowDate && rowDate >= fromDate);
+    const matchesTo = !toDate || (rowDate && rowDate <= toDate);
+
+    return matchesType && matchesRecipientType && matchesItem && matchesRecipient && matchesFrom && matchesTo;
   });
   const categoryOptions = [
     ...DEFAULT_CATEGORY_OPTIONS,
@@ -984,9 +1048,92 @@ export default function InventoryManagement() {
         )}
 
         {activeTab === 'log' && (
-          <div style={{ padding: '80px 20px', textAlign: 'center', color: 'var(--muted)' }}>
-            <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '4rem', opacity: 0.2, marginBottom: '20px' }}></i>
-            <h3>سيتم توفير سجل تاريخي لجميع حركات المخازن في التحديث القادم</h3>
+          <div style={{ padding: '20px' }}>
+            <div className="custody-filters-panel">
+              <select value={movementFilterType} onChange={(e) => setMovementFilterType(e.target.value as 'all' | 'issue' | 'return' | 'loss' | 'damage')}>
+                <option value="all">كل أنواع الحركات</option>
+                <option value="issue">صرف عهدة</option>
+                <option value="return">استرجاع عهدة</option>
+                <option value="loss">فقد</option>
+                <option value="damage">تلف</option>
+              </select>
+              <select value={movementFilterRecipientType} onChange={(e) => setMovementFilterRecipientType(e.target.value as 'all' | 'agent' | 'employee')}>
+                <option value="all">كل أنواع المستلمين</option>
+                <option value="agent">وكيل / فرع</option>
+                <option value="employee">موظف عام</option>
+              </select>
+              <input type="date" value={movementFilterFromDate} onChange={(e) => setMovementFilterFromDate(e.target.value)} />
+              <input type="date" value={movementFilterToDate} onChange={(e) => setMovementFilterToDate(e.target.value)} />
+              <input
+                type="text"
+                placeholder="بحث باسم الصنف..."
+                value={movementFilterItem}
+                onChange={(e) => setMovementFilterItem(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="بحث باسم المستلم..."
+                value={movementFilterRecipient}
+                onChange={(e) => setMovementFilterRecipient(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn-cancel custody-reset-btn"
+                onClick={() => {
+                  setMovementFilterType('all');
+                  setMovementFilterRecipientType('all');
+                  setMovementFilterFromDate('');
+                  setMovementFilterToDate('');
+                  setMovementFilterItem('');
+                  setMovementFilterRecipient('');
+                }}
+              >
+                تصفير الفلاتر
+              </button>
+            </div>
+
+            <div className="table-wrapper" style={{ marginTop: '10px' }}>
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>التاريخ</th>
+                    <th>نوع الحركة</th>
+                    <th>الصنف</th>
+                    <th>نوع المخزون</th>
+                    <th>الكمية</th>
+                    <th>المستلم</th>
+                    <th>نوع المستلم</th>
+                    <th>تمت بواسطة</th>
+                    <th>ملاحظات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movementsLoading ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>جاري تحميل سجل الحركات...</td>
+                    </tr>
+                  ) : filteredMovements.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>لا توجد حركات مطابقة للفلاتر</td>
+                    </tr>
+                  ) : (
+                    filteredMovements.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.created_at ? new Date(row.created_at).toLocaleString('en-GB') : '-'}</td>
+                        <td>{getMovementTypeName(row.type)}</td>
+                        <td>{row.item?.name || '-'}</td>
+                        <td>{getInventoryTypeName(row.item?.inventory_type)}</td>
+                        <td>{row.quantity}</td>
+                        <td>{row.recipient?.name || '-'}</td>
+                        <td>{getRecipientTypeName(row.recipient?.type || 'employee')}</td>
+                        <td>{row.processor?.name || '-'}</td>
+                        <td>{row.notes || '-'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
