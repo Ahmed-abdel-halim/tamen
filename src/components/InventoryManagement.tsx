@@ -5,6 +5,7 @@ interface StoreItem {
   id: number;
   name: string;
   category: string;
+  inventory_type?: 'fixed' | 'consumable';
   unit: string;
   price?: number;
   unit_price?: number;
@@ -14,6 +15,7 @@ interface StoreItem {
 
 interface Custody {
   id: number;
+  batch_ref?: string | null;
   item: StoreItem;
   quantity: number;
   serial_start?: string;
@@ -39,6 +41,14 @@ export default function InventoryManagement() {
   const [custodies, setCustodies] = useState<Custody[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterInventoryType, setFilterInventoryType] = useState<'all' | 'fixed' | 'consumable'>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterQuantityStatus, setFilterQuantityStatus] = useState<'all' | 'low' | 'available' | 'out'>('all');
+  const [custodyFilterType, setCustodyFilterType] = useState<'all' | 'fixed' | 'consumable'>('all');
+  const [custodyFilterStatus, setCustodyFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [custodyFilterRecipientType, setCustodyFilterRecipientType] = useState<'all' | 'agent' | 'employee'>('all');
+  const [custodyFilterRecipient, setCustodyFilterRecipient] = useState('');
+  const [custodyFilterItem, setCustodyFilterItem] = useState('');
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,6 +57,7 @@ export default function InventoryManagement() {
   // Form states
   const getDefaultItemForm = () => ({
     name: '',
+    inventory_type: 'consumable' as 'fixed' | 'consumable',
     category: 'paper',
     unit: 'قطعة',
     price: '',
@@ -71,6 +82,19 @@ export default function InventoryManagement() {
   const [agents, setAgents] = useState<{id: number, agent_name: string, agency_name: string}[]>([]);
   const [employees, setEmployees] = useState<{id: number, name: string}[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [assignInventoryType, setAssignInventoryType] = useState<'fixed' | 'consumable'>('fixed');
+  const [assignmentItems, setAssignmentItems] = useState<Array<{
+    item_id: string;
+    quantity: number;
+    serial_start: string;
+    serial_end: string;
+    condition: string;
+  }>>([
+    { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }
+  ]);
+
+  const getBatchKey = (custody: Custody) =>
+    custody.batch_ref || `single-${custody.id}`;
 
   useEffect(() => {
     fetchData();
@@ -94,7 +118,10 @@ export default function InventoryManagement() {
 
       const employeesRes = await fetch('/api/users');
       const employeesData = await employeesRes.json();
-      setEmployees(Array.isArray(employeesData) ? employeesData : []);
+      const employeesList = Array.isArray(employeesData)
+        ? employeesData
+        : (Array.isArray(employeesData?.data) ? employeesData.data : []);
+      setEmployees(employeesList);
 
     } catch (error) {
       console.error('Error fetching inventory data:', error);
@@ -119,6 +146,7 @@ export default function InventoryManagement() {
 
       const payload = {
         name: newItem.name,
+        inventory_type: newItem.inventory_type,
         category: selectedCategory,
         unit: newItem.unit,
         min_threshold: Number(newItem.min_threshold) || 0,
@@ -197,6 +225,7 @@ export default function InventoryManagement() {
     setEditingItemId(item.id);
     setNewItem({
       name: item.name ?? '',
+      inventory_type: item.inventory_type ?? 'consumable',
       category: isDefaultCategory ? (item.category ?? 'other') : 'other',
       unit: item.unit ?? 'قطعة',
       price: String(item.price ?? item.unit_price ?? ''),
@@ -224,162 +253,204 @@ export default function InventoryManagement() {
 
   const handleAssignCustody = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (assignmentItems.length === 0 || assignmentItems.some((it) => !it.item_id)) {
+      showToast('يرجى اختيار صنف واحد على الأقل', 'error');
+      return;
+    }
+
+    const selectedItems = assignmentItems
+      .map((it) => items.find((i) => String(i.id) === it.item_id))
+      .filter(Boolean) as StoreItem[];
+    const hasWrongType = selectedItems.some((it) => (it.inventory_type ?? 'consumable') !== assignInventoryType);
+    if (hasWrongType) {
+      showToast('يجب أن تكون كل الأصناف المختارة من نفس النوع المحدد', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const res = await fetch('/api/inventory/assign-custody', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assignment)
-      });
-      if (res.ok) {
-        showToast('تم صرف العهدة بنجاح', 'success');
-        setAssignment({ 
-          item_id: '', recipient_id: '', recipient_type: 'agent', 
-          quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' 
+      const batchRef = `BATCH-${Date.now()}`;
+      for (const row of assignmentItems) {
+        const res = await fetch('/api/inventory/assign-custody', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...assignment,
+            inventory_type: assignInventoryType,
+            batch_ref: batchRef,
+            item_id: row.item_id,
+            quantity: row.quantity,
+            serial_start: row.serial_start,
+            serial_end: row.serial_end,
+            condition: row.condition,
+          })
         });
-        fetchData();
-        setActiveTab('custody');
-      } else {
-        const err = await res.json();
-        showToast(err.message || 'حدث خطأ أثناء التسليم', 'error');
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'حدث خطأ أثناء التسليم');
+        }
       }
+      showToast('تم صرف العهدة بنجاح', 'success');
+      setAssignment({ 
+        item_id: '', recipient_id: '', recipient_type: 'agent', 
+        quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' 
+      });
+      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }]);
+      fetchData();
+      setActiveTab('custody');
     } catch (error) {
       console.error('Error assigning custody:', error);
+      showToast((error as Error).message || 'حدث خطأ أثناء التسليم', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleReturnCustody = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من استرجاع هذه العهدة للمخايزن؟')) return;
+  const addAssignmentItemRow = () => {
+    setAssignmentItems((prev) => [...prev, { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }]);
+  };
+
+  const removeAssignmentItemRow = (index: number) => {
+    setAssignmentItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateAssignmentItemRow = (index: number, key: 'item_id' | 'quantity' | 'serial_start' | 'serial_end' | 'condition', value: string | number) => {
+    setAssignmentItems((prev) => prev.map((row, i) => i === index ? { ...row, [key]: value } : row));
+  };
+
+  const handleReturnCustodyGroup = async (group: Custody[]) => {
+    const activeRows = group.filter((item) => item.status === 'active');
+    if (activeRows.length === 0) {
+      showToast('لا توجد أصناف نشطة داخل هذه العهدة', 'error');
+      return;
+    }
+    if (!window.confirm(`هل أنت متأكد من استرجاع كل أصناف هذه العهدة؟ (${activeRows.length} صنف)`)) return;
+
     try {
-      const res = await fetch(`/api/inventory/return-custody/${id}`, { method: 'POST' });
-      if (res.ok) {
-        showToast('تم الاسترجاع بنجاح', 'success');
-        fetchData();
+      for (const row of activeRows) {
+        const res = await fetch(`/api/inventory/return-custody/${row.id}`, { method: 'POST' });
+        if (!res.ok) {
+          throw new Error('تعذر استرجاع بعض الأصناف');
+        }
       }
+      showToast('تم استرجاع كل أصناف العهدة بنجاح', 'success');
+      fetchData();
     } catch (error) {
-      console.error('Error returning custody:', error);
+      console.error('Error returning custody group:', error);
+      showToast((error as Error).message || 'حدث خطأ أثناء استرجاع العهدة', 'error');
     }
   };
 
-  const handlePrintCustodyReceipt = (custody: Custody) => {
-    const printWindow = window.open('', '', 'width=900,height=700');
+  const buildBatchReceiptSection = (batch: Custody[]) => {
+    const main = batch[0];
+    const rows = batch.map((c, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${c.item.name}</td>
+        <td>${getCategoryName(c.item.category)}</td>
+        <td>${c.quantity} ${c.item.unit}</td>
+        <td dir="ltr" style="text-align: right;">${c.serial_start || '-'} ${c.serial_end ? `➔ ${c.serial_end}` : ''}</td>
+        <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <section class="receipt-page">
+        <div class="header">
+          <div class="header-text">
+            <h1>شركة المدار الليبي للتأمين</h1>
+            <h2>نموذج إقرار استلام عهدة (أصول / مستندات)</h2>
+          </div>
+          <img src="/img/logo.png" alt="المدار الليبي للتأمين" class="logo" />
+        </div>
+
+        <p><strong>تاريخ وتوقيت الصرف:</strong> ${main.assigned_at}</p>
+        <p><strong>الرقم المرجعي لتسجيل العهدة:</strong> #${main.id.toString().padStart(5, '0')}</p>
+        <p><strong>الجهة المستلمة:</strong> ${main.recipient.agency_name || main.recipient.name}</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الصنف</th>
+              <th>التصنيف</th>
+              <th>الكمية</th>
+              <th>السيريال</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+
+        <div class="declaration">
+          <p style="margin-top: 0">أقر أنا الموقع أدناه، بصفتي المذكورة أعلاه، بأنني استلمت العهدة الموضحة تفاصيلها بموجب هذا الإيصال وهي بحالة سليمة، وأتعهد أمام شركة المدار الليبي للتأمين بالمحافظة عليها واستخدامها في أغراض العمل الرسمية فقط، وبأنني أتحمل كامل المسؤولية المادية والقانونية في حال فقدانها أو تلفها نتيجة الإهمال، وأتعهد بإعادتها عند الطلب أو عند انتهاء تكليفي.</p>
+        </div>
+
+        <div class="signatures">
+          <div class="signature-box">
+            <h3>توقيع المستلم بالاستلام</h3>
+            <div class="signature-line"></div>
+            <p style="color: #64748b; font-size: 13px; margin-top: 10px;">الاسم والتوقيع</p>
+          </div>
+          <div class="signature-box">
+            <h3>توقيع أمين المخزن أو المسلم</h3>
+            <div class="signature-line"></div>
+            <p style="color: #64748b; font-size: 13px; margin-top: 10px;">الختم والتوقيع</p>
+          </div>
+        </div>
+      </section>
+    `;
+  };
+
+  const printBatches = (batches: Custody[][], title: string) => {
+    const printWindow = window.open('', '', 'width=1000,height=800');
     if (!printWindow) {
       showToast('يرجى السماح بالنوافذ المنبثقة (Pop-ups) للطباعة', 'error');
       return;
     }
-
+    const sections = batches.map((b) => buildBatchReceiptSection(b)).join('');
     const html = `
-      <html dir="rtl">
-        <head>
-          <title>إيصال استلام عهدة - ${custody.item.name}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-            body {
-              font-family: 'Cairo', sans-serif;
-              padding: 20px 40px;
-              color: #111;
-              font-size: 15px;
-              line-height: 1.5;
-            }
-            .header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              margin-bottom: 25px;
-              border-bottom: 3px double #000;
-              padding-bottom: 15px;
-            }
-            .header-text {
-              text-align: right;
-              flex: 1;
-            }
-            .header img.logo {
-              max-width: 140px;
-              height: auto;
-            }
-            .header h1 { margin: 0 0 5px 0; font-size: 26px; color: #014cb1; font-weight: 800; }
-            .header h2 { margin: 0; font-size: 18px; color: #333; font-weight: 700; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 25px; margin-top: 15px; }
-            th, td { padding: 12px 14px; border: 1px solid #000; text-align: right; }
-            th { background-color: #f1f5f9; width: 33%; font-weight: 700; color: #0f172a; }
-            td { font-weight: 600; color: #1e293b; }
-            .signatures { display: flex; justify-content: space-around; margin-top: 40px; padding-top: 10px; }
-            .signature-box { text-align: center; width: 35%; }
-            .signature-line { border-bottom: 2px dashed #64748b; margin-top: 40px; }
-            .declaration { font-size: 14px; font-weight: 600; color: #334155; text-align: justify; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; background: #f8fafc; margin-bottom: 15px; }
-            @media print {
-              @page { margin: 10mm; size: A4 portrait; }
-              body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body onload="setTimeout(() => window.print(), 500);">
-          <div class="header">
-            <div class="header-text">
-              <h1>شركة المدار الليبي للتأمين</h1>
-              <h2>نموذج إقرار استلام عهدة (أصول / مستندات)</h2>
-            </div>
-            <img src="/img/logo.png" alt="المدار الليبي للتأمين" class="logo" />
-          </div>
-
-          <p><strong>تاريخ وتوقيت الصرف:</strong> ${custody.assigned_at}</p>
-          <p><strong>الرقم المرجعي لتسجيل العهدة:</strong> #${custody.id.toString().padStart(5, '0')}</p>
-
-          <table>
-            <tr>
-              <th>الجهة المستلمة (الوكيل / الموظف)</th>
-              <td>${custody.recipient.agency_name || custody.recipient.name}</td>
-            </tr>
-            <tr>
-              <th>توصيف العهدة المسلمة (الصنف)</th>
-              <td>${custody.item.name} (${getCategoryName(custody.item.category)})</td>
-            </tr>
-            <tr>
-              <th>الكمية المستلمة</th>
-              <td>${custody.quantity} ${custody.item.unit}</td>
-            </tr>
-            ${(custody.serial_start || custody.serial_end) ? `
-            <tr>
-              <th>أرقام مسلسلة / سيريالات الدفاتر</th>
-              <td dir="ltr" style="text-align: right;">
-                ${custody.serial_start} ${custody.serial_end ? ` ➔ ${custody.serial_end}` : ''}
-              </td>
-            </tr>
-            ` : ''}
-            <tr>
-              <th>حالة العهدة عند التسليم</th>
-              <td>${custody.condition === 'new' ? 'جديد (لم يسبق استخدامه)' : 'مستعمل (بحالة جيدة)'}</td>
-            </tr>
-            <tr>
-              <th>ملاحظات التسليم الإضافية</th>
-              <td>${custody.notes || 'لا توجد ملاحظات.'}</td>
-            </tr>
-          </table>
-
-          <div class="declaration">
-            <p style="margin-top: 0">أقر أنا الموقع أدناه، بصفتي المذكورة أعلاه، بأنني استلمت العهدة الموضحة تفاصيلها بموجب هذا الإيصال وهي بحالة سليمة، وأتعهد أمام شركة المدار الليبي للتأمين بالمحافظة عليها واستخدامها في أغراض العمل الرسمية فقط، وبأنني أتحمل كامل المسؤولية المادية والقانونية في حال فقدانها أو تلفها نتيجة الإهمال، وأتعهد بإعادتها عند الطلب أو عند انتهاء تكليفي.</p>
-          </div>
-
-          <div class="signatures">
-            <div class="signature-box">
-              <h3>توقيع المستلم بالاستلام</h3>
-              <div class="signature-line"></div>
-              <p style="color: #64748b; font-size: 13px; margin-top: 10px;">الاسم والتوقيع</p>
-            </div>
-            <div class="signature-box">
-              <h3>توقيع أمين المخزن أو المسلم</h3>
-              <div class="signature-line"></div>
-              <p style="color: #64748b; font-size: 13px; margin-top: 10px;">الختم والتوقيع</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+      <html dir="rtl"><head><title>${title}</title>
+      <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+      body { font-family: 'Cairo', sans-serif; padding: 20px 40px; color: #111; font-size: 15px; line-height: 1.5; }
+      .receipt-page { page-break-after: always; margin-bottom: 20px; }
+      .receipt-page:last-child { page-break-after: auto; }
+      .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 3px double #000; padding-bottom: 15px; }
+      .header-text { text-align: right; flex: 1; } .header img.logo { max-width: 140px; height: auto; }
+      .header h1 { margin: 0 0 5px 0; font-size: 26px; color: #014cb1; font-weight: 800; } .header h2 { margin: 0; font-size: 18px; color: #333; font-weight: 700; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 25px; margin-top: 15px; }
+      th, td { padding: 10px 12px; border: 1px solid #000; text-align: right; }
+      th { background-color: #f1f5f9; font-weight: 700; color: #0f172a; }
+      td { font-weight: 600; color: #1e293b; }
+      .signatures { display: flex; justify-content: space-around; margin-top: 40px; padding-top: 10px; }
+      .signature-box { text-align: center; width: 35%; } .signature-line { border-bottom: 2px dashed #64748b; margin-top: 40px; }
+      .declaration { font-size: 14px; font-weight: 600; color: #334155; text-align: justify; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; background: #f8fafc; margin-bottom: 15px; }
+      @media print { @page { margin: 10mm; size: A4 portrait; } body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style></head>
+      <body onload="setTimeout(() => window.print(), 500);">${sections}</body></html>`;
     printWindow.document.write(html);
     printWindow.document.close();
+  };
+
+  const handlePrintCustodyReceipt = (custody: Custody) => {
+    const batchKey = getBatchKey(custody);
+    const batch = custodies.filter((c) => getBatchKey(c) === batchKey);
+    printBatches([batch.length ? batch : [custody]], 'إيصال استلام عهدة');
+  };
+
+  const handlePrintAllCustodyReceipts = (custodyList: Custody[]) => {
+    if (!custodyList.length) {
+      showToast('لا توجد عهدة للطباعة', 'error');
+      return;
+    }
+    const grouped = custodyList.reduce((acc, item) => {
+      const key = getBatchKey(item);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {} as Record<string, Custody[]>);
+    printBatches(Object.values(grouped), 'طباعة جميع إيصالات العهد');
   };
 
   const getCategoryName = (category: string) => {
@@ -387,7 +458,51 @@ export default function InventoryManagement() {
     return names[category] || category;
   };
 
-  const filteredItems = items.filter(i => i.name.includes(searchTerm));
+  const getInventoryTypeName = (inventoryType?: string) => {
+    return inventoryType === 'fixed' ? 'مخزون ثابت' : 'مخزون مستهلك';
+  };
+  const assignableItems = items.filter((i) => (i.inventory_type ?? 'consumable') === assignInventoryType);
+
+  const filteredItems = items.filter((i) => {
+    const matchesSearch = i.name.includes(searchTerm.trim());
+    const matchesType = filterInventoryType === 'all' || i.inventory_type === filterInventoryType;
+    const matchesCategory = filterCategory === 'all' || i.category === filterCategory;
+    const qty = i.stocks?.[0]?.quantity || 0;
+    const isLow = qty <= i.min_threshold;
+    const matchesQty =
+      filterQuantityStatus === 'all' ||
+      (filterQuantityStatus === 'out' && qty <= 0) ||
+      (filterQuantityStatus === 'low' && qty > 0 && isLow) ||
+      (filterQuantityStatus === 'available' && qty > i.min_threshold);
+    return matchesSearch && matchesType && matchesCategory && matchesQty;
+  });
+  const custodyGroups = Object.values(
+    custodies.reduce((acc, custody) => {
+      const key = getBatchKey(custody);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(custody);
+      return acc;
+    }, {} as Record<string, Custody[]>)
+  );
+  const filteredCustodyGroups = custodyGroups.filter((group) => {
+    const main = group[0];
+    const isActive = group.some((item) => item.status === 'active');
+    const groupType = main.item.inventory_type ?? 'consumable';
+    const recipientName = (main.recipient.agency_name || main.recipient.name || '').toLowerCase();
+    const itemNames = group.map((entry) => entry.item.name.toLowerCase()).join(' ');
+    const itemQuery = custodyFilterItem.trim().toLowerCase();
+    const recipientQuery = custodyFilterRecipient.trim().toLowerCase();
+
+    const matchesType = custodyFilterType === 'all' || groupType === custodyFilterType;
+    const matchesStatus =
+      custodyFilterStatus === 'all' ||
+      (custodyFilterStatus === 'active' && isActive) ||
+      (custodyFilterStatus === 'inactive' && !isActive);
+    const matchesRecipientType = custodyFilterRecipientType === 'all' || main.recipient_type === custodyFilterRecipientType;
+    const matchesRecipient = !recipientQuery || recipientName.includes(recipientQuery);
+    const matchesItem = !itemQuery || itemNames.includes(itemQuery);
+    return matchesType && matchesStatus && matchesRecipientType && matchesRecipient && matchesItem;
+  });
   const categoryOptions = [
     ...DEFAULT_CATEGORY_OPTIONS,
     ...Array.from(
@@ -474,6 +589,34 @@ export default function InventoryManagement() {
                 <i className="fa-solid fa-plus"></i> إضافة صنف 
               </button>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>نوع المخزون</label>
+                <select value={filterInventoryType} onChange={(e) => setFilterInventoryType(e.target.value as 'all' | 'fixed' | 'consumable')}>
+                  <option value="all">الكل</option>
+                  <option value="fixed">مخزون ثابت</option>
+                  <option value="consumable">مخزون مستهلك</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>التصنيف</label>
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                  <option value="all">كل التصنيفات</option>
+                  {categoryOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>حالة الكمية</label>
+                <select value={filterQuantityStatus} onChange={(e) => setFilterQuantityStatus(e.target.value as 'all' | 'low' | 'available' | 'out')}>
+                  <option value="all">الكل</option>
+                  <option value="available">متوفر</option>
+                  <option value="low">قرب النفاد</option>
+                  <option value="out">نافد</option>
+                </select>
+              </div>
+            </div>
 
             {loading ? (
               <p style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>جار التحميل...</p>
@@ -484,6 +627,7 @@ export default function InventoryManagement() {
                     <tr>
                       <th>#</th>
                       <th>الصنف</th>
+                      <th>نوع المخزون</th>
                       <th>التصنيف</th>
                       <th>سعر الصنف</th>
                       <th>الكمية المتوفرة</th>
@@ -495,7 +639,7 @@ export default function InventoryManagement() {
                   <tbody>
                     {filteredItems.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                        <td colSpan={9} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
                           <i className="fa-solid fa-box-open" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
                           لا توجد أصناف في المخزن تناسب بحثك
                         </td>
@@ -505,6 +649,7 @@ export default function InventoryManagement() {
                         <tr key={item.id}>
                           <td>{index + 1}</td>
                           <td style={{ fontWeight: 'bold' }}>{item.name}</td>
+                          <td>{getInventoryTypeName(item.inventory_type)}</td>
                           <td>{getCategoryName(item.category)}</td>
                           <td>
                             {getItemPrice(item) !== null ? (
@@ -560,71 +705,129 @@ export default function InventoryManagement() {
 
         {activeTab === 'custody' && (
           <div style={{ padding: '20px' }}>
+            <div className="custody-filters-panel">
+              <select value={custodyFilterType} onChange={(e) => setCustodyFilterType(e.target.value as 'all' | 'fixed' | 'consumable')}>
+                <option value="all">كل أنواع العهد</option>
+                <option value="fixed">مخزون ثابت</option>
+                <option value="consumable">مخزون مستهلك</option>
+              </select>
+              <select value={custodyFilterStatus} onChange={(e) => setCustodyFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}>
+                <option value="all">كل الحالات</option>
+                <option value="active">نشطة</option>
+                <option value="inactive">غير نشطة</option>
+              </select>
+              <select value={custodyFilterRecipientType} onChange={(e) => setCustodyFilterRecipientType(e.target.value as 'all' | 'agent' | 'employee')}>
+                <option value="all">كل أنواع المستلمين</option>
+                <option value="agent">وكيل / فرع</option>
+                <option value="employee">موظف عام</option>
+              </select>
+              <input
+                type="text"
+                placeholder="بحث باسم المستلم..."
+                value={custodyFilterRecipient}
+                onChange={(e) => setCustodyFilterRecipient(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="بحث باسم الصنف داخل العهدة..."
+                value={custodyFilterItem}
+                onChange={(e) => setCustodyFilterItem(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn-cancel custody-reset-btn"
+                onClick={() => {
+                  setCustodyFilterType('all');
+                  setCustodyFilterStatus('all');
+                  setCustodyFilterRecipientType('all');
+                  setCustodyFilterRecipient('');
+                  setCustodyFilterItem('');
+                }}
+              >
+                تصفير الفلاتر
+              </button>
+              <button
+                className="btn-submit custody-print-btn"
+                onClick={() => handlePrintAllCustodyReceipts(filteredCustodyGroups.flat())}
+                disabled={filteredCustodyGroups.length === 0}
+              >
+                <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
+                طباعة كل العهد الحالية
+              </button>
+            </div>
             <div className="users-mobile-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: 0 }}>
-              {custodies.length === 0 ? (
+              {filteredCustodyGroups.length === 0 ? (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
                   <i className="fa-solid fa-user-check" style={{ fontSize: '3rem', opacity: 0.3, marginBottom: '15px', display: 'block' }}></i>
-                  لا توجد عهدة نشطة مسجلة حالياً
+                  لا توجد عهد مطابقة للفلاتر الحالية
                 </div>
               ) : (
-                custodies.map((c) => (
-                  <div key={c.id} className="user-mobile-card" style={{ position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', backgroundColor: c.status === 'active' ? '#3b82f6' : 'var(--muted)' }}></div>
+                filteredCustodyGroups.map((group) => {
+                  const main = group[0];
+                  const isActive = group.some((item) => item.status === 'active');
+                  return (
+                  <div key={getBatchKey(main)} className="user-mobile-card" style={{ position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', backgroundColor: isActive ? '#3b82f6' : 'var(--muted)' }}></div>
                     <div className="user-mobile-header">
                       <div>
-                        <h4 className="user-mobile-title">{c.item.name}</h4>
+                        <h4 className="user-mobile-title">{getInventoryTypeName(main.item.inventory_type)}</h4>
                         <span className="user-mobile-number" style={{ color: 'var(--accent)' }}>
                           <i className="fa-solid fa-user" style={{ marginLeft: '5px' }}></i>
-                          {c.recipient.agency_name || c.recipient.name}
+                          {main.recipient.agency_name || main.recipient.name}
                         </span>
                       </div>
                     </div>
                     <div className="user-mobile-body">
                       <div className="user-mobile-row">
-                        <span className="user-mobile-label">الكمية المستلمة:</span>
-                        <span className="user-mobile-value" style={{ fontWeight: 'bold' }}>{c.quantity} {c.item.unit}</span>
+                        <span className="user-mobile-label">عدد الأصناف:</span>
+                        <span className="user-mobile-value" style={{ fontWeight: 'bold' }}>{group.length}</span>
                       </div>
-                      {(c.serial_start || c.serial_end) && (
-                        <div className="user-mobile-row">
-                          <span className="user-mobile-label">السيريالات:</span>
-                          <span className="user-mobile-value" dir="ltr" style={{ fontWeight: 'bold', letterSpacing: '1px' }}>
-                            {c.serial_start} {c.serial_end ? ` ➔ ${c.serial_end}` : ''}
-                          </span>
-                        </div>
-                      )}
+                      <div className="user-mobile-row">
+                        <span className="user-mobile-label">الأصناف المسلمة:</span>
+                        <span className="user-mobile-value" style={{ display: 'block', width: '100%' }}>
+                          <ul style={{ margin: '6px 0 0 0', paddingInlineStart: '16px' }}>
+                            {group.map((entry) => (
+                              <li key={entry.id} style={{ marginBottom: '4px' }}>
+                                {entry.item.name} - {entry.quantity} {entry.item.unit}
+                                {(entry.serial_start || entry.serial_end) ? ` (${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        </span>
+                      </div>
                       <div className="user-mobile-row">
                         <span className="user-mobile-label">تاريخ الصرف:</span>
-                        <span className="user-mobile-value">{c.assigned_at}</span>
+                        <span className="user-mobile-value">{main.assigned_at}</span>
                       </div>
                       <div className="user-mobile-row">
-                        <span className="user-mobile-label">حالة الصنف:</span>
-                        <span className="user-mobile-value">{c.condition === 'new' ? 'جديد' : 'مستعمل'}</span>
+                        <span className="user-mobile-label">حالة العهدة:</span>
+                        <span className="user-mobile-value">{isActive ? 'نشطة' : 'غير نشطة'}</span>
                       </div>
                       
-                      {c.status === 'active' && (
-                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                          <button 
-                            className="btn-submit" 
-                            style={{ width: '100%', backgroundColor: 'transparent', color: '#10b981', border: '1px solid currentColor', borderRadius: '8px' }}
-                            onClick={() => handlePrintCustodyReceipt(c)}
-                          >
-                            <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
-                            طباعة إيصال التسليم
-                          </button>
-                          
-                          <button 
-                            className="btn-submit" 
+                      <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                        <button
+                          className="btn-submit"
+                          style={{ width: '100%', backgroundColor: 'transparent', color: '#10b981', border: '1px solid currentColor', borderRadius: '8px' }}
+                          onClick={() => handlePrintCustodyReceipt(main)}
+                        >
+                          <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
+                          طباعة إيصال التسليم
+                        </button>
+
+                        {isActive && (
+                          <button
+                            className="btn-submit"
                             style={{ width: '100%', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid currentColor', borderRadius: '8px' }}
-                            onClick={() => handleReturnCustody(c.id)}
+                            onClick={() => handleReturnCustodyGroup(group)}
                           >
                             <i className="fa-solid fa-arrow-turn-down" style={{ marginLeft: '8px' }}></i>
                             تسجيل استرجاع العهدة
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))
+                )})
               )}
             </div>
           </div>
@@ -640,19 +843,96 @@ export default function InventoryManagement() {
             <form onSubmit={handleAssignCustody} className="user-form">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>الصنف المراد صرفه <span className="required">*</span></label>
-                  <select 
-                    required 
-                    value={assignment.item_id}
-                    onChange={(e) => setAssignment({...assignment, item_id: e.target.value})}
+                  <label>نوع الصنف المصروف <span className="required">*</span></label>
+                  <select
+                    value={assignInventoryType}
+                    onChange={(e) => {
+                      const nextType = e.target.value as 'fixed' | 'consumable';
+                      setAssignInventoryType(nextType);
+                      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }]);
+                    }}
                   >
-                    <option value="">اختر الصنف من المخزن...</option>
-                    {items.map(i => (
-                      <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
-                        {i.name} (المتوفر بالرصيد: {i.stocks?.[0]?.quantity || 0})
-                      </option>
-                    ))}
+                    <option value="fixed">مخزون ثابت</option>
+                    <option value="consumable">مخزون مستهلك</option>
                   </select>
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>الأصناف المراد صرفها <span className="required">*</span></label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {assignmentItems.map((row, index) => (
+                      <div key={`assign-row-${index}`} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>الصنف #{index + 1}</label>
+                            <select
+                              required
+                              value={row.item_id}
+                              onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
+                            >
+                              <option value="">اختر الصنف من المخزن...</option>
+                              {assignableItems.map(i => (
+                                <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
+                                  {i.name} (المتوفر: {i.stocks?.[0]?.quantity || 0})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>الكمية</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={row.quantity}
+                              onChange={(e) => updateAssignmentItemRow(index, 'quantity', parseInt(e.target.value || '1'))}
+                            />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>السيريال الأول</label>
+                            <input
+                              type="text"
+                              dir="ltr"
+                              value={row.serial_start}
+                              onChange={(e) => updateAssignmentItemRow(index, 'serial_start', e.target.value)}
+                            />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>السيريال الأخير</label>
+                            <input
+                              type="text"
+                              dir="ltr"
+                              value={row.serial_end}
+                              onChange={(e) => updateAssignmentItemRow(index, 'serial_end', e.target.value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-cancel"
+                            onClick={() => removeAssignmentItemRow(index)}
+                            disabled={assignmentItems.length === 1}
+                            style={{ padding: '8px 10px' }}
+                            title="حذف الصنف"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </div>
+                        <div className="form-group" style={{ marginTop: '10px', marginBottom: 0 }}>
+                          <label>حالة الصنف المسلم</label>
+                          <select
+                            value={row.condition}
+                            onChange={(e) => updateAssignmentItemRow(index, 'condition', e.target.value)}
+                          >
+                            <option value="new">جديد بقراطيسه</option>
+                            <option value="used">مستعمل سابقاً</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className="btn-submit" onClick={addAssignmentItemRow} style={{ width: 'fit-content' }}>
+                      <i className="fa-solid fa-plus" style={{ marginLeft: '6px' }}></i>
+                      إضافة صنف آخر
+                    </button>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -680,50 +960,6 @@ export default function InventoryManagement() {
                       employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)
                     )}
                   </select>
-                </div>
-
-                <div className="form-group">
-                  <label>الكمية المصروفة <span className="required">*</span></label>
-                  <input 
-                    type="number" 
-                    required 
-                    min="1"
-                    value={assignment.quantity}
-                    onChange={(e) => setAssignment({...assignment, quantity: parseInt(e.target.value)})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>حالة الصنف المسلم <span className="required">*</span></label>
-                  <select 
-                    value={assignment.condition}
-                    onChange={(e) => setAssignment({...assignment, condition: e.target.value})}
-                  >
-                    <option value="new">جديد بقراطيسه</option>
-                    <option value="used">مستعمل سابقاً</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>السيريال الأول / رقم بداية الدفتر</label>
-                  <input 
-                    type="text" 
-                    dir="ltr"
-                    placeholder="مثال: N-0001"
-                    value={assignment.serial_start}
-                    onChange={(e) => setAssignment({...assignment, serial_start: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>السيريال الأخير / رقم نهاية الدفتر</label>
-                  <input 
-                    type="text" 
-                    dir="ltr"
-                    placeholder="مثال: N-0100"
-                    value={assignment.serial_end}
-                    onChange={(e) => setAssignment({...assignment, serial_end: e.target.value})}
-                  />
                 </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -774,6 +1010,14 @@ export default function InventoryManagement() {
                 <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
               </div>
               
+              <div className="form-group">
+                <label>نوع المخزون <span className="required">*</span></label>
+                <select value={newItem.inventory_type} onChange={e => setNewItem({...newItem, inventory_type: e.target.value as 'fixed' | 'consumable'})}>
+                  <option value="consumable">مخزون مستهلك</option>
+                  <option value="fixed">مخزون ثابت</option>
+                </select>
+              </div>
+
               <div className="form-group">
                 <label>التصنيف <span className="required">*</span></label>
                 <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>

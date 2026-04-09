@@ -255,6 +255,81 @@ html, body {
   font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif !important;
 }
 
+/* Inventory custody filters (professional layout) */
+.custody-filters-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, #ffffff 4%), var(--panel));
+  border-radius: 14px;
+}
+
+.custody-filters-panel select,
+.custody-filters-panel input {
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.custody-filters-panel select:focus,
+.custody-filters-panel input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.custody-reset-btn {
+  min-height: 38px;
+  border-radius: 10px !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 8px 12px !important;
+}
+
+.custody-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 14px;
+}
+
+.custody-print-btn {
+  min-height: 38px;
+  border-radius: 10px !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 8px 12px !important;
+  box-shadow: 0 8px 18px rgba(1, 76, 177, 0.12);
+}
+
+.custody-print-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .custody-filters-panel {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .custody-toolbar {
+    justify-content: stretch;
+  }
+
+  .custody-print-btn {
+    width: 100%;
+  }
+}
+
 body,
 body * {
   caret-color: transparent !important;
