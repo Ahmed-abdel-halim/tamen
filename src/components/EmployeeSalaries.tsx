@@ -178,12 +178,27 @@ export default function EmployeeSalaries() {
   };
 
   const handleExportCsv = () => {
+    // Semicolon matches Windows "list separator" in Arabic/EU locales; comma-only CSV opens as one column in Excel.
+    const sep = ';';
+    const q = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
     const lines = [
-      ['اسم الموظف', 'اسم المستخدم', 'السنة', 'الشهر', 'الأساسي', 'بدلات', 'مكافآت', 'خصومات', 'سلف', 'الصافي', 'حالة الصرف'].join(','),
+      [
+        'اسم الموظف',
+        'اسم المستخدم',
+        'السنة',
+        'الشهر',
+        'الأساسي',
+        'بدلات',
+        'مكافآت',
+        'خصومات',
+        'سلف',
+        'الصافي',
+        'حالة الصرف',
+      ].join(sep),
       ...rows.map((r) =>
         [
-          `"${r.e.name}"`,
-          `"${r.e.username}"`,
+          q(r.e.name),
+          q(r.e.username),
           year,
           month,
           r.base,
@@ -192,8 +207,8 @@ export default function EmployeeSalaries() {
           r.deduction,
           r.advance,
           r.net,
-          `"${r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}"`,
-        ].join(',')
+          q(r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'),
+        ].join(sep)
       ),
     ];
     // UTF-8 BOM so Excel (Windows) opens the file as Unicode instead of ANSI (prevents mojibake for Arabic)
