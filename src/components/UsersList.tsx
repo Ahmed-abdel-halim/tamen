@@ -65,8 +65,6 @@ export default function UsersList() {
   const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', user?: User }>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
   const perPage = 10;
   const [formData, setFormData] = useState({
     username: '',
@@ -106,13 +104,9 @@ export default function UsersList() {
       // إذا كان الـ response يحتوي على pagination data
       if (data.data && Array.isArray(data.data)) {
         setUsers(data.data);
-        setTotalPages(data.last_page || 1);
-        setTotalUsers(data.total || 0);
       } else {
         // Fallback للـ response القديم (بدون pagination)
         setUsers(Array.isArray(data) ? data : []);
-        setTotalPages(1);
-        setTotalUsers(Array.isArray(data) ? data.length : 0);
       }
     } catch (error: any) {
       console.error('Error fetching users:', error);
@@ -161,7 +155,6 @@ export default function UsersList() {
     u.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const displayUsers = filteredUsers;
   const displayTotalUsers = filteredUsers.length;
   const displayTotalPages = filteredUsers.length > 0 ? Math.ceil(filteredUsers.length / perPage) : 1;
 
