@@ -56,9 +56,23 @@ const INSURANCE_TYPES = [
   'تأمين الوافدين',
   'تأمين المسؤولية المهنية (الطبية)',
   'تأمين الحوادث الشخصية',
-  'تأمين حماية طلبة المدارس',
+  'تأمين حماية طلاب المدارس',
   'تأمين نقل النقدية',
   'تأمين شحن البضائع',
+];
+
+const REPORT_PERMISSIONS = [
+  'كشف حساب الوكيل',
+  'إغلاق حساب شهري',
+  'كشف إغلاق الحساب الشهري',
+  'إيصالات القبض',
+  'إدارة المصروفات',
+  'التسويات والعمولات',
+  'الديون المستحقة',
+  'الأرشيف المالي',
+  'المخازن والعهدة',
+  'الإحصائيات المالية',
+  'مرتبات الموظفين',
 ];
 
 export default function CreateBranchAgent() {
@@ -732,6 +746,37 @@ export default function CreateBranchAgent() {
                         }}
                       >
                         {insuranceType}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <h3 className="form-section-title" style={{ marginTop: '24px', marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                تقارير وصلاحيات إضافية
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                {REPORT_PERMISSIONS.map((permission) => {
+                  const isSelected = formData.authorized_documents.includes(permission);
+                  
+                  return (
+                    <div key={permission} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        id={`perm-${permission}`}
+                        checked={isSelected}
+                        onChange={() => handleDocumentToggle(permission)}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <label 
+                        htmlFor={`perm-${permission}`}
+                        style={{ 
+                          cursor: 'pointer',
+                          color: '#111827',
+                          fontSize: '14px'
+                        }}
+                      >
+                        {permission}
                       </label>
                     </div>
                   );

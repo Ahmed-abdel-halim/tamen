@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 
 type User = {
@@ -16,7 +17,38 @@ type User = {
     agent_name: string;
   } | null;
   salary?: number;
+  national_id_number?: string | null;
+  job_title?: string | null;
+  profile_photo_url?: string | null;
+  personal_id_proof_url?: string | null;
+  employment_contract_url?: string | null;
+  fixed_custodies?: any[];
+  consumed_custodies?: any[];
 };
+
+function escapeHtml(s: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function employeeCardNumber(u: User): string {
+  const n = (u.national_id_number || '').trim();
+  return n || `EMP-${String(u.id).padStart(5, '0')}`;
+}
+
+/** Use absolute URL for <img> and print windows (about:blank cannot resolve /storage). */
+function resolvePublicUrl(path: string | null | undefined): string {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('/img/')) return `${window.location.origin}${path}`;
+  if (path.startsWith('img/')) return `${window.location.origin}/${path}`;
+  if (path.startsWith('/storage/')) return `${window.location.origin}${path}`;
+  if (path.startsWith('storage/')) return `${window.location.origin}/${path}`;
+  return `${window.location.origin}/storage/${path}`;
+}
 
 const INSURANCE_TYPES = [
   'تأمين سيارات إجباري',
@@ -60,6 +92,7 @@ const SETTINGS_PERMISSIONS = [
 ];
 
 export default function UsersList() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', user?: User }>(null);
@@ -73,8 +106,13 @@ export default function UsersList() {
     password: '',
     is_admin: false,
     authorized_documents: [] as string[],
-    salary: '' as string | number
+    salary: '' as string | number,
+    national_id_number: '',
+    job_title: '',
   });
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [personalIdProofFile, setPersonalIdProofFile] = useState<File | null>(null);
+  const [contractFile, setContractFile] = useState<File | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<null | User>(null);
@@ -116,7 +154,325 @@ export default function UsersList() {
     }
   };
 
+  const uploadPendingEmployeeFiles = async (userId: number) => {
+    const parts: { type: 'profile_photo' | 'personal_id_proof' | 'employment_contract'; file: File }[] = [];
+    if (profilePhotoFile) parts.push({ type: 'profile_photo', file: profilePhotoFile });
+    if (personalIdProofFile) parts.push({ type: 'personal_id_proof', file: personalIdProofFile });
+    if (contractFile) parts.push({ type: 'employment_contract', file: contractFile });
+    for (const { type, file } of parts) {
+      const fd = new FormData();
+      fd.append('type', type);
+      fd.append('file', file);
+      const r = await fetch(`/api/users/${userId}/employee-files`, {
+        method: 'POST',
+        body: fd,
+        headers: { Accept: 'application/json' },
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.message || `فشل رفع الملف (${type})`);
+      }
+    }
+  };
+
+  const printEmployeeA4 = async (u: User) => {
+    // جلب بيانات العهدة للموظف
+    let userFixedCustodies: any[] = [];
+    let userConsumedCustodies: any[] = [];
+    
+    try {
+      const res = await fetch(`/api/inventory/custody?recipient_id=${u.id}&recipient_type=employee`);
+      if (res.ok) {
+        const allCustody: any[] = await res.json();
+        userFixedCustodies = allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active');
+        userConsumedCustodies = allCustody.filter(c => (c.item?.inventory_type === 'consumable' || c.inventory_type === 'consumable') && c.status === 'active');
+      }
+    } catch (e) {
+      console.error("Failed to fetch user custody", e);
+    }
+
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) return;
+
+    const photoSrc = u.profile_photo_url ? resolvePublicUrl(u.profile_photo_url) : '';
+    const logoSrc = resolvePublicUrl('/img/logo3.png');
+    const printDate = new Date().toLocaleString('ar-LY');
+
+    const permissionsHtml = (u.authorized_documents || []).length > 0
+      ? (u.authorized_documents || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')
+      : '<li>لا توجد صلاحيات محددة</li>';
+
+    const fixedCustodyHtml = userFixedCustodies.length > 0 
+      ? userFixedCustodies.map(c => `<tr><td>${escapeHtml(c.item?.name || 'صنف عهدة')}</td><td>${c.quantity}</td></tr>`).join('')
+      : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة ثابتة</td></tr>';
+
+    const consumedCustodyHtml = userConsumedCustodies.length > 0 
+      ? userConsumedCustodies.map(c => `<tr><td>${escapeHtml(c.item?.name || 'صنف عهدة')}</td><td>${c.quantity}</td></tr>`).join('')
+      : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة مستهلكة</td></tr>';
+
+    const rows: [string, string][] = [
+      ['الاسم بالكامل', escapeHtml(u.name)],
+      ['اسم المستخدم', escapeHtml(u.username)],
+      ['البريد الإلكتروني', escapeHtml(u.email || '—')],
+      ['المعرف الشخصي', escapeHtml(employeeCardNumber(u))],
+      ['المسمى الوظيفي', escapeHtml((u.job_title || '').trim() || '—')],
+      ['نوع الحساب', escapeHtml(u.user_type || '—')],
+      ['الراتب الشهري', u.salary != null ? `${Number(u.salary).toLocaleString('ar-LY')} دينار ليبي` : '—'],
+    ];
+
+    const tableRows = rows
+      .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
+      .join('');
+
+    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>استمارة بيانات موظف - ${escapeHtml(u.name)}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        @page { size: A4; margin: 10mm; }
+        body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.4; background: #fff; }
+        .page-container { border: 1px solid #e2e8f0; padding: 8mm; position: relative; min-height: 270mm; box-sizing: border-box; display: flex; flex-direction: column; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
+        .header-info h1 { margin: 0; color: #1e40af; font-size: 1.6rem; font-weight: 800; }
+        .header-info p { margin: 2px 0 0 0; color: #64748b; font-size: 0.9rem; font-weight: 600; }
+        
+        .header-branding { display: flex; align-items: center; gap: 10px; }
+        .brand-text { text-align: left; }
+        .brand-text div { font-size: 8pt; font-weight: 800; color: #1e40af; line-height: 1.1; }
+        .header-branding img { height: 50px; width: auto; }
+
+        .content-body { display: flex; gap: 20px; }
+        .main-data { flex: 1; }
+        .photo-sidebar { width: 140px; text-align: center; }
+        .photo-box { width: 130px; height: 160px; border: 2px solid #f1f5f9; border-radius: 6px; overflow: hidden; background: #f8fafc; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-box .no-img { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        table th { background: #f1f5f9; color: #475569; text-align: right; padding: 8px 12px; border: 1px solid #e2e8f0; width: 35%; font-weight: 700; font-size: 0.9rem; }
+        table td { padding: 8px 12px; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: 0.9rem; }
+
+        .permissions-section { margin-top: 15px; background: #f8fafc; padding: 12px; border-radius: 6px; border-right: 4px solid #1e40af; }
+        .permissions-section h3 { margin: 0 0 8px 0; font-size: 1rem; color: #1e40af; }
+        .permissions-section ul { margin: 0; padding: 0 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+        .permissions-section li { font-size: 0.8rem; color: #475569; font-weight: 600; list-style: none; }
+        .permissions-section li::before { content: "•"; color: #1e40af; margin-left: 5px; }
+
+        /* Custody Styles */
+        .section-title { font-size: 0.95rem; color: #1e40af; font-weight: 800; margin: 12px 0 5px 0; display: flex; align-items: center; gap: 5px; }
+        .section-title::before { content: ""; width: 4px; height: 15px; background: #1e40af; border-radius: 2px; }
+        
+        .custody-tables { display: flex; gap: 15px; margin-top: 5px; }
+        .custody-col { flex: 1; }
+        .custody-table { width: 100%; border-collapse: collapse; }
+        .custody-table th { background: #eff6ff; color: #1e40af; text-align: center; font-size: 0.8rem; padding: 5px; border: 1px solid #e2e8f0; }
+        .custody-table td { font-size: 0.8rem; padding: 5px 8px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; }
+
+        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-bottom: 10px; }
+        .sig-block { text-align: center; width: 45%; }
+        .sig-line { border-top: 1px solid #1e293b; margin-top: 30px; padding-top: 5px; font-weight: 700; color: #1e293b; font-size: 0.9rem; }
+        .print-date { position: absolute; bottom: 3mm; left: 8mm; font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
+      </style></head><body onload="window.print()">
+      <div class="page-container">
+        <div class="header">
+          <div class="header-info">
+            <h1>استمارة بيانات موظف</h1>
+            <p>قسم الشؤون الإدارية</p>
+          </div>
+          <div class="header-branding">
+            <div class="brand-text">
+              <div>المدار الليبي للتأمين</div>
+              <div>Al Madar Libyan Insurance</div>
+            </div>
+            <img src="${escapeHtml(logoSrc)}" alt="Logo" />
+          </div>
+        </div>
+
+        <div class="content-body">
+          <div class="main-data">
+            <table>${tableRows}</table>
+            
+            <div class="permissions-section">
+              <h3>الصلاحيات والأذونات الممنوحة:</h3>
+              <ul>${permissionsHtml}</ul>
+            </div>
+
+            <div class="custody-tables">
+              <div class="custody-col">
+                <div class="section-title">العهدة الثابتة</div>
+                <table class="custody-table"><thead><tr><th>البيان</th><th>الكمية</th></tr></thead><tbody>${fixedCustodyHtml}</tbody></table>
+              </div>
+              <div class="custody-col">
+                <div class="section-title">العهدة المستهلكة</div>
+                <table class="custody-table"><thead><tr><th>البيان</th><th>الكمية</th></tr></thead><tbody>${consumedCustodyHtml}</tbody></table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="photo-sidebar">
+            <div class="photo-box">
+              ${photoSrc ? `<img src="${escapeHtml(photoSrc)}" alt="" />` : `<div class="no-img">لا توجد صورة</div>`}
+            </div>
+            <p style="font-size: 0.8rem; font-weight: 700; color: #64748b;">الصورة الشخصية</p>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="sig-block">
+            <div class="sig-line">توقيع الموظف المعني</div>
+          </div>
+          <div class="sig-block">
+            <div class="sig-line">اعتماد رئيس قسم الموارد البشرية</div>
+          </div>
+        </div>
+        
+        <div class="print-date">تاريخ الطباعة: ${printDate}</div>
+      </div>
+      </body></html>`);
+    w.document.close();
+  };
+
+  const printEmployeeIdCard = (u: User) => {
+    const w = window.open('', '_blank', 'width=520,height=420');
+    if (!w) return;
+    const num = escapeHtml(employeeCardNumber(u));
+    const name = escapeHtml(u.name);
+    const job = escapeHtml((u.job_title || '').trim() || '—');
+    const idPhotoSrc = resolvePublicUrl(u.profile_photo_url);
+    const logoSrc = resolvePublicUrl('/img/logo3.png');
+    
+    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>بطاقة موظف</title>
+      <style>
+        @page { margin: 0; size: 85.6mm 53.98mm; }
+        body { font-family: Cairo, 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; background: #e2e8f0; }
+        
+        .card {
+          width: 85.6mm;
+          height: 53.98mm;
+          background: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+          position: relative;
+          color: #0f172a;
+          border: 1px solid #cbd5e1;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .card-header {
+          height: 16mm;
+          background: #1e40af;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0 4mm;
+          color: #ffffff;
+        }
+        .header-title { font-size: 10pt; font-weight: 800; margin: 0; }
+        .header-logo-box { display: flex; align-items: center; gap: 3mm; }
+        .logo-circle { width: 12mm; height: 12mm; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .header-logo-box img { height: 10mm; width: 10mm; object-fit: contain; }
+        .header-company-name { font-size: 8.5pt; font-weight: 700; text-align: left; line-height: 1.2; white-space: nowrap; }
+        .header-company-name div:first-child { font-size: 12pt; font-weight: 800; margin-bottom: 0.5mm; line-height: 1; }
+        .header-company-name div:last-child { font-size: 8.5pt; opacity: 0.95; font-weight: 800; line-height: 1; }
+
+        .card-body {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          padding: 2mm 5mm;
+          gap: 5mm;
+        }
+        .photo-section {
+          flex-shrink: 0;
+          width: 25mm;
+          height: 28mm;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          overflow: hidden;
+          background: #f8fafc;
+        }
+        .photo-section img { width: 100%; height: 100%; object-fit: cover; }
+
+        .info-section {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2mm;
+        }
+        .info-row {
+          display: flex;
+          gap: 2mm;
+          font-size: 9pt;
+          line-height: 1.2;
+        }
+        .info-label {
+          color: #64748b;
+          font-weight: 700;
+          min-width: 14mm;
+        }
+        .info-val {
+          color: #0f172a;
+          font-weight: 800;
+        }
+
+        .card-footer-note {
+          position: absolute;
+          bottom: 3mm;
+          left: 4mm;
+          font-size: 6pt;
+          color: #94a3b8;
+          font-weight: 700;
+        }
+      </style></head><body onload="window.print()">
+      <div class="card">
+        <div class="card-header">
+          <div class="header-title">بطاقة موظف</div>
+          <div class="header-logo-box">
+             <div class="header-company-name">
+               <div>المدار الليبي للتأمين</div>
+               <div>Al Madar Libyan Insurance</div>
+             </div>
+             <div class="logo-circle"><img src="${escapeHtml(logoSrc)}" alt="Logo" /></div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="photo-section">
+            ${idPhotoSrc ? `<img src="${escapeHtml(idPhotoSrc)}" alt="" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:7pt">بلا صورة</div>`}
+          </div>
+          <div class="info-section">
+            <div class="info-row">
+              <span class="info-label">المعرف:</span>
+              <span class="info-val">${num}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">الاسم:</span>
+              <span class="info-val">${name}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">المهنة:</span>
+              <span class="info-val">${job}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">الإصدار:</span>
+              <span class="info-val">${new Date().toLocaleDateString('ar-LY')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer-note">
+          صدرت عن قسم الموارد البشرية
+        </div>
+      </div>
+      </body></html>`);
+    w.document.close();
+  };
+
   useEffect(() => {
+    setProfilePhotoFile(null);
+    setPersonalIdProofFile(null);
+    setContractFile(null);
     if (showForm?.mode === 'edit' && showForm.user) {
       setFormData({
         username: showForm.user.username || '',
@@ -125,7 +481,9 @@ export default function UsersList() {
         password: '',
         is_admin: showForm.user.is_admin || false,
         authorized_documents: showForm.user.authorized_documents || [],
-        salary: showForm.user.salary || ''
+        salary: showForm.user.salary || '',
+        national_id_number: showForm.user.national_id_number || '',
+        job_title: showForm.user.job_title || '',
       });
     } else {
       setFormData({
@@ -135,7 +493,9 @@ export default function UsersList() {
         password: '',
         is_admin: false,
         authorized_documents: [],
-        salary: ''
+        salary: '',
+        national_id_number: '',
+        job_title: '',
       });
     }
     setFormErrors({});
@@ -237,6 +597,8 @@ export default function UsersList() {
         email: formData.email || null,
         is_admin: formData.is_admin,
         salary: formData.salary || null,
+        national_id_number: formData.national_id_number.trim() || null,
+        job_title: formData.job_title.trim() || null,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -269,8 +631,16 @@ export default function UsersList() {
       }
 
       const updatedData = await res.json();
+      const savedUserId = showForm?.mode === 'edit' ? showForm.user!.id : updatedData.id;
+      let uploadError: string | null = null;
+      try {
+        await uploadPendingEmployeeFiles(savedUserId);
+      } catch (uploadErr: unknown) {
+        uploadError = uploadErr instanceof Error ? uploadErr.message : 'فشل رفع المرفقات';
+      }
+
       await fetchUsers();
-      
+
       // إذا كان المستخدم المحدث هو نفس المستخدم المسجل دخول، حدث localStorage
       const currentUser = localStorage.getItem('user');
       if (currentUser && showForm?.mode === 'edit' && showForm.user?.id === updatedData.id) {
@@ -283,10 +653,24 @@ export default function UsersList() {
           }
         } catch {}
       }
-      
+
       setShowForm(null);
-      setFormData({ username: '', name: '', email: '', password: '', is_admin: false, authorized_documents: [], salary: '' });
-      showToast(showForm?.mode === 'add' ? 'تم إضافة الموظف بنجاح' : 'تم تحديث بيانات الموظف بنجاح', 'success');
+      setFormData({
+        username: '',
+        name: '',
+        email: '',
+        password: '',
+        is_admin: false,
+        authorized_documents: [],
+        salary: '',
+        national_id_number: '',
+        job_title: '',
+      });
+      if (uploadError) {
+        showToast(`تم حفظ البيانات. ${uploadError}`, 'error');
+      } else {
+        showToast(showForm?.mode === 'add' ? 'تم إضافة الموظف بنجاح' : 'تم تحديث بيانات الموظف بنجاح', 'success');
+      }
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء حفظ بيانات الموظف', 'error');
     } finally {
@@ -331,28 +715,39 @@ export default function UsersList() {
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th>صورة</th>
                     <th>إسم المستخدم</th>
                     <th>البريد الإلكتروني</th>
                     <th>حالة المستخدم</th>
                     <th>نوع المستخدم</th>
                     <th>المرتب</th>
+                    <th>الرقم الوطني</th>
+                    <th>المهنة</th>
                     <th>الصلاحيات</th>
-                    <th>معلومات إضافية</th>
                     <th>الإجراء</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="empty-state">
+                      <td colSpan={11} className="empty-state">
                         لا توجد نتائج
                       </td>
                     </tr>
                   ) : (
-                    paginatedUsers.map((u, index) => (
+                    paginatedUsers.map((u) => (
                       <tr key={u.id}>
-                        <td>{startIndex + index + 1}</td>
+                        <td>
+                          {u.profile_photo_url ? (
+                            <img
+                              src={resolvePublicUrl(u.profile_photo_url)}
+                              alt=""
+                              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }}
+                            />
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
                         <td>{u.name}</td>
                         <td>{u.email || '-'}</td>
                         <td>
@@ -385,6 +780,14 @@ export default function UsersList() {
                             <span style={{ color: '#94a3b8' }}>-</span>
                           )}
                         </td>
+                        <td style={{ fontSize: '0.8rem' }}>{u.national_id_number || <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                        <td style={{ fontSize: '0.8rem', maxWidth: 140 }} title={u.job_title || ''}>
+                          {u.job_title ? (
+                            u.job_title.length > 28 ? `${u.job_title.slice(0, 28)}…` : u.job_title
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
                         <td>
                           {u.is_admin ? (
                             <span style={{ color: '#64748b', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
@@ -404,17 +807,35 @@ export default function UsersList() {
                           )}
                         </td>
                         <td>
-                          {u.branch_agent_info ? (
-                            <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                              <div><strong>{u.branch_agent_info.agency_name}</strong></div>
-                              <div>{u.branch_agent_info.agent_name}</div>
-                            </div>
-                          ) : (
-                            <span style={{ color: '#94a3b8' }}>-</span>
-                          )}
-                        </td>
-                        <td>
                           <div className="action-buttons">
+                             <button
+                               type="button"
+                               className="action-btn"
+                               onClick={() => navigate(`/users/${u.id}`)}
+                               aria-label="عرض التفاصيل"
+                               title="عرض التفاصيل"
+                               style={{ color: '#0ea5e9' }}
+                             >
+                               <i className="fa-solid fa-eye"></i>
+                             </button>
+                             <button
+                               type="button"
+                               className="action-btn"
+                               onClick={() => printEmployeeA4(u)}
+                              aria-label="طباعة A4"
+                              title="طباعة بيانات الموظف A4"
+                            >
+                              <i className="fa-solid fa-file-lines"></i>
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn"
+                              onClick={() => printEmployeeIdCard(u)}
+                              aria-label="بطاقة عمل"
+                              title="طباعة بطاقة عمل"
+                            >
+                              <i className="fa-solid fa-id-card"></i>
+                            </button>
                             <button 
                               className="action-btn edit" 
                               onClick={() => setShowForm({ mode: 'edit', user: u })}
@@ -445,12 +866,11 @@ export default function UsersList() {
               {paginatedUsers.length === 0 ? (
                 <div className="empty-state">لا توجد نتائج</div>
               ) : (
-                paginatedUsers.map((u, index) => (
+                paginatedUsers.map((u) => (
                   <div key={u.id} className="user-mobile-card">
                     <div className="user-mobile-header">
                       <div>
                         <h4 className="user-mobile-title">{u.name}</h4>
-                        <span className="user-mobile-number">#{startIndex + index + 1}</span>
                       </div>
                     </div>
                     <div className="user-mobile-body">
@@ -492,6 +912,26 @@ export default function UsersList() {
                         </span>
                       </div>
                       <div className="user-mobile-row">
+                        <span className="user-mobile-label">المرتب:</span>
+                        <span className="user-mobile-value">
+                          {u.salary ? `${Number(u.salary).toLocaleString()} د.ل` : '—'}
+                        </span>
+                      </div>
+                      <div className="user-mobile-row">
+                        <span className="user-mobile-label">الرقم الوطني:</span>
+                        <span className="user-mobile-value">{u.national_id_number || '—'}</span>
+                      </div>
+                      <div className="user-mobile-row">
+                        <span className="user-mobile-label">المهنة:</span>
+                        <span className="user-mobile-value">{u.job_title || '—'}</span>
+                      </div>
+                      {u.profile_photo_url && (
+                        <div className="user-mobile-row" style={{ alignItems: 'center' }}>
+                          <span className="user-mobile-label">صورة:</span>
+                          <img src={resolvePublicUrl(u.profile_photo_url)} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                        </div>
+                      )}
+                      <div className="user-mobile-row">
                         <span className="user-mobile-label">الصلاحيات:</span>
                         <span className="user-mobile-value">
                           {u.is_admin ? (
@@ -512,15 +952,32 @@ export default function UsersList() {
                           )}
                         </span>
                       </div>
-                      {u.branch_agent_info && (
-                        <div className="user-mobile-row">
-                          <span className="user-mobile-label">معلومات الوكيل/الفرع:</span>
-                          <span className="user-mobile-value">
-                            {u.branch_agent_info.agency_name} - {u.branch_agent_info.agent_name}
-                          </span>
-                        </div>
-                      )}
                       <div className="user-mobile-actions">
+                        <button
+                          type="button"
+                          className="action-btn"
+                          onClick={() => navigate(`/users/${u.id}`)}
+                          title="التفاصيل"
+                          style={{ color: '#0ea5e9' }}
+                        >
+                          <i className="fa-solid fa-eye"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="action-btn"
+                          onClick={() => printEmployeeA4(u)}
+                          title="طباعة A4"
+                        >
+                          <i className="fa-solid fa-file-lines"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="action-btn"
+                          onClick={() => printEmployeeIdCard(u)}
+                          title="بطاقة عمل"
+                        >
+                          <i className="fa-solid fa-id-card"></i>
+                        </button>
                         <button 
                           className="action-btn edit" 
                           onClick={() => setShowForm({ mode: 'edit', user: u })}
@@ -660,6 +1117,79 @@ export default function UsersList() {
                   className={formErrors.salary ? 'error' : ''}
                   placeholder="أدخل قيمة المرتب"
                 />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="national_id_number">الرقم الوطني (اختياري)</label>
+                <input
+                  type="text"
+                  id="national_id_number"
+                  value={formData.national_id_number}
+                  onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value })}
+                  placeholder="الرقم الوطني أو رقم الهوية"
+                  maxLength={64}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="job_title">المهنة أو الاختصاص (اختياري)</label>
+                <input
+                  type="text"
+                  id="job_title"
+                  value={formData.job_title}
+                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                  placeholder="مثال: محاسب، موظف استقبال..."
+                  maxLength={191}
+                />
+              </div>
+
+              <div className="form-group" style={{ borderTop: '1px solid var(--border, #e2e8f0)', paddingTop: '12px', marginTop: '8px' }}>
+                <label className="permissions-section-title">المرفقات (اختياري)</label>
+                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 10px' }}>
+                  الصورة الشخصية: صورة فقط. الإثبات وعقد العمل: صورة أو PDF. يُرفع الملف بعد حفظ بيانات الموظف.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                    صورة شخصية
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      style={{ display: 'block', marginTop: '6px' }}
+                      onChange={(e) => setProfilePhotoFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                    إثبات شخصي
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      style={{ display: 'block', marginTop: '6px' }}
+                      onChange={(e) => setPersonalIdProofFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                    عقد العمل
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      style={{ display: 'block', marginTop: '6px' }}
+                      onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                </div>
+                {showForm.mode === 'edit' && showForm.user && (
+                  <div style={{ marginTop: '12px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {showForm.user.profile_photo_url && (
+                      <a href={resolvePublicUrl(showForm.user.profile_photo_url)} target="_blank" rel="noreferrer">عرض الصورة الحالية</a>
+                    )}
+                    {showForm.user.personal_id_proof_url && (
+                      <a href={resolvePublicUrl(showForm.user.personal_id_proof_url)} target="_blank" rel="noreferrer">عرض إثبات شخصي محفوظ</a>
+                    )}
+                    {showForm.user.employment_contract_url && (
+                      <a href={resolvePublicUrl(showForm.user.employment_contract_url)} target="_blank" rel="noreferrer">عرض عقد العمل محفوظ</a>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">

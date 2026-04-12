@@ -16,6 +16,9 @@ interface Voucher {
   agent_name: string;
   amount: number;
   payment_method: string;
+  bank_name?: string;
+  reference_number?: string;
+  extra_details?: any;
   payment_date: string;
   notes: string;
   created_at: string;
@@ -32,6 +35,9 @@ export default function PaymentVouchers() {
   const [selectedAgent, setSelectedAgent] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('نقدي');
+  const [bankName, setBankName] = useState('');
+  const [refNumber, setRefNumber] = useState('');
+  const [customMethod, setCustomMethod] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
@@ -71,6 +77,8 @@ export default function PaymentVouchers() {
           payment_method: v.payment_method,
           payment_date: v.payment_date,
           notes: v.notes || '',
+          bank_name: v.bank_name || '',
+          reference_number: v.reference_number || '',
           created_at: v.created_at
         }));
         setVouchers(mappedVouchers);
@@ -89,6 +97,9 @@ export default function PaymentVouchers() {
       setSelectedAgent(voucher.agent_id.toString());
       setAmount(voucher.amount.toString());
       setPaymentMethod(voucher.payment_method);
+      setBankName(voucher.bank_name || '');
+      setRefNumber(voucher.reference_number || '');
+      setCustomMethod('');
       setPaymentDate(voucher.payment_date);
       setNotes(voucher.notes);
       setVoucherNumber(voucher.voucher_number);
@@ -97,6 +108,9 @@ export default function PaymentVouchers() {
       setSelectedAgent('');
       setAmount('');
       setPaymentMethod('نقدي');
+      setBankName('');
+      setRefNumber('');
+      setCustomMethod('');
       setPaymentDate(new Date().toISOString().split('T')[0]);
       setNotes('');
       setVoucherNumber(`PV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
@@ -125,7 +139,9 @@ export default function PaymentVouchers() {
           voucher_number: voucherNumber,
           branch_agent_id: parseInt(selectedAgent),
           amount: parseFloat(amount),
-          payment_method: paymentMethod,
+          payment_method: paymentMethod === 'أخرى' ? customMethod : paymentMethod,
+          bank_name: bankName,
+          reference_number: refNumber,
           payment_date: paymentDate,
           notes: notes
         }),
@@ -286,7 +302,7 @@ export default function PaymentVouchers() {
         <div className="modal no-print" onClick={(e) => {
           if (e.target === e.currentTarget) setShowModal(false);
         }}>
-          <div className="modal-content" style={{ width: '550px', maxWidth: '95%' }}>
+          <div className="modal-content" style={{ width: '550px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3 style={{ margin: 0 }}>
                 {editingVoucher ? 'تعديل إيصال القبض' : 'إصدار إيصال قبض جديد'}
@@ -344,15 +360,65 @@ export default function PaymentVouchers() {
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>طريقة الدفع</label>
                   <select 
                     value={paymentMethod} 
-                    onChange={(e) => setPaymentMethod(e.target.value)} 
+                    onChange={(e) => {
+                      setPaymentMethod(e.target.value);
+                      if (e.target.value === 'نقدي') {
+                        setBankName('');
+                        setRefNumber('');
+                      }
+                    }} 
                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                   >
                     <option value="نقدي" style={{ background: 'var(--panel)' }}>نقدي</option>
                     <option value="شيك" style={{ background: 'var(--panel)' }}>شيك</option>
-                    <option value="تحويل بنكي" style={{ background: 'var(--panel)' }}>تحويل بنكي</option>
+                    <option value="تحويل بنكي" style={{ background: 'var(--panel)' }}>حوالة مصرفية</option>
+                    <option value="بطاقة مصرفية" style={{ background: 'var(--panel)' }}>بطاقة مصرفية (POS)</option>
+                    <option value="أخرى" style={{ background: 'var(--panel)' }}>نوع آخر...</option>
                   </select>
                 </div>
               </div>
+
+              {paymentMethod === 'أخرى' && (
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>اسم وسيلة الدفع <span className="required">*</span></label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={customMethod} 
+                    onChange={(e) => setCustomMethod(e.target.value)} 
+                    placeholder="مثال: نقدي + شيك" 
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }} 
+                  />
+                </div>
+              )}
+
+              {(paymentMethod === 'شيك' || paymentMethod === 'تحويل بنكي' || paymentMethod === 'بطاقة مصرفية') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div className="form-group">
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>
+                      {paymentMethod === 'شيك' ? 'رقم الشيك' : 
+                       paymentMethod === 'تحويل بنكي' ? 'رقم الحوالة' : 'رقم الإيصال'} <span className="required">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={refNumber} 
+                      onChange={(e) => setRefNumber(e.target.value)} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }} 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>اسم المصرف <span className="required">*</span></label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={bankName} 
+                      onChange={(e) => setBankName(e.target.value)} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }} 
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>تاريخ القبض <span className="required">*</span></label>
@@ -464,7 +530,11 @@ export default function PaymentVouchers() {
 
               <div style={{ borderBottom: '1px dotted #aaa', display: 'flex', gap: '15px' }}>
                 <span style={{ fontWeight: 'bold', minWidth: '150px', color: '#014cb1' }}>طريقة الدفع:</span>
-                <span style={{ fontWeight: 'bold', fontSize: '15px' }}>{printingVoucher.payment_method}</span>
+                <span style={{ fontWeight: 'bold', fontSize: '15px' }}>
+                  {printingVoucher.payment_method}
+                  {printingVoucher.bank_name ? ` - ${printingVoucher.bank_name}` : ''}
+                  {printingVoucher.reference_number ? ` (${printingVoucher.reference_number})` : ''}
+                </span>
               </div>
             </div>
 

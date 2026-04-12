@@ -14,7 +14,7 @@ type CargoInsuranceDocument = {
   branch_agent?: { agency_name: string };
 };
 
-export default function CargoInsuranceList() {
+export default function CargoInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<CargoInsuranceDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +86,7 @@ export default function CargoInsuranceList() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>تأمين شحن البضائع / قائمة الوثائق</span>
+        <span>{isArchive ? 'الأرشيف / تأمين شحن البضائع' : 'تأمين شحن البضائع / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">
@@ -100,17 +100,26 @@ export default function CargoInsuranceList() {
               className="users-search-input"
             />
           </div>
-          <button
-            className="primary add-user-btn"
-            onClick={() => navigate('/cargo-insurance/create')}
-          >
-            <i className="fa-solid fa-plus"></i>
-            إصدار وثيقة جديدة
-          </button>
+          {!isArchive && (
+            <button
+              className="primary add-user-btn"
+              onClick={() => navigate('/cargo-insurance/create')}
+            >
+              <i className="fa-solid fa-plus"></i>
+              إصدار وثيقة جديدة
+            </button>
+          )}
         </div>
 
         {loading ? (
           <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
+            <i className="fa-solid fa-folder-open" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+              {searchQuery ? 'لا توجد نتائج للبحث' : (isArchive ? 'لا توجد وثائق مؤرشفة' : 'لا توجد وثائق مسجلة')}
+            </p>
+          </div>
         ) : (
           <div className="users-table-wrapper">
             <table className="users-table">

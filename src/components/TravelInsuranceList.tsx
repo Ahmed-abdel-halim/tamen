@@ -154,10 +154,11 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
         {loading ? (
           <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
         ) : filteredDocuments.length === 0 ? (
-          <div className="empty-state">
-            <i className="fa-solid fa-file-invoice" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
-            <p>{searchQuery ? 'لا توجد نتائج للبحث' : 'لا توجد وثائق مسجلة'}</p>
-           
+          <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
+            <i className="fa-solid fa-folder-open" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+              {searchQuery ? 'لا توجد نتائج للبحث' : (isArchive ? 'لا توجد وثائق مؤرشفة' : 'لا توجد وثائق مسجلة')}
+            </p>
           </div>
         ) : (
           <>

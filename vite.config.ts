@@ -10,6 +10,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/storage': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
       '/external-api': {
         target: 'https://testenvapi.lifo.ly',
         changeOrigin: true,

@@ -17,7 +17,7 @@ interface Statistics {
   monthly_average: number;
 }
 
-const CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'أخرى'];
+const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة'];
 
 export default function ExpenseManagement() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -37,8 +37,15 @@ export default function ExpenseManagement() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState('مدفوع');
   const [notes, setNotes] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
 
   const API_BASE_URL = '/api';
+
+  const dynamicCategories = React.useMemo(() => {
+    const existing = expenses.map(e => e.category);
+    const combined = [...DEFAULT_CATEGORIES, ...existing];
+    return Array.from(new Set(combined)).filter(cat => cat && !cat.includes('أخرى'));
+  }, [expenses]);
 
   React.useEffect(() => {
     fetchExpenses();
@@ -99,7 +106,7 @@ export default function ExpenseManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          category,
+          category: category.includes('أخرى') ? customCategory : category,
           amount: parseFloat(amount),
           expense_date: date,
           status,
@@ -299,7 +306,7 @@ export default function ExpenseManagement() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000 
         }}>
-          <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '20px', width: '500px', maxWidth: '90%' }}>
+          <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '20px', width: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', color: '#ef4444' }}>
               {editingExpense ? 'تعديل المصروف التشغيلي' : 'تسجيل مصروف تشغيلي جديد'}
             </h3>
@@ -323,7 +330,8 @@ export default function ExpenseManagement() {
                     onChange={(e) => setCategory(e.target.value)}
                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                   >
-                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    <option value="أخرى (إضافة فئة جديدة)">أخرى (إضافة فئة جديدة)</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -338,6 +346,20 @@ export default function ExpenseManagement() {
                   />
                 </div>
               </div>
+
+              {category.includes('أخرى') && (
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم الفئة الجديدة <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={customCategory} 
+                    onChange={(e) => setCustomCategory(e.target.value)} 
+                    placeholder="مثال: دعاية وإعلان" 
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }} 
+                  />
+                </div>
+              )}
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>تاريخ الصرف</label>
                 <input 

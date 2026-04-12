@@ -14,7 +14,7 @@ interface DocumentRecord {
   status: 'active' | 'archived';
 }
 
-const CATEGORIES = ['إيصالات قبض', 'وثائق تأمين ملغاة', 'كشوفات بنكية', 'فواتير مصروفات', 'عقود وكلاء', 'تقارير دورية'];
+const CATEGORIES = ['إيصالات قبض', 'وثائق تأمين ملغاة', 'كشوفات بنكية', 'فواتير مصروفات', 'عقود وكلاء', 'تقارير دورية', 'أخرى'];
 
 export default function FinancialArchive() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -26,6 +26,7 @@ export default function FinancialArchive() {
   const [formData, setFormData] = useState({
     document_name: '',
     category: CATEGORIES[0],
+    custom_category: '',
     related_entity: '',
     file: null as File | null
   });
@@ -73,7 +74,7 @@ export default function FinancialArchive() {
 
     const data = new FormData();
     data.append('document_name', formData.document_name);
-    data.append('category', formData.category);
+    data.append('category', formData.category === 'أخرى' ? formData.custom_category : formData.category);
     data.append('related_entity', formData.related_entity);
     data.append('file', formData.file);
 
@@ -86,10 +87,28 @@ export default function FinancialArchive() {
         setShowModal(false);
         fetchArchive();
         showToast('تمت أرشفة المستند بنجاح', 'success');
-        setFormData({ document_name: '', category: CATEGORIES[0], related_entity: '', file: null });
+        setFormData({ document_name: '', category: CATEGORIES[0], custom_category: '', related_entity: '', file: null });
       }
     } catch (error) {
       showToast('فشل رفع المستند', 'error');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا المستند نهائياً؟')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/financial-archive/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        showToast('تم حذف المستند بنجاح', 'success');
+        fetchArchive();
+      } else {
+        showToast('فشل في حذف المستند', 'error');
+      }
+    } catch (error) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
     }
   };
 
@@ -131,13 +150,19 @@ export default function FinancialArchive() {
               style={{ textAlign: 'right', padding: '10px 15px', borderRadius: '8px', border: 'none', background: activeCategory === 'all' ? '#014cb1' : 'transparent', color: activeCategory === 'all' ? '#fff' : 'var(--text)', cursor: 'pointer' }}>
               الكل
             </button>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat} onClick={() => setActiveCategory(cat)}
-                style={{ textAlign: 'right', padding: '10px 15px', borderRadius: '8px', border: 'none', background: activeCategory === cat ? '#014cb1' : 'transparent', color: activeCategory === cat ? '#fff' : 'var(--text)', cursor: 'pointer', fontSize: '13px' }}>
-                {cat}
-              </button>
-            ))}
+            {(() => {
+              const availableCategories = Array.from(new Set([
+                ...CATEGORIES.filter(c => c !== 'أخرى'),
+                ...documents.map(doc => doc.category)
+              ]));
+              return availableCategories.map(cat => (
+                <button
+                  key={cat} onClick={() => setActiveCategory(cat)}
+                  style={{ textAlign: 'right', padding: '10px 15px', borderRadius: '8px', border: 'none', background: activeCategory === cat ? '#014cb1' : 'transparent', color: activeCategory === cat ? '#fff' : 'var(--text)', cursor: 'pointer', fontSize: '13px' }}>
+                  {cat}
+                </button>
+              ));
+            })()}
           </div>
         </div>
 
@@ -187,6 +212,13 @@ export default function FinancialArchive() {
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <a href={`${API_BASE_URL.replace('/api', '')}/storage/${(doc as any).file_path}`} target="_blank" rel="noreferrer" style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="معاينة"><i className="fa-solid fa-eye"></i></a>
                         <a href={`${API_BASE_URL.replace('/api', '')}/storage/${(doc as any).file_path}`} download style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="تحميل"><i className="fa-solid fa-download"></i></a>
+                        <button 
+                          onClick={() => handleDelete(doc.id)}
+                          style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#ef4444' }} 
+                          title="حذف"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -213,9 +245,24 @@ export default function FinancialArchive() {
                 <div className="form-group">
                   <label>تصنيف المستند</label>
                   <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    {(() => {
+                      const dynamicCategoriesArr = Array.from(new Set([
+                        ...CATEGORIES.filter(c => c !== 'أخرى'),
+                        ...documents.map(doc => doc.category)
+                      ]));
+                      return [
+                        ...dynamicCategoriesArr.map(c => <option key={c} value={c}>{c}</option>),
+                        <option key="other" value="أخرى">أخرى</option>
+                      ];
+                    })()}
                   </select>
                 </div>
+                {formData.category === 'أخرى' && (
+                  <div className="form-group">
+                    <label>اكتب التصنيف الجديد</label>
+                    <input type="text" required placeholder="مثال: مستندات قانونية" value={formData.custom_category} onChange={e => setFormData({ ...formData, custom_category: e.target.value })} />
+                  </div>
+                )}
                 <div className="form-group">
                   <label>جهة التعامل (اختياري)</label>
                   <input type="text" placeholder="اسم الوكيل أو المصرف" value={formData.related_entity} onChange={e => setFormData({ ...formData, related_entity: e.target.value })} />

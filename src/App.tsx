@@ -25,6 +25,7 @@ import FinancialStatistics from './components/FinancialStatistics';
 import PaymentVouchers from './components/PaymentVouchers';
 import ExpenseManagement from './components/ExpenseManagement';
 import ProfilePage from './components/ProfilePage';
+import RevenueManagement from './components/RevenueManagement';
 import BranchesAgentsList from './components/BranchesAgentsList';
 import CreateBranchAgent from './components/CreateBranchAgent';
 import BranchAgentDetails from './components/BranchAgentDetails';
@@ -61,6 +62,7 @@ import PersonalAccidentInsuranceList from './components/PersonalAccidentInsuranc
 import CreatePersonalAccidentInsurance from './components/CreatePersonalAccidentInsurance';
 import ViewPersonalAccidentInsurance from './components/ViewPersonalAccidentInsurance';
 import EditPersonalAccidentInsurance from './components/EditPersonalAccidentInsurance';
+import UserDetails from './components/UserDetails';
 
 import SchoolStudentInsuranceList from './components/SchoolStudentInsuranceList';
 import CreateSchoolStudentInsurance from './components/CreateSchoolStudentInsurance';
@@ -142,6 +144,7 @@ function hasAccessToRoute(
     'كشف إغلاق الحساب الشهري': ['/reports/monthly-account-closures-report'],
     'المخازن والعهدة': ['/reports/inventory'],
     'مرتبات الموظفين': ['/reports/employee-salaries'],
+    'إدارة الإيرادات': ['/reports/revenue'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -256,6 +259,7 @@ const menuSections: SidebarSection[] = [
     title: 'الشؤون المالية',
     items: [
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+      { label: 'إدارة الإيرادات', icon: 'fa-solid fa-money-bill-trend-up', to: '/reports/revenue' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
       { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
@@ -324,6 +328,7 @@ const createMenuSections = (
     'الأرشيف المالي': { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
     'المخازن والعهدة': { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
     'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+    'إدارة الإيرادات': { label: 'إدارة الإيرادات', icon: 'fa-solid fa-money-bill-trend-up', to: '/reports/revenue' },
     'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     'إدارة الفروع والوكلاء': { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
     'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' },
@@ -351,6 +356,7 @@ const createMenuSections = (
   // ترتيب التقارير
   const reportsOrder: string[] = [
     '/reports/financial-statistics',
+    '/reports/revenue',
     '/reports/outstanding-debts',
     '/reports/commissions',
     '/reports/payment-vouchers',
@@ -652,6 +658,7 @@ export default function App() {
                   <Route path="/dashboard" element={<DashboardPanels />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/users" element={<UsersList />} />
+                  <Route path="/users/:id" element={<UserDetails />} />
                   {/* إدارة الفروع والوكلاء */}
                   <Route path="/branches-agents" element={<BranchesAgentsList />} />
                   <Route path="/branches-agents/create" element={<CreateBranchAgent />} />
@@ -730,6 +737,7 @@ export default function App() {
 
                   {/* تقارير */}
                   <Route path="/reports/financial-statistics" element={<FinancialStatistics />} />
+                  <Route path="/reports/revenue" element={<RevenueManagement />} />
                   <Route path="/reports/branch-agent-account" element={<BranchAgentAccountReport />} />
                   <Route path="/reports/monthly-account-closure" element={<MonthlyAccountClosure />} />
                   <Route path="/reports/monthly-account-closures-report" element={<MonthlyAccountClosuresReport />} />
