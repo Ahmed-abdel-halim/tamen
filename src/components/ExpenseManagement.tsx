@@ -166,15 +166,200 @@ export default function ExpenseManagement() {
         showToast('فشل تحديث الحالة', 'error');
       }
     } catch (error) {
-      console.error('Error updating status:', error);
       showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
     }
+  };
+
+  const exportToExcel = () => {
+    if (expenses.length === 0) {
+      showToast('لا توجد بيانات لتصديرها', 'error');
+      return;
+    }
+
+    const logoUrl = window.location.origin + '/img/logo.png';
+    const tableHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; }
+          .co-name { font-size: 20pt; font-weight: 900; color: #ef4444; text-align: right; }
+          .co-sub { font-size: 12pt; color: #64748b; text-align: right; }
+          .report-subtitle { font-size: 14pt; font-weight: bold; background-color: #fef2f2; color: #ef4444; text-align: center; border: 1px solid #fee2e2; }
+          table { border-collapse: collapse; width: 100%; }
+          th { background-color: #ef4444; color: #ffffff; font-weight: bold; border: 1px solid #b91c1c; padding: 12px; text-align: center; }
+          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; }
+          .total-box { background-color: #fff1f2; font-weight: bold; border: 1px solid #fee2e2; }
+          .amount { color: #ef4444; font-weight: bold; }
+          .meta-info { color: #94a3b8; font-size: 9pt; text-align: right; }
+        </style>
+      </head>
+      <body dir="rtl">
+        <table>
+          <tr>
+            <td colspan="4" style="border:none; text-align:right; vertical-align: top;">
+              <div class="co-name">شركة المدار الليبي للتأمين</div>
+              <div class="co-sub">Al Madar Libyan Insurance</div>
+              <div class="co-sub">قسم الشؤون المالية والمحاسبية</div>
+            </td>
+            <td colspan="2" style="border:none; text-align:left; vertical-align: top;">
+              <img src="${logoUrl}" width="100" height="80">
+            </td>
+          </tr>
+          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
+          <tr><td colspan="6" class="report-subtitle">تقرير المصروفات التشغيلية - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</td></tr>
+          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
+          
+          <tr style="height: 50px;">
+            <td colspan="2" class="total-box">إجمالي المصروفات: ${statistics.monthly_total.toLocaleString()} د.ل</td>
+            <td colspan="2" class="total-box" style="background:#f8fafc">عدد العمليات: ${statistics.monthly_count}</td>
+            <td colspan="2" class="total-box" style="background:#f0fdf4">متوسط الصرف: ${statistics.monthly_average.toFixed(2)} د.ل</td>
+          </tr>
+          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
+          
+          <thead>
+            <tr>
+              <th style="width: 200px;">البند (الوصف)</th>
+              <th style="width: 120px;">الفئة</th>
+              <th style="width: 100px;">المبلغ (د.ل)</th>
+              <th style="width: 100px;">التاريخ</th>
+              <th style="width: 80px;">الحالة</th>
+              <th style="width: 180px;">ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${expenses.map(e => `
+              <tr>
+                <td style="text-align:right; font-weight:bold;">${e.name}</td>
+                <td>${e.category}</td>
+                <td class="amount">${e.amount.toLocaleString()}</td>
+                <td>${e.expense_date}</td>
+                <td>${e.status}</td>
+                <td style="color: #64748b; font-size: 9pt;">${e.notes || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <br>
+        <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `تقرير_مصروفات_المدار_${new Date().getTime()}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   // const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <section className="users-management">
+      {/* Professional Print-only Header (Employee Salaries Style) */}
+      <div className="print-only-header" style={{ display: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '3px double #e2e8f0' }}>
+          <div style={{ textAlign: 'right' }}>
+            <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b', fontWeight: '900' }}>المدار الليبي للتأمين</h1>
+            <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>Al Madar Libyan Insurance</p>
+            <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>قسم الشؤون المالية والموارد البشرية</p>
+          </div>
+          <img src="/img/logo.png" alt="Logo" style={{ height: '80px', width: 'auto' }} />
+        </div>
+
+        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+          <h2 style={{ 
+            display: 'inline-block',
+            margin: 0, 
+            padding: '10px 40px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '50px',
+            fontSize: '18px',
+            color: '#1e293b'
+          }}>
+            تقرير المصروفات التشغيلية
+          </h2>
+        </div>
+      </div>
+
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 10mm; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .no-print, .sidebar, .topbar, th:last-child, td:last-child { display: none !important; }
+          .print-only-header { display: block !important; }
+          .print-only-footer { display: flex !important; }
+          .print-date { display: block !important; }
+          
+          body, html { 
+            background: #fff !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 100% !important; 
+            direction: rtl !important; 
+            font-family: 'Cairo', sans-serif !important;
+            color: #1e293b !important;
+          }
+          
+          .app-shell { display: block !important; position: static !important; }
+          .main-area { padding: 0 !important; margin: 0 !important; width: 100% !important; display: block !important; position: static !important; }
+          
+          .users-management { padding: 0 !important; margin: 0 !important; width: 100% !important; display: block !important; }
+          .users-card { border: none !important; box-shadow: none !important; width: 100% !important; background: transparent !important; }
+          .users-table-wrapper { width: 100% !important; overflow: visible !important; }
+          
+          .users-table { 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            margin-bottom: 40px !important; 
+            font-size: 11px !important;
+            table-layout: auto !important;
+          }
+          .users-table th { 
+            background-color: #f1f5f9 !important; 
+            color: #475569 !important; 
+            font-weight: 700 !important; 
+            padding: 12px 10px !important; 
+            border: 1px solid #cbd5e1 !important;
+            text-align: center !important;
+            -webkit-print-color-adjust: exact;
+          }
+          .users-table td { 
+            padding: 10px !important; 
+            border: 1px solid #e2e8f0 !important; 
+            text-align: center !important;
+            color: #1e293b !important;
+          }
+          tr:nth-child(even) { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
+          
+          /* Summary boxes */
+          div[style*="display: grid"] { 
+            display: flex !important; 
+            justify-content: flex-start !important; 
+            gap: 25px !important; 
+            margin-bottom: 30px !important;
+          }
+          div[style*="background: #fff"] { 
+            background: #f8fafc !important; 
+            border: 1px solid #e2e8f0 !important; 
+            padding: 15px 25px !important; 
+            border-radius: 12px !important;
+            width: auto !important;
+            min-width: 200px !important;
+            -webkit-print-color-adjust: exact;
+          }
+        }
+      `}</style>
+
       <div className="users-breadcrumb no-print" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -189,25 +374,66 @@ export default function ExpenseManagement() {
           <i className="fa-solid fa-vault" style={{ marginLeft: '10px', color: '#ef4444' }}></i>
           إدارة المصروفات التشغيلية
         </span>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="btn-primary"
-          style={{ 
-            background: '#ef4444', 
-            color: '#fff',
-            padding: '10px 20px', 
-            borderRadius: '10px', 
-            border: 'none',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer'
-          }}
-        >
-          <i className="fa-solid fa-plus"></i>
-          تسجيل مصروف جديد
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={exportToExcel}
+            className="btn-secondary"
+            style={{ 
+              background: '#10b981', 
+              color: '#fff',
+              padding: '10px 20px', 
+              borderRadius: '10px', 
+              border: 'none',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <i className="fa-solid fa-file-excel"></i>
+            تصدير Excel
+          </button>
+          <button 
+            onClick={handlePrint}
+            className="btn-secondary"
+            style={{ 
+              background: '#64748b', 
+              color: '#fff',
+              padding: '10px 20px', 
+              borderRadius: '10px', 
+              border: 'none',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <i className="fa-solid fa-print"></i>
+            طباعة
+          </button>
+          <button 
+            onClick={() => handleOpenModal()}
+            className="btn-primary"
+            style={{ 
+              background: '#ef4444', 
+              color: '#fff',
+              padding: '10px 20px', 
+              borderRadius: '10px', 
+              border: 'none',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <i className="fa-solid fa-plus"></i>
+            تسجيل مصروف جديد
+          </button>
+        </div>
+
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
@@ -380,6 +606,23 @@ export default function ExpenseManagement() {
           </div>
         </div>
       )}
+
+      {/* Professional Print-only Footer (Employee Salaries Style) */}
+      <div className="print-only-footer" style={{ display: 'none', marginTop: '50px', justifyContent: 'space-between', textAlign: 'center' }}>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
+        </div>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>مدير الشؤون المالية</p>
+        </div>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
+        </div>
+      </div>
+
+      <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
+        تم استخراج هذا الكشف بتاريخ: {new Date().toLocaleString('ar-LY')}
+      </div>
     </section>
   );
 }

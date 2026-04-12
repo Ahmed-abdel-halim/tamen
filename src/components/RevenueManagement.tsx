@@ -60,38 +60,153 @@ export default function RevenueManagement() {
 
   const exportToExcel = () => {
     if (!stats) return;
-    const excelHeader = `
-      <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Arial, sans-serif;">
-        <h1 style="color: #014cb1;">شركة المدار الليبي للتأمين - تقرير الإيرادات</h1>
-        <p>التاريخ: ${new Date().toLocaleDateString('ar-LY')}</p>
-        <hr>
-      </div>
+    const logoUrl = window.location.origin + '/img/logo.png';
+    const tableHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; }
+          .co-name { font-size: 20pt; font-weight: 900; color: #014cb1; text-align: right; }
+          .co-sub { font-size: 12pt; color: #64748b; text-align: right; }
+          .report-subtitle { font-size: 14pt; font-weight: bold; background-color: #f0f7ff; color: #014cb1; text-align: center; border: 1px solid #dbeafe; }
+          table { border-collapse: collapse; width: 100%; }
+          th { background-color: #014cb1; color: #ffffff; font-weight: bold; border: 1px solid #003173; padding: 12px; text-align: center; }
+          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; }
+          .total-box { background-color: #f8fafc; font-weight: bold; border: 1px solid #e2e8f0; }
+          .meta-info { color: #94a3b8; font-size: 9pt; text-align: right; }
+        </style>
+      </head>
+      <body dir="rtl">
+        <table>
+          <tr>
+            <td colspan="4" style="border:none; text-align:right; vertical-align: top;">
+              <div class="co-name">شركة المدار الليبي للتأمين</div>
+              <div class="co-sub">Al Madar Libyan Insurance</div>
+              <div class="co-sub">قسم الشؤون المالية والمحاسبية</div>
+            </td>
+            <td colspan="2" style="border:none; text-align:left; vertical-align: top;">
+              <img src="${logoUrl}" width="100" height="80">
+            </td>
+          </tr>
+          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
+          <tr><td colspan="6" class="report-subtitle">تقرير الإيرادات والمقبوضات المالية - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</td></tr>
+          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
+          
+          <tr style="height: 50px;">
+            <td colspan="2" class="total-box">إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل</td>
+            <td colspan="2" class="total-box">إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل</td>
+            <td colspan="2" class="total-box" style="color: #ef4444;">الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل</td>
+          </tr>
+          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
+          
+          <thead>
+            <tr>
+              <th colspan="3">نوع التأمين</th>
+              <th colspan="2">عدد الوثائق الصادرة</th>
+              <th colspan="1">نسبة المساهمة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stats.sources.map(s => `
+              <tr>
+                <td colspan="3" style="text-align:right; font-weight:bold;">${s.name}</td>
+                <td colspan="2">${s.value.toLocaleString()} وثيقة</td>
+                <td colspan="1">100%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <br>
+        <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
+      </body>
+      </html>
     `;
-    const table = `
-      <table border="1" dir="rtl" style="border-collapse: collapse; width: 100%; text-align: right;">
-        <tr style="background: #014cb1; color: #fff;">
-          <th style="padding: 10px;">البيان</th>
-          <th style="padding: 10px;">القيمة (د.ل)</th>
-        </tr>
-        <tr><td>إجمالي الإيرادات</td><td>${stats.total_revenue.toLocaleString()}</td></tr>
-        <tr><td>إجمالي المقبوضات</td><td>${stats.total_paid.toLocaleString()}</td></tr>
-        <tr><td>الأرصدة المعلقة</td><td>${stats.total_outstanding.toLocaleString()}</td></tr>
-      </table>
-    `;
-    const fullHtml = `<html><head><meta charset="utf-8"></head><body>${excelHeader}${table}</body></html>`;
-    const blob = new Blob([fullHtml], { type: 'application/vnd.ms-excel' });
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `تقرير_الإيرادات_${new Date().getTime()}.xls`;
+    a.download = `تقرير_إيرادات_المدار_${new Date().getTime()}.xls`;
     a.click();
-    showToast('تم التصدير بنجاح', 'success');
+    URL.revokeObjectURL(url);
+    showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
   };
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>جاري تحميل قسم الإيرادات...</div>;
 
   return (
     <section className="revenue-management" style={{ padding: '20px' }}>
+      {/* Professional Print-only Header (Employee Salaries Style) */}
+      <div className="print-only-header" style={{ display: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '3px double #e2e8f0' }}>
+          <div style={{ textAlign: 'right' }}>
+            <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b', fontWeight: '900' }}>المدار الليبي للتأمين</h1>
+            <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>Al Madar Libyan Insurance</p>
+            <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>قسم الشؤون المالية والموارد البشرية</p>
+          </div>
+          <img src="/img/logo.png" alt="Logo" style={{ height: '80px', width: 'auto' }} />
+        </div>
+
+        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+          <h2 style={{ 
+            display: 'inline-block',
+            margin: 0, 
+            padding: '10px 40px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '50px',
+            fontSize: '18px',
+            color: '#1e293b'
+          }}>
+            تقرير الإيرادات والمقبوضات المالية
+          </h2>
+        </div>
+      </div>
+
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 10mm; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .no-print, .sidebar, .topbar, button { display: none !important; }
+          .print-only-header { display: block !important; }
+          .print-only-footer { display: flex !important; }
+          .print-date { display: block !important; }
+          
+          body, html { 
+            background: #fff !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 100% !important; 
+            direction: rtl !important; 
+            font-family: 'Cairo', sans-serif !important;
+            color: #1e293b !important;
+          }
+          
+          .app-shell { display: block !important; position: static !important; }
+          .main-area { padding: 0 !important; margin: 0 !important; width: 100% !important; position: static !important; display: block !important; }
+          
+          .stat-card { 
+            border: 1px solid #e2e8f0 !important; 
+            box-shadow: none !important; 
+            break-inside: avoid; 
+            margin-bottom: 20px !important; 
+            background: #f8fafc !important;
+            -webkit-print-color-adjust: exact;
+            width: 23% !important;
+            display: inline-block !important;
+            vertical-align: top;
+            margin-right: 1% !important;
+            padding: 15px !important;
+            border-radius: 12px !important;
+          }
+          h2, h3 { color: #1e293b !important; margin-top: 30px !important; border-right: 4px solid #014cb1; padding-right: 10px; font-weight: 900 !important; }
+          
+          /* Force layout for print */
+          div[style*="display: grid"] { display: block !important; }
+          div[style*="grid-template-columns"] { display: block !important; }
+        }
+      `}</style>
       <div className="breadcrumb" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -209,6 +324,23 @@ export default function RevenueManagement() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Professional Print-only Footer (Employee Salaries Style) */}
+      <div className="print-only-footer" style={{ display: 'none', marginTop: '60px', justifyContent: 'space-between', textAlign: 'center' }}>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
+        </div>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير المالي</p>
+        </div>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
+        </div>
+      </div>
+
+      <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
+        تم استخراج هذا التقرير بتاريخ: {new Date().toLocaleString('ar-LY')}
       </div>
     </section>
   );

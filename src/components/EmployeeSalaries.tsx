@@ -384,7 +384,10 @@ export default function EmployeeSalaries() {
         <title>كشف مرتبات الموظفين - ${month}/${year}</title>
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
         <style>
-          @media print { @page { margin: 10mm; size: landscape; } }
+          @media print { 
+            @page { margin: 10mm; size: auto; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
           body { 
             font-family: 'Cairo', sans-serif; 
             margin: 0; 
