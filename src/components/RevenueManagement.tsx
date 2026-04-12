@@ -207,6 +207,24 @@ export default function RevenueManagement() {
           div[style*="grid-template-columns"] { display: block !important; }
         }
       `}</style>
+      <style>{`
+        [data-theme='dark'] .stat-card {
+          background-color: var(--card-bg) !important;
+          border-color: var(--border) !important;
+        }
+        [data-theme='dark'] .chart-container {
+          background-color: var(--card-bg) !important;
+          border-color: var(--border) !important;
+        }
+        [data-theme='dark'] .source-item {
+          background-color: var(--input-bg) !important;
+          border-color: var(--border) !important;
+        }
+        [data-theme='dark'] .agent-item {
+          border-bottom-color: var(--border) !important;
+        }
+      `}</style>
+
       <div className="breadcrumb" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -233,53 +251,53 @@ export default function RevenueManagement() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '25px', marginBottom: '30px' }}>
-        <div className="stat-card" style={{ background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '25px', borderRadius: '20px', border: '1px solid var(--border)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
             <div style={{ background: '#dcfce7', color: '#166534', width: '50px', height: '50px', borderRadius: '15px', display: 'grid', placeItems: 'center', fontSize: '20px' }}>
               <i className="fa-solid fa-coins"></i>
             </div>
             <div style={{ color: '#166534', fontSize: '12px', fontWeight: 'bold', background: '#dcfce7', padding: '4px 10px', borderRadius: '20px', height: 'fit-content' }}>+12.5% الشهر الحالي</div>
           </div>
-          <div style={{ color: '#64748b', fontSize: '14px', marginBottom: '5px' }}>إجمالي الإيرادات (المحقق)</div>
-          <div style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b' }}>{stats?.total_revenue.toLocaleString()} د.ل</div>
+          <div style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '5px' }}>إجمالي الإيرادات (المحقق)</div>
+          <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text)' }}>{stats?.total_revenue.toLocaleString()} د.ل</div>
         </div>
 
-        <div className="stat-card" style={{ background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '25px', borderRadius: '20px', border: '1px solid var(--border)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
             <div style={{ background: '#e0f2fe', color: '#0369a1', width: '50px', height: '50px', borderRadius: '15px', display: 'grid', placeItems: 'center', fontSize: '20px' }}>
               <i className="fa-solid fa-hand-holding-dollar"></i>
             </div>
           </div>
-          <div style={{ color: '#64748b', fontSize: '14px', marginBottom: '5px' }}>إجمالي المقبوضات الفعلية</div>
+          <div style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '5px' }}>إجمالي المقبوضات الفعلية</div>
           <div style={{ fontSize: '28px', fontWeight: '900', color: '#014cb1' }}>{stats?.total_paid.toLocaleString()} د.ل</div>
         </div>
 
-        <div className="stat-card" style={{ background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '25px', borderRadius: '20px', border: '1px solid var(--border)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
             <div style={{ background: '#fef2f2', color: '#991b1b', width: '50px', height: '50px', borderRadius: '15px', display: 'grid', placeItems: 'center', fontSize: '20px' }}>
               <i className="fa-solid fa-clock-rotate-left"></i>
             </div>
           </div>
-          <div style={{ color: '#64748b', fontSize: '14px', marginBottom: '5px' }}>بقايا أرصدة (قيد التحصيل)</div>
+          <div style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '5px' }}>بقايا أرصدة (قيد التحصيل)</div>
           <div style={{ fontSize: '28px', fontWeight: '900', color: '#ef4444' }}>{stats?.total_outstanding.toLocaleString()} د.ل</div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px' }}>
-        <div style={{ background: '#fff', borderRadius: '24px', padding: '30px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+        <div className="chart-container" style={{ background: 'var(--card-bg)', borderRadius: '24px', padding: '30px', border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text)' }}>
               <span style={{ width: '4px', height: '20px', background: '#014cb1', borderRadius: '4px' }}></span>
               توزيع الإيرادات حسب نوع التأمين
             </h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             {stats?.sources.map((source, idx) => (
-              <div key={idx} style={{
+              <div key={idx} className="source-item" style={{
                 padding: '20px',
                 borderRadius: '16px',
-                background: '#f8fafc',
-                border: '1px solid #f1f5f9',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '15px'
@@ -292,8 +310,8 @@ export default function RevenueManagement() {
                   <i className="fa-solid fa-shield-halved"></i>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>{source.name}</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{source.value.toLocaleString()} وثيقة</div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{source.name}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '16px', color: 'var(--text)' }}>{source.value.toLocaleString()} وثيقة</div>
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontWeight: '900', color: source.color }}>100%</div>
@@ -303,17 +321,17 @@ export default function RevenueManagement() {
           </div>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: '24px', padding: '30px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-          <h3 style={{ margin: '0 0 25px', fontSize: '18px' }}>أفضل الوكلاء تحصيلاً</h3>
+        <div className="stat-card" style={{ background: 'var(--card-bg)', borderRadius: '24px', padding: '30px', border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <h3 style={{ margin: '0 0 25px', fontSize: '18px', color: 'var(--text)' }}>أفضل الوكلاء تحصيلاً</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {stats?.top_agents.map((agent, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#F1F5F9', border: '2px solid #fff', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', display: 'grid', placeItems: 'center', fontWeight: 'bold', color: '#64748b' }}>
+              <div key={idx} className="agent-item" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: 'var(--input-bg)', border: '2px solid var(--border)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', display: 'grid', placeItems: 'center', fontWeight: 'bold', color: 'var(--text)' }}>
                   {idx + 1}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{agent.name}</div>
-                  <div style={{ height: '6px', background: '#F1F5F9', borderRadius: '10px', marginTop: '6px', overflow: 'hidden' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text)' }}>{agent.name}</div>
+                  <div style={{ height: '6px', background: 'var(--input-bg)', borderRadius: '10px', marginTop: '6px', overflow: 'hidden' }}>
                     <div style={{ width: `${(agent.sales / stats.total_revenue) * 100}%`, height: '100%', background: '#014cb1', borderRadius: '10px' }}></div>
                   </div>
                 </div>

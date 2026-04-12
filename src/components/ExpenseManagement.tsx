@@ -358,22 +358,51 @@ export default function ExpenseManagement() {
             -webkit-print-color-adjust: exact;
           }
         }
+
+        /* Dark Mode Overrides */
+        [data-theme='dark'] .users-table th {
+          background-color: var(--table-header) !important;
+          color: var(--text) !important;
+          border-color: var(--border) !important;
+        }
+        [data-theme='dark'] .users-table td {
+          border-color: var(--border) !important;
+          color: var(--text) !important;
+        }
+        [data-theme='dark'] .users-table tr:nth-child(even) {
+          background-color: rgba(255, 255, 255, 0.02) !important;
+        }
+        [data-theme='dark'] .stat-box {
+          background-color: var(--card-bg) !important;
+          border-color: var(--border) !important;
+          box-shadow: none !important;
+        }
+        [data-theme='dark'] .stat-title {
+          color: var(--muted) !important;
+        }
+        [data-theme='dark'] .stat-value-dark {
+          color: var(--text) !important;
+        }
       `}</style>
 
       <div className="users-breadcrumb no-print" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        padding: '15px 20px',
-        background: '#fff',
-        borderRadius: '12px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        padding: '25px 30px',
+        background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
+        borderRadius: '16px',
+        marginBottom: '30px',
+        color: '#fff',
+        boxShadow: '0 10px 20px rgba(1, 76, 177, 0.15)'
       }}>
-        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#014cb1' }}>
-          <i className="fa-solid fa-vault" style={{ marginLeft: '10px', color: '#ef4444' }}></i>
-          إدارة المصروفات التشغيلية
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
+            <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#38bdf8' }}></i>
+            إدارة المصروفات التشغيلية
+          </h2>
+          <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية</p>
+        </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button 
             onClick={exportToExcel}
@@ -437,25 +466,25 @@ export default function ExpenseManagement() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '15px', border: '1px solid #eee', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div style={{ color: '#666', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (الشهر)</div>
+        <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (الشهر)</div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
             {statistics.monthly_total.toLocaleString()} د.ل
           </div>
         </div>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '15px', border: '1px solid #eee', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div style={{ color: '#666', fontSize: '13px', marginBottom: '8px' }}>عدد العمليات</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a' }}>{statistics.monthly_count} عملية</div>
+        <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>عدد العمليات</div>
+          <div className="stat-value-dark" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text)' }}>{statistics.monthly_count} عملية</div>
         </div>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '15px', border: '1px solid #eee', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div style={{ color: '#666', fontSize: '13px', marginBottom: '8px' }}>متوسط الصرف</div>
+        <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>متوسط الصرف</div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>
             {statistics.monthly_average.toFixed(2)} د.ل
           </div>
         </div>
       </div>
 
-      <div className="users-card" style={{ padding: '0', overflow: 'hidden' }}>
+      <div className="users-card" style={{ padding: '0', overflow: 'hidden', background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
         <div className="users-table-wrapper">
           <table className="users-table">
             <thead>
@@ -471,10 +500,10 @@ export default function ExpenseManagement() {
             <tbody>
               {expenses.map((expense) => (
                 <tr key={expense.id}>
-                  <td style={{ fontWeight: 'bold', color: '#0f172a' }}>{expense.name}</td>
-                  <td>{expense.category}</td>
+                  <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
+                  <td style={{ color: 'var(--text)' }}>{expense.category}</td>
                   <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{expense.amount.toLocaleString()} د.ل</td>
-                  <td>{expense.expense_date}</td>
+                  <td style={{ color: 'var(--text)' }}>{expense.expense_date}</td>
                   <td>
                     <span style={{ 
                       padding: '4px 12px', 
