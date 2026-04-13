@@ -71,7 +71,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [customCategory, setCustomCategory] = useState('');
 
   // Union Balance States
-  const [activeTab, setActiveTab] = useState<'expenses'|'union'>(activeTabOverride);
+  const [activeTab, setActiveTab] = useState<'expenses' | 'union'>(activeTabOverride);
 
   React.useEffect(() => {
     setActiveTab(activeTabOverride);
@@ -101,8 +101,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     return Math.floor(paid / price);
   }, [amountPaid, cardPrice]);
 
-  const totalUnionFee = React.useMemo(() => cardsCount * (parseFloat(unionFeePerCard)||0), [cardsCount, unionFeePerCard]);
-  const totalCompanyDeposit = React.useMemo(() => cardsCount * (parseFloat(companyDepositPerCard)||0), [cardsCount, companyDepositPerCard]);
+  const totalUnionFee = React.useMemo(() => cardsCount * (parseFloat(unionFeePerCard) || 0), [cardsCount, unionFeePerCard]);
+  const totalCompanyDeposit = React.useMemo(() => cardsCount * (parseFloat(companyDepositPerCard) || 0), [cardsCount, companyDepositPerCard]);
 
   const unionTotalStats = React.useMemo(() => {
     let totalPaid = 0;
@@ -314,10 +314,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         setRequestNumber('');
         fetchUnionBalances();
       } else {
-        showToast('فشل التسجيل', 'error');
+        const errorText = await response.text();
+        showToast(`فشل: ${errorText.substring(0, 50)}`, 'error');
+        console.error("Backend Error Response:", errorText);
       }
     } catch (e) {
-      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+      showToast(`خطأ: ${(e as Error).message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -426,14 +428,100 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     window.print();
   };
 
+  const exportUnionToExcel = () => {
+    if (unionPurchases.length === 0) {
+      showToast('لا توجد بيانات لتصديرها', 'error');
+      return;
+    }
+
+    const logoUrl = window.location.origin + '/img/logo.png';
+    const tableHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; }
+          .co-name { font-size: 20pt; font-weight: 900; color: #014cb1; text-align: right; }
+          .co-sub { font-size: 12pt; color: #64748b; text-align: right; }
+          .report-subtitle { font-size: 14pt; font-weight: bold; background-color: #e0f2fe; color: #0284c7; text-align: center; border: 1px solid #bae6fd; }
+          table { border-collapse: collapse; width: 100%; }
+          th { background-color: #0284c7; color: #ffffff; font-weight: bold; border: 1px solid #0369a1; padding: 12px; text-align: center; }
+          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; }
+          .total-box { background-color: #f8fafc; font-weight: bold; border: 1px solid #e2e8f0; }
+          .amount { color: #0284c7; font-weight: bold; }
+          .meta-info { color: #94a3b8; font-size: 9pt; text-align: right; }
+        </style>
+      </head>
+      <body dir="rtl">
+        <table>
+          <tr>
+            <td colspan="5" style="border:none; text-align:right; vertical-align: top;">
+              <div class="co-name">شركة المدار الليبي للتأمين</div>
+              <div class="co-sub">Al Madar Libyan Insurance</div>
+              <div class="co-sub">قسم الشؤون المالية والمحاسبية</div>
+            </td>
+            <td colspan="2" style="border:none; text-align:left; vertical-align: top;">
+              <img src="${logoUrl}" width="100" height="80">
+            </td>
+          </tr>
+          <tr><td colspan="7" style="border:none; height:20px;"></td></tr>
+          <tr><td colspan="7" class="report-subtitle">تقرير رصيد الاتحاد والتكاليف - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</td></tr>
+          <tr><td colspan="7" style="border:none; height:20px;"></td></tr>
+          
+          <tr style="height: 50px;">
+            <td colspan="2" class="total-box">إجمالي المبلغ المدفوع: ${unionTotalStats.totalPaid.toLocaleString()} د.ل</td>
+            <td colspan="2" class="total-box" style="background:#f0fdf4">إجمالي البطاقات المُشتراة: ${unionStats.total_cards} بطاقة</td>
+            <td colspan="3" class="total-box" style="background:#fef2f2">إجمالي خصم الاتحاد: ${unionTotalStats.totalFee.toLocaleString()} د.ل | إجمالي الوديعة: ${unionStats.total_deposit.toLocaleString()} د.ل</td>
+          </tr>
+          <tr><td colspan="7" style="border:none; height:20px;"></td></tr>
+          
+            <thead>
+              <tr>
+                <th style="width: 140px;">رقم الواصل/الطلب</th>
+                <th style="width: 150px;">المبلغ المدفوع</th>
+                <th style="width: 110px;">عدد البطاقات</th>
+                <th style="width: 150px;">خصم الاتحاد (المصروفات)</th>
+                <th style="width: 140px;">وديعة الشركة</th>
+                <th style="width: 120px;">تاريخ الطلب</th>
+                <th style="width: 180px;">البيان/ملاحظات</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${unionPurchases.map(u => `
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">${u.request_number || '-'}</td>
+                  <td class="amount">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
+                  <td style="color:#10b981;">${u.cards_count}</td>
+                  <td>${parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
+                  <td>${parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
+                  <td>${u.purchase_date ? u.purchase_date.split('T')[0] : ''}</td>
+                  <td>${u.notes || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+        </table>
+        <br>
+        <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `تقرير_سجل_الاتحاد_${new Date().getTime()}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('تم تصدير سجل الاتحاد بنجاح', 'success');
+  };
+
   return (
     <section className="users-management">
 
       {/* التبويبات تمت إزالتها بناءً على طلب المستخدم ليتم التعامل معها من القائمة الجانبية كـ sub-section */}
 
-      {activeTab === 'expenses' && (
-        <>
-          {/* Professional Print-only Header (Employee Salaries Style) */}
+      {/* Professional Print-only Header (Employee Salaries Style) */}
       <div className="print-only-header" style={{ display: 'none' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '3px double #e2e8f0' }}>
           <div style={{ textAlign: 'right' }}>
@@ -455,7 +543,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             fontSize: '18px',
             color: '#1e293b'
           }}>
-            تقرير المصروفات التشغيلية
+            {activeTab === 'expenses' ? 'تقرير المصروفات التشغيلية' : 'سجل شراء رصيد البطاقة البرتقالية (الاتحاد)'}
           </h2>
         </div>
       </div>
@@ -464,7 +552,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         @media print {
           @page { size: auto; margin: 10mm; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .no-print, .sidebar, .topbar, th:last-child, td:last-child { display: none !important; }
+          .no-print, .sidebar, .topbar, th:last-child, td:last-child, th:nth-child(7), td:nth-child(7) { display: none !important; }
           .print-only-header { display: block !important; }
           .print-only-footer { display: flex !important; }
           .print-date { display: block !important; }
@@ -490,20 +578,20 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             width: 100% !important; 
             border-collapse: collapse !important; 
             margin-bottom: 40px !important; 
-            font-size: 11px !important;
+            font-size: 9px !important;
             table-layout: auto !important;
           }
           .users-table th { 
             background-color: #f1f5f9 !important; 
             color: #475569 !important; 
             font-weight: 700 !important; 
-            padding: 12px 10px !important; 
+            padding: 6px 4px !important; 
             border: 1px solid #cbd5e1 !important;
             text-align: center !important;
             -webkit-print-color-adjust: exact;
           }
           .users-table td { 
-            padding: 10px !important; 
+            padding: 6px 4px !important; 
             border: 1px solid #e2e8f0 !important; 
             text-align: center !important;
             color: #1e293b !important;
@@ -554,248 +642,251 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         }
       `}</style>
 
-      <div className="users-breadcrumb no-print" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '25px 30px',
-        background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
-        borderRadius: '16px',
-        marginBottom: '30px',
-        color: '#fff',
-        boxShadow: '0 10px 20px rgba(1, 76, 177, 0.15)'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
-            <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#38bdf8' }}></i>
-            إدارة المصروفات التشغيلية
-          </h2>
-          <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية</p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={exportToExcel}
-            className="btn-secondary"
-            style={{
-              background: '#10b981',
-              color: '#fff',
-              padding: '10px 20px',
-              borderRadius: '10px',
-              border: 'none',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <i className="fa-solid fa-file-excel"></i>
-            تصدير Excel
-          </button>
-          <button
-            onClick={handlePrint}
-            className="btn-secondary"
-            style={{
-              background: '#64748b',
-              color: '#fff',
-              padding: '10px 20px',
-              borderRadius: '10px',
-              border: 'none',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <i className="fa-solid fa-print"></i>
-            طباعة
-          </button>
-          <button
-            onClick={() => handleOpenModal()}
-            className="btn-primary"
-            style={{
-              background: '#ef4444',
-              color: '#fff',
-              padding: '10px 20px',
-              borderRadius: '10px',
-              border: 'none',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <i className="fa-solid fa-plus"></i>
-            تسجيل مصروف جديد
-          </button>
-        </div>
+      {activeTab === 'expenses' && (
+        <>
 
-      </div>
+          <div className="users-breadcrumb no-print" style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '25px 30px',
+            background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
+            borderRadius: '16px',
+            marginBottom: '30px',
+            color: '#fff',
+            boxShadow: '0 10px 20px rgba(1, 76, 177, 0.15)'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
+                <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#38bdf8' }}></i>
+                إدارة المصروفات التشغيلية
+              </h2>
+              <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية</p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={exportToExcel}
+                className="btn-secondary"
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fa-solid fa-file-excel"></i>
+                تصدير Excel
+              </button>
+              <button
+                onClick={handlePrint}
+                className="btn-secondary"
+                style={{
+                  background: '#64748b',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fa-solid fa-print"></i>
+                طباعة
+              </button>
+              <button
+                onClick={() => handleOpenModal()}
+                className="btn-primary"
+                style={{
+                  background: '#ef4444',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fa-solid fa-plus"></i>
+                تسجيل مصروف جديد
+              </button>
+            </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-        <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (المصفاة)</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-            {filteredStats.total.toLocaleString()} د.ل
           </div>
-        </div>
-        <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>عدد العمليات</div>
-          <div className="stat-value-dark" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text)' }}>{filteredStats.count} عملية</div>
-        </div>
-        <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>متوسط الصرف</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>
-            {filteredStats.average.toFixed(2)} د.ل
-          </div>
-        </div>
-      </div>
 
-      {/* Modern Filter Bar - Strictly hidden from print and excel generated code */}
-      <div className="no-print" style={{ marginBottom: '20px' }}>
-        <div style={{ 
-          background: 'var(--card-bg)', 
-          padding: '20px', 
-          borderRadius: '15px', 
-          border: '1px solid var(--border)',
-          display: 'grid',
-          gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr auto',
-          gap: '15px',
-          alignItems: 'end'
-        }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>بحث بالبند</label>
-            <div style={{ position: 'relative' }}>
-              <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}></i>
-              <input 
-                type="text" 
-                placeholder="ابحث عن مصروف..." 
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                style={{ paddingRight: '35px' }}
-              />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
+            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (المصفاة)</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
+                {filteredStats.total.toLocaleString()} د.ل
+              </div>
+            </div>
+            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>عدد العمليات</div>
+              <div className="stat-value-dark" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text)' }}>{filteredStats.count} عملية</div>
+            </div>
+            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>متوسط الصرف</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>
+                {filteredStats.average.toFixed(2)} د.ل
+              </div>
             </div>
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الفئة</label>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-              <option value="الكل">كل الفئات</option>
-              {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الحالة</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="الكل">كل الحالات</option>
-              <option value="مدفوع">مدفوع</option>
-              <option value="غير مدفوع">غير مدفوع</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>من تاريخ</label>
-            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>إلى تاريخ</label>
-            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </div>
-          <button 
-            onClick={() => {
-              setSearchFilter('');
-              setCategoryFilter('الكل');
-              setStatusFilter('الكل');
-              setFromDate('');
-              setToDate('');
-            }}
-            style={{ 
-              background: 'var(--input-bg)', 
-              border: '1px solid var(--border)', 
-              padding: '10px', 
-              borderRadius: '10px',
-              color: 'var(--text)',
-              cursor: 'pointer'
-            }}
-            title="تصفير الفلاتر"
-          >
-            <i className="fa-solid fa-rotate-left"></i>
-          </button>
-        </div>
-      </div>
 
-      <div className="users-card" style={{ padding: '0', overflow: 'hidden', background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
-        <div className="users-table-wrapper">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>البند</th>
-                <th>المستلم</th>
-                <th>الفئة</th>
-                <th>المبلغ</th>
-                <th>التاريخ</th>
-                <th>الحالة</th>
-                <th className="no-print">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredExpenses.map((expense) => (
-                <tr key={expense.id}>
-                  <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
-                  <td style={{ color: 'var(--text)' }}>{expense.recipient || '-'}</td>
-                  <td style={{ color: 'var(--text)' }}>{expense.category}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{expense.amount.toLocaleString()} د.ل</td>
-                  <td style={{ color: 'var(--text)' }}>{expense.expense_date}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontSize: '11px',
-                      background: expense.status === 'مدفوع' ? '#dcfce7' : '#fef3c7',
-                      color: expense.status === 'مدفوع' ? '#166534' : '#92400e',
-                      fontWeight: '800'
-                    }}>
-                      {expense.status}
-                    </span>
-                  </td>
-                  <td className="no-print">
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {expense.status !== 'مدفوع' && (
-                        <button
-                          onClick={() => handlePayExpense(expense)}
-                          style={{ background: '#ecfdf5', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#059669' }}
-                          title="تغيير الحالة لمدفوع"
-                        >
-                          <i className="fa-solid fa-check-double"></i>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleOpenModal(expense)}
-                        style={{ background: '#f0f9ff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#0369a1' }}
-                        title="تعديل"
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteExpense(expense.id)}
-                        style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#991b1b' }}
-                        title="حذف"
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {expenses.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا توجد مصروفات مسجلة</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          {/* Modern Filter Bar - Strictly hidden from print and excel generated code */}
+          <div className="no-print" style={{ marginBottom: '20px' }}>
+            <div style={{
+              background: 'var(--card-bg)',
+              padding: '20px',
+              borderRadius: '15px',
+              border: '1px solid var(--border)',
+              display: 'grid',
+              gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr auto',
+              gap: '15px',
+              alignItems: 'end'
+            }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>بحث بالبند</label>
+                <div style={{ position: 'relative' }}>
+                  <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}></i>
+                  <input
+                    type="text"
+                    placeholder="ابحث عن مصروف..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    style={{ paddingRight: '35px' }}
+                  />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الفئة</label>
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                  <option value="الكل">كل الفئات</option>
+                  {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الحالة</label>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="الكل">كل الحالات</option>
+                  <option value="مدفوع">مدفوع</option>
+                  <option value="غير مدفوع">غير مدفوع</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>من تاريخ</label>
+                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>إلى تاريخ</label>
+                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              </div>
+              <button
+                onClick={() => {
+                  setSearchFilter('');
+                  setCategoryFilter('الكل');
+                  setStatusFilter('الكل');
+                  setFromDate('');
+                  setToDate('');
+                }}
+                style={{
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border)',
+                  padding: '10px',
+                  borderRadius: '10px',
+                  color: 'var(--text)',
+                  cursor: 'pointer'
+                }}
+                title="تصفير الفلاتر"
+              >
+                <i className="fa-solid fa-rotate-left"></i>
+              </button>
+            </div>
+          </div>
+
+          <div className="users-card" style={{ padding: '0', overflow: 'hidden', background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+            <div className="users-table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>البند</th>
+                    <th>المستلم</th>
+                    <th>الفئة</th>
+                    <th>المبلغ</th>
+                    <th>التاريخ</th>
+                    <th>الحالة</th>
+                    <th className="no-print">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredExpenses.map((expense) => (
+                    <tr key={expense.id}>
+                      <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
+                      <td style={{ color: 'var(--text)' }}>{expense.recipient || '-'}</td>
+                      <td style={{ color: 'var(--text)' }}>{expense.category}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{expense.amount.toLocaleString()} د.ل</td>
+                      <td style={{ color: 'var(--text)' }}>{expense.expense_date}</td>
+                      <td>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          background: expense.status === 'مدفوع' ? '#dcfce7' : '#fef3c7',
+                          color: expense.status === 'مدفوع' ? '#166534' : '#92400e',
+                          fontWeight: '800'
+                        }}>
+                          {expense.status}
+                        </span>
+                      </td>
+                      <td className="no-print">
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {expense.status !== 'مدفوع' && (
+                            <button
+                              onClick={() => handlePayExpense(expense)}
+                              style={{ background: '#ecfdf5', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#059669' }}
+                              title="تغيير الحالة لمدفوع"
+                            >
+                              <i className="fa-solid fa-check-double"></i>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleOpenModal(expense)}
+                            style={{ background: '#f0f9ff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#0369a1' }}
+                            title="تعديل"
+                          >
+                            <i className="fa-solid fa-pen-to-square"></i>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteExpense(expense.id)}
+                            style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#991b1b' }}
+                            title="حذف"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {expenses.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا توجد مصروفات مسجلة</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
 
@@ -820,6 +911,44 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>إدارة المدفوعات وحصص الاتحاد وودائع الشركة</p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={exportUnionToExcel}
+                className="btn-secondary"
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fa-solid fa-file-excel"></i>
+                تصدير Excel
+              </button>
+              <button
+                onClick={handlePrint}
+                className="btn-secondary"
+                style={{
+                  background: '#64748b',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fa-solid fa-print"></i>
+                طباعة
+              </button>
               <button
                 onClick={() => {
                   setAmountPaid('');
@@ -897,7 +1026,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       <td style={{ color: '#10b981', fontWeight: 'bold' }}>{u.cards_count}</td>
                       <td style={{ color: 'var(--text)' }}>{parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
                       <td style={{ color: '#f59e0b', fontWeight: 'bold' }}>{parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
-                      <td style={{ color: 'var(--text)' }}>{u.purchase_date}</td>
+                      <td style={{ color: 'var(--text)' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : ''}</td>
                       <td>
                         {u.receipt_image ? (
                           <button
@@ -933,93 +1062,93 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         </div>
       )}
 
-      {showModal && (        <div className="modal-overlay no-print" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000
-        }}>
-          <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '20px', width: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', color: '#ef4444' }}>
-              {editingExpense ? 'تعديل المصروف التشغيلي' : 'تسجيل مصروف تشغيلي جديد'}
-            </h3>
-            <form onSubmit={handleAddExpense}>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>وصف البند (البضاعة/الخدمة)</label>
+      {showModal && (<div className="modal-overlay no-print" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000
+      }}>
+        <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '20px', width: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <h3 style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', color: '#ef4444' }}>
+            {editingExpense ? 'تعديل المصروف التشغيلي' : 'تسجيل مصروف تشغيلي جديد'}
+          </h3>
+          <form onSubmit={handleAddExpense}>
+            <div className="form-group" style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>وصف البند (البضاعة/الخدمة)</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="مثال: فاتورة مياه، قرطاسية.."
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم المستلم / المورد</label>
+              <input
+                type="text"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                placeholder="اسم الشخص أو الشركة المستلمة للمبلغ..."
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                >
+                  {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  <option value="أخرى (إضافة فئة جديدة)">أخرى (إضافة فئة جديدة)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>المبلغ (د.ل)</label>
                 <input
-                  type="text"
+                  type="number"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="مثال: فاتورة مياه، قرطاسية.."
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم المستلم / المورد</label>
-                <input
-                  type="text"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  placeholder="اسم الشخص أو الشركة المستلمة للمبلغ..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  >
-                    {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    <option value="أخرى (إضافة فئة جديدة)">أخرى (إضافة فئة جديدة)</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>المبلغ (د.ل)</label>
-                  <input
-                    type="number"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  />
-                </div>
-              </div>
+            </div>
 
-              {category.includes('أخرى') && (
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم الفئة الجديدة <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                    placeholder="مثال: دعاية وإعلان"
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  />
-                </div>
-              )}
-              <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>تاريخ الصرف</label>
+            {category.includes('أخرى') && (
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم الفئة الجديدة <span style={{ color: '#ef4444' }}>*</span></label>
                 <input
-                  type="date"
+                  type="text"
                   required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="مثال: دعاية وإعلان"
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1, padding: '14px', background: '#ef4444', border: 'none', color: '#fff', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
-                  {loading ? 'جاري الحفظ...' : (editingExpense ? 'تحديث المصروف' : 'حفظ المصروف')}
-                </button>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>إلغاء</button>
-              </div>
-            </form>
-          </div>
+            )}
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>تاريخ الصرف</label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1, padding: '14px', background: '#ef4444', border: 'none', color: '#fff', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'جاري الحفظ...' : (editingExpense ? 'تحديث المصروف' : 'حفظ المصروف')}
+              </button>
+              <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>إلغاء</button>
+            </div>
+          </form>
         </div>
+      </div>
       )}
 
       {/* Union Balance Modal */}
@@ -1032,10 +1161,10 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            
+
             <form onSubmit={handleAddUnionPurchase} className="user-form">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-                
+
                 <div className="form-group">
                   <label>المبلغ المدفوع للاتحاد (د.ل) <span style={{ color: '#ef4444' }}>*</span></label>
                   <input
@@ -1123,8 +1252,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
               <div className="form-group">
                 <label>صورة الواصل المرفق</label>
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   accept="image/*"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
@@ -1166,25 +1295,21 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       )}
 
       {/* Professional Print-only Footer (Employee Salaries Style) */}
-      {activeTab === 'expenses' && (
-        <>
-          <div className="print-only-footer" style={{ display: 'none', marginTop: '50px', justifyContent: 'space-between', textAlign: 'center' }}>
-            <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-              <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
-            </div>
-            <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-              <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>مدير الشؤون المالية</p>
-            </div>
-            <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-              <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
-            </div>
-          </div>
+      <div className="print-only-footer" style={{ display: 'none', marginTop: '50px', justifyContent: 'space-between', textAlign: 'center' }}>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
+        </div>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>مدير الشؤون المالية</p>
+        </div>
+        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
+        </div>
+      </div>
 
-          <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
-            تم استخراج هذا الكشف بتاريخ: {new Date().toLocaleString('ar-LY')}
-          </div>
-        </>
-      )}
+      <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
+        تم استخراج هذا الكشف بتاريخ: {new Date().toLocaleString('ar-LY')}
+      </div>
     </section>
   );
 }
