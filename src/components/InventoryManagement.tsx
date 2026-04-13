@@ -119,8 +119,9 @@ export default function InventoryManagement() {
     serial_start: string;
     serial_end: string;
     condition: string;
+    notes: string;
   }>>([
-    { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }
+    { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }
   ]);
 
   const getBatchKey = (custody: Custody) =>
@@ -319,6 +320,7 @@ export default function InventoryManagement() {
             serial_start: row.serial_start,
             serial_end: row.serial_end,
             condition: row.condition,
+            notes: row.notes || assignment.notes, // Use row-specific notes if provided, otherwise global
           })
         });
         if (!res.ok) {
@@ -331,7 +333,7 @@ export default function InventoryManagement() {
         item_id: '', recipient_id: '', recipient_type: 'agent', 
         quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' 
       });
-      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }]);
+      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
       fetchData();
       setActiveTab('custody');
     } catch (error) {
@@ -343,14 +345,14 @@ export default function InventoryManagement() {
   };
 
   const addAssignmentItemRow = () => {
-    setAssignmentItems((prev) => [...prev, { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }]);
+    setAssignmentItems((prev) => [...prev, { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
   };
 
   const removeAssignmentItemRow = (index: number) => {
     setAssignmentItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateAssignmentItemRow = (index: number, key: 'item_id' | 'quantity' | 'serial_start' | 'serial_end' | 'condition', value: string | number) => {
+  const updateAssignmentItemRow = (index: number, key: 'item_id' | 'quantity' | 'serial_start' | 'serial_end' | 'condition' | 'notes', value: string | number) => {
     setAssignmentItems((prev) => prev.map((row, i) => i === index ? { ...row, [key]: value } : row));
   };
 
@@ -387,6 +389,7 @@ export default function InventoryManagement() {
         <td>${c.quantity} ${c.item.unit}</td>
         <td dir="ltr" style="text-align: right;">${c.serial_start || '-'} ${c.serial_end ? `➔ ${c.serial_end}` : ''}</td>
         <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
+        <td>${c.notes || '-'}</td>
       </tr>
     `).join('');
 
@@ -414,6 +417,7 @@ export default function InventoryManagement() {
               <th>الكمية</th>
               <th>السيريال</th>
               <th>الحالة</th>
+              <th>التفاصيل</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -914,7 +918,7 @@ export default function InventoryManagement() {
                     onChange={(e) => {
                       const nextType = e.target.value as 'fixed' | 'consumable';
                       setAssignInventoryType(nextType);
-                      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new' }]);
+                      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
                     }}
                   >
                     <option value="fixed">مخزون ثابت</option>
@@ -990,6 +994,16 @@ export default function InventoryManagement() {
                             <option value="new">جديد بقراطيسه</option>
                             <option value="used">مستعمل سابقاً</option>
                           </select>
+                        </div>
+                        <div className="form-group" style={{ marginTop: '10px', marginBottom: 0 }}>
+                          <label>تفاصيل للصنف (مثل: رقم الموديل، ملاحظات خاصة)</label>
+                          <textarea
+                            rows={1}
+                            placeholder="تفاصيل إضافية لهذا الصنف..."
+                            style={{ minHeight: '45px' }}
+                            value={row.notes}
+                            onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
+                          />
                         </div>
                       </div>
                     ))}
@@ -1168,32 +1182,29 @@ export default function InventoryManagement() {
 
               <div className="form-group">
                 <label>التصنيف <span className="required">*</span></label>
-                <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
-                  {categoryOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                {!showCustomCategoryInput ? (
+                  <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
+                    {categoryOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="اسم التصنيف الجديد (مثال: أدوات مكتبية)"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                  />
+                )}
                 <button
                   type="button"
                   className="btn-submit"
                   style={{ width: 'fit-content', marginTop: '8px' }}
                   onClick={() => setShowCustomCategoryInput((prev) => !prev)}
                 >
-                  {showCustomCategoryInput ? 'إلغاء إضافة تصنيف جديد' : '+ إضافة تصنيف جديد'}
+                  {showCustomCategoryInput ? 'إلغاء واختيار تصنيف موجود' : '+ إضافة تصنيف جديد'}
                 </button>
               </div>
-
-              {showCustomCategoryInput && (
-                <div className="form-group">
-                  <label>اسم التصنيف الجديد <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    placeholder="مثال: أدوات مكتبية"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                  />
-                </div>
-              )}
 
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div className="form-group" style={{ flex: 1 }}>

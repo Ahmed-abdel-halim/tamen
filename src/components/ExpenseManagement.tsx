@@ -4,6 +4,7 @@ import { showToast } from './Toast';
 interface Expense {
   id: number;
   name: string;
+  recipient?: string;
   category: string;
   amount: number;
   expense_date: string;
@@ -30,8 +31,17 @@ export default function ExpenseManagement() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  
+
+  // Filter States
+  const [searchFilter, setSearchFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('الكل');
+  const [statusFilter, setStatusFilter] = useState('الكل');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  // Form states
   const [name, setName] = useState('');
+  const [recipient, setRecipient] = useState('');
   const [category, setCategory] = useState('قرطاسية');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -46,6 +56,29 @@ export default function ExpenseManagement() {
     const combined = [...DEFAULT_CATEGORIES, ...existing];
     return Array.from(new Set(combined)).filter(cat => cat && !cat.includes('أخرى'));
   }, [expenses]);
+
+  const filteredExpenses = React.useMemo(() => {
+    return expenses.filter(e => {
+      const matchesSearch = e.name.toLowerCase().includes(searchFilter.toLowerCase());
+      const matchesCategory = categoryFilter === 'الكل' || e.category === categoryFilter;
+      const matchesStatus = statusFilter === 'الكل' || e.status === statusFilter;
+
+      const expenseDate = new Date(e.expense_date);
+      const matchesFrom = !fromDate || expenseDate >= new Date(fromDate);
+      const matchesTo = !toDate || expenseDate <= new Date(toDate);
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesFrom && matchesTo;
+    });
+  }, [expenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate]);
+
+  const filteredStats = React.useMemo(() => {
+    const total = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    return {
+      total,
+      count: filteredExpenses.length,
+      average: filteredExpenses.length > 0 ? total / filteredExpenses.length : 0
+    };
+  }, [filteredExpenses]);
 
   React.useEffect(() => {
     fetchExpenses();
@@ -72,6 +105,7 @@ export default function ExpenseManagement() {
     if (expense) {
       setEditingExpense(expense);
       setName(expense.name);
+      setRecipient(expense.recipient || '');
       setCategory(expense.category);
       setAmount(expense.amount.toString());
       setDate(expense.expense_date);
@@ -80,6 +114,7 @@ export default function ExpenseManagement() {
     } else {
       setEditingExpense(null);
       setName('');
+      setRecipient('');
       setCategory('قرطاسية');
       setAmount('');
       setDate(new Date().toISOString().split('T')[0]);
@@ -95,10 +130,10 @@ export default function ExpenseManagement() {
 
     setLoading(true);
     try {
-      const url = editingExpense 
+      const url = editingExpense
         ? `${API_BASE_URL}/expenses/${editingExpense.id}`
         : `${API_BASE_URL}/expenses`;
-      
+
       const method = editingExpense ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -106,6 +141,7 @@ export default function ExpenseManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
+          recipient,
           category: category.includes('أخرى') ? customCategory : category,
           amount: parseFloat(amount),
           expense_date: date,
@@ -217,28 +253,28 @@ export default function ExpenseManagement() {
           </tr>
           <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
           
-          <thead>
-            <tr>
-              <th style="width: 200px;">البند (الوصف)</th>
-              <th style="width: 120px;">الفئة</th>
-              <th style="width: 100px;">المبلغ (د.ل)</th>
-              <th style="width: 100px;">التاريخ</th>
-              <th style="width: 80px;">الحالة</th>
-              <th style="width: 180px;">ملاحظات</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${expenses.map(e => `
+            <thead>
               <tr>
-                <td style="text-align:right; font-weight:bold;">${e.name}</td>
-                <td>${e.category}</td>
-                <td class="amount">${e.amount.toLocaleString()}</td>
-                <td>${e.expense_date}</td>
-                <td>${e.status}</td>
-                <td style="color: #64748b; font-size: 9pt;">${e.notes || '-'}</td>
+                <th style="width: 200px;">البند (الوصف)</th>
+                <th style="width: 150px;">المستلم</th>
+                <th style="width: 120px;">الفئة</th>
+                <th style="width: 110px;">المبلغ (د.ل)</th>
+                <th style="width: 100px;">التاريخ</th>
+                <th style="width: 90px;">الحالة</th>
               </tr>
-            `).join('')}
-          </tbody>
+            </thead>
+            <tbody>
+              ${expenses.map(e => `
+                <tr>
+                  <td style="text-align:right; font-weight:bold;">${e.name}</td>
+                  <td>${e.recipient || '-'}</td>
+                  <td>${e.category}</td>
+                  <td class="amount">${e.amount.toLocaleString()}</td>
+                  <td>${e.expense_date}</td>
+                  <td>${e.status}</td>
+                </tr>
+              `).join('')}
+            </tbody>
         </table>
         <br>
         <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
@@ -260,8 +296,6 @@ export default function ExpenseManagement() {
     window.print();
   };
 
-  // const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
   return (
     <section className="users-management">
       {/* Professional Print-only Header (Employee Salaries Style) */}
@@ -276,9 +310,9 @@ export default function ExpenseManagement() {
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-          <h2 style={{ 
+          <h2 style={{
             display: 'inline-block',
-            margin: 0, 
+            margin: 0,
             padding: '10px 40px',
             background: '#f8fafc',
             border: '1px solid #e2e8f0',
@@ -385,9 +419,9 @@ export default function ExpenseManagement() {
         }
       `}</style>
 
-      <div className="users-breadcrumb no-print" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div className="users-breadcrumb no-print" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         padding: '25px 30px',
         background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
@@ -404,14 +438,14 @@ export default function ExpenseManagement() {
           <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
+          <button
             onClick={exportToExcel}
             className="btn-secondary"
-            style={{ 
-              background: '#10b981', 
+            style={{
+              background: '#10b981',
               color: '#fff',
-              padding: '10px 20px', 
-              borderRadius: '10px', 
+              padding: '10px 20px',
+              borderRadius: '10px',
               border: 'none',
               fontSize: '14px',
               display: 'flex',
@@ -423,14 +457,14 @@ export default function ExpenseManagement() {
             <i className="fa-solid fa-file-excel"></i>
             تصدير Excel
           </button>
-          <button 
+          <button
             onClick={handlePrint}
             className="btn-secondary"
-            style={{ 
-              background: '#64748b', 
+            style={{
+              background: '#64748b',
               color: '#fff',
-              padding: '10px 20px', 
-              borderRadius: '10px', 
+              padding: '10px 20px',
+              borderRadius: '10px',
               border: 'none',
               fontSize: '14px',
               display: 'flex',
@@ -442,14 +476,14 @@ export default function ExpenseManagement() {
             <i className="fa-solid fa-print"></i>
             طباعة
           </button>
-          <button 
+          <button
             onClick={() => handleOpenModal()}
             className="btn-primary"
-            style={{ 
-              background: '#ef4444', 
+            style={{
+              background: '#ef4444',
               color: '#fff',
-              padding: '10px 20px', 
-              borderRadius: '10px', 
+              padding: '10px 20px',
+              borderRadius: '10px',
               border: 'none',
               fontSize: '14px',
               display: 'flex',
@@ -465,22 +499,93 @@ export default function ExpenseManagement() {
 
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
         <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (الشهر)</div>
+          <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (المصفاة)</div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-            {statistics.monthly_total.toLocaleString()} د.ل
+            {filteredStats.total.toLocaleString()} د.ل
           </div>
         </div>
         <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>عدد العمليات</div>
-          <div className="stat-value-dark" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text)' }}>{statistics.monthly_count} عملية</div>
+          <div className="stat-value-dark" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text)' }}>{filteredStats.count} عملية</div>
         </div>
         <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>متوسط الصرف</div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>
-            {statistics.monthly_average.toFixed(2)} د.ل
+            {filteredStats.average.toFixed(2)} د.ل
           </div>
+        </div>
+      </div>
+
+      {/* Modern Filter Bar - Strictly hidden from print and excel generated code */}
+      <div className="no-print" style={{ marginBottom: '20px' }}>
+        <div style={{ 
+          background: 'var(--card-bg)', 
+          padding: '20px', 
+          borderRadius: '15px', 
+          border: '1px solid var(--border)',
+          display: 'grid',
+          gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr auto',
+          gap: '15px',
+          alignItems: 'end'
+        }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>بحث بالبند</label>
+            <div style={{ position: 'relative' }}>
+              <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}></i>
+              <input 
+                type="text" 
+                placeholder="ابحث عن مصروف..." 
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                style={{ paddingRight: '35px' }}
+              />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الفئة</label>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="الكل">كل الفئات</option>
+              {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الحالة</label>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="الكل">كل الحالات</option>
+              <option value="مدفوع">مدفوع</option>
+              <option value="غير مدفوع">غير مدفوع</option>
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>من تاريخ</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>إلى تاريخ</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </div>
+          <button 
+            onClick={() => {
+              setSearchFilter('');
+              setCategoryFilter('الكل');
+              setStatusFilter('الكل');
+              setFromDate('');
+              setToDate('');
+            }}
+            style={{ 
+              background: 'var(--input-bg)', 
+              border: '1px solid var(--border)', 
+              padding: '10px', 
+              borderRadius: '10px',
+              color: 'var(--text)',
+              cursor: 'pointer'
+            }}
+            title="تصفير الفلاتر"
+          >
+            <i className="fa-solid fa-rotate-left"></i>
+          </button>
         </div>
       </div>
 
@@ -490,6 +595,7 @@ export default function ExpenseManagement() {
             <thead>
               <tr>
                 <th>البند</th>
+                <th>المستلم</th>
                 <th>الفئة</th>
                 <th>المبلغ</th>
                 <th>التاريخ</th>
@@ -498,16 +604,17 @@ export default function ExpenseManagement() {
               </tr>
             </thead>
             <tbody>
-              {expenses.map((expense) => (
+              {filteredExpenses.map((expense) => (
                 <tr key={expense.id}>
                   <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
+                  <td style={{ color: 'var(--text)' }}>{expense.recipient || '-'}</td>
                   <td style={{ color: 'var(--text)' }}>{expense.category}</td>
                   <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{expense.amount.toLocaleString()} د.ل</td>
                   <td style={{ color: 'var(--text)' }}>{expense.expense_date}</td>
                   <td>
-                    <span style={{ 
-                      padding: '4px 12px', 
-                      borderRadius: '20px', 
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
                       fontSize: '11px',
                       background: expense.status === 'مدفوع' ? '#dcfce7' : '#fef3c7',
                       color: expense.status === 'مدفوع' ? '#166534' : '#92400e',
@@ -519,7 +626,7 @@ export default function ExpenseManagement() {
                   <td className="no-print">
                     <div style={{ display: 'flex', gap: '8px' }}>
                       {expense.status !== 'مدفوع' && (
-                        <button 
+                        <button
                           onClick={() => handlePayExpense(expense)}
                           style={{ background: '#ecfdf5', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#059669' }}
                           title="تغيير الحالة لمدفوع"
@@ -527,14 +634,14 @@ export default function ExpenseManagement() {
                           <i className="fa-solid fa-check-double"></i>
                         </button>
                       )}
-                      <button 
+                      <button
                         onClick={() => handleOpenModal(expense)}
                         style={{ background: '#f0f9ff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#0369a1' }}
                         title="تعديل"
                       >
                         <i className="fa-solid fa-pen-to-square"></i>
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteExpense(expense.id)}
                         style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#991b1b' }}
                         title="حذف"
@@ -548,7 +655,7 @@ export default function ExpenseManagement() {
               ))}
               {expenses.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا توجد مصروفات مسجلة</td>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا توجد مصروفات مسجلة</td>
                 </tr>
               )}
             </tbody>
@@ -557,9 +664,9 @@ export default function ExpenseManagement() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay no-print" style={{ 
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000 
+        <div className="modal-overlay no-print" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000
         }}>
           <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '20px', width: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', color: '#ef4444' }}>
@@ -568,8 +675,8 @@ export default function ExpenseManagement() {
             <form onSubmit={handleAddExpense}>
               <div className="form-group" style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>وصف البند (البضاعة/الخدمة)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -577,10 +684,20 @@ export default function ExpenseManagement() {
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                 />
               </div>
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم المستلم / المورد</label>
+                <input
+                  type="text"
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  placeholder="اسم الشخص أو الشركة المستلمة للمبلغ..."
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                />
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                 <div className="form-group">
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
-                  <select 
+                  <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
@@ -591,8 +708,8 @@ export default function ExpenseManagement() {
                 </div>
                 <div className="form-group">
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>المبلغ (د.ل)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     required
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -605,20 +722,20 @@ export default function ExpenseManagement() {
               {category.includes('أخرى') && (
                 <div className="form-group" style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم الفئة الجديدة <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={customCategory} 
-                    onChange={(e) => setCustomCategory(e.target.value)} 
-                    placeholder="مثال: دعاية وإعلان" 
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }} 
+                  <input
+                    type="text"
+                    required
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="مثال: دعاية وإعلان"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                   />
                 </div>
               )}
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>تاريخ الصرف</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
