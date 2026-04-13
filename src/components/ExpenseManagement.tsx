@@ -18,9 +18,30 @@ interface Statistics {
   monthly_average: number;
 }
 
+interface UnionPurchase {
+  id: number;
+  request_number: string;
+  amount_paid: number;
+  card_price: number;
+  union_fee_per_card: number;
+  company_deposit_per_card: number;
+  cards_count: number;
+  total_union_fee: number;
+  total_company_deposit: number;
+  payment_method: string;
+  purchase_date: string;
+  receipt_image: string | null;
+  notes: string;
+}
+
+interface UnionStats {
+  total_deposit: number;
+  total_cards: number;
+}
+
 const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة'];
 
-export default function ExpenseManagement() {
+export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { activeTabOverride?: 'expenses' | 'union' }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     monthly_total: 0,
@@ -49,7 +70,49 @@ export default function ExpenseManagement() {
   const [notes, setNotes] = useState('');
   const [customCategory, setCustomCategory] = useState('');
 
+  // Union Balance States
+  const [activeTab, setActiveTab] = useState<'expenses'|'union'>(activeTabOverride);
+
+  React.useEffect(() => {
+    setActiveTab(activeTabOverride);
+  }, [activeTabOverride]);
+  const [unionPurchases, setUnionPurchases] = useState<UnionPurchase[]>([]);
+  const [unionStats, setUnionStats] = useState<UnionStats>({ total_deposit: 0, total_cards: 0 });
+  const [showUnionModal, setShowUnionModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Union Form States
+  const [requestNumber, setRequestNumber] = useState('');
+  const [amountPaid, setAmountPaid] = useState('');
+  const [cardPrice, setCardPrice] = useState('20');
+  const [unionFeePerCard, setUnionFeePerCard] = useState('5');
+  const [companyDepositPerCard, setCompanyDepositPerCard] = useState('15');
+  const [paymentMethod, setPaymentMethod] = useState('حوالة مصرفية');
+  const [unionPurchaseDate, setUnionPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [unionNotes, setUnionNotes] = useState('');
+  const [receiptImage, setReceiptImage] = useState<File | null>(null);
+
   const API_BASE_URL = '/api';
+
+  // Calculated derived state for Union UI
+  const cardsCount = React.useMemo(() => {
+    const paid = parseFloat(amountPaid) || 0;
+    const price = parseFloat(cardPrice) || 1;
+    return Math.floor(paid / price);
+  }, [amountPaid, cardPrice]);
+
+  const totalUnionFee = React.useMemo(() => cardsCount * (parseFloat(unionFeePerCard)||0), [cardsCount, unionFeePerCard]);
+  const totalCompanyDeposit = React.useMemo(() => cardsCount * (parseFloat(companyDepositPerCard)||0), [cardsCount, companyDepositPerCard]);
+
+  const unionTotalStats = React.useMemo(() => {
+    let totalPaid = 0;
+    let totalFee = 0;
+    unionPurchases.forEach(u => {
+      totalPaid += parseFloat(u.amount_paid.toString()) || 0;
+      totalFee += (parseFloat(u.cards_count.toString()) || 0) * (parseFloat(u.union_fee_per_card.toString()) || 0);
+    });
+    return { totalPaid, totalFee };
+  }, [unionPurchases]);
 
   const dynamicCategories = React.useMemo(() => {
     const existing = expenses.map(e => e.category);
@@ -82,7 +145,21 @@ export default function ExpenseManagement() {
 
   React.useEffect(() => {
     fetchExpenses();
+    fetchUnionBalances();
   }, []);
+
+  const fetchUnionBalances = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/union-balances`);
+      const data = await response.json();
+      if (data.success) {
+        setUnionPurchases(data.data);
+        setUnionStats(data.statistics);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchExpenses = async () => {
     setLoading(true);
@@ -206,6 +283,59 @@ export default function ExpenseManagement() {
     }
   };
 
+  const handleAddUnionPurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amountPaid || !cardPrice) return;
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('request_number', requestNumber);
+      formData.append('amount_paid', amountPaid);
+      formData.append('card_price', cardPrice);
+      formData.append('union_fee_per_card', unionFeePerCard);
+      formData.append('company_deposit_per_card', companyDepositPerCard);
+      formData.append('payment_method', paymentMethod);
+      formData.append('purchase_date', unionPurchaseDate);
+      formData.append('notes', unionNotes);
+      if (receiptImage) {
+        formData.append('receipt_image', receiptImage);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/union-balances`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        showToast('تم تسجيل إيصال رصيد الاتحاد بنجاح', 'success');
+        setShowUnionModal(false);
+        setReceiptImage(null);
+        setAmountPaid('');
+        setRequestNumber('');
+        fetchUnionBalances();
+      } else {
+        showToast('فشل التسجيل', 'error');
+      }
+    } catch (e) {
+      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUnionPurchase = async (id: number) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا الإيصال؟')) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/union-balances/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        showToast('تم حذف الإيصال بنجاح', 'success');
+        fetchUnionBalances();
+      }
+    } catch (e) {
+      showToast('خطأ أثناء החذف', 'error');
+    }
+  };
+
   const exportToExcel = () => {
     if (expenses.length === 0) {
       showToast('لا توجد بيانات لتصديرها', 'error');
@@ -298,7 +428,12 @@ export default function ExpenseManagement() {
 
   return (
     <section className="users-management">
-      {/* Professional Print-only Header (Employee Salaries Style) */}
+
+      {/* التبويبات تمت إزالتها بناءً على طلب المستخدم ليتم التعامل معها من القائمة الجانبية كـ sub-section */}
+
+      {activeTab === 'expenses' && (
+        <>
+          {/* Professional Print-only Header (Employee Salaries Style) */}
       <div className="print-only-header" style={{ display: 'none' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '3px double #e2e8f0' }}>
           <div style={{ textAlign: 'right' }}>
@@ -651,7 +786,6 @@ export default function ExpenseManagement() {
                     </div>
                   </td>
                 </tr>
-
               ))}
               {expenses.length === 0 && (
                 <tr>
@@ -662,9 +796,144 @@ export default function ExpenseManagement() {
           </table>
         </div>
       </div>
+        </>
+      )}
 
-      {showModal && (
-        <div className="modal-overlay no-print" style={{
+      {activeTab === 'union' && (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+          <div className="users-breadcrumb no-print" style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '25px 30px',
+            background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
+            borderRadius: '16px',
+            marginBottom: '30px',
+            color: '#fff',
+            boxShadow: '0 10px 20px rgba(1, 76, 177, 0.15)'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
+                <i className="fa-solid fa-id-card" style={{ color: '#f59e0b' }}></i>
+                سجل شراء رصيد البطاقة البرتقالية (الاتحاد)
+              </h2>
+              <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>إدارة المدفوعات وحصص الاتحاد وودائع الشركة</p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setAmountPaid('');
+                  setUnionPurchaseDate(new Date().toISOString().split('T')[0]);
+                  setReceiptImage(null);
+                  setUnionNotes('');
+                  setShowUnionModal(true);
+                }}
+                className="btn-primary"
+                style={{
+                  background: '#f59e0b',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="fa-solid fa-plus"></i>
+                طلب رصيد جديد
+              </button>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
+            <div className="stat-box" style={{ background: '#eff6ff', padding: '20px', borderRadius: '15px', border: '1px solid #bfdbfe' }}>
+              <div className="stat-title" style={{ color: '#1d4ed8', fontSize: '13px', marginBottom: '8px' }}>إجمالي المبلغ المدفوع</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1d4ed8' }}>
+                {unionTotalStats.totalPaid.toLocaleString()} د.ل
+              </div>
+            </div>
+            <div className="stat-box" style={{ background: '#ecfdf5', padding: '20px', borderRadius: '15px', border: '1px solid #a7f3d0' }}>
+              <div className="stat-title" style={{ color: '#047857', fontSize: '13px', marginBottom: '8px' }}>إجمالي البطاقات المُشتراة</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#047857' }}>
+                {unionStats.total_cards.toLocaleString()} بطاقة
+              </div>
+            </div>
+            <div className="stat-box" style={{ background: '#fef2f2', padding: '20px', borderRadius: '15px', border: '1px solid #fecaca' }}>
+              <div className="stat-title" style={{ color: '#b91c1c', fontSize: '13px', marginBottom: '8px' }}>إجمالي خصم الاتحاد</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#b91c1c' }}>
+                {unionTotalStats.totalFee.toLocaleString()} د.ل
+              </div>
+            </div>
+            <div className="stat-box" style={{ background: '#fef3c7', padding: '20px', borderRadius: '15px', border: '1px solid #fde68a' }}>
+              <div className="stat-title" style={{ color: '#b45309', fontSize: '13px', marginBottom: '8px' }}>إجمالي مبلغ الوديعة (للشركة)</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#b45309' }}>
+                {unionStats.total_deposit.toLocaleString()} د.ل
+              </div>
+            </div>
+          </div>
+
+          <div className="users-card" style={{ padding: '0', overflow: 'hidden', background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+            <div className="users-table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>رقم الواصل/الطلب</th>
+                    <th>المبلغ المدفوع</th>
+                    <th>عدد البطاقات</th>
+                    <th>خصم الاتحاد (المصروفات)</th>
+                    <th>وديعة الشركة</th>
+                    <th>تاريخ الطلب</th>
+                    <th>صورة الواصل</th>
+                    <th>الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unionPurchases.map((u) => (
+                    <tr key={u.id}>
+                      <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{u.request_number}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#10b981', fontWeight: 'bold' }}>{u.cards_count}</td>
+                      <td style={{ color: 'var(--text)' }}>{parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#f59e0b', fontWeight: 'bold' }}>{parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
+                      <td style={{ color: 'var(--text)' }}>{u.purchase_date}</td>
+                      <td>
+                        {u.receipt_image ? (
+                          <button
+                            onClick={() => setSelectedImage(u.receipt_image ? `${API_BASE_URL.replace('/api', '')}${u.receipt_image}` : null)}
+                            style={{ background: '#e0f2fe', color: '#0284c7', padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
+                          >
+                            <i className="fa-solid fa-image"></i> عرض الواصل
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8' }}>لا يوجد</span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => handleDeleteUnionPurchase(u.id)}
+                          style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#991b1b' }}
+                          title="حذف"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {unionPurchases.length === 0 && (
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا يوجد سجل شراء لرصيد الاتحاد</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModal && (        <div className="modal-overlay no-print" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000
         }}>
@@ -753,22 +1022,169 @@ export default function ExpenseManagement() {
         </div>
       )}
 
-      {/* Professional Print-only Footer (Employee Salaries Style) */}
-      <div className="print-only-footer" style={{ display: 'none', marginTop: '50px', justifyContent: 'space-between', textAlign: 'center' }}>
-        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
-        </div>
-        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>مدير الشؤون المالية</p>
-        </div>
-        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
-        </div>
-      </div>
+      {/* Union Balance Modal */}
+      {showUnionModal && (
+        <div className="modal" onClick={(e) => { if ((e.target as HTMLElement).className === 'modal') setShowUnionModal(false); }}>
+          <div className="modal-content user-form-modal" style={{ maxWidth: '650px' }}>
+            <div className="modal-header">
+              <h3>تسجيل رصيد اتحاد جديد (بطاقة برتقالية)</h3>
+              <button className="modal-close" onClick={() => setShowUnionModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddUnionPurchase} className="user-form">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                
+                <div className="form-group">
+                  <label>المبلغ المدفوع للاتحاد (د.ل) <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    type="number"
+                    required
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(e.target.value)}
+                    placeholder="مثال: 10000"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', fontSize: '18px', fontWeight: 'bold' }}
+                  />
+                </div>
 
-      <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
-        تم استخراج هذا الكشف بتاريخ: {new Date().toLocaleString('ar-LY')}
-      </div>
+                <div className="form-group">
+                  <label>تاريخ الشراء / الطلب <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    type="date"
+                    required
+                    value={unionPurchaseDate}
+                    onChange={(e) => setUnionPurchaseDate(e.target.value)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>رقم الطلب (إن وجد)</label>
+                  <input
+                    type="text"
+                    value={requestNumber}
+                    onChange={(e) => setRequestNumber(e.target.value)}
+                    placeholder="مثال: 837530"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>طريقة الدفع</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  >
+                    <option value="صك بقيمة">صك بقيمة</option>
+                    <option value="نقداً بقيمة">نقداً بقيمة</option>
+                    <option value="حوالة مصرفية">حوالة مصرفية</option>
+                    <option value="خصم من الوديعة">خصم من الوديعة</option>
+                  </select>
+                </div>
+
+              </div>
+
+              {/* Advanced Settings for Union breakdown */}
+              <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px', marginTop: '15px', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b' }}>إعدادات حساب الوديعة (قابلة للتغيير مستقبلاً)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '11px' }}>سعر البطاقة الكلي</label>
+                    <input type="number" required value={cardPrice} onChange={(e) => setCardPrice(e.target.value)} style={{ padding: '8px' }} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '11px' }}>خصم الاتحاد الفعلي (مصروف)</label>
+                    <input type="number" required value={unionFeePerCard} onChange={(e) => setUnionFeePerCard(e.target.value)} style={{ padding: '8px' }} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '11px' }}>رصيد/وديعة الشركة للبطاقة</label>
+                    <input type="number" required value={companyDepositPerCard} onChange={(e) => setCompanyDepositPerCard(e.target.value)} style={{ padding: '8px' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Automatic Calculation Results */}
+              <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: '#f0fdf4', padding: '15px', borderRadius: '10px', border: '1px dashed #10b981' }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>الكمية المُستلمة</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#10b981' }}>{cardsCount} بطاقة</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>خصم الاتحاد (المصروفات)</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#ef4444' }}>{totalUnionFee} د.ل</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>تُضاف كوديعة للشركة</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#f59e0b' }}>{totalCompanyDeposit} د.ل</div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>صورة الواصل المرفق</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setReceiptImage(e.target.files[0]);
+                    }
+                  }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', background: '#fff' }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>ملاحظات إضافية</label>
+                <textarea
+                  value={unionNotes}
+                  onChange={(e) => setUnionNotes(e.target.value)}
+                  placeholder="أي تفاصيل إضافية..."
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', minHeight: '60px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1, padding: '14px', background: '#f59e0b', border: 'none', color: '#fff', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
+                  {loading ? 'جاري التسجيل...' : 'اعتماد وتسجيل الإيصال'}
+                </button>
+                <button type="button" onClick={() => setShowUnionModal(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>إلغاء</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {selectedImage && (
+        <div className="modal" onClick={() => setSelectedImage(null)} style={{ zIndex: 9999 }}>
+          <div className="modal-content" style={{ background: 'transparent', boxShadow: 'none', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}>
+            <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Professional Print-only Footer (Employee Salaries Style) */}
+      {activeTab === 'expenses' && (
+        <>
+          <div className="print-only-footer" style={{ display: 'none', marginTop: '50px', justifyContent: 'space-between', textAlign: 'center' }}>
+            <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+              <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
+            </div>
+            <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+              <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>مدير الشؤون المالية</p>
+            </div>
+            <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
+              <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
+            </div>
+          </div>
+
+          <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
+            تم استخراج هذا الكشف بتاريخ: {new Date().toLocaleString('ar-LY')}
+          </div>
+        </>
+      )}
     </section>
   );
 }

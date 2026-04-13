@@ -145,6 +145,7 @@ function hasAccessToRoute(
     'المخازن والعهدة': ['/reports/inventory'],
     'مرتبات الموظفين': ['/reports/employee-salaries'],
     'إدارة الإيرادات': ['/reports/revenue'],
+    'إدارة المصروفات': ['/reports/expenses', '/reports/union-balances'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -272,7 +273,12 @@ const menuSections: SidebarSection[] = [
         ? [{ label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const }]
         : []),
       { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
-      { label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', to: '/reports/expenses' },
+      { 
+        label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
+          { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+          { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+        ] 
+      },
     ],
   },
   {
@@ -321,7 +327,6 @@ const createMenuSections = (
     'إغلاق حساب شهري': { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
     'كشف إغلاق الحساب الشهري': { label: 'كشف إغلاق الحساب الشهري', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
     'إيصالات القبض': { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
-    'إدارة المصروفات': { label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', to: '/reports/expenses' },
     'التسويات والعمولات': { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
     'التحصيلات البنكية': { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' },
     'الديون المستحقة': { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
@@ -368,6 +373,7 @@ const createMenuSections = (
     ...(SHOW_BANK_RECONCILIATION ? ['/reports/bank-reconciliation'] : []),
     '/reports/financial-archive',
     '/reports/expenses',
+    '/reports/union-balances',
   ];
   const adminOrder: string[] = ['/branches-agents', '/users', '/archive'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
@@ -380,6 +386,13 @@ const createMenuSections = (
 
   if (authorizedDocs && authorizedDocs.length > 0) {
     authorizedDocs.forEach((docType) => {
+      // التعامل الخاص مع إدارة المصروفات لجعلها قائمة فرعية
+      if (docType === 'إدارة المصروفات') {
+        reportsItemsMap.set('/reports/expenses', { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' });
+        reportsItemsMap.set('/reports/union-balances', { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' });
+        return;
+      }
+
       const itemInfo = insuranceTypeMap[docType];
       if (itemInfo) {
         // تحديد إذا كان تقرير أو تأمين
@@ -470,9 +483,21 @@ const createMenuSections = (
   }
 
   if (reportsItems.length > 0) {
+    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances');
+    const otherReports = reportsItems.filter(i => i.to !== '/reports/expenses' && i.to !== '/reports/union-balances');
+    
+    const finalReports = [...otherReports];
+    if (expensesGroup.length > 0) {
+      finalReports.push({
+        label: 'إدارة المصروفات',
+        icon: 'fa-solid fa-vault',
+        children: expensesGroup
+      });
+    }
+
     sections.push({
       title: 'الشؤون المالية',
-      items: reportsItems,
+      items: finalReports,
     });
   }
 
@@ -748,7 +773,8 @@ export default function App() {
                   <Route path="/reports/financial-archive" element={<FinancialArchive />} />
                   <Route path="/reports/inventory" element={<InventoryManagement />} />
                   <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
-                  <Route path="/reports/expenses" element={<ExpenseManagement />} />
+                  <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><ExpenseManagement activeTabOverride="expenses" /></AuthorizedRoute>} />
+                  <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
                   {/* اختبار API */}
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
                   <Route path="/test-lifo-login" element={<TestLifoLogin />} />
