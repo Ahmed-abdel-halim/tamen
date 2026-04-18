@@ -268,6 +268,7 @@ export default function BranchAgentDetails() {
               </div>
             </div>
 
+
             <div className="engineer-stat-card">
               <i className="fa-solid fa-boxes-stacked engineer-stat-icon" style={{ color: '#f59e0b' }}></i>
               <div className="engineer-stat-label">العهدة الثابتة</div>
@@ -449,7 +450,6 @@ export default function BranchAgentDetails() {
               </div>
             </div>
           </div>
-
           {/* العهد */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px', marginTop: '30px' }}>
             {/* عهد الوكيل الثابتة */}

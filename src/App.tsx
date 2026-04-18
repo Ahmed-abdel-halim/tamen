@@ -145,7 +145,7 @@ function hasAccessToRoute(
     'المخازن والعهدة': ['/reports/inventory'],
     'مرتبات الموظفين': ['/reports/employee-salaries'],
     'إدارة الإيرادات': ['/reports/revenue'],
-    'إدارة المصروفات': ['/reports/expenses', '/reports/union-balances'],
+    'إدارة المصروفات': ['/reports/expenses', '/reports/union-balances', '/reports/indemnities'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -276,6 +276,7 @@ const menuSections: SidebarSection[] = [
       { 
         label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
           { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+          { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
           { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
         ] 
       },
@@ -373,6 +374,7 @@ const createMenuSections = (
     ...(SHOW_BANK_RECONCILIATION ? ['/reports/bank-reconciliation'] : []),
     '/reports/financial-archive',
     '/reports/expenses',
+    '/reports/indemnities',
     '/reports/union-balances',
   ];
   const adminOrder: string[] = ['/branches-agents', '/users', '/archive'];
@@ -389,6 +391,7 @@ const createMenuSections = (
       // التعامل الخاص مع إدارة المصروفات لجعلها قائمة فرعية
       if (docType === 'إدارة المصروفات') {
         reportsItemsMap.set('/reports/expenses', { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' });
+        reportsItemsMap.set('/reports/indemnities', { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' });
         reportsItemsMap.set('/reports/union-balances', { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' });
         return;
       }
@@ -483,8 +486,8 @@ const createMenuSections = (
   }
 
   if (reportsItems.length > 0) {
-    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances');
-    const otherReports = reportsItems.filter(i => i.to !== '/reports/expenses' && i.to !== '/reports/union-balances');
+    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances' || i.to === '/reports/indemnities');
+    const otherReports = reportsItems.filter(i => i.to !== '/reports/expenses' && i.to !== '/reports/union-balances' && i.to !== '/reports/indemnities');
     
     const finalReports = [...otherReports];
     if (expensesGroup.length > 0) {
@@ -774,6 +777,7 @@ export default function App() {
                   <Route path="/reports/inventory" element={<InventoryManagement />} />
                   <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
                   <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><ExpenseManagement activeTabOverride="expenses" /></AuthorizedRoute>} />
+                  <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><ExpenseManagement activeTabOverride="indemnities" /></AuthorizedRoute>} />
                   <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
                   {/* اختبار API */}
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />

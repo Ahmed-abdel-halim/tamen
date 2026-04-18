@@ -2,10 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 
-type Custody = {
-  description: string;
-  quantity: number;
-};
+
 
 const LIBYAN_CITIES = [
   { ar: 'طرابلس', en: 'Tripoli' },
@@ -100,8 +97,7 @@ export default function CreateBranchAgent() {
     authorized_documents: [] as string[],
     document_percentages: {} as Record<string, number>,
   });
-  const [consumedCustodies, setConsumedCustodies] = useState<Custody[]>([]);
-  const [fixedCustodies, setFixedCustodies] = useState<Custody[]>([]);
+
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
@@ -151,24 +147,6 @@ export default function CreateBranchAgent() {
       }
     }
   }, [formData.contract_date, formData.contract_end_date]);
-
-  const addConsumedCustody = () => {
-    setConsumedCustodies([...consumedCustodies, { description: '', quantity: 1 }]);
-  };
-
-  const removeConsumedCustody = (index: number) => {
-    setConsumedCustodies(consumedCustodies.filter((_, i) => i !== index));
-  };
-
-  const updateConsumedCustody = (index: number, field: keyof Custody, value: string | number) => {
-    const newCustodies = [...consumedCustodies];
-    newCustodies[index] = { ...newCustodies[index], [field]: value };
-    setConsumedCustodies(newCustodies);
-  };
-
-  const addFixedCustody = () => {
-    setFixedCustodies([...fixedCustodies, { description: '', quantity: 1 }]);
-  };
 
   const handleDocumentToggle = (documentType: string) => {
     const isSelected = formData.authorized_documents.includes(documentType);
@@ -228,16 +206,6 @@ export default function CreateBranchAgent() {
     }));
   };
 
-  const removeFixedCustody = (index: number) => {
-    setFixedCustodies(fixedCustodies.filter((_, i) => i !== index));
-  };
-
-  const updateFixedCustody = (index: number, field: keyof Custody, value: string | number) => {
-    const newCustodies = [...fixedCustodies];
-    newCustodies[index] = { ...newCustodies[index], [field]: value };
-    setFixedCustodies(newCustodies);
-  };
-
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.agency_name.trim()) errors.agency_name = 'اسم الوكالة مطلوب';
@@ -280,12 +248,7 @@ export default function CreateBranchAgent() {
       if (formData.nationality) formDataToSend.append('nationality', formData.nationality);
       if (formData.national_id) formDataToSend.append('national_id', formData.national_id);
       if (formData.identity_number) formDataToSend.append('identity_number', formData.identity_number);
-      if (consumedCustodies.length > 0) {
-        formDataToSend.append('consumed_custodies', JSON.stringify(consumedCustodies));
-      }
-      if (fixedCustodies.length > 0) {
-        formDataToSend.append('fixed_custodies', JSON.stringify(fixedCustodies));
-      }
+
       if (personalPhoto) formDataToSend.append('personal_photo', personalPhoto);
       if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
       if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
@@ -531,89 +494,6 @@ export default function CreateBranchAgent() {
               </div>
             </div>
 
-            {/* عهد مستهلكة */}
-            <div className="payment-section">
-              <div className="payment-section-header">
-                <h3>عهد مستهلكة</h3>
-                <button type="button" onClick={addConsumedCustody} className="btn-submit">
-                  <i className="fa-solid fa-plus" style={{ marginLeft: '6px' }}></i>
-                  إضافة عهدة
-                </button>
-              </div>
-              {consumedCustodies.map((custody, index) => (
-                <div key={index} className="payment-card">
-                  <div className="payment-card-header">
-                    <strong>عهدة #{index + 1}</strong>
-                    <button type="button" onClick={() => removeConsumedCustody(index)} className="btn-cancel" style={{ padding: '5px 10px' }}>
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
-                  <div className="payment-card-grid">
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>البيان *</label>
-                      <input
-                        type="text"
-                        value={custody.description}
-                        onChange={(e) => updateConsumedCustody(index, 'description', e.target.value)}
-                        placeholder="البيان"
-                      />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>العدد *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={custody.quantity}
-                        onChange={(e) => updateConsumedCustody(index, 'quantity', parseInt(e.target.value) || 1)}
-                        placeholder="العدد"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* عهد الوكيل الثابتة */}
-            <div className="payment-section">
-              <div className="payment-section-header">
-                <h3>عهد الوكيل الثابتة</h3>
-                <button type="button" onClick={addFixedCustody} className="btn-submit">
-                  <i className="fa-solid fa-plus" style={{ marginLeft: '6px' }}></i>
-                  إضافة عهدة
-                </button>
-              </div>
-              {fixedCustodies.map((custody, index) => (
-                <div key={index} className="payment-card">
-                  <div className="payment-card-header">
-                    <strong>عهدة #{index + 1}</strong>
-                    <button type="button" onClick={() => removeFixedCustody(index)} className="btn-cancel" style={{ padding: '5px 10px' }}>
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
-                  <div className="payment-card-grid">
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>البيان *</label>
-                      <input
-                        type="text"
-                        value={custody.description}
-                        onChange={(e) => updateFixedCustody(index, 'description', e.target.value)}
-                        placeholder="البيان"
-                      />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>العدد *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={custody.quantity}
-                        onChange={(e) => updateFixedCustody(index, 'quantity', parseInt(e.target.value) || 1)}
-                        placeholder="العدد"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
 
             {/* رفع الصور */}
             <div className="form-grid">

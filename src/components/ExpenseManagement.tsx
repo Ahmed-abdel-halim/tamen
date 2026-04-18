@@ -10,6 +10,9 @@ interface Expense {
   expense_date: string;
   status: string;
   notes?: string;
+  is_indemnity?: boolean;
+  indemnity_type?: string;
+  payment_source?: string;
 }
 
 interface Statistics {
@@ -36,12 +39,14 @@ interface UnionPurchase {
 
 interface UnionStats {
   total_deposit: number;
+  original_deposit?: number;
   total_cards: number;
+  total_indemnities_deducted?: number;
 }
 
-const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة'];
+const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة', 'التعويضات'];
 
-export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { activeTabOverride?: 'expenses' | 'union' }) {
+export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { activeTabOverride?: 'expenses' | 'union' | 'indemnities' }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     monthly_total: 0,
@@ -69,9 +74,10 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [status, setStatus] = useState('مدفوع');
   const [notes, setNotes] = useState('');
   const [customCategory, setCustomCategory] = useState('');
+  const [indemnityType, setIndemnityType] = useState('orange_card');
 
   // Union Balance States
-  const [activeTab, setActiveTab] = useState<'expenses' | 'union'>(activeTabOverride);
+  const [activeTab, setActiveTab] = useState<'expenses' | 'union' | 'indemnities'>(activeTabOverride);
 
   React.useEffect(() => {
     setActiveTab(activeTabOverride);
@@ -122,6 +128,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
   const filteredExpenses = React.useMemo(() => {
     return expenses.filter(e => {
+      if (activeTab === 'indemnities' && !e.is_indemnity) return false;
+      if (activeTab === 'expenses' && e.is_indemnity) return false;
+
       const matchesSearch = e.name.toLowerCase().includes(searchFilter.toLowerCase());
       const matchesCategory = categoryFilter === 'الكل' || e.category === categoryFilter;
       const matchesStatus = statusFilter === 'الكل' || e.status === statusFilter;
@@ -132,7 +141,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
       return matchesSearch && matchesCategory && matchesStatus && matchesFrom && matchesTo;
     });
-  }, [expenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate]);
+  }, [expenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
   const filteredStats = React.useMemo(() => {
     const total = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -188,15 +197,17 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       setDate(expense.expense_date);
       setStatus(expense.status);
       setNotes(expense.notes || '');
+      setIndemnityType(expense.indemnity_type || 'orange_card');
     } else {
       setEditingExpense(null);
       setName('');
       setRecipient('');
-      setCategory('قرطاسية');
+      setCategory(activeTab === 'indemnities' ? 'التعويضات' : 'قرطاسية');
       setAmount('');
       setDate(new Date().toISOString().split('T')[0]);
       setStatus('مدفوع');
       setNotes('');
+      setIndemnityType('orange_card');
     }
     setShowModal(true);
   };
@@ -223,7 +234,10 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
           amount: parseFloat(amount),
           expense_date: date,
           status,
-          notes
+          notes,
+          is_indemnity: category === 'التعويضات',
+          indemnity_type: category === 'التعويضات' ? indemnityType : null,
+          payment_source: category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : 'bank'
         }),
       });
 
@@ -231,6 +245,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         showToast(editingExpense ? 'تم تحديث المصروف بنجاح' : 'تم إضافة المصروف بنجاح', 'success');
         setShowModal(false);
         fetchExpenses();
+        fetchUnionBalances();
       } else {
         const errorData = await response.json().catch(() => ({}));
         showToast(errorData.message || 'حدث خطأ أثناء الحفظ', 'error');
@@ -543,7 +558,6 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             fontSize: '18px',
             color: '#1e293b'
           }}>
-            {activeTab === 'expenses' ? 'تقرير المصروفات التشغيلية' : 'سجل شراء رصيد البطاقة البرتقالية (الاتحاد)'}
           </h2>
         </div>
       </div>
@@ -642,7 +656,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         }
       `}</style>
 
-      {activeTab === 'expenses' && (
+      { (activeTab === 'expenses' || activeTab === 'indemnities') && (
         <>
 
           <div className="users-breadcrumb no-print" style={{
@@ -658,10 +672,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
-                <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#38bdf8' }}></i>
-                إدارة المصروفات التشغيلية
+                <i className={activeTab === 'expenses' ? "fa-solid fa-file-invoice-dollar" : "fa-solid fa-scale-unbalanced"} style={{ color: activeTab === 'expenses' ? '#38bdf8' : '#fcd34d' }}></i>
+                {activeTab === 'expenses' ? 'إدارة المصروفات التشغيلية' : 'إدارة التعويضات'}
               </h2>
-              <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية</p>
+              <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>
+                {activeTab === 'expenses' ? 'تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية' : 'إدارة جميع التعويضات وإصداراتها للمستفيدين'}
+              </p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
@@ -719,7 +735,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 }}
               >
                 <i className="fa-solid fa-plus"></i>
-                تسجيل مصروف جديد
+                {activeTab === 'expenses' ? 'تسجيل مصروف جديد' : 'تسجيل تعويض جديد'}
               </button>
             </div>
 
@@ -834,7 +850,14 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                     <tr key={expense.id}>
                       <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
                       <td style={{ color: 'var(--text)' }}>{expense.recipient || '-'}</td>
-                      <td style={{ color: 'var(--text)' }}>{expense.category}</td>
+                      <td style={{ color: 'var(--text)' }}>
+                        {expense.category}
+                        {expense.is_indemnity && (
+                          <div style={{ fontSize: '10px', marginTop: '4px', color: expense.indemnity_type === 'orange_card' ? '#d97706' : '#475569', background: expense.indemnity_type === 'orange_card' ? '#fef3c7' : '#f1f5f9', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                            {expense.indemnity_type === 'orange_card' ? 'تُخصم من الوديعة' : 'تعويض بنكي'}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{expense.amount.toLocaleString()} د.ل</td>
                       <td style={{ color: 'var(--text)' }}>{expense.expense_date}</td>
                       <td>
@@ -996,10 +1019,15 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               </div>
             </div>
             <div className="stat-box" style={{ background: '#fef3c7', padding: '20px', borderRadius: '15px', border: '1px solid #fde68a' }}>
-              <div className="stat-title" style={{ color: '#b45309', fontSize: '13px', marginBottom: '8px' }}>إجمالي مبلغ الوديعة (للشركة)</div>
+              <div className="stat-title" style={{ color: '#b45309', fontSize: '13px', marginBottom: '8px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#b45309' }}>
                 {unionStats.total_deposit.toLocaleString()} د.ل
               </div>
+              {unionStats.total_indemnities_deducted ? (
+                <div style={{ fontSize: '11px', color: '#d97706', marginTop: '5px' }}>
+                  بعد خصم تعويضات بقيمة {unionStats.total_indemnities_deducted.toLocaleString()} د.ل
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -1093,17 +1121,24 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                >
-                  {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  <option value="أخرى (إضافة فئة جديدة)">أخرى (إضافة فئة جديدة)</option>
-                </select>
-              </div>
+              {activeTab === 'expenses' ? (
+                <div className="form-group">
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  >
+                    {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    <option value="أخرى (إضافة فئة جديدة)">أخرى (إضافة فئة جديدة)</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
+                  <div style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', background: '#f8fafc', color: '#64748b' }}>التعويضات</div>
+                </div>
+              )}
               <div className="form-group">
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>المبلغ (د.ل)</label>
                 <input
@@ -1128,6 +1163,25 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   placeholder="مثال: دعاية وإعلان"
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                 />
+              </div>
+            )}
+            
+            {category === 'التعويضات' && (
+              <div className="form-group" style={{ marginBottom: '15px', background: '#fffbeb', padding: '15px', border: '1px solid #fde68a', borderRadius: '10px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold', color: '#b45309' }}>
+                  <i className="fa-solid fa-scale-unbalanced text-amber-500 mr-2"></i> نوع التعويض ومصدر الدفع <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <select
+                  value={indemnityType}
+                  onChange={(e) => setIndemnityType(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #fcd34d', background: '#fff' }}
+                >
+                  <option value="orange_card">بطاقة برتقالية / عربية (تُخصم من وديعة الاتحاد)</option>
+                  <option value="general">تعويضات أخرى (تُخصم من الحساب الجاري/المصرف)</option>
+                </select>
+                <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#b45309' }}>
+                  {indemnityType === 'orange_card' ? 'ملاحظة: سيتم خصم هذا المبلغ من رصيد وديعة الشركة لدى الاتحاد تلقائياً.' : 'ملاحظة: سيتم تسجيل هذا المصروف كتعويض ولن يؤثر على وديعة الاتحاد.'}
+                </p>
               </div>
             )}
             <div className="form-group" style={{ marginBottom: '20px' }}>
