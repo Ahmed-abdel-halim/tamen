@@ -23,7 +23,7 @@ const getApiBaseUrl = (): string => {
   
   // في production، استخدم الـ domain المحدد
   // Domain: https://con.primes.ly/
-  return 'https://mli.mli.ly/api';
+  return 'https://api.mli.ly/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
