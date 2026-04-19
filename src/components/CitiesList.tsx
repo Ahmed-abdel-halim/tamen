@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type City = {
   id: number;
@@ -35,7 +36,7 @@ export default function CitiesList() {
 
   const fetchCities = async () => {
     try {
-      const res = await fetch('/api/cities', {
+      const res = await fetch(`${API_BASE_URL}/cities`, {
         headers: {
           'Accept': 'application/json',
         }
@@ -47,7 +48,7 @@ export default function CitiesList() {
       setCities(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Error fetching cities:', error);
-      showToast(`حدث خطأ أثناء جلب المدن: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
+      showToast(`حدث خطأ أثناء جلب المدن: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -88,7 +89,7 @@ export default function CitiesList() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/cities/${deleteConfirmation.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/cities/${deleteConfirmation.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -127,8 +128,8 @@ export default function CitiesList() {
     setSubmitting(true);
     try {
       const url = showForm?.mode === 'edit' 
-        ? `/api/cities/${showForm.city?.id}` 
-        : '/api/cities';
+        ? `${API_BASE_URL}/cities/${showForm.city?.id}` 
+        : `${API_BASE_URL}/cities`;
       
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
       

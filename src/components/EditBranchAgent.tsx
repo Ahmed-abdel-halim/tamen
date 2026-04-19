@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 
 
 
@@ -161,7 +162,7 @@ export default function EditBranchAgent() {
 
   const fetchBranchAgent = async (branchAgentId: number) => {
     try {
-      const res = await fetch(`/api/branches-agents/${branchAgentId}`, {
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${branchAgentId}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) {
@@ -331,7 +332,7 @@ export default function EditBranchAgent() {
       formDataToSend.append('document_percentages', percentagesJson);
       formDataToSend.append('_method', 'PUT');
 
-      const res = await fetch(`/api/branches-agents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${id}`, {
         method: 'POST',
         body: formDataToSend,
         headers: {
@@ -362,7 +363,7 @@ export default function EditBranchAgent() {
           // التحقق من أن المستخدم المحدث هو نفسه المستخدم الحالي
           if (updatedUserId && updatedUserId === currentUser.id) {
             // جلب البيانات المحدثة من الخادم
-            const refreshRes = await fetch(`/api/user/${updatedUserId}/refresh`, {
+            const refreshRes = await fetch(`${API_BASE_URL}/user/${updatedUserId}/refresh`, {
               headers: { 'Accept': 'application/json' },
             });
             
@@ -602,7 +603,7 @@ export default function EditBranchAgent() {
                 {existingPersonalPhoto && !personalPhoto && (
                   <div style={{ marginBottom: '10px' }}>
                     <img 
-                      src={`/storage/${existingPersonalPhoto}`} 
+                      src={`${BACKEND_URL}/storage/${existingPersonalPhoto}`} 
                       alt="صورة شخصية حالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -629,7 +630,7 @@ export default function EditBranchAgent() {
                 {existingIdentityPhoto && !identityPhoto && (
                   <div style={{ marginBottom: '10px' }}>
                     <img 
-                      src={`/storage/${existingIdentityPhoto}`} 
+                      src={`${BACKEND_URL}/storage/${existingIdentityPhoto}`} 
                       alt="صورة إثبات الهوية حالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -659,7 +660,7 @@ export default function EditBranchAgent() {
                 <div style={{ marginBottom: '10px' }}>
                   {existingContractPhoto.endsWith('.pdf') ? (
                     <a 
-                      href={`/storage/${existingContractPhoto}`} 
+                      href={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ display: 'inline-block', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
@@ -669,7 +670,7 @@ export default function EditBranchAgent() {
                     </a>
                   ) : (
                     <img 
-                      src={`/storage/${existingContractPhoto}`} 
+                      src={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
                       alt="صورة العقد الحالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />

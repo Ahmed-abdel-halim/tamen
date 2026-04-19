@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { showToast } from './Toast';
+import { API_BASE_URL } from '../config/api';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export default function ProfilePage() {
 
   const fetchUserDetails = async (userId: number) => {
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -90,7 +91,7 @@ export default function ProfilePage() {
     try {
       // تحديث البريد الإلكتروني
       if (formData.email !== user.email) {
-        const emailRes = await fetch(`/api/users/${user.id}/email`, {
+        const emailRes = await fetch(`${API_BASE_URL}/users/${user.id}/email`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ export default function ProfilePage() {
 
       // تحديث كلمة المرور إذا تم إدخالها
       if (formData.current_password && formData.new_password && formData.confirm_password) {
-        const passwordRes = await fetch(`/api/users/${user.id}/password`, {
+        const passwordRes = await fetch(`${API_BASE_URL}/users/${user.id}/password`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

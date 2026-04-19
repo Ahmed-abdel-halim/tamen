@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 
 
@@ -261,7 +262,7 @@ export default function CreateBranchAgent() {
       formDataToSend.append('authorized_documents', JSON.stringify(formData.authorized_documents || []));
       formDataToSend.append('document_percentages', JSON.stringify(formData.document_percentages || {}));
 
-      const res = await fetch('/api/branches-agents', {
+      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         method: 'POST',
         body: formDataToSend,
       });

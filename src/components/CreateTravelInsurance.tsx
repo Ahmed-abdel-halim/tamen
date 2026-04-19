@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
@@ -867,7 +868,7 @@ export default function CreateTravelInsurance() {
         headers['X-User-Id'] = userId.toString();
       }
 
-      const res = await fetch('/api/travel-insurance-documents', {
+      const res = await fetch(`${API_BASE_URL}/travel-insurance-documents`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

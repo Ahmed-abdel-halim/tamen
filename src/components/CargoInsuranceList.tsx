@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type CargoInsuranceDocument = {
   id: number;
@@ -40,7 +41,7 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
       const headers: HeadersInit = { 'Accept': 'application/json' };
       if (userId) headers['X-User-Id'] = userId.toString();
 
-      const res = await fetch('/api/cargo-insurance', { headers });
+      const res = await fetch(`${API_BASE_URL}/cargo-insurance`, { headers });
       const data = await res.json();
       setDocuments(Array.isArray(data) ? data : []);
     } catch (error: any) {
@@ -61,7 +62,7 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
     
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/cargo-insurance/${deleteConfirm.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/cargo-insurance/${deleteConfirm.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json'
@@ -152,7 +153,7 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
                             iframe.style.right = '-9999px';
                             iframe.style.width = '0';
                             iframe.style.height = '0';
-                            iframe.src = `/api/cargo-insurance/${doc.id}/print`;
+                            iframe.src = `${API_BASE_URL}/cargo-insurance/${doc.id}/print`;
                             document.body.appendChild(iframe);
                             iframe.onload = () => {
                               setTimeout(() => {

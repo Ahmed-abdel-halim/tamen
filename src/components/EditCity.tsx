@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 export default function EditCity() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function EditCity() {
 
   const fetchCity = async () => {
     try {
-      const res = await fetch(`/api/cities/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/cities/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -51,7 +52,7 @@ export default function EditCity() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/cities/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/cities/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

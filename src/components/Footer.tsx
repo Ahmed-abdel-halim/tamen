@@ -49,7 +49,7 @@ export default function Footer() {
           companyName: 'المدار الليبي للتأمين',
           loginCta: 'دخول الوكلاء أو الفروع',
           creditPrefix: 'برمجة وتطوير',
-          creditBrand: 'رُوتـــ لتقنية المعلومات',
+          creditBrand: 'كودينيتي تيك Codinity Tech',
         }
       : {
           newsletterTitle: 'Newsletter',
@@ -79,7 +79,7 @@ export default function Footer() {
           companyName: 'Almadar Libya Insurance',
           loginCta: 'Agents / Branches Login',
           creditPrefix: 'Developed by',
-          creditBrand: 'root Information Technologys',
+          creditBrand: 'Codinity Tech',
         };
   }, [language]);
 
@@ -169,7 +169,7 @@ export default function Footer() {
           <p className="footer-credit">
             {t.creditPrefix}
             {' '}
-            <a href="https://root.com.ly" target="_blank" rel="noopener noreferrer">
+            <a href="https://www.facebook.com/profile.php?id=100072479525246" target="_blank" rel="noopener noreferrer">
               {t.creditBrand}
             </a>
           </p>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type MonthlyAccountClosure = {
   id: number;
@@ -119,7 +120,7 @@ export default function MonthlyAccountClosuresReport() {
         if (dateTo) params.append('to_date', dateTo);
       }
 
-      const res = await fetch(`/api/branches-agents/monthly-account-closures-report?${params}`, {
+      const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closures-report?${params}`, {
         headers: { 'Accept': 'application/json' }
       });
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import WebsiteNavbar from './WebsiteNavbar';
 import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
+import { API_BASE_URL } from "../config/api";
 
 type BranchAgent = {
   id: number;
@@ -91,7 +92,7 @@ export default function BranchesAgentsPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch('http://localhost:8000/api/branches-agents', {
+      const response = await fetch(`${API_BASE_URL}/branches-agents`, {
         headers
       });
       

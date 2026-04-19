@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 type ProfessionalLiabilityInsuranceDocument = {
   id: number;
   insurance_number: string;
@@ -42,7 +43,7 @@ export default function ViewProfessionalLiabilityInsurance() {
 
   const fetchDocument = async () => {
     try {
-      const res = await fetch(`/api/professional-liability-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
 
@@ -70,7 +71,7 @@ export default function ViewProfessionalLiabilityInsurance() {
     iframe.style.right = '-9999px';
     iframe.style.width = '0';
     iframe.style.height = '0';
-    iframe.src = `/api/professional-liability-insurance-documents/${id}/print`;
+    iframe.src = `${API_BASE_URL}/professional-liability-insurance-documents/${id}/print`;
     window.document.body.appendChild(iframe);
     
     iframe.onload = () => {

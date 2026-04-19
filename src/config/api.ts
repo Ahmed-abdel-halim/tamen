@@ -27,6 +27,7 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_BASE_URL = getApiBaseUrl();
+export const BACKEND_URL = API_BASE_URL.replace(/\/api$/, '');
 
 export const apiUrl = (path: string): string => {
   // إزالة الـ slash الأول إذا كان موجوداً

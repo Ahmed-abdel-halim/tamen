@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 type ResidentInsurancePassenger = {
   id: number;
   is_main_passenger: boolean;
@@ -42,7 +43,7 @@ export default function ViewResidentInsurance() {
   const fetchDocument = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/resident-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/resident-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
 
@@ -78,7 +79,7 @@ export default function ViewResidentInsurance() {
     iframe.style.right = '-9999px';
     iframe.style.width = '0';
     iframe.style.height = '0';
-    iframe.src = `/api/resident-insurance-documents/${id}/print`;
+    iframe.src = `${API_BASE_URL}/resident-insurance-documents/${id}/print`;
     window.document.body.appendChild(iframe);
     
     iframe.onload = () => {

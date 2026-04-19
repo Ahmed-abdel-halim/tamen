@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 export default function CreateCashInTransitInsurance() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function CreateCashInTransitInsurance() {
         'X-User-Id': userId?.toString() || '',
       };
 
-      const res = await fetch('/api/cash-in-transit-insurance', {
+      const res = await fetch(`${API_BASE_URL}/cash-in-transit-insurance`, {
         method: 'POST',
         headers,
         body: JSON.stringify(formData),

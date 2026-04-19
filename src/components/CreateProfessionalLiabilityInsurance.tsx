@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
@@ -234,7 +235,7 @@ export default function CreateProfessionalLiabilityInsurance() {
   useEffect(() => {
     const fetchProfessions = async () => {
       try {
-        const res = await fetch('/api/professions', {
+        const res = await fetch(`${API_BASE_URL}/professions`, {
           headers: { 'Accept': 'application/json' }
         });
         if (res.ok) {
@@ -326,7 +327,7 @@ export default function CreateProfessionalLiabilityInsurance() {
     if (!newProfessionName.trim()) return;
 
     try {
-      const res = await fetch('/api/professions', {
+      const res = await fetch(`${API_BASE_URL}/professions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -364,7 +365,7 @@ export default function CreateProfessionalLiabilityInsurance() {
 
     setDeletingProfession(true);
     try {
-      const res = await fetch(`/api/professions/${showDeleteProfessionModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/professions/${showDeleteProfessionModal.id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -425,7 +426,7 @@ export default function CreateProfessionalLiabilityInsurance() {
         headers['X-User-Id'] = userId.toString();
       }
 
-      const res = await fetch('/api/professional-liability-insurance-documents', {
+      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

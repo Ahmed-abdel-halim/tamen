@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 // قائمة بلدان الصنع (جميع دول العالم عدا إسرائيل)
 const COUNTRIES = [
   { ar: 'مصري', en: 'Egyptian' },
@@ -267,7 +268,7 @@ export default function ViewMarineStructureInsurance() {
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/marine-structure-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/marine-structure-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
 
@@ -295,7 +296,7 @@ export default function ViewMarineStructureInsurance() {
     iframe.style.right = '-9999px';
     iframe.style.width = '0';
     iframe.style.height = '0';
-    iframe.src = `/api/marine-structure-insurance-documents/${id}/print`;
+    iframe.src = `${API_BASE_URL}/marine-structure-insurance-documents/${id}/print`;
     window.document.body.appendChild(iframe);
     
     iframe.onload = () => {

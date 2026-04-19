@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 type VehicleType = {
   id: number;
   brand: string;
@@ -51,7 +52,7 @@ export default function ViewInternationalInsurance() {
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/international-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
 
@@ -79,7 +80,7 @@ export default function ViewInternationalInsurance() {
     iframe.style.right = '-9999px';
     iframe.style.width = '0';
     iframe.style.height = '0';
-    iframe.src = `/api/international-insurance-documents/${id}/print`;
+    iframe.src = `${API_BASE_URL}/international-insurance-documents/${id}/print`;
     window.document.body.appendChild(iframe);
     
     iframe.onload = () => {

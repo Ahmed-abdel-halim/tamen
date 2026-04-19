@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 type Plate = {
   id: number;
   plate_number: string;
@@ -101,7 +102,7 @@ export default function TransferOwnershipInsuranceDocument() {
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) {
@@ -127,7 +128,7 @@ export default function TransferOwnershipInsuranceDocument() {
 
   const fetchPlates = async () => {
     try {
-      const res = await fetch('/api/plates', {
+      const res = await fetch(`${API_BASE_URL}/plates`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -170,7 +171,7 @@ export default function TransferOwnershipInsuranceDocument() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/insurance-documents/${id}/transfer-ownership`, {
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}/transfer-ownership`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

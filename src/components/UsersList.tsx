@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 
 type User = {
   id: number;
@@ -43,11 +44,11 @@ function employeeCardNumber(u: User): string {
 function resolvePublicUrl(path: string | null | undefined): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  if (path.startsWith('/img/')) return `${window.location.origin}${path}`;
-  if (path.startsWith('img/')) return `${window.location.origin}/${path}`;
-  if (path.startsWith('/storage/')) return `${window.location.origin}${path}`;
-  if (path.startsWith('storage/')) return `${window.location.origin}/${path}`;
-  return `${window.location.origin}/storage/${path}`;
+  if (path.startsWith('/img/')) return `${BACKEND_URL}${path}`;
+  if (path.startsWith('img/')) return `${BACKEND_URL}/${path}`;
+  if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
+  if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
+  return `${BACKEND_URL}/storage/${path}`;
 }
 
 const INSURANCE_TYPES = [
@@ -132,7 +133,7 @@ export default function UsersList() {
     setLoading(true);
     try {
       // Fetch a large page once, then paginate الموظفين locally to avoid empty pages after excluding agents.
-      const url = `/api/users?page=1&per_page=1000`;
+      const url = `${API_BASE_URL}/users?page=1&per_page=1000`;
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -148,7 +149,7 @@ export default function UsersList() {
       }
     } catch (error: any) {
       console.error('Error fetching users:', error);
-      showToast(`حدث خطأ أثناء جلب المستخدمين: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
+      showToast(`حدث خطأ أثناء جلب المستخدمين: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -163,7 +164,7 @@ export default function UsersList() {
       const fd = new FormData();
       fd.append('type', type);
       fd.append('file', file);
-      const r = await fetch(`/api/users/${userId}/employee-files`, {
+      const r = await fetch(`${API_BASE_URL}/users/${userId}/employee-files`, {
         method: 'POST',
         body: fd,
         headers: { Accept: 'application/json' },
@@ -181,7 +182,7 @@ export default function UsersList() {
     let userConsumedCustodies: any[] = [];
     
     try {
-      const res = await fetch(`/api/inventory/custody?recipient_id=${u.id}&recipient_type=employee`);
+      const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${u.id}&recipient_type=employee`);
       if (res.ok) {
         const allCustody: any[] = await res.json();
         userFixedCustodies = allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active');
@@ -531,7 +532,7 @@ export default function UsersList() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/users/${deleteConfirmation.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/users/${deleteConfirmation.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -586,8 +587,8 @@ export default function UsersList() {
     setSubmitting(true);
     try {
       const url = showForm?.mode === 'edit' 
-        ? `/api/users/${showForm.user?.id}` 
-        : '/api/users';
+        ? `${API_BASE_URL}/users/${showForm.user?.id}` 
+        : `${API_BASE_URL}/users`;
       
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
       

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 export default function WhatsAppFloating() {
   const [show, setShow] = useState(false);
-  const phoneNumber = '201070684501'; // Number from the top bar
+  const phoneNumber = '218920003366'; // Number from the top bar
   const message = 'السلام عليكم، أود الاستفسار عن خدمات شركة المدار الليبي للتأمين';
 
   useEffect(() => {

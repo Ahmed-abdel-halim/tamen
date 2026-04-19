@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type City = {
   id: number;
@@ -75,7 +76,7 @@ export default function PlatesList() {
 
   const fetchPlates = async () => {
     try {
-      const res = await fetch('/api/plates', {
+      const res = await fetch(`${API_BASE_URL}/plates`, {
         headers: {
           'Accept': 'application/json',
         }
@@ -87,7 +88,7 @@ export default function PlatesList() {
       setPlates(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Error fetching plates:', error);
-      showToast(`حدث خطأ أثناء جلب اللوحات: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
+      showToast(`حدث خطأ أثناء جلب اللوحات: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -95,7 +96,7 @@ export default function PlatesList() {
 
   const fetchCities = async () => {
     try {
-      const res = await fetch('/api/cities', {
+      const res = await fetch(`${API_BASE_URL}/cities`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -133,7 +134,7 @@ export default function PlatesList() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/plates/${deleteConfirmation.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/plates/${deleteConfirmation.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -172,8 +173,8 @@ export default function PlatesList() {
     setSubmitting(true);
     try {
       const url = showForm?.mode === 'edit' 
-        ? `/api/plates/${showForm.plate?.id}` 
-        : '/api/plates';
+        ? `${API_BASE_URL}/plates/${showForm.plate?.id}` 
+        : `${API_BASE_URL}/plates`;
       
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
       

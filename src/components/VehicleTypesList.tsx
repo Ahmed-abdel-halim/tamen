@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type VehicleType = {
   id: number;
@@ -35,7 +36,7 @@ export default function VehicleTypesList() {
 
   const fetchVehicleTypes = async () => {
     try {
-      const res = await fetch('/api/vehicle-types', {
+      const res = await fetch(`${API_BASE_URL}/vehicle-types`, {
         headers: {
           'Accept': 'application/json',
         }
@@ -47,7 +48,7 @@ export default function VehicleTypesList() {
       setVehicleTypes(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Error fetching vehicle types:', error);
-      showToast(`حدث خطأ أثناء جلب أنواع السيارات: ${error.message || 'تأكد من أن الخادم يعمل على http://localhost:8000'}`, 'error');
+      showToast(`حدث خطأ أثناء جلب أنواع السيارات: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -88,7 +89,7 @@ export default function VehicleTypesList() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/vehicle-types/${deleteConfirmation.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/vehicle-types/${deleteConfirmation.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -127,8 +128,8 @@ export default function VehicleTypesList() {
     setSubmitting(true);
     try {
       const url = showForm?.mode === 'edit' 
-        ? `/api/vehicle-types/${showForm.vehicleType?.id}` 
-        : '/api/vehicle-types';
+        ? `${API_BASE_URL}/vehicle-types/${showForm.vehicleType?.id}` 
+        : `${API_BASE_URL}/vehicle-types`;
       
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
       

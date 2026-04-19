@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
 type ServiceCard = {
   label: string;
@@ -76,7 +77,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
           headers['X-User-Id'] = userId.toString();
         }
         
-        const res = await fetch('/api/dashboard/statistics', {
+        const res = await fetch(`${API_BASE_URL}/dashboard/statistics`, {
           headers
         });
         if (res.ok) {
@@ -103,7 +104,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
           headers['X-User-Id'] = userId.toString();
         }
         
-        const res = await fetch('/api/dashboard/latest-documents', {
+        const res = await fetch(`${API_BASE_URL}/dashboard/latest-documents`, {
           headers
         });
         if (res.ok) {

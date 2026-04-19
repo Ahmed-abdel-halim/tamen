@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 export default function CreateCity() {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export default function CreateCity() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/cities', {
+      const res = await fetch(`${API_BASE_URL}/cities`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

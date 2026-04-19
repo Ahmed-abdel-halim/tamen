@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type VehicleType = {
   id: number;
@@ -711,7 +712,7 @@ export default function CreateInternationalInsurance() {
       console.log('Loaded cars from external API:', cars.length, 'cars');
       
       // يمكن إضافة endpoint لاحقاً للمزامنة:
-      // const res = await fetch('/api/vehicle-types/sync-external', {
+      // const res = await fetch(`${API_BASE_URL}/vehicle-types/sync-external`, {
       //   method: 'POST',
       //   headers: {
       //     'Content-Type': 'application/json',
@@ -794,7 +795,7 @@ export default function CreateInternationalInsurance() {
 
   const fetchVehicleTypes = async () => {
     try {
-      const res = await fetch('/api/vehicle-types', {
+      const res = await fetch(`${API_BASE_URL}/vehicle-types`, {
         headers: { 'Accept': 'application/json' },
       });
       if (res.ok) {
@@ -906,7 +907,7 @@ export default function CreateInternationalInsurance() {
 
       // 1. حفظ الوثيقة في النظام المحلي أولاً
       console.log('💾 جاري حفظ الوثيقة في النظام المحلي...');
-      const res = await fetch('/api/international-insurance-documents', {
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents`, {
         method: 'POST',
         headers,
         body: JSON.stringify(documentData),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 
 type BranchAgent = {
   id: number;
@@ -43,7 +44,7 @@ export default function BranchesAgentsList() {
 
   const fetchBranchesAgents = async () => {
     try {
-      const res = await fetch('/api/branches-agents', {
+      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -56,7 +57,7 @@ export default function BranchesAgentsList() {
     }
   };
 
-  const filteredBranchesAgents = branchesAgents.filter(ba => 
+  const filteredBranchesAgents = branchesAgents.filter((ba: BranchAgent) => 
     ba.agency_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     ba.agent_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     ba.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,28 +72,19 @@ export default function BranchesAgentsList() {
   const paginatedBranchesAgents = filteredBranchesAgents.slice(startIndex, endIndex);
 
   const handlePrint = async (ba: BranchAgent) => {
-    // This maintains existing print logic if needed, but we'll add our custom ones
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '-9999px';
     iframe.style.width = '0';
     iframe.style.height = '0';
-    iframe.src = `/api/branches-agents/${ba.id}/print?t=${new Date().getTime()}`;
+    iframe.src = `${API_BASE_URL}/branches-agents/${ba.id}/print?t=${new Date().getTime()}`;
     document.body.appendChild(iframe);
     
-    iframe.onload = () => {
-      setTimeout(() => {
-        if (iframe.contentWindow) {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        }
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-          }
-        }, 300);
-      }, 100);
-    };
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 5000);
   };
 
   const escapeHtml = (s: string): string => {
@@ -108,9 +100,9 @@ export default function BranchesAgentsList() {
     if (path.startsWith('http')) return path;
     if (path.startsWith('/img/')) return `${window.location.origin}${path}`;
     if (path.startsWith('img/')) return `${window.location.origin}/${path}`;
-    if (path.startsWith('/storage/')) return `${window.location.origin}${path}`;
-    if (path.startsWith('storage/')) return `${window.location.origin}/${path}`;
-    return `${window.location.origin}/storage/${path}`;
+    if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
+    if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
+    return `${BACKEND_URL}/storage/${path}`;
   };
 
   const printAgentA4 = (ba: BranchAgent) => {
@@ -275,7 +267,7 @@ export default function BranchesAgentsList() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/branches-agents/${showDeleteModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: { 
           'Accept': 'application/json',
@@ -366,7 +358,7 @@ export default function BranchesAgentsList() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedBranchesAgents.map((branchAgent, index) => (
+                    paginatedBranchesAgents.map((branchAgent: BranchAgent, index: number) => (
                       <tr key={branchAgent.id}>
                         <td>{startIndex + index + 1}</td>
                         <td>{branchAgent.code}</td>
@@ -446,7 +438,7 @@ export default function BranchesAgentsList() {
               {filteredBranchesAgents.length === 0 ? (
                 <div className="empty-state">لا توجد نتائج</div>
               ) : (
-                paginatedBranchesAgents.map((branchAgent, index) => (
+                paginatedBranchesAgents.map((branchAgent: BranchAgent, index: number) => (
                   <div key={branchAgent.id} className="user-mobile-card">
                     <div className="user-mobile-header">
                       <div>
@@ -549,7 +541,7 @@ export default function BranchesAgentsList() {
                 <div className="pagination-controls">
                   <button
                     className="pagination-btn pagination-prev"
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
                   >
                     <i className="fa-solid fa-chevron-right"></i>
@@ -586,7 +578,7 @@ export default function BranchesAgentsList() {
                   })()}
                   <button
                     className="pagination-btn pagination-next"
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
                   >
                     <span className="pagination-btn-text">التالي</span>

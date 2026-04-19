@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 type Plate = {
   id: number;
   plate_number: string;
@@ -372,7 +373,7 @@ export default function EditMarineStructureInsurance() {
 
   const fetchEngineModels = async () => {
     try {
-      const res = await fetch('/api/marine-engine-models', {
+      const res = await fetch(`${API_BASE_URL}/marine-engine-models`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -499,7 +500,7 @@ export default function EditMarineStructureInsurance() {
   const fetchDocument = async (documentId: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/marine-structure-insurance-documents/${documentId}`, {
+      const res = await fetch(`${API_BASE_URL}/marine-structure-insurance-documents/${documentId}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) {
@@ -631,7 +632,7 @@ export default function EditMarineStructureInsurance() {
 
   const fetchPlates = async () => {
     try {
-      const res = await fetch('/api/plates', {
+      const res = await fetch(`${API_BASE_URL}/plates`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -713,7 +714,7 @@ export default function EditMarineStructureInsurance() {
         headers['X-User-Id'] = userId.toString();
       }
 
-      const res = await fetch(`/api/marine-structure-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/marine-structure-insurance-documents/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
@@ -781,7 +782,7 @@ export default function EditMarineStructureInsurance() {
       // التأكد من عدم إضافة نوع مكرر محلياً
       if (!engineModels.includes(trimmedModel)) {
         try {
-          const res = await fetch('/api/marine-engine-models', {
+          const res = await fetch(`${API_BASE_URL}/marine-engine-models`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

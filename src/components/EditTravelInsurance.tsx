@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
   { ar: 'مصري', en: 'Egyptian' },
@@ -727,7 +728,7 @@ export default function EditTravelInsurance() {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/travel-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/travel-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) {
@@ -960,7 +961,7 @@ export default function EditTravelInsurance() {
         headers['X-User-Id'] = userId.toString();
       }
 
-      const res = await fetch(`/api/travel-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/travel-insurance-documents/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({

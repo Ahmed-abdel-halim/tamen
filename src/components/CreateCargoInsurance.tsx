@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 
+import { API_BASE_URL } from "../config/api";
+
 export default function CreateCargoInsurance() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -29,7 +31,7 @@ export default function CreateCargoInsurance() {
         'X-User-Id': userId?.toString() || '',
       };
 
-      const res = await fetch('/api/cargo-insurance', {
+      const res = await fetch(`${API_BASE_URL}/cargo-insurance`, {
         method: 'POST',
         headers,
         body: JSON.stringify(formData),

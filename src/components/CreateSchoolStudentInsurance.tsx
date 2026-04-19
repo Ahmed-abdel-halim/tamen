@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 export default function CreateSchoolStudentInsurance() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function CreateSchoolStudentInsurance() {
         'X-User-Id': userId?.toString() || '',
       };
 
-      const res = await fetch('/api/school-student-insurance', {
+      const res = await fetch(`${API_BASE_URL}/school-student-insurance`, {
         method: 'POST',
         headers,
         body: JSON.stringify(formData),

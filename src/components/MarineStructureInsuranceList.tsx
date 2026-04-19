@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type Plate = {
   id: number;
@@ -69,7 +70,8 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
         headers['X-User-Id'] = userId.toString();
       }
       
-      const url = `/api/marine-structure-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      
+      const url = `${API_BASE_URL}/marine-structure-insurance-documents${isArchive ? '?archived=true' : ''}`;
       const res = await fetch(url, {
         headers
       });
@@ -101,7 +103,7 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/marine-structure-insurance-documents/${showDeleteModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/marine-structure-insurance-documents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: { 'Accept': 'application/json' }
       });
@@ -210,7 +212,7 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
                                 iframe.style.right = '-9999px';
                                 iframe.style.width = '0';
                                 iframe.style.height = '0';
-                                iframe.src = `/api/marine-structure-insurance-documents/${doc.id}/print`;
+                                iframe.src = `${API_BASE_URL}/marine-structure-insurance-documents/${doc.id}/print`;
                                 document.body.appendChild(iframe);
                                 
                                 iframe.onload = () => {
@@ -334,7 +336,7 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
                               iframe.style.right = '-9999px';
                               iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/marine-structure-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/marine-structure-insurance-documents/${doc.id}/print`;
                               document.body.appendChild(iframe);
                               
                               iframe.onload = () => {

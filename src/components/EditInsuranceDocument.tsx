@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type Plate = {
   id: number;
@@ -244,7 +245,7 @@ export default function EditInsuranceDocument() {
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) {
@@ -1084,7 +1085,7 @@ export default function EditInsuranceDocument() {
 
   const fetchPlates = async () => {
     try {
-      const res = await fetch('/api/plates', {
+      const res = await fetch(`${API_BASE_URL}/plates`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -1098,7 +1099,7 @@ export default function EditInsuranceDocument() {
 
   const fetchVehicleTypes = async () => {
     try {
-      const res = await fetch('/api/vehicle-types', {
+      const res = await fetch(`${API_BASE_URL}/vehicle-types`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -1112,7 +1113,7 @@ export default function EditInsuranceDocument() {
 
   const fetchColors = async () => {
     try {
-      const res = await fetch('/api/colors', {
+      const res = await fetch(`${API_BASE_URL}/colors`, {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
@@ -1163,7 +1164,7 @@ export default function EditInsuranceDocument() {
     if (!newVehicleTypeBrand.trim() || !newVehicleTypeCategory.trim()) return;
 
     try {
-      const res = await fetch('/api/vehicle-types', {
+      const res = await fetch(`${API_BASE_URL}/vehicle-types`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1203,7 +1204,7 @@ export default function EditInsuranceDocument() {
     if (!showDeleteVehicleTypeModal) return;
     setDeletingVehicleType(true);
     try {
-      const res = await fetch(`/api/vehicle-types/${showDeleteVehicleTypeModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/vehicle-types/${showDeleteVehicleTypeModal.id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -1235,7 +1236,7 @@ export default function EditInsuranceDocument() {
     if (!newColorName.trim()) return;
 
     try {
-      const res = await fetch('/api/colors', {
+      const res = await fetch(`${API_BASE_URL}/colors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1272,7 +1273,7 @@ export default function EditInsuranceDocument() {
     if (!showDeleteColorModal) return;
     setDeletingColor(true);
     try {
-      const res = await fetch(`/api/colors/${showDeleteColorModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/colors/${showDeleteColorModal.id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -1395,7 +1396,7 @@ export default function EditInsuranceDocument() {
         headers['X-User-Id'] = userId.toString();
       }
       
-      const res = await fetch(`/api/insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({

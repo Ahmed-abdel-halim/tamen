@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 import '../styles/DocumentView.css';
 
 const ViewCargoInsurance: React.FC = () => {
@@ -15,7 +16,7 @@ const ViewCargoInsurance: React.FC = () => {
 
     const fetchDocument = async () => {
         try {
-            const response = await fetch(`/api/cargo-insurance/${id}`);
+            const response = await fetch(`${API_BASE_URL}/cargo-insurance/${id}`);
             const data = await response.json();
             setDocument(data);
         } catch (error) {

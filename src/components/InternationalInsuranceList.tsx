@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type VehicleType = {
   id: number;
@@ -65,7 +66,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
         headers['X-User-Id'] = userId.toString();
       }
       
-      const url = `/api/international-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      const url = `${API_BASE_URL}/international-insurance-documents${isArchive ? '?archived=true' : ''}`;
       const res = await fetch(url, {
         headers
       });
@@ -96,7 +97,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/international-insurance-documents/${showDeleteModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: { 'Accept': 'application/json' }
       });
@@ -200,29 +201,21 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                         <td>
                           <div className="action-buttons">
                             <button
-                              onClick={() => {
-                                const iframe = document.createElement('iframe');
-                                iframe.style.position = 'fixed';
-                                iframe.style.right = '-9999px';
-                                iframe.style.width = '0';
-                                iframe.style.height = '0';
-                                iframe.src = `/api/international-insurance-documents/${doc.id}/print`;
-                                document.body.appendChild(iframe);
-                                
-                                iframe.onload = () => {
+                                onClick={() => {
+                                  const iframe = document.createElement('iframe');
+                                  iframe.style.position = 'fixed';
+                                  iframe.style.right = '-9999px';
+                                  iframe.style.width = '0';
+                                  iframe.style.height = '0';
+                                  iframe.src = `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
+                                  document.body.appendChild(iframe);
+                                  
                                   setTimeout(() => {
-                                    if (iframe.contentWindow) {
-                                      iframe.contentWindow.focus();
-                                      iframe.contentWindow.print();
+                                    if (document.body.contains(iframe)) {
+                                      document.body.removeChild(iframe);
                                     }
-                                    setTimeout(() => {
-                                      if (document.body.contains(iframe)) {
-                                        document.body.removeChild(iframe);
-                                      }
-                                    }, 300);
-                                  }, 100);
-                                };
-                              }}
+                                  }, 5000);
+                                }}
                               className="action-btn"
                               aria-label="طباعة الوثيقة"
                               title="طباعة الوثيقة"
@@ -326,22 +319,14 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                               iframe.style.right = '-9999px';
                               iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/international-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
                               document.body.appendChild(iframe);
                               
-                              iframe.onload = () => {
-                                setTimeout(() => {
-                                  if (iframe.contentWindow) {
-                                    iframe.contentWindow.focus();
-                                    iframe.contentWindow.print();
-                                  }
-                                  setTimeout(() => {
-                                    if (document.body.contains(iframe)) {
-                                      document.body.removeChild(iframe);
-                                    }
-                                  }, 300);
-                                }, 100);
-                              };
+                              setTimeout(() => {
+                                if (document.body.contains(iframe)) {
+                                  document.body.removeChild(iframe);
+                                }
+                              }, 5000);
                             }}
                             className="action-btn"
                             aria-label="طباعة الوثيقة"

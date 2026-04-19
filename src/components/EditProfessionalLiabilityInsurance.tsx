@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
@@ -265,7 +266,7 @@ export default function EditProfessionalLiabilityInsurance() {
   useEffect(() => {
     const fetchProfessions = async () => {
       try {
-        const res = await fetch('/api/professions', {
+        const res = await fetch(`${API_BASE_URL}/professions`, {
           headers: { 'Accept': 'application/json' }
         });
         if (res.ok) {
@@ -298,7 +299,7 @@ export default function EditProfessionalLiabilityInsurance() {
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/professional-liability-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) {
@@ -411,7 +412,7 @@ export default function EditProfessionalLiabilityInsurance() {
     if (!newProfessionName.trim()) return;
 
     try {
-      const res = await fetch('/api/professions', {
+      const res = await fetch(`${API_BASE_URL}/professions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -449,7 +450,7 @@ export default function EditProfessionalLiabilityInsurance() {
 
     setDeletingProfession(true);
     try {
-      const res = await fetch(`/api/professions/${showDeleteProfessionModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/professions/${showDeleteProfessionModal.id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -510,7 +511,7 @@ export default function EditProfessionalLiabilityInsurance() {
         headers['X-User-Id'] = userId.toString();
       }
 
-      const res = await fetch(`/api/professional-liability-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({

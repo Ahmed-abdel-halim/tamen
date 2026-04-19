@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 interface StoreItem {
   id: number;
@@ -134,25 +135,25 @@ export default function InventoryManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const itemsRes = await fetch(`/api/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
+      const itemsRes = await fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
       const itemsData = await itemsRes.json();
       setItems(Array.isArray(itemsData) ? itemsData : []);
 
-      const custodyRes = await fetch('/api/inventory/custody');
+      const custodyRes = await fetch(`${API_BASE_URL}/inventory/custody`);
       const custodyData = await custodyRes.json();
       setCustodies(Array.isArray(custodyData) ? custodyData : []);
 
       setMovementsLoading(true);
-      const movementsRes = await fetch('/api/inventory/movements');
+      const movementsRes = await fetch(`${API_BASE_URL}/inventory/movements`);
       const movementsData = await movementsRes.json();
       setMovements(Array.isArray(movementsData) ? movementsData : []);
 
       // Fetch agents and employees
-      const agentsRes = await fetch('/api/branches-agents');
+      const agentsRes = await fetch(`${API_BASE_URL}/branches-agents`);
       const agentsData = await agentsRes.json();
       setAgents(Array.isArray(agentsData) ? agentsData : []);
 
-      const employeesRes = await fetch('/api/users');
+      const employeesRes = await fetch(`${API_BASE_URL}/users`);
       const employeesData = await employeesRes.json();
       const employeesList = Array.isArray(employeesData)
         ? employeesData
@@ -190,7 +191,7 @@ export default function InventoryManagement() {
         price: newItem.price === '' ? null : Number(newItem.price),
       };
       const isEditMode = editingItemId !== null;
-      const itemRes = await fetch(isEditMode ? `/api/inventory/items/${editingItemId}` : '/api/inventory/items', {
+      const itemRes = await fetch(isEditMode ? `${API_BASE_URL}/inventory/items/${editingItemId}` : `${API_BASE_URL}/inventory/items`, {
         method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -219,7 +220,7 @@ export default function InventoryManagement() {
         const locationChanged = isEditMode ? newItem.location !== originalLocation : !!newItem.location;
 
         if (qtyDelta !== 0 || locationChanged) {
-          const stockRes = await fetch('/api/inventory/update-stock', {
+          const stockRes = await fetch(`${API_BASE_URL}/inventory/update-stock`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -278,7 +279,7 @@ export default function InventoryManagement() {
   const handleDeleteItem = async (item: StoreItem) => {
     if (!window.confirm(`هل تريد حذف الصنف "${item.name}"؟`)) return;
     try {
-      const res = await fetch(`/api/inventory/items/${item.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE_URL}/inventory/items/${item.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('فشل الحذف');
       showToast('تم حذف الصنف بنجاح', 'success');
       await fetchData();
@@ -308,7 +309,7 @@ export default function InventoryManagement() {
     try {
       const batchRef = `BATCH-${Date.now()}`;
       for (const row of assignmentItems) {
-        const res = await fetch('/api/inventory/assign-custody', {
+        const res = await fetch(`${API_BASE_URL}/inventory/assign-custody`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -366,7 +367,7 @@ export default function InventoryManagement() {
 
     try {
       for (const row of activeRows) {
-        const res = await fetch(`/api/inventory/return-custody/${row.id}`, { method: 'POST' });
+        const res = await fetch(`${API_BASE_URL}/inventory/return-custody/${row.id}`, { method: 'POST' });
         if (!res.ok) {
           throw new Error('تعذر استرجاع بعض الأصناف');
         }

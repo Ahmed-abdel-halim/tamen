@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type ProfessionalLiabilityInsuranceDocument = {
   id: number;
@@ -58,7 +59,8 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
         headers['X-User-Id'] = userId.toString();
       }
       
-      const url = `/api/professional-liability-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      
+      const url = `${API_BASE_URL}/professional-liability-insurance-documents${isArchive ? '?archived=true' : ''}`;
       const res = await fetch(url, {
         headers
       });
@@ -90,7 +92,7 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/professional-liability-insurance-documents/${showDeleteModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: { 'Accept': 'application/json' }
       });
@@ -200,7 +202,7 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
                               iframe.style.right = '-9999px';
                               iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/professional-liability-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/professional-liability-insurance-documents/${doc.id}/print`;
                               document.body.appendChild(iframe);
                               
                               iframe.onload = () => {
@@ -316,9 +318,8 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
                               const iframe = document.createElement('iframe');
                               iframe.style.position = 'fixed';
                               iframe.style.right = '-9999px';
-                              iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/professional-liability-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/professional-liability-insurance-documents/${doc.id}/print`;
                               document.body.appendChild(iframe);
                               
                               iframe.onload = () => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/CreateInsurance.css';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 const EditSchoolStudentInsurance: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -13,7 +14,7 @@ const EditSchoolStudentInsurance: React.FC = () => {
     useEffect(() => {
         const fetchDocument = async () => {
             try {
-                const response = await fetch(`/api/school-student-insurance/${id}`);
+                const response = await fetch(`${API_BASE_URL}/school-student-insurance/${id}`);
                 const data = await response.json();
                 setFormData(data);
             } catch (error) {
@@ -28,7 +29,7 @@ const EditSchoolStudentInsurance: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await fetch(`/api/school-student-insurance/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/school-student-insurance/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),

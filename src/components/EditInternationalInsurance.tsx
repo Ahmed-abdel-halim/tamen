@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 type VehicleType = {
   id: number;
   brand: string;
@@ -162,7 +163,7 @@ export default function EditInternationalInsurance() {
 
   const fetchVehicleTypes = async () => {
     try {
-      const res = await fetch('/api/vehicle-types', {
+      const res = await fetch(`${API_BASE_URL}/vehicle-types`, {
         headers: { 'Accept': 'application/json' },
       });
       if (res.ok) {
@@ -177,7 +178,7 @@ export default function EditInternationalInsurance() {
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/international-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents/${id}`, {
         headers: { 'Accept': 'application/json' }
       });
 
@@ -264,7 +265,7 @@ export default function EditInternationalInsurance() {
         headers['X-User-Id'] = userId.toString();
       }
       
-      const res = await fetch(`/api/international-insurance-documents/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({

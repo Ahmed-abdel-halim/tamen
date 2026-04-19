@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type PersonalAccidentInsuranceDocument = {
   id: number;
@@ -56,7 +57,8 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
         headers['X-User-Id'] = userId.toString();
       }
       
-      const url = `/api/personal-accident-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      
+      const url = `${API_BASE_URL}/personal-accident-insurance-documents${isArchive ? '?archived=true' : ''}`;
       const res = await fetch(url, {
         headers
       });
@@ -88,7 +90,7 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/personal-accident-insurance-documents/${showDeleteModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/personal-accident-insurance-documents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: { 'Accept': 'application/json' }
       });
@@ -198,7 +200,7 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
                               iframe.style.right = '-9999px';
                               iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/personal-accident-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/personal-accident-insurance-documents/${doc.id}/print`;
                               document.body.appendChild(iframe);
                               
                               iframe.onload = () => {
@@ -315,7 +317,7 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
                               iframe.style.right = '-9999px';
                               iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/personal-accident-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/personal-accident-insurance-documents/${doc.id}/print`;
                               document.body.appendChild(iframe);
                               
                               iframe.onload = () => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 
 type User = {
   id: number;
@@ -32,7 +33,7 @@ export default function UserDetails() {
 
   const fetchUserData = async () => {
     try {
-      const res = await fetch(`/api/users/${id}`);
+      const res = await fetch(`${API_BASE_URL}/users/${id}`);
       if (!res.ok) throw new Error("فشل جلب بيانات الموظف");
       const data = await res.json();
       setUser(data);
@@ -45,7 +46,7 @@ export default function UserDetails() {
 
   const fetchCustodyData = async () => {
     try {
-      const res = await fetch(`/api/inventory/custody?recipient_id=${id}&recipient_type=employee`);
+      const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${id}&recipient_type=employee`);
       if (res.ok) {
         const allCustody: any[] = await res.json();
         setFixedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active'));
@@ -59,7 +60,9 @@ export default function UserDetails() {
   const resolvePublicUrl = (path: string | null | undefined): string => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    return `${window.location.origin}${path.startsWith('/') ? '' : '/'}${path}`;
+    if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
+    if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
+    return `${BACKEND_URL}/storage/${path.startsWith('/') ? path.substring(1) : path}`;
   };
 
   if (loading) return <div className="loading-container">جاري التحميل...</div>;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type ResidentInsurancePassenger = {
   id: number;
@@ -63,7 +64,8 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
         headers['X-User-Id'] = userId.toString();
       }
       
-      const url = `/api/resident-insurance-documents${isArchive ? '?archived=true' : ''}`;
+      
+      const url = `${API_BASE_URL}/resident-insurance-documents${isArchive ? '?archived=true' : ''}`;
       const res = await fetch(url, {
         headers
       });
@@ -98,7 +100,7 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/resident-insurance-documents/${showDeleteModal.id}`, {
+      const res = await fetch(`${API_BASE_URL}/resident-insurance-documents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: { 'Accept': 'application/json' }
       });
@@ -209,7 +211,7 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
                                 iframe.style.right = '-9999px';
                                 iframe.style.width = '0';
                                 iframe.style.height = '0';
-                                iframe.src = `/api/resident-insurance-documents/${doc.id}/print`;
+                                iframe.src = `${API_BASE_URL}/resident-insurance-documents/${doc.id}/print`;
                                 document.body.appendChild(iframe);
                                 
                                 iframe.onload = () => {
@@ -331,7 +333,7 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
                               iframe.style.right = '-9999px';
                               iframe.style.width = '0';
                               iframe.style.height = '0';
-                              iframe.src = `/api/resident-insurance-documents/${doc.id}/print`;
+                              iframe.src = `${API_BASE_URL}/resident-insurance-documents/${doc.id}/print`;
                               document.body.appendChild(iframe);
                               
                               iframe.onload = () => {

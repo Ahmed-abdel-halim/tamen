@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type BranchAgent = {
   id: number;
@@ -121,7 +122,7 @@ export default function BranchAgentAccountReport() {
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch('/api/branches-agents', {
+      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) throw new Error('فشل في جلب الوكلاء');
@@ -175,7 +176,7 @@ export default function BranchAgentAccountReport() {
 
     setLoading(true);
     try {
-      let url = `/api/branches-agents/${agentToUse.id}/account-report`;
+      let url = `${API_BASE_URL}/branches-agents/${agentToUse.id}/account-report`;
       const params = new URLSearchParams();
       
       if (reportType === 'range') {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showToast } from './Toast';
+import { API_BASE_URL } from "../config/api";
 
 type Employee = {
   id: number;
@@ -85,8 +86,8 @@ export default function EmployeeSalaries() {
     setLoading(true);
     try {
       const [employeesRes, payrollsRes] = await Promise.all([
-        fetch('/api/employee-payrolls/employees'),
-        fetch(`/api/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`),
+        fetch(`${API_BASE_URL}/employee-payrolls/employees`),
+        fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`),
       ]);
       const employeesData = await employeesRes.json();
       const payrollsData = await payrollsRes.json();
@@ -175,7 +176,7 @@ export default function EmployeeSalaries() {
     if (!payrollForm) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/employee-payrolls', {
+      const res = await fetch(`${API_BASE_URL}/employee-payrolls`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -216,7 +217,7 @@ export default function EmployeeSalaries() {
   const openHistory = async (employee: Employee) => {
     setHistoryFor(employee);
     try {
-      const res = await fetch(`/api/users/${employee.id}/salary-history`);
+      const res = await fetch(`${API_BASE_URL}/users/${employee.id}/salary-history`);
       const data = await res.json();
       setHistory(Array.isArray(data) ? data : []);
     } catch {
@@ -332,7 +333,7 @@ export default function EmployeeSalaries() {
     if (!ok) return;
     setBulkPaying(true);
     try {
-      const res = await fetch('/api/employee-payrolls/bulk-pay', {
+      const res = await fetch(`${API_BASE_URL}/employee-payrolls/bulk-pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ year, month }),

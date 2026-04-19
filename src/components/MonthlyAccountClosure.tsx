@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { enhanceAuthorizedDocuments } from "../utils/insuranceTypeHelper";
 import { showToast } from "./Toast";
+import { API_BASE_URL } from "../config/api";
 
 type BranchAgent = {
   id: number;
@@ -133,7 +134,7 @@ export default function MonthlyAccountClosure() {
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch('/api/branches-agents', {
+      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         headers: { 'Accept': 'application/json' }
       });
       if (!res.ok) throw new Error('فشل في جلب الوكلاء');
@@ -323,7 +324,7 @@ export default function MonthlyAccountClosure() {
         params.append('insurance_type', selectedInsuranceType);
       }
 
-      const res = await fetch(`/api/branches-agents/monthly-account-closure?${params}`, {
+      const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closure?${params}`, {
         headers: { 'Accept': 'application/json' }
       });
 
@@ -384,7 +385,7 @@ export default function MonthlyAccountClosure() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/branches-agents/monthly-account-closure', {
+      const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closure`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -438,12 +439,12 @@ export default function MonthlyAccountClosure() {
     if (filterMode === 'monthly') {
       params.append('year', selectedYear);
       params.append('month', selectedMonth);
-      url = `/api/branches-agents/${selectedAgent.id}/monthly-account-closure-print?${params.toString()}`;
+      url = `${API_BASE_URL}/branches-agents/${selectedAgent.id}/monthly-account-closure-print?${params.toString()}`;
     } else {
       params.append('type', 'range');
       params.append('from_date', dateFrom);
       params.append('to_date', dateTo);
-      url = `/api/branches-agents/${selectedAgent.id}/account-report?${params.toString()}`;
+      url = `${API_BASE_URL}/branches-agents/${selectedAgent.id}/account-report?${params.toString()}`;
     }
     
     // إضافة نوع التأمين إذا كان محدداً
