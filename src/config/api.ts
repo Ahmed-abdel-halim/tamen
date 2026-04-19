@@ -21,21 +21,16 @@ const getApiBaseUrl = (): string => {
     return '/api';
   }
   
-  // في production، استخدم رابط ngrok الحالي للتجربة
-  return 'https://nonmetallic-pa-unprojecting.ngrok-free.dev/api';
+  // في production، استخدم الـ domain المحدد
+  // Domain: https://con.primes.ly/
+  return 'https://mli.mli.ly/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
-export const API_HEADERS = {
-  'Content-Type': 'application/json',
-  'ngrok-skip-browser-warning': 'true'
-};
-
 export const apiUrl = (path: string): string => {
+  // إزالة الـ slash الأول إذا كان موجوداً
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  // إزالة '/api' من الـ path لو موجود لأن الـ API_BASE_URL فيه '/api' فعلياً
-  const finalPath = cleanPath.startsWith('api/') ? cleanPath.slice(4) : cleanPath;
-  return `${API_BASE_URL}/${finalPath}`;
+  return `${API_BASE_URL}/${cleanPath}`;
 };
 
