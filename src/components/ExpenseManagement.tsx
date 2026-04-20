@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { showToast } from './Toast';
 import { exportToExcel } from '../utils/excelExport';
+import { API_BASE_URL } from '../config/api';
 
 interface Expense {
   id: number;
@@ -105,7 +106,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [unionNotes, setUnionNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
 
-  const API_BASE_URL = '/api';
+
 
   // Calculated derived state for Union UI
   const cardsCount = React.useMemo(() => {
