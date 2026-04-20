@@ -564,8 +564,8 @@ const createMenuSections = (
     });
   }
 
-  // إضافة قسم "حسابي الشخصي" للجميع (موظفين، وكلاء، أدمن)
-  if (userId) {
+  // إضافة قسم "حسابي الشخصي" للموظفين والأدمن فقط (مع استبعاد الوكلاء)
+  if (userId && !branchAgentId) {
     sections.push({
       title: 'حسابي الشخصي',
       items: [

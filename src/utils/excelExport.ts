@@ -55,7 +55,7 @@ export function exportToExcel(options: ExcelExportOptions) {
             <span style="font-size: 15px; color: #4b5563; font-weight: normal;">تاريخ الإصدار: ${printDate}</span>
           </td>
           <td colspan="${logoColspan}" style="border: none; text-align: left; vertical-align: middle;">
-            <img src="${window.location.origin}/img/logo.png" width="90" height="90" alt="المدار الليبي للتأمين" />
+            <img src="${window.location.origin}/img/logo3.png" width="90" height="90" alt="المدار الليبي للتأمين" />
           </td>
         </tr>
         ${(summaryRight || summaryLeft) ? `

@@ -136,25 +136,34 @@ export default function InventoryManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const itemsRes = await fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      const itemsRes = await fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, { 
+        cache: 'no-store',
+        headers 
+      });
       const itemsData = await itemsRes.json();
       setItems(Array.isArray(itemsData) ? itemsData : []);
 
-      const custodyRes = await fetch(`${API_BASE_URL}/inventory/custody`);
+      const custodyRes = await fetch(`${API_BASE_URL}/inventory/custody`, { headers });
       const custodyData = await custodyRes.json();
       setCustodies(Array.isArray(custodyData) ? custodyData : []);
 
       setMovementsLoading(true);
-      const movementsRes = await fetch(`${API_BASE_URL}/inventory/movements`);
+      const movementsRes = await fetch(`${API_BASE_URL}/inventory/movements`, { headers });
       const movementsData = await movementsRes.json();
       setMovements(Array.isArray(movementsData) ? movementsData : []);
 
       // Fetch agents and employees
-      const agentsRes = await fetch(`${API_BASE_URL}/branches-agents`);
+      const agentsRes = await fetch(`${API_BASE_URL}/branches-agents`, { headers });
       const agentsData = await agentsRes.json();
       setAgents(Array.isArray(agentsData) ? agentsData : []);
 
-      const employeesRes = await fetch(`${API_BASE_URL}/users`);
+      const employeesRes = await fetch(`${API_BASE_URL}/users`, { headers });
       const employeesData = await employeesRes.json();
       const employeesList = Array.isArray(employeesData)
         ? employeesData
@@ -191,10 +200,15 @@ export default function InventoryManagement() {
         min_threshold: Number(newItem.min_threshold) || 0,
         price: newItem.price === '' ? null : Number(newItem.price),
       };
+      const token = localStorage.getItem('token');
       const isEditMode = editingItemId !== null;
       const itemRes = await fetch(isEditMode ? `${API_BASE_URL}/inventory/items/${editingItemId}` : `${API_BASE_URL}/inventory/items`, {
         method: isEditMode ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(payload)
       });
 
@@ -221,9 +235,14 @@ export default function InventoryManagement() {
         const locationChanged = isEditMode ? newItem.location !== originalLocation : !!newItem.location;
 
         if (qtyDelta !== 0 || locationChanged) {
+          const token = localStorage.getItem('token');
           const stockRes = await fetch(`${API_BASE_URL}/inventory/update-stock`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
             body: JSON.stringify({
               item_id: String(targetItemId),
               quantity: qtyDelta,
@@ -280,7 +299,14 @@ export default function InventoryManagement() {
   const handleDeleteItem = async (item: StoreItem) => {
     if (!window.confirm(`هل تريد حذف الصنف "${item.name}"؟`)) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/inventory/items/${item.id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inventory/items/${item.id}`, { 
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       if (!res.ok) throw new Error('فشل الحذف');
       showToast('تم حذف الصنف بنجاح', 'success');
       await fetchData();
@@ -308,11 +334,16 @@ export default function InventoryManagement() {
 
     setSubmitting(true);
     try {
+      const token = localStorage.getItem('token');
       const batchRef = `BATCH-${Date.now()}`;
       for (const row of assignmentItems) {
         const res = await fetch(`${API_BASE_URL}/inventory/assign-custody`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({
             ...assignment,
             inventory_type: assignInventoryType,
@@ -367,8 +398,15 @@ export default function InventoryManagement() {
     if (!window.confirm(`هل أنت متأكد من استرجاع كل أصناف هذه العهدة؟ (${activeRows.length} صنف)`)) return;
 
     try {
+      const token = localStorage.getItem('token');
       for (const row of activeRows) {
-        const res = await fetch(`${API_BASE_URL}/inventory/return-custody/${row.id}`, { method: 'POST' });
+        const res = await fetch(`${API_BASE_URL}/inventory/return-custody/${row.id}`, { 
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        });
         if (!res.ok) {
           throw new Error('تعذر استرجاع بعض الأصناف');
         }
