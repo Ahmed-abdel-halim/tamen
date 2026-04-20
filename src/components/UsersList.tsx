@@ -23,8 +23,48 @@ type User = {
   profile_photo_url?: string | null;
   personal_id_proof_url?: string | null;
   employment_contract_url?: string | null;
-  fixed_custodies?: any[];
-  consumed_custodies?: any[];
+  // Personal Data
+  full_name_quad?: string;
+  mother_name?: string;
+  gender?: string;
+  birth_date?: string;
+  birth_place?: string;
+  nationality?: string;
+  social_status?: string;
+  qualification?: string;
+  blood_type?: string;
+  personal_phone?: string;
+  guardian_phone?: string;
+  address?: string;
+  // Job Data
+  financial_number?: string;
+  job_number?: string;
+  bank_name?: string;
+  bank_branch?: string;
+  account_number?: string;
+  start_date?: string;
+  working_hours_from?: string;
+  working_hours_to?: string;
+  working_days_from?: string;
+  working_days_to?: string;
+  contract_type?: string;
+  contract_conditions?: string;
+  // Financial Data
+  housing_allowance?: number;
+  transportation_allowance?: number;
+  communication_allowance?: number;
+  fixed_bonuses?: number;
+  fixed_fines?: number;
+  hourly_leave_deduction?: number;
+  daily_leave_deduction?: number;
+  // Extra File URLs
+  national_id_photo_url?: string;
+  identity_proof_url?: string;
+  certified_stamp_url?: string;
+  approved_signature_url?: string;
+  educational_certificate_url?: string;
+  health_certificate_url?: string;
+  contract_conditions_photo_url?: string;
 };
 
 function escapeHtml(s: string): string {
@@ -99,7 +139,11 @@ export default function UsersList() {
   const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', user?: User }>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const perPage = 10;
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [from, setFrom] = useState(0);
+  const [to, setTo] = useState(0);
+  const perPage = 50; // زيادة العدد في الصفحة الواحدة لضمان رؤية الجميع
   const [formData, setFormData] = useState({
     username: '',
     name: '',
@@ -110,43 +154,96 @@ export default function UsersList() {
     salary: '' as string | number,
     national_id_number: '',
     job_title: '',
+    // الموظفين
+    full_name_quad: '',
+    mother_name: '',
+    gender: '',
+    birth_date: '',
+    birth_place: '',
+    nationality: '',
+    social_status: '',
+    qualification: '',
+    blood_type: '',
+    personal_phone: '',
+    guardian_phone: '',
+    address: '',
+    financial_number: '',
+    job_number: '',
+    bank_name: '',
+    bank_branch: '',
+    account_number: '',
+    start_date: '',
+    working_hours_from: '',
+    working_hours_to: '',
+    working_days_from: '',
+    working_days_to: '',
+    contract_type: '',
+    contract_conditions: '',
+    housing_allowance: '' as string | number,
+    transportation_allowance: '' as string | number,
+    communication_allowance: '' as string | number,
+    fixed_bonuses: '' as string | number,
+    fixed_fines: '' as string | number,
+    hourly_leave_deduction: '' as string | number,
+    daily_leave_deduction: '' as string | number,
   });
-  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
-  const [personalIdProofFile, setPersonalIdProofFile] = useState<File | null>(null);
-  const [contractFile, setContractFile] = useState<File | null>(null);
+
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
+    profile_photo: null,
+    personal_id_proof: null,
+    employment_contract: null,
+    national_id_photo: null,
+    identity_proof: null,
+    certified_stamp: null,
+    approved_signature: null,
+    educational_certificate: null,
+    health_certificate: null,
+    contract_conditions_photo: null,
+  });
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<null | User>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [filterRole, setFilterRole] = useState("all");
+  const [filterJobTitle, setFilterJobTitle] = useState("all");
+  const [filterPermission, setFilterPermission] = useState("all");
+
   useEffect(() => {
     fetchUsers();
-  }, []);
-
-
+  }, [currentPage, searchQuery, perPage, filterRole, filterJobTitle, filterPermission]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, filterRole, filterJobTitle, filterPermission]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch a large page once, then paginate الموظفين locally to avoid empty pages after excluding agents.
-      const url = `${API_BASE_URL}/users?page=1&per_page=1000`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      const data = await res.json();
-      
-      // إذا كان الـ response يحتوي على pagination data
-      if (data.data && Array.isArray(data.data)) {
-        setUsers(data.data);
-      } else {
-        // Fallback للـ response القديم (بدون pagination)
-        setUsers(Array.isArray(data) ? data : []);
-      }
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        per_page: perPage.toString(),
+        search: searchQuery,
+        role: filterRole,
+        job_title: filterJobTitle,
+        permission: filterPermission
+      });
+
+      const response = await fetch(`${API_BASE_URL}/users?${params}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      setUsers(data.data);
+      setTotalPages(data.last_page);
+      setFrom(data.from);
+      setTo(data.to);
+      setTotal(data.total);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       showToast(`حدث خطأ أثناء جلب المستخدمين: ${error.message || ''}`, 'error');
@@ -156,18 +253,19 @@ export default function UsersList() {
   };
 
   const uploadPendingEmployeeFiles = async (userId: number) => {
-    const parts: { type: 'profile_photo' | 'personal_id_proof' | 'employment_contract'; file: File }[] = [];
-    if (profilePhotoFile) parts.push({ type: 'profile_photo', file: profilePhotoFile });
-    if (personalIdProofFile) parts.push({ type: 'personal_id_proof', file: personalIdProofFile });
-    if (contractFile) parts.push({ type: 'employment_contract', file: contractFile });
-    for (const { type, file } of parts) {
+    const token = localStorage.getItem('token');
+    for (const [type, file] of Object.entries(pendingFiles)) {
+      if (!file) continue;
       const fd = new FormData();
       fd.append('type', type);
       fd.append('file', file);
       const r = await fetch(`${API_BASE_URL}/users/${userId}/employee-files`, {
         method: 'POST',
         body: fd,
-        headers: { Accept: 'application/json' },
+        headers: { 
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -471,9 +569,18 @@ export default function UsersList() {
   };
 
   useEffect(() => {
-    setProfilePhotoFile(null);
-    setPersonalIdProofFile(null);
-    setContractFile(null);
+    setPendingFiles({
+      profile_photo: null,
+      personal_id_proof: null,
+      employment_contract: null,
+      national_id_photo: null,
+      identity_proof: null,
+      certified_stamp: null,
+      approved_signature: null,
+      educational_certificate: null,
+      health_certificate: null,
+      contract_conditions_photo: null,
+    });
     if (showForm?.mode === 'edit' && showForm.user) {
       setFormData({
         username: showForm.user.username || '',
@@ -485,6 +592,38 @@ export default function UsersList() {
         salary: showForm.user.salary || '',
         national_id_number: showForm.user.national_id_number || '',
         job_title: showForm.user.job_title || '',
+        // الموظفين
+        full_name_quad: showForm.user.full_name_quad || '',
+        mother_name: showForm.user.mother_name || '',
+        gender: showForm.user.gender || '',
+        birth_date: showForm.user.birth_date || '',
+        birth_place: showForm.user.birth_place || '',
+        nationality: showForm.user.nationality || '',
+        social_status: showForm.user.social_status || '',
+        qualification: showForm.user.qualification || '',
+        blood_type: showForm.user.blood_type || '',
+        personal_phone: showForm.user.personal_phone || '',
+        guardian_phone: showForm.user.guardian_phone || '',
+        address: showForm.user.address || '',
+        financial_number: showForm.user.financial_number || '',
+        job_number: showForm.user.job_number || '',
+        bank_name: showForm.user.bank_name || '',
+        bank_branch: showForm.user.bank_branch || '',
+        account_number: showForm.user.account_number || '',
+        start_date: showForm.user.start_date || '',
+        working_hours_from: showForm.user.working_hours_from || '',
+        working_hours_to: showForm.user.working_hours_to || '',
+        working_days_from: showForm.user.working_days_from || '',
+        working_days_to: showForm.user.working_days_to || '',
+        contract_type: showForm.user.contract_type || '',
+        contract_conditions: showForm.user.contract_conditions || '',
+        housing_allowance: showForm.user.housing_allowance || '',
+        transportation_allowance: showForm.user.transportation_allowance || '',
+        communication_allowance: showForm.user.communication_allowance || '',
+        fixed_bonuses: showForm.user.fixed_bonuses || '',
+        fixed_fines: showForm.user.fixed_fines || '',
+        hourly_leave_deduction: showForm.user.hourly_leave_deduction || '',
+        daily_leave_deduction: showForm.user.daily_leave_deduction || '',
       });
     } else {
       setFormData({
@@ -497,31 +636,47 @@ export default function UsersList() {
         salary: '',
         national_id_number: '',
         job_title: '',
+        full_name_quad: '',
+        mother_name: '',
+        gender: '',
+        birth_date: '',
+        birth_place: '',
+        nationality: '',
+        social_status: '',
+        qualification: '',
+        blood_type: '',
+        personal_phone: '',
+        guardian_phone: '',
+        address: '',
+        financial_number: '',
+        job_number: '',
+        bank_name: '',
+        bank_branch: '',
+        account_number: '',
+        start_date: '',
+        working_hours_from: '',
+        working_hours_to: '',
+        working_days_from: '',
+        working_days_to: '',
+        contract_type: '',
+        contract_conditions: '',
+        housing_allowance: '',
+        transportation_allowance: '',
+        communication_allowance: '',
+        fixed_bonuses: '',
+        fixed_fines: '',
+        hourly_leave_deduction: '',
+        daily_leave_deduction: '',
       });
     }
     setFormErrors({});
   }, [showForm]);
 
-  // عرض الموظفين فقط (استبعاد الوكلاء/الفروع من شاشة إدارة الموظفين)
-  const employeesOnly = users.filter((u) => {
-    const userType = (u.user_type || '').trim();
-    const isAgentByType = userType.includes('وكيل');
-    const isLinkedToBranchAgent = !!u.branch_agent_info;
-    return !isAgentByType && !isLinkedToBranchAgent;
-  });
-
-  // فلترة الموظفين محلياً (client-side filtering)
-  const filteredUsers = employeesOnly.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const displayTotalUsers = filteredUsers.length;
-  const displayTotalPages = filteredUsers.length > 0 ? Math.ceil(filteredUsers.length / perPage) : 1;
-
-  const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  // إلغاء الفلترة المحلية والاعتماد على بيانات الخادم مباشرة
+  const paginatedUsers = users; 
+  const filteredUsers = users; // للملفات التي تعتمد على هذا المسمى
+  const displayTotalPages = totalPages;
+  // const displayTotalUsers = total;
 
   const handleDeleteClick = (user: User) => {
     setDeleteConfirmation(user);
@@ -532,10 +687,12 @@ export default function UsersList() {
     
     setDeleting(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/users/${deleteConfirmation.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
       if (!res.ok) {
@@ -593,13 +750,18 @@ export default function UsersList() {
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
       
       const body: any = {
-        username: formData.username,
-        name: formData.name,
+        ...formData,
         email: formData.email || null,
-        is_admin: formData.is_admin,
         salary: formData.salary || null,
         national_id_number: formData.national_id_number.trim() || null,
         job_title: formData.job_title.trim() || null,
+        housing_allowance: formData.housing_allowance || 0,
+        transportation_allowance: formData.transportation_allowance || 0,
+        communication_allowance: formData.communication_allowance || 0,
+        fixed_bonuses: formData.fixed_bonuses || 0,
+        fixed_fines: formData.fixed_fines || 0,
+        hourly_leave_deduction: formData.hourly_leave_deduction || 0,
+        daily_leave_deduction: formData.daily_leave_deduction || 0,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -611,11 +773,13 @@ export default function UsersList() {
         body.password = formData.password;
       }
 
+      const token = localStorage.getItem('token');
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify(body),
       });
@@ -666,6 +830,37 @@ export default function UsersList() {
         salary: '',
         national_id_number: '',
         job_title: '',
+        full_name_quad: '',
+        mother_name: '',
+        gender: '',
+        birth_date: '',
+        birth_place: '',
+        nationality: '',
+        social_status: '',
+        qualification: '',
+        blood_type: '',
+        personal_phone: '',
+        guardian_phone: '',
+        address: '',
+        financial_number: '',
+        job_number: '',
+        bank_name: '',
+        bank_branch: '',
+        account_number: '',
+        start_date: '',
+        working_hours_from: '',
+        working_hours_to: '',
+        working_days_from: '',
+        working_days_to: '',
+        contract_type: '',
+        contract_conditions: '',
+        housing_allowance: '',
+        transportation_allowance: '',
+        communication_allowance: '',
+        fixed_bonuses: '',
+        fixed_fines: '',
+        hourly_leave_deduction: '',
+        daily_leave_deduction: '',
       });
       if (uploadError) {
         showToast(`تم حفظ البيانات. ${uploadError}`, 'error');
@@ -687,21 +882,71 @@ export default function UsersList() {
       
       <div className="users-card">
         <div className="users-header">
-          <div className="users-search-bar">
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
+            <div className="users-search-bar" style={{ marginBottom: 0, flex: '1', minWidth: '200px' }}>
+              <input 
+                type="text" 
+                placeholder="بحث باسم المستخدم..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="users-search-input"
+              />
+              <button className="users-search-btn" type="button">
+                <i className="fa-solid fa-magnifying-glass"></i>
+              </button>
+            </div>
+
+            <select 
+              value={filterRole} 
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="users-search-input"
+              style={{ padding: '0 10px', height: '42px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+            >
+              <option value="all">درجة الوصول (الكل)</option>
+              <option value="admin">مدير</option>
+              <option value="user">موظف عادي</option>
+            </select>
+
+            <select 
+              value={filterPermission} 
+              onChange={(e) => setFilterPermission(e.target.value)}
+              className="users-search-input"
+              style={{ padding: '0 10px', height: '42px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+            >
+              <option value="all">حسب الصلاحية</option>
+              {[
+                'تأمين سيارات إجباري',
+                'تأمين سيارات دولي',
+                'تأمين المسافرين',
+                'تأمين الوافدين للمقيمين',
+                'تأمين الهياكل البحرية',
+                'تأمين المسؤولية المهنية (الطبية)',
+                'تأمين الحوادث الشخصية',
+                'تأمين طلبة المدارس',
+                'تأمين نقل النقدية',
+                'تأمين البضائع',
+                'إدارة الإيرادات',
+                'إدارة المصروفات',
+                'إدارة الفروع والوكلاء',
+                'إدارة الموظفين',
+                'الأرشيف',
+              ].map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+
             <input 
               type="text" 
-              placeholder="بحث باسم المستخدم..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="المسمى الوظيفي..." 
+              value={filterJobTitle === 'all' ? '' : filterJobTitle}
+              onChange={(e) => setFilterJobTitle(e.target.value || 'all')}
               className="users-search-input"
+              style={{ padding: '0 15px', height: '42px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, width: '150px' }}
             />
-            <button className="users-search-btn" type="button">
-              <i className="fa-solid fa-magnifying-glass"></i>
-            </button>
           </div>
+
           <button 
             className="primary add-user-btn" 
             onClick={() => setShowForm({ mode: 'add' })}
+            style={{ height: '42px', whiteSpace: 'nowrap' }}
           >
             <i className="fa-solid fa-plus"></i>
             إضافة موظف
@@ -1005,12 +1250,7 @@ export default function UsersList() {
             {displayTotalPages > 1 && (
               <div className="pagination-wrapper">
                 <div className="pagination-info">
-                  عرض {startIndex + 1}
-                  {' إلى '}
-                  {Math.min(endIndex, displayTotalUsers)}
-                  {' من '}
-                  {displayTotalUsers}
-                  {' مستخدم'}
+                  عرض {from} إلى {to} من {total} مستخدم
                 </div>
                 <div className="pagination-controls">
                   <button
@@ -1021,23 +1261,16 @@ export default function UsersList() {
                     <i className="fa-solid fa-chevron-right"></i>
                     <span className="pagination-btn-text">السابق</span>
                   </button>
-                  {(() => {
-                    const items: (number | 'dots')[] = [];
-                    if (displayTotalPages <= 3) {
-                      for (let p = 1; p <= displayTotalPages; p++) {
-                        items.push(p);
-                      }
-                    } else {
-                      items.push(1);
-                      let start = Math.max(2, currentPage - 1);
-                      let end = Math.min(displayTotalPages - 1, currentPage + 1);
-                      if (start > 2) items.push('dots');
-                      for (let p = start; p <= end; p++) items.push(p);
-                      if (end < displayTotalPages - 1) items.push('dots');
-                      items.push(displayTotalPages);
-                    }
-                    return items.map((item, idx) =>
-                      item === 'dots' ? (
+                  
+                  {Array.from({ length: displayTotalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === displayTotalPages || (p >= currentPage - 1 && p <= currentPage + 1))
+                    .reduce((acc: (number | string)[], p, i, arr) => {
+                      if (i > 0 && p !== (arr[i-1] as number) + 1) acc.push('...');
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) => (
+                      item === '...' ? (
                         <span key={`dots-${idx}`} className="pagination-dots">...</span>
                       ) : (
                         <button
@@ -1048,8 +1281,9 @@ export default function UsersList() {
                           {item}
                         </button>
                       )
-                    );
-                  })()}
+                    ))
+                  }
+
                   <button
                     className="pagination-btn pagination-next"
                     onClick={() => setCurrentPage((prev) => Math.min(displayTotalPages, prev + 1))}
@@ -1081,317 +1315,306 @@ export default function UsersList() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="user-form">
-              <div className="form-group">
-                <label htmlFor="username">اسم المستخدم <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({...formData, username: e.target.value})}
-                  className={formErrors.username ? 'error' : ''}
-                  placeholder="أدخل اسم المستخدم"
-                />
-                {formErrors.username && <span className="error-message">{formErrors.username}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="name">الاسم الكامل <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className={formErrors.name ? 'error' : ''}
-                  placeholder="أدخل الاسم الكامل"
-                />
-                {formErrors.name && <span className="error-message">{formErrors.name}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="salary">المرتب (اختياري)</label>
-                <input
-                  type="number"
-                  id="salary"
-                  value={formData.salary}
-                  onChange={(e) => setFormData({...formData, salary: e.target.value})}
-                  className={formErrors.salary ? 'error' : ''}
-                  placeholder="أدخل قيمة المرتب"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="national_id_number">الرقم الوطني (اختياري)</label>
-                <input
-                  type="text"
-                  id="national_id_number"
-                  value={formData.national_id_number}
-                  onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value })}
-                  placeholder="الرقم الوطني أو رقم الهوية"
-                  maxLength={64}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="job_title">المهنة أو الاختصاص (اختياري)</label>
-                <input
-                  type="text"
-                  id="job_title"
-                  value={formData.job_title}
-                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                  placeholder="مثال: محاسب، موظف استقبال..."
-                  maxLength={191}
-                />
-              </div>
-
-              <div className="form-group" style={{ borderTop: '1px solid var(--border, #e2e8f0)', paddingTop: '12px', marginTop: '8px' }}>
-                <label className="permissions-section-title">المرفقات (اختياري)</label>
-                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 10px' }}>
-                  الصورة الشخصية: صورة فقط. الإثبات وعقد العمل: صورة أو PDF. يُرفع الملف بعد حفظ بيانات الموظف.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                    صورة شخصية
+            <form onSubmit={handleSubmit} className="user-form-premium">
+              {/* Section 1: Login & Access */}
+              <div className="form-section">
+                <h4 className="section-title-sm"><i className="fa-solid fa-key"></i> بيانات الدخول ودرجة الوصول</h4>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label htmlFor="username">اسم المستخدم <span className="required">*</span></label>
                     <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      style={{ display: 'block', marginTop: '6px' }}
-                      onChange={(e) => setProfilePhotoFile(e.target.files?.[0] ?? null)}
+                      type="text" id="username"
+                      value={formData.username}
+                      onChange={(e) => setFormData({...formData, username: e.target.value})}
+                      className={formErrors.username ? 'error' : ''}
+                      placeholder="أدخل اسم المستخدم"
                     />
-                  </label>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                    إثبات شخصي
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,application/pdf"
-                      style={{ display: 'block', marginTop: '6px' }}
-                      onChange={(e) => setPersonalIdProofFile(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                    عقد العمل
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,application/pdf"
-                      style={{ display: 'block', marginTop: '6px' }}
-                      onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                </div>
-                {showForm.mode === 'edit' && showForm.user && (
-                  <div style={{ marginTop: '12px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {showForm.user.profile_photo_url && (
-                      <a href={resolvePublicUrl(showForm.user.profile_photo_url)} target="_blank" rel="noreferrer">عرض الصورة الحالية</a>
-                    )}
-                    {showForm.user.personal_id_proof_url && (
-                      <a href={resolvePublicUrl(showForm.user.personal_id_proof_url)} target="_blank" rel="noreferrer">عرض إثبات شخصي محفوظ</a>
-                    )}
-                    {showForm.user.employment_contract_url && (
-                      <a href={resolvePublicUrl(showForm.user.employment_contract_url)} target="_blank" rel="noreferrer">عرض عقد العمل محفوظ</a>
-                    )}
+                    {formErrors.username && <span className="error-message">{formErrors.username}</span>}
                   </div>
-                )}
+                  <div className="form-group flex-1">
+                    <label htmlFor="password">
+                      كلمة المرور {showForm.mode === 'add' && <span className="required">*</span>}
+                    </label>
+                    <input
+                      type="password" id="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className={formErrors.password ? 'error' : ''}
+                      placeholder={showForm.mode === 'edit' ? "اتركه فارغاً للحفاظ على القديم" : "أدخل كلمة المرور"}
+                    />
+                    {formErrors.password && <span className="error-message">{formErrors.password}</span>}
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox" checked={formData.is_admin}
+                        onChange={(e) => setFormData({...formData, is_admin: e.target.checked, authorized_documents: e.target.checked ? [] : formData.authorized_documents})}
+                      />
+                      <span>مدير نظام (Admin)</span>
+                    </label>
+                  </div>
+                  <div className="form-group flex-1">
+                    <label htmlFor="email">البريد الإلكتروني</label>
+                    <input
+                      type="email" id="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="example@mail.com"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="email">البريد الإلكتروني</label>
-                <input
-                  type="email"
-                  id="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className={formErrors.email ? 'error' : ''}
-                  placeholder="أدخل البريد الإلكتروني (اختياري)"
-                />
-                {formErrors.email && <span className="error-message">{formErrors.email}</span>}
+              {/* Section 2: Personal Data */}
+              <div className="form-section">
+                <h4 className="section-title-sm"><i className="fa-solid fa-user-tag"></i> البيانات الشخصية</h4>
+                <div className="form-row">
+                  <div className="form-group flex-2">
+                    <label>الاسم بالكامل (رباعي) <span className="required">*</span></label>
+                    <input 
+                      type="text" 
+                      value={formData.full_name_quad} 
+                      onChange={(e) => setFormData({...formData, full_name_quad: e.target.value, name: e.target.value})} 
+                      placeholder="الاسم الرباعي كما في الهوية" 
+                      className={formErrors.name ? 'error' : ''}
+                    />
+                    {formErrors.name && <span className="error-message">{formErrors.name}</span>}
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>الجنس</label>
+                    <select value={formData.gender} onChange={(e)=>setFormData({...formData, gender: e.target.value})}>
+                      <option value="">اختر</option>
+                      <option value="ذكر">ذكر</option>
+                      <option value="أنثى">أنثى</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>الرقم القومي / الوطني</label>
+                    <input type="text" value={formData.national_id_number} onChange={(e)=>setFormData({...formData, national_id_number: e.target.value})} placeholder="الرقم الوطني المكون من 12 رقم" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>مكان الميلاد</label>
+                    <input type="text" value={formData.birth_place} onChange={(e)=>setFormData({...formData, birth_place: e.target.value})} placeholder="المحافظة / المدينة" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>اسم الأم</label>
+                    <input type="text" value={formData.mother_name} onChange={(e)=>setFormData({...formData, mother_name: e.target.value})} placeholder="اسم الأم الكامل" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>تاريخ الميلاد</label>
+                    <input type="date" value={formData.birth_date} onChange={(e)=>setFormData({...formData, birth_date: e.target.value})} />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>الجنسية</label>
+                    <input type="text" value={formData.nationality} onChange={(e)=>setFormData({...formData, nationality: e.target.value})} placeholder="مثال: يمني" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>الحالة الاجتماعية</label>
+                    <select value={formData.social_status} onChange={(e)=>setFormData({...formData, social_status: e.target.value})}>
+                      <option value="">اختر</option>
+                      <option value="أعزب">أعزب</option>
+                      <option value="متزوج">متزوج</option>
+                      <option value="مطلق">مطلق</option>
+                      <option value="أرمل">أرمل</option>
+                    </select>
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>المؤهل العلمي</label>
+                    <input type="text" value={formData.qualification} onChange={(e)=>setFormData({...formData, qualification: e.target.value})} placeholder="مثال: بكالوريوس" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>فصيلة الدم</label>
+                    <input type="text" value={formData.blood_type} onChange={(e)=>setFormData({...formData, blood_type: e.target.value})} placeholder="A+, O- ..." />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>رقم الهاتف الشخصي</label>
+                    <input type="text" value={formData.personal_phone} onChange={(e)=>setFormData({...formData, personal_phone: e.target.value})} placeholder="000 000 000" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>هاتف ولي الأمر (للطوارئ)</label>
+                    <input type="text" value={formData.guardian_phone} onChange={(e)=>setFormData({...formData, guardian_phone: e.target.value})} placeholder="000 000 000" />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>عنوان السكن بالتفصيل</label>
+                  <textarea value={formData.address} onChange={(e)=>setFormData({...formData, address: e.target.value})} rows={2} placeholder="المحافظة - المدينة - الشارع - رقم المنزل"></textarea>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="password">
-                  كلمة المرور {showForm.mode === 'add' && <span className="required">*</span>}
-                  {showForm.mode === 'edit' && <span className="optional">(اتركه فارغاً إذا لم ترد تغييره)</span>}
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className={formErrors.password ? 'error' : ''}
-                  placeholder="أدخل كلمة المرور"
-                />
-                {formErrors.password && <span className="error-message">{formErrors.password}</span>}
+              {/* Section 3: Job Data */}
+              <div className="form-section">
+                <h4 className="section-title-sm"><i className="fa-solid fa-briefcase"></i> البيانات الوظيفية والمصرفية</h4>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>الرقم الوظيفي</label>
+                    <input type="text" value={formData.job_number} onChange={(e)=>setFormData({...formData, job_number: e.target.value})} placeholder="الرقم التعريفي للموظف" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>الرقم المالي (إن وجد)</label>
+                    <input type="text" value={formData.financial_number} onChange={(e)=>setFormData({...formData, financial_number: e.target.value})} placeholder="رقم الملف المالي" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>المسمى الوظيفي</label>
+                    <input type="text" value={formData.job_title} onChange={(e)=>setFormData({...formData, job_title: e.target.value})} placeholder="مثال: محاسب، مندوب..." />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>اسم المصرف</label>
+                    <input type="text" value={formData.bank_name} onChange={(e)=>setFormData({...formData, bank_name: e.target.value})} placeholder="اسم البنك لتحويل الراتب" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>رقم الحساب (IBAN)</label>
+                    <input type="text" value={formData.account_number} onChange={(e)=>setFormData({...formData, account_number: e.target.value})} placeholder="رقم الحساب البنكي" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>تاريخ المباشرة</label>
+                    <input type="date" value={formData.start_date} onChange={(e)=>setFormData({...formData, start_date: e.target.value})} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>نوع العقد</label>
+                    <select value={formData.contract_type} onChange={(e)=>setFormData({...formData, contract_type: e.target.value})}>
+                      <option value="">اختر النوع</option>
+                      <option value="دوام كامل">دوام كامل</option>
+                      <option value="دوام جزئي">دوام جزئي</option>
+                      <option value="عقد محدد">عقد محدد المدة</option>
+                      <option value="تدريب">تدريب</option>
+                    </select>
+                  </div>
+                  <div className="form-group flex-2">
+                    <label>شروط أو ملاحظات العقد</label>
+                    <textarea value={formData.contract_conditions} onChange={(e)=>setFormData({...formData, contract_conditions: e.target.value})} rows={1} placeholder="أي شروط إضافية أو ملاحظات خاصة بالعقد..."></textarea>
+                  </div>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.is_admin}
-                    onChange={(e) => setFormData({...formData, is_admin: e.target.checked, authorized_documents: e.target.checked ? [] : formData.authorized_documents})}
-                    style={{ width: 'auto', cursor: 'pointer' }}
-                  />
-                  <span>مدير النظام (Admin)</span>
-                </label>
-                <p className="admin-note">
-                  المدير لديه صلاحيات كاملة على جميع أجزاء النظام
-                </p>
+              {/* Section 4: Financial Data */}
+              <div className="form-section">
+                <h4 className="section-title-sm"><i className="fa-solid fa-money-bill-wave"></i> الرواتب والبدلات المالية</h4>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>المرتب الأساسي</label>
+                    <input type="number" value={formData.salary} onChange={(e)=>setFormData({...formData, salary: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>بدل سكن</label>
+                    <input type="number" value={formData.housing_allowance} onChange={(e)=>setFormData({...formData, housing_allowance: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>بدل مواصلات</label>
+                    <input type="number" value={formData.transportation_allowance} onChange={(e)=>setFormData({...formData, transportation_allowance: e.target.value})} placeholder="0.00" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>بدل إتصالات</label>
+                    <input type="number" value={formData.communication_allowance} onChange={(e)=>setFormData({...formData, communication_allowance: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>مكافآت ثابتة</label>
+                    <input type="number" value={formData.fixed_bonuses} onChange={(e)=>setFormData({...formData, fixed_bonuses: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>غرامات ثابتة</label>
+                    <input type="number" value={formData.fixed_fines} onChange={(e)=>setFormData({...formData, fixed_fines: e.target.value})} placeholder="0.00" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>خصم غياب (ساعة)</label>
+                    <input type="number" value={formData.hourly_leave_deduction} onChange={(e)=>setFormData({...formData, hourly_leave_deduction: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>خصم غياب (يوم)</label>
+                    <input type="number" value={formData.daily_leave_deduction} onChange={(e)=>setFormData({...formData, daily_leave_deduction: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="form-group flex-1"></div> {/* Spacer */}
+                </div>
+              </div>
+
+              {/* Section 5: Attachments */}
+              <div className="form-section">
+                <h4 className="section-title-sm"><i className="fa-solid fa-paperclip"></i> المستندات والأوراق الثبوتية</h4>
+                <div className="attachments-grid">
+                  {[
+                    { key: 'profile_photo', label: 'صورة شخصية' },
+                    { key: 'national_id_photo', label: 'رقم القومي (صورة)' },
+                    { key: 'identity_proof', label: 'إثبات هوية' },
+                    { key: 'employment_contract', label: 'عقد عمل' },
+                    { key: 'certified_stamp', label: 'ختم معتمد' },
+                    { key: 'approved_signature', label: 'توقيع معتمد' },
+                    { key: 'educational_certificate', label: 'شهادة تعليمية' },
+                    { key: 'health_certificate', label: 'شهادة صحية' },
+                    { key: 'contract_conditions_photo', label: 'شروط العقد (صورة)' },
+                  ].map((doc) => (
+                    <div key={doc.key} className="attachment-item">
+                      <label>{doc.label}</label>
+                      <input type="file" onChange={(e) => setPendingFiles({...pendingFiles, [doc.key]: e.target.files?.[0] || null})} />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {!formData.is_admin && (
                 <>
-                  <div className="form-group">
-                    <label className="permissions-section-title">
-                      أنواع التأمين المصرح بها <span className="required">*</span>
-                    </label>
-                    <div className="permissions-grid permissions-grid-scrollable">
-                      {INSURANCE_TYPES.map((type) => (
-                        <label 
-                          key={type} 
-                          className="permission-option"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.authorized_documents.includes(type)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: [...formData.authorized_documents, type]
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: formData.authorized_documents.filter(doc => doc !== type)
-                                });
-                              }
-                            }}
-                            style={{ width: 'auto', cursor: 'pointer' }}
-                          />
-                          <span>{type}</span>
-                        </label>
-                      ))}
+                  <div className="form-section">
+                    <h4 className="section-title-sm"><i className="fa-solid fa-shield"></i> الصلاحيات الممنوحة</h4>
+                    <div className="permissions-tabs">
+                      <div className="form-group">
+                        <label className="permissions-label">أنواع التأمين</label>
+                        <div className="permissions-grid-sm">
+                          {INSURANCE_TYPES.map((type) => (
+                            <label key={type} className="perm-chk">
+                              <input type="checkbox" checked={formData.authorized_documents.includes(type)} onChange={(e) => {
+                                const list = e.target.checked ? [...formData.authorized_documents, type] : formData.authorized_documents.filter(d => d !== type);
+                                setFormData({...formData, authorized_documents: list});
+                              }} />
+                              <span>{type}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="form-group mt-4">
+                        <label className="permissions-label">الأقسام الإدارية والمالية</label>
+                        <div className="permissions-grid-sm">
+                          {[...REPORT_PERMISSIONS, ...ADMIN_SECTION_PERMISSIONS, ...SETTINGS_PERMISSIONS].map((p) => (
+                            <label key={p} className="perm-chk">
+                              <input type="checkbox" checked={formData.authorized_documents.includes(p)} onChange={(e) => {
+                                const list = e.target.checked ? [...formData.authorized_documents, p] : formData.authorized_documents.filter(d => d !== p);
+                                setFormData({...formData, authorized_documents: list});
+                              }} />
+                              <span>{p}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      {formErrors.authorized_documents && (
+                        <div className="error-message" style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
+                          <i className="fa-solid fa-triangle-exclamation"></i> {formErrors.authorized_documents}
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <div className="form-group">
-                    <label className="permissions-section-title">
-                      التقارير والأقسام المالية
-                    </label>
-                    <div className="permissions-grid permissions-grid-scrollable">
-                      {REPORT_PERMISSIONS.map((permission) => (
-                        <label 
-                          key={permission} 
-                          className="permission-option"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.authorized_documents.includes(permission)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: [...formData.authorized_documents, permission]
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: formData.authorized_documents.filter(doc => doc !== permission)
-                                });
-                              }
-                            }}
-                            style={{ width: 'auto', cursor: 'pointer' }}
-                          />
-                          <span>{permission}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="permissions-section-title">
-                      الأقسام الإدارية
-                    </label>
-                    <div className="permissions-grid">
-                      {ADMIN_SECTION_PERMISSIONS.map((permission) => (
-                        <label key={permission} className="permission-option">
-                          <input
-                            type="checkbox"
-                            checked={formData.authorized_documents.includes(permission)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: [...formData.authorized_documents, permission]
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: formData.authorized_documents.filter(doc => doc !== permission)
-                                });
-                              }
-                            }}
-                            style={{ width: 'auto', cursor: 'pointer' }}
-                          />
-                          <span>{permission}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="permissions-section-title">
-                      الإعدادات
-                    </label>
-                    <div className="permissions-grid">
-                      {SETTINGS_PERMISSIONS.map((permission) => (
-                        <label key={permission} className="permission-option">
-                          <input
-                            type="checkbox"
-                            checked={formData.authorized_documents.includes(permission)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: [...formData.authorized_documents, permission]
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  authorized_documents: formData.authorized_documents.filter(doc => doc !== permission)
-                                });
-                              }
-                            }}
-                            style={{ width: 'auto', cursor: 'pointer' }}
-                          />
-                          <span>{permission}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {formData.authorized_documents.length === 0 && (
-                    <span className="error-message" style={{ display: 'block', marginTop: '0.5rem' }}>
-                      يجب اختيار صلاحية واحدة على الأقل
-                    </span>
-                  )}
                 </>
               )}
 
-              <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="btn-cancel" 
-                  onClick={() => setShowForm(null)}
-                  disabled={submitting}
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-submit" 
-                  disabled={submitting}
-                >
-                  {submitting ? 'جاري الحفظ...' : (showForm.mode === 'add' ? 'إضافة' : 'حفظ التعديلات')}
+              <div className="form-actions-premium">
+                <button type="button" className="btn-cancel" onClick={() => setShowForm(null)} disabled={submitting}>إلغاء</button>
+                <button type="submit" className="btn-submit-premium" disabled={submitting}>
+                  {submitting ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-save"></i>}
+                  {submitting ? ' جاري الحفظ...' : (showForm.mode === 'add' ? ' إنشاء الحساب' : ' حفظ التعديلات')}
                 </button>
               </div>
             </form>

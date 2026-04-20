@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { showToast } from './Toast';
+import { exportToExcel } from '../utils/excelExport';
 
 interface Expense {
   id: number;
@@ -64,6 +65,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [statusFilter, setStatusFilter] = useState('الكل');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [currentUnionPage, setCurrentUnionPage] = useState(1);
+  const unionItemsPerPage = 10;
 
   // Form states
   const [name, setName] = useState('');
@@ -143,6 +150,47 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     });
   }, [expenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
+  const paginatedExpenses = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredExpenses.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredExpenses, currentPage]);
+
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+
+  const paginatedUnion = React.useMemo(() => {
+    const startIndex = (currentUnionPage - 1) * unionItemsPerPage;
+    return unionPurchases.slice(startIndex, startIndex + unionItemsPerPage);
+  }, [unionPurchases, currentUnionPage]);
+
+  const totalUnionPages = Math.ceil(unionPurchases.length / unionItemsPerPage);
+
+  const getPaginationRange = (current: number, total: number) => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots: (number | string)[] = [];
+    let l;
+
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
+  };
+
   const filteredStats = React.useMemo(() => {
     const total = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     return {
@@ -156,6 +204,11 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     fetchExpenses();
     fetchUnionBalances();
   }, []);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
   const fetchUnionBalances = async () => {
     try {
@@ -353,89 +406,40 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcelFunc = () => {
     if (expenses.length === 0) {
       showToast('لا توجد بيانات لتصديرها', 'error');
       return;
     }
 
-    const logoUrl = window.location.origin + '/img/logo.png';
-    const tableHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; }
-          .co-name { font-size: 20pt; font-weight: 900; color: #ef4444; text-align: right; }
-          .co-sub { font-size: 12pt; color: #64748b; text-align: right; }
-          .report-subtitle { font-size: 14pt; font-weight: bold; background-color: #fef2f2; color: #ef4444; text-align: center; border: 1px solid #fee2e2; }
-          table { border-collapse: collapse; width: 100%; }
-          th { background-color: #ef4444; color: #ffffff; font-weight: bold; border: 1px solid #b91c1c; padding: 12px; text-align: center; }
-          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; }
-          .total-box { background-color: #fff1f2; font-weight: bold; border: 1px solid #fee2e2; }
-          .amount { color: #ef4444; font-weight: bold; }
-          .meta-info { color: #94a3b8; font-size: 9pt; text-align: right; }
-        </style>
-      </head>
-      <body dir="rtl">
-        <table>
-          <tr>
-            <td colspan="4" style="border:none; text-align:right; vertical-align: top;">
-              <div class="co-name">شركة المدار الليبي للتأمين</div>
-              <div class="co-sub">Al Madar Libyan Insurance</div>
-              <div class="co-sub">قسم الشؤون المالية والمحاسبية</div>
-            </td>
-            <td colspan="2" style="border:none; text-align:left; vertical-align: top;">
-              <img src="${logoUrl}" width="100" height="80">
-            </td>
-          </tr>
-          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
-          <tr><td colspan="6" class="report-subtitle">تقرير المصروفات التشغيلية - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</td></tr>
-          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
-          
-          <tr style="height: 50px;">
-            <td colspan="2" class="total-box">إجمالي المصروفات: ${statistics.monthly_total.toLocaleString()} د.ل</td>
-            <td colspan="2" class="total-box" style="background:#f8fafc">عدد العمليات: ${statistics.monthly_count}</td>
-            <td colspan="2" class="total-box" style="background:#f0fdf4">متوسط الصرف: ${statistics.monthly_average.toFixed(2)} د.ل</td>
-          </tr>
-          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
-          
-            <thead>
-              <tr>
-                <th style="width: 200px;">البند (الوصف)</th>
-                <th style="width: 150px;">المستلم</th>
-                <th style="width: 120px;">الفئة</th>
-                <th style="width: 110px;">المبلغ (د.ل)</th>
-                <th style="width: 100px;">التاريخ</th>
-                <th style="width: 90px;">الحالة</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${expenses.map(e => `
-                <tr>
-                  <td style="text-align:right; font-weight:bold;">${e.name}</td>
-                  <td>${e.recipient || '-'}</td>
-                  <td>${e.category}</td>
-                  <td class="amount">${e.amount.toLocaleString()}</td>
-                  <td>${e.expense_date}</td>
-                  <td>${e.status}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-        </table>
-        <br>
-        <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `تقرير_مصروفات_المدار_${new Date().getTime()}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportToExcel({
+      title: 'تقرير المصروفات التشغيلية',
+      fileName: 'تقرير_مصروفات_المدار',
+      columnCount: 6,
+      summaryRight: `يوميات وتقارير الصرف`,
+      summaryLeft: `الإجمالي: ${statistics.monthly_total.toLocaleString()} د.ل    |    عدد العمليات: ${statistics.monthly_count}`,
+      tableHeaders: `
+        <tr height="40">
+          <th width="300">البند (الوصف)</th>
+          <th width="200">المستلم</th>
+          <th width="150">الفئة</th>
+          <th width="150">المبلغ (د.ل)</th>
+          <th width="150">التاريخ</th>
+          <th width="120">الحالة</th>
+        </tr>
+      `,
+      tableBody: expenses.map((e, index) => `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td style="text-align:right; font-weight:bold;">${e.name}</td>
+          <td>${e.recipient || '-'}</td>
+          <td>${e.category}</td>
+          <td class="red">${e.amount.toLocaleString()}</td>
+          <td>${e.expense_date}</td>
+          <td class="bold">${e.status}</td>
+        </tr>
+      `).join('')
+    });
+    
     showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
   };
 
@@ -443,91 +447,42 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     window.print();
   };
 
-  const exportUnionToExcel = () => {
+  const exportUnionToExcelFunc = () => {
     if (unionPurchases.length === 0) {
       showToast('لا توجد بيانات لتصديرها', 'error');
       return;
     }
 
-    const logoUrl = window.location.origin + '/img/logo.png';
-    const tableHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; }
-          .co-name { font-size: 20pt; font-weight: 900; color: #014cb1; text-align: right; }
-          .co-sub { font-size: 12pt; color: #64748b; text-align: right; }
-          .report-subtitle { font-size: 14pt; font-weight: bold; background-color: #e0f2fe; color: #0284c7; text-align: center; border: 1px solid #bae6fd; }
-          table { border-collapse: collapse; width: 100%; }
-          th { background-color: #0284c7; color: #ffffff; font-weight: bold; border: 1px solid #0369a1; padding: 12px; text-align: center; }
-          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; }
-          .total-box { background-color: #f8fafc; font-weight: bold; border: 1px solid #e2e8f0; }
-          .amount { color: #0284c7; font-weight: bold; }
-          .meta-info { color: #94a3b8; font-size: 9pt; text-align: right; }
-        </style>
-      </head>
-      <body dir="rtl">
-        <table>
-          <tr>
-            <td colspan="5" style="border:none; text-align:right; vertical-align: top;">
-              <div class="co-name">شركة المدار الليبي للتأمين</div>
-              <div class="co-sub">Al Madar Libyan Insurance</div>
-              <div class="co-sub">قسم الشؤون المالية والمحاسبية</div>
-            </td>
-            <td colspan="2" style="border:none; text-align:left; vertical-align: top;">
-              <img src="${logoUrl}" width="100" height="80">
-            </td>
-          </tr>
-          <tr><td colspan="7" style="border:none; height:20px;"></td></tr>
-          <tr><td colspan="7" class="report-subtitle">تقرير رصيد الاتحاد والتكاليف - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</td></tr>
-          <tr><td colspan="7" style="border:none; height:20px;"></td></tr>
-          
-          <tr style="height: 50px;">
-            <td colspan="2" class="total-box">إجمالي المبلغ المدفوع: ${unionTotalStats.totalPaid.toLocaleString()} د.ل</td>
-            <td colspan="2" class="total-box" style="background:#f0fdf4">إجمالي البطاقات المُشتراة: ${unionStats.total_cards} بطاقة</td>
-            <td colspan="3" class="total-box" style="background:#fef2f2">إجمالي خصم الاتحاد: ${unionTotalStats.totalFee.toLocaleString()} د.ل | إجمالي الوديعة: ${unionStats.total_deposit.toLocaleString()} د.ل</td>
-          </tr>
-          <tr><td colspan="7" style="border:none; height:20px;"></td></tr>
-          
-            <thead>
-              <tr>
-                <th style="width: 140px;">رقم الواصل/الطلب</th>
-                <th style="width: 150px;">المبلغ المدفوع</th>
-                <th style="width: 110px;">عدد البطاقات</th>
-                <th style="width: 150px;">خصم الاتحاد (المصروفات)</th>
-                <th style="width: 140px;">وديعة الشركة</th>
-                <th style="width: 120px;">تاريخ الطلب</th>
-                <th style="width: 180px;">البيان/ملاحظات</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${unionPurchases.map(u => `
-                <tr>
-                  <td style="text-align:center; font-weight:bold;">${u.request_number || '-'}</td>
-                  <td class="amount">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
-                  <td style="color:#10b981;">${u.cards_count}</td>
-                  <td>${parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
-                  <td>${parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
-                  <td>${u.purchase_date ? u.purchase_date.split('T')[0] : ''}</td>
-                  <td>${u.notes || '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-        </table>
-        <br>
-        <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `تقرير_سجل_الاتحاد_${new Date().getTime()}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportToExcel({
+      title: 'تقرير رصيد الاتحاد والتكاليف',
+      fileName: 'تقرير_سجل_الاتحاد',
+      columnCount: 7,
+      summaryRight: `خصم الاتحاد: ${unionTotalStats.totalFee.toLocaleString()} د.ل  |  وديعة الشركة: ${unionStats.total_deposit.toLocaleString()} د.ل`,
+      summaryLeft: `المبلغ المدفوع: ${unionTotalStats.totalPaid.toLocaleString()} د.ل  |  البطاقات: ${unionStats.total_cards}`,
+      tableHeaders: `
+        <tr height="40">
+          <th width="200">رقم الواصل/الطلب</th>
+          <th width="200">المبلغ المدفوع</th>
+          <th width="150">عدد البطاقات</th>
+          <th width="200">خصم الاتحاد (المصروفات)</th>
+          <th width="200">وديعة الشركة</th>
+          <th width="150">تاريخ الطلب</th>
+          <th width="250">البيان/ملاحظات</th>
+        </tr>
+      `,
+      tableBody: unionPurchases.map((u, index) => `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td style="text-align:center; font-weight:bold; mso-number-format:'\@';">${u.request_number || '-'}</td>
+          <td class="blue">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
+          <td style="color:#10b981; font-weight:bold;">${u.cards_count}</td>
+          <td>${parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
+          <td>${parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
+          <td>${u.purchase_date ? u.purchase_date.split('T')[0] : ''}</td>
+          <td>${u.notes || '-'}</td>
+        </tr>
+      `).join('')
+    });
+    
     showToast('تم تصدير سجل الاتحاد بنجاح', 'success');
   };
 
@@ -681,7 +636,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
-                onClick={exportToExcel}
+                onClick={exportToExcelFunc}
                 className="btn-secondary"
                 style={{
                   background: '#10b981',
@@ -846,7 +801,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredExpenses.map((expense) => (
+                  {paginatedExpenses.map((expense) => (
                     <tr key={expense.id}>
                       <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
                       <td style={{ color: 'var(--text)' }}>{expense.recipient || '-'}</td>
@@ -901,13 +856,66 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       </td>
                     </tr>
                   ))}
-                  {expenses.length === 0 && (
+                  {filteredExpenses.length === 0 && (
                     <tr>
                       <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا توجد مصروفات مسجلة</td>
                     </tr>
                   )}
                 </tbody>
               </table>
+
+              {/* Expense Pagination */}
+              {totalPages > 1 && (
+                <div className="no-print" style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  gap: '10px', 
+                  padding: '20px',
+                  borderTop: '1px solid var(--border)',
+                  background: 'var(--panel)'
+                }}>
+                  <button 
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
+                  >
+                    السابق
+                  </button>
+                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    {getPaginationRange(currentPage, totalPages).map((page, idx) => (
+                      page === '...' ? (
+                        <span key={`dots-${idx}`} style={{ color: 'var(--muted)', padding: '0 5px' }}>...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(Number(page))}
+                          style={{
+                            width: '35px',
+                            height: '35px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: currentPage === page ? '#014cb1' : 'transparent',
+                            color: currentPage === page ? '#fff' : 'var(--text)',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+                  <button 
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
+                  >
+                    التالي
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -935,7 +943,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
-                onClick={exportUnionToExcel}
+                onClick={exportUnionToExcelFunc}
                 className="btn-secondary"
                 style={{
                   background: '#10b981',
@@ -1047,7 +1055,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   </tr>
                 </thead>
                 <tbody>
-                  {unionPurchases.map((u) => (
+                  {paginatedUnion.map((u) => (
                     <tr key={u.id}>
                       <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{u.request_number}</td>
                       <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
@@ -1085,6 +1093,59 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   )}
                 </tbody>
               </table>
+
+              {/* Union Pagination */}
+              {totalUnionPages > 1 && (
+                <div className="no-print" style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  gap: '10px', 
+                  padding: '20px',
+                  borderTop: '1px solid var(--border)',
+                  background: 'var(--panel)'
+                }}>
+                  <button 
+                    disabled={currentUnionPage === 1}
+                    onClick={() => setCurrentUnionPage(prev => prev - 1)}
+                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentUnionPage === 1 ? 'not-allowed' : 'pointer', opacity: currentUnionPage === 1 ? 0.5 : 1 }}
+                  >
+                    السابق
+                  </button>
+                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    {getPaginationRange(currentUnionPage, totalUnionPages).map((page, idx) => (
+                      page === '...' ? (
+                        <span key={`dots-u-${idx}`} style={{ color: 'var(--muted)', padding: '0 5px' }}>...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentUnionPage(Number(page))}
+                          style={{
+                            width: '35px',
+                            height: '35px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: currentUnionPage === page ? '#f59e0b' : 'transparent',
+                            color: currentUnionPage === page ? '#fff' : 'var(--text)',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+                  <button 
+                    disabled={currentUnionPage === totalUnionPages}
+                    onClick={() => setCurrentUnionPage(prev => prev + 1)}
+                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentUnionPage === totalUnionPages ? 'not-allowed' : 'pointer', opacity: currentUnionPage === totalUnionPages ? 0.5 : 1 }}
+                  >
+                    التالي
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

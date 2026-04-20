@@ -38,11 +38,11 @@ export default function FinancialArchive() {
   const fetchArchive = async () => {
     setLoading(true);
     try {
-      const url = new URL(`${API_BASE_URL}/financial-archive`);
-      if (activeCategory !== 'all') url.searchParams.append('category', activeCategory);
-      if (searchQuery) url.searchParams.append('search', searchQuery);
+      let url = `${API_BASE_URL}/financial-archive?`;
+      if (activeCategory !== 'all') url += `category=${encodeURIComponent(activeCategory)}&`;
+      if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`;
 
-      const response = await fetch(url.toString());
+      const response = await fetch(url);
 
       if (response.ok) {
         const data = await response.json();

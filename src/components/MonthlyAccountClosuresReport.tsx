@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { exportToExcel } from "../utils/excelExport";
 
 type MonthlyAccountClosure = {
   id: number;
@@ -168,40 +169,51 @@ export default function MonthlyAccountClosuresReport() {
   const handleExportExcel = () => {
     if (closures.length === 0) return;
 
-    // Headers
-    const headers = ["الوكيل", "رقم الوكيل", "السنة", "الشهر", "القيمة المستحقة", "المدفوع", "المتبقي", "تاريخ الإغلاق"];
-    
-    // Rows
-    const rows = closures.map(closure => [
-      `"${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}"`,
-      `"${closure.branch_agent.code}"`,
-      `"${closure.year}"`,
-      `"${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}"`,
-      `"${closure.due_amount}"`,
-      `"${closure.paid_amount}"`,
-      `"${closure.remaining_amount}"`,
-      `"${formatDate(closure.created_at)}"`
-    ]);
-
-    // Summary Row
-    rows.push([]);
-    rows.push([`"الإجمالي"`, `""`, `""`, `""`, `"${totalDue}"`, `"${totalPaid}"`, `"${totalRemaining}"`, `""`]);
-
-    // Combine to CSV with semicolon for better Excel compatibility in common regional settings
-    const csvContent = "\uFEFF" + [headers.map(h => `"${h}"`), ...rows].map(e => e.join(";")).join("\n");
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
     const reportLabel = filterMode === 'monthly'
-      ? `${selectedYear}_${selectedMonth || 'الكل'}`
-      : `${dateFrom || 'من'}_${dateTo || 'إلى'}`;
-    link.setAttribute("download", `تقرير_إغلاق_الحسابات_${reportLabel}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      ? `${selectedYear} / ${selectedMonth ? MONTHS.find(m => m.value === selectedMonth)?.label : 'جميع الأشهر'}`
+      : `${dateFrom || '-'} إلى ${dateTo || '-'}`;
+
+    exportToExcel({
+      title: 'كشف إغلاق الحسابات الشهرية',
+      fileName: 'كشف_إغلاق_الحسابات',
+      columnCount: 8,
+      summaryRight: `الفترة: ${reportLabel}`,
+      summaryLeft: `إجمالي المستحقات: ${totalDue.toLocaleString()} د.ل    |    المدفوع: ${totalPaid.toLocaleString()} د.ل`,
+      tableHeaders: `
+        <tr height="40">
+          <th width="300">الوكيل</th>
+          <th width="100">رقم الوكيل</th>
+          <th width="100">السنة</th>
+          <th width="100">الشهر</th>
+          <th width="150">القيمة المستحقة</th>
+          <th width="150">المدفوع</th>
+          <th width="150">المتبقي</th>
+          <th width="150">تاريخ الإغلاق</th>
+        </tr>
+      `,
+      tableBody: closures.map((closure, index) => `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td>${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}</td>
+          <td align="center" style="mso-number-format:'\@';">${closure.branch_agent.code}</td>
+          <td align="center">${closure.year}</td>
+          <td align="center">${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</td>
+          <td class="bold">${closure.due_amount}</td>
+          <td class="green">${closure.paid_amount}</td>
+          <td class="red">${closure.remaining_amount}</td>
+          <td align="center">${formatDate(closure.created_at)}</td>
+        </tr>
+      `).join('') + `
+        <tr height="35" style="background-color: #f3f4f6; font-weight: bold;">
+          <td colspan="4" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
+          <td class="bold">${totalDue}</td>
+          <td class="green">${totalPaid}</td>
+          <td class="red">${totalRemaining}</td>
+          <td></td>
+        </tr>
+      `
+    });
+    
+    showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
   };
 
   const handlePrint = () => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
+import { exportToExcel } from '../utils/excelExport';
 
 interface BranchAgent {
   id: number;
@@ -206,17 +207,58 @@ export default function PaymentVouchers() {
           <i className="fa-solid fa-receipt" style={{ marginLeft: '10px', color: '#139625' }}></i>
           نظام إيصالات القبض المالي
         </span>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="primary"
-          style={{ 
-            padding: '10px 20px', borderRadius: '10px', 
-            fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          <i className="fa-solid fa-plus"></i>
-          إصدار إيصال جديد
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={() => {
+              exportToExcel({
+                title: 'سجل إيصالات القبض المالي',
+                fileName: 'إيصالات_القبض',
+                columnCount: 5,
+                summaryRight: `إجمالي المقبوضات: ${vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل`,
+                summaryLeft: `عدد الإيصالات: ${vouchers.length}`,
+                tableHeaders: `
+                  <tr height="40">
+                    <th width="150">رقم الإيصال</th>
+                    <th width="250">اسم الوكيل</th>
+                    <th width="120">المبلغ</th>
+                    <th width="150">طريقة الدفع</th>
+                    <th width="150">التاريخ</th>
+                  </tr>
+                `,
+                tableBody: vouchers.map((v, index) => `
+                  <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+                    <td style="font-weight:bold; color:#014cb1;">${v.voucher_number}</td>
+                    <td>${v.agent_name}</td>
+                    <td style="color:#139625; font-weight:bold;">${v.amount.toLocaleString()} د.ل</td>
+                    <td>${v.payment_method}</td>
+                    <td>${v.payment_date}</td>
+                  </tr>
+                `).join('')
+              });
+              showToast('تم تصدير سجل الإيصالات بنجاح', 'success');
+            }}
+            className="secondary"
+            style={{ 
+              padding: '10px 20px', borderRadius: '10px', 
+              fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+              border: '1px solid var(--border)'
+            }}
+          >
+            <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+            تصدير إكسيل
+          </button>
+          <button 
+            onClick={() => handleOpenModal()}
+            className="primary"
+            style={{ 
+              padding: '10px 20px', borderRadius: '10px', 
+              fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px'
+            }}
+          >
+            <i className="fa-solid fa-plus"></i>
+            إصدار إيصال جديد
+          </button>
+        </div>
       </div>
 
       <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>

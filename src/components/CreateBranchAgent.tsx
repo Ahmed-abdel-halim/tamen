@@ -101,11 +101,15 @@ export default function CreateBranchAgent() {
 
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
+  const [nationalIdPhoto, setNationalIdPhoto] = useState<File | null>(null);
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isCustomCity, setIsCustomCity] = useState(false);
   const personalPhotoRef = useRef<HTMLInputElement>(null);
   const identityPhotoRef = useRef<HTMLInputElement>(null);
+  const nationalIdPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
 
   // حساب مدة العقد تلقائياً
@@ -252,6 +256,7 @@ export default function CreateBranchAgent() {
 
       if (personalPhoto) formDataToSend.append('personal_photo', personalPhoto);
       if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
+      if (nationalIdPhoto) formDataToSend.append('national_id_photo', nationalIdPhoto);
       if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
       formDataToSend.append('username', formData.username);
       formDataToSend.append('password', formData.password);
@@ -424,17 +429,55 @@ export default function CreateBranchAgent() {
 
             <div className="form-group">
               <label>المدينة *</label>
-              <select
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              >
-                <option value="">اختر المدينة</option>
-                {LIBYAN_CITIES.map((city, index) => (
-                  <option key={index} value={city.ar}>
-                    {city.ar} - {city.en}
-                  </option>
-                ))}
-              </select>
+              {isCustomCity ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="اكتب اسم المدينة الجديدة"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCity(false);
+                      setFormData({ ...formData, city: '' });
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#f3f4f6',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      color: '#374151',
+                      fontWeight: '500'
+                    }}
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={formData.city}
+                  onChange={(e) => {
+                    if (e.target.value === 'other') {
+                      setIsCustomCity(true);
+                      setFormData({ ...formData, city: '' });
+                    } else {
+                      setFormData({ ...formData, city: e.target.value });
+                    }
+                  }}
+                >
+                  <option value="">اختر المدينة</option>
+                  {LIBYAN_CITIES.map((city, index) => (
+                    <option key={index} value={city.ar}>
+                      {city.ar} - {city.en}
+                    </option>
+                  ))}
+                  <option value="other">أخرى (إضافة مدينة جديدة...)</option>
+                </select>
+              )}
               {formErrors.city && <span className="error-message">{formErrors.city}</span>}
             </div>
 
@@ -536,23 +579,44 @@ export default function CreateBranchAgent() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>صورة العقد (غير إجباري)</label>
-              <input
-                ref={contractPhotoRef}
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(e) => setContractPhoto(e.target.files?.[0] || null)}
-                style={{ display: 'none' }}
-              />
-              <button
-                type="button"
-                onClick={() => contractPhotoRef.current?.click()}
-                className="btn-submit"
-                style={{ width: '100%' }}
-              >
-                {contractPhoto ? contractPhoto.name : 'اختر صورة العقد'}
-              </button>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>صورة الرقم الوطني</label>
+                <input
+                  ref={nationalIdPhotoRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNationalIdPhoto(e.target.files?.[0] || null)}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => nationalIdPhotoRef.current?.click()}
+                  className="btn-submit"
+                  style={{ width: '100%' }}
+                >
+                  {nationalIdPhoto ? nationalIdPhoto.name : 'اختر صورة الرقم الوطني'}
+                </button>
+              </div>
+
+              <div className="form-group">
+                <label>صورة العقد (غير إجباري)</label>
+                <input
+                  ref={contractPhotoRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setContractPhoto(e.target.files?.[0] || null)}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => contractPhotoRef.current?.click()}
+                  className="btn-submit"
+                  style={{ width: '100%' }}
+                >
+                  {contractPhoto ? contractPhoto.name : 'اختر صورة العقد'}
+                </button>
+              </div>
             </div>
 
             <div className="form-grid">
@@ -568,12 +632,34 @@ export default function CreateBranchAgent() {
               </div>
               <div className="form-group">
                 <label>كلمة المرور *</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="كلمة المرور"
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="كلمة المرور"
+                    style={{ width: '100%', paddingLeft: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      left: '10px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      color: '#6b7280'
+                    }}
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
                 {formErrors.password && <span className="error-message">{formErrors.password}</span>}
               </div>
             </div>
@@ -665,7 +751,7 @@ export default function CreateBranchAgent() {
               </div>
 
               {/* النسب الخاصة بالوثائق المصرح بها */}
-              {(formData.authorized_documents.length > 0 || (formData.authorized_documents.includes('تأمين سيارات إجباري') && formData.document_percentages['تأمين سيارات'] !== undefined)) && (
+              {formData.authorized_documents.some(doc => INSURANCE_TYPES.includes(doc)) && (
                 <div style={{ marginTop: '20px' }}>
                   <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
                     النسب الخاصة بالوكيل/الفرع (من القسط المقرر)
@@ -695,7 +781,7 @@ export default function CreateBranchAgent() {
                       </div>
                     )}
                     {/* عرض باقي الوثائق المصرح بها (عدا "تأمين سيارات إجباري") */}
-                    {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري').map((docType) => (
+                    {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
                       <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
                         <select

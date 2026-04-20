@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar'
+import './premium-hr.css';
 
 type SidebarItem = {
   label: string;
@@ -62,7 +63,8 @@ import PersonalAccidentInsuranceList from './components/PersonalAccidentInsuranc
 import CreatePersonalAccidentInsurance from './components/CreatePersonalAccidentInsurance';
 import ViewPersonalAccidentInsurance from './components/ViewPersonalAccidentInsurance';
 import EditPersonalAccidentInsurance from './components/EditPersonalAccidentInsurance';
-import UserDetails from './components/UserDetails';
+// // import UserDetails from './components/UserDetails';
+import EmployeeProfile from './components/EmployeeProfile';
 
 import SchoolStudentInsuranceList from './components/SchoolStudentInsuranceList';
 import CreateSchoolStudentInsurance from './components/CreateSchoolStudentInsurance';
@@ -91,6 +93,7 @@ import BankReconciliation from './components/BankReconciliation';
 import FinancialArchive from './components/FinancialArchive';
 import OutstandingDebts from './components/OutstandingDebts';
 import InventoryManagement from './components/InventoryManagement';
+import AllEmployeeRequests from './components/AllEmployeeRequests';
 import EmployeeSalaries from './components/EmployeeSalaries';
 import { ToastContainer } from './components/Toast';
 
@@ -252,7 +255,12 @@ const menuSections: SidebarSection[] = [
     title: 'الشؤون الادارية',
     items: [
       { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
-      { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' },
+      { 
+        label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
+          { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+          { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+        ]
+      },
       { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
   },
@@ -300,7 +308,8 @@ const menuSections: SidebarSection[] = [
 const createMenuSections = (
   authorizedDocs: string[] | null,
   isAdmin: boolean,
-  branchAgentId?: number | null
+  branchAgentId?: number | null,
+  userId?: number | null
 ): SidebarSection[] => {
   // إذا كان المستخدم admin، أظهر كل شيء
   if (isAdmin) {
@@ -337,7 +346,9 @@ const createMenuSections = (
     'إدارة الإيرادات': { label: 'إدارة الإيرادات', icon: 'fa-solid fa-money-bill-trend-up', to: '/reports/revenue' },
     'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     'إدارة الفروع والوكلاء': { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
-    'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' },
+    'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+    'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+    'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' }, // للتوافق القديم
     'الأرشيف': { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
@@ -377,7 +388,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
   ];
-  const adminOrder: string[] = ['/branches-agents', '/users', '/archive'];
+  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/archive'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -479,9 +490,29 @@ const createMenuSections = (
 
   // إضافة قسم التقارير إذا كان هناك تقارير مصرح بها
   if (adminItems.length > 0) {
+    const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
+    const otherAdmin = adminItems.filter(i => i.to !== '/users' && i.to !== '/employee-requests');
+    
+    const finalAdmin = [...otherAdmin];
+    if (hrGroup.length > 0) {
+      // إذا كان هناك عنصر واحد فقط، لا حاجة للمجموعة
+      if (hrGroup.length === 1 && hrGroup[0].to === '/users') {
+        finalAdmin.push(hrGroup[0]);
+      } else {
+        finalAdmin.push({
+          label: 'إدارة الموظفين',
+          icon: 'fa-solid fa-user-shield',
+          children: hrGroup.map(item => ({
+            ...item,
+            label: item.to === '/users' ? 'قائمة الموظفين' : 'طلبات الموظفين'
+          }))
+        });
+      }
+    }
+
     sections.push({
       title: 'الشؤون الادارية',
-      items: adminItems,
+      items: finalAdmin,
     });
   }
 
@@ -533,6 +564,19 @@ const createMenuSections = (
     });
   }
 
+  // إضافة قسم "حسابي الشخصي" للجميع (موظفين، وكلاء، أدمن)
+  if (userId) {
+    sections.push({
+      title: 'حسابي الشخصي',
+      items: [
+        { label: 'ملفي الوظيفي', icon: 'fa-solid fa-address-card', to: `/users/${userId}?tab=personal` },
+        { label: 'بياناتي الوظيفية', icon: 'fa-solid fa-briefcase', to: `/users/${userId}?tab=job` },
+        { label: 'طلباتي الشخصية', icon: 'fa-solid fa-paper-plane', to: `/users/${userId}?tab=requests` },
+        { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
+      ],
+    });
+  }
+
   return sections;
 }
 
@@ -540,6 +584,7 @@ export default function App() {
   const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [branchAgentId, setBranchAgentId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const html = document.documentElement
@@ -562,11 +607,13 @@ export default function App() {
         setIsAdmin(user.is_admin || false);
         setAuthorizedDocuments(user.authorized_documents || null);
         setBranchAgentId(user.branch_agent_id ?? null);
+        setCurrentUserId(user.id);
       } catch (error) {
         console.error('Error loading user permissions:', error);
         setAuthorizedDocuments(null);
         setIsAdmin(false);
         setBranchAgentId(null);
+        setCurrentUserId(null);
       }
     };
 
@@ -591,6 +638,7 @@ export default function App() {
       setAuthorizedDocuments(null);
       setIsAdmin(false);
       setBranchAgentId(null);
+      setCurrentUserId(null);
       window.location.reload(); // إعادة تحميل الصفحة عند تسجيل الخروج
     });
 
@@ -601,6 +649,15 @@ export default function App() {
       window.removeEventListener('userLoggedOut', () => { });
     };
   }, [])
+
+  const getMenuSectionsSafely = () => {
+    try {
+      return createMenuSections(authorizedDocuments, isAdmin, branchAgentId, currentUserId);
+    } catch (e) {
+      console.error('Error creating menu sections:', e);
+      return [];
+    }
+  };
 
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -656,7 +713,7 @@ export default function App() {
           <ProtectedRoute>
             <div className={`app-shell ${isSidebarOpen ? 'is-sidebar-open' : 'is-sidebar-closed'}`}>
               <Sidebar
-                sections={createMenuSections(authorizedDocuments, isAdmin, branchAgentId)}
+                sections={getMenuSectionsSafely()}
                 LinkTag={Link}
                 onLinkClick={() => {
                   // إغلاق السايدبار عند النقر على رابط في الشاشات الصغيرة
@@ -686,7 +743,8 @@ export default function App() {
                   <Route path="/dashboard" element={<DashboardPanels />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/users" element={<UsersList />} />
-                  <Route path="/users/:id" element={<UserDetails />} />
+                  <Route path="/employee-requests" element={<AllEmployeeRequests />} />
+                  <Route path="/users/:id" element={<EmployeeProfile />} />
                   {/* إدارة الفروع والوكلاء */}
                   <Route path="/branches-agents" element={<BranchesAgentsList />} />
                   <Route path="/branches-agents/create" element={<CreateBranchAgent />} />

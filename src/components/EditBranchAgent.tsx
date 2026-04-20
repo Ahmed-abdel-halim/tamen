@@ -103,14 +103,19 @@ export default function EditBranchAgent() {
 
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
+  const [nationalIdPhoto, setNationalIdPhoto] = useState<File | null>(null);
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
   const [existingPersonalPhoto, setExistingPersonalPhoto] = useState<string | null>(null);
   const [existingIdentityPhoto, setExistingIdentityPhoto] = useState<string | null>(null);
+  const [existingNationalIdPhoto, setExistingNationalIdPhoto] = useState<string | null>(null);
   const [existingContractPhoto, setExistingContractPhoto] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isCustomCity, setIsCustomCity] = useState(false);
   const personalPhotoRef = useRef<HTMLInputElement>(null);
   const identityPhotoRef = useRef<HTMLInputElement>(null);
+  const nationalIdPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
 
   // حساب مدة العقد تلقائياً
@@ -204,9 +209,15 @@ export default function EditBranchAgent() {
         document_percentages: data.document_percentages || {},
       });
       
+      if (data.city && !LIBYAN_CITIES.some(c => c.ar === data.city)) {
+        setIsCustomCity(true);
+      } else {
+        setIsCustomCity(false);
+      }
 
       setExistingPersonalPhoto(data.personal_photo || null);
       setExistingIdentityPhoto(data.identity_photo || null);
+      setExistingNationalIdPhoto(data.national_id_photo || null);
       setExistingContractPhoto(data.contract_photo || null);
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء جلب البيانات', 'error');
@@ -318,6 +329,7 @@ export default function EditBranchAgent() {
 
       if (personalPhoto) formDataToSend.append('personal_photo', personalPhoto);
       if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
+      if (nationalIdPhoto) formDataToSend.append('national_id_photo', nationalIdPhoto);
       if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
       formDataToSend.append('username', formData.username);
       if (formData.password) formDataToSend.append('password', formData.password);
@@ -523,17 +535,55 @@ export default function EditBranchAgent() {
 
             <div className="form-group">
               <label>المدينة *</label>
-              <select
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              >
-                <option value="">اختر المدينة</option>
-                {LIBYAN_CITIES.map((city, index) => (
-                  <option key={index} value={city.ar}>
-                    {city.ar} - {city.en}
-                  </option>
-                ))}
-              </select>
+              {isCustomCity ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="اكتب اسم المدينة الجديدة"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCity(false);
+                      setFormData({ ...formData, city: '' });
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#f3f4f6',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      color: '#374151',
+                      fontWeight: '500'
+                    }}
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={formData.city}
+                  onChange={(e) => {
+                    if (e.target.value === 'other') {
+                      setIsCustomCity(true);
+                      setFormData({ ...formData, city: '' });
+                    } else {
+                      setFormData({ ...formData, city: e.target.value });
+                    }
+                  }}
+                >
+                  <option value="">اختر المدينة</option>
+                  {LIBYAN_CITIES.map((city, index) => (
+                    <option key={index} value={city.ar}>
+                      {city.ar} - {city.en}
+                    </option>
+                  ))}
+                  <option value="other">أخرى (إضافة مدينة جديدة...)</option>
+                </select>
+              )}
               {formErrors.city && <span className="error-message">{formErrors.city}</span>}
             </div>
 
@@ -654,44 +704,74 @@ export default function EditBranchAgent() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>صورة العقد (غير إجباري)</label>
-              {existingContractPhoto && !contractPhoto && (
-                <div style={{ marginBottom: '10px' }}>
-                  {existingContractPhoto.endsWith('.pdf') ? (
-                    <a 
-                      href={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ display: 'inline-block', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
-                    >
-                      <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', color: '#ef4444' }}></i>
-                      <div>عرض PDF الحالي</div>
-                    </a>
-                  ) : (
+            <div className="form-grid">
+              <div className="form-group">
+                <label>صورة الرقم الوطني</label>
+                {existingNationalIdPhoto && !nationalIdPhoto && (
+                  <div style={{ marginBottom: '10px' }}>
                     <img 
-                      src={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
-                      alt="صورة العقد الحالية"
+                      src={`${BACKEND_URL}/storage/${existingNationalIdPhoto}`} 
+                      alt="صورة الرقم الوطني الحالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
-                  )}
-                </div>
-              )}
-              <input
-                ref={contractPhotoRef}
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(e) => setContractPhoto(e.target.files?.[0] || null)}
-                style={{ display: 'none' }}
-              />
-              <button
-                type="button"
-                onClick={() => contractPhotoRef.current?.click()}
-                className="btn-submit"
-                style={{ width: '100%' }}
-              >
-                {contractPhoto ? contractPhoto.name : 'اختر صورة العقد جديدة'}
-              </button>
+                  </div>
+                )}
+                <input
+                  ref={nationalIdPhotoRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNationalIdPhoto(e.target.files?.[0] || null)}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => nationalIdPhotoRef.current?.click()}
+                  className="btn-submit"
+                  style={{ width: '100%' }}
+                >
+                  {nationalIdPhoto ? nationalIdPhoto.name : 'اختر صورة الرقم الوطني جديدة'}
+                </button>
+              </div>
+
+              <div className="form-group">
+                <label>صورة العقد (غير إجباري)</label>
+                {existingContractPhoto && !contractPhoto && (
+                  <div style={{ marginBottom: '10px' }}>
+                    {existingContractPhoto.endsWith('.pdf') ? (
+                      <a 
+                        href={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-block', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                      >
+                        <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', color: '#ef4444' }}></i>
+                        <div>عرض PDF الحالي</div>
+                      </a>
+                    ) : (
+                      <img 
+                        src={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
+                        alt="صورة العقد الحالية"
+                        style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
+                      />
+                    )}
+                  </div>
+                )}
+                <input
+                  ref={contractPhotoRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setContractPhoto(e.target.files?.[0] || null)}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => contractPhotoRef.current?.click()}
+                  className="btn-submit"
+                  style={{ width: '100%' }}
+                >
+                  {contractPhoto ? contractPhoto.name : 'اختر صورة العقد جديدة'}
+                </button>
+              </div>
             </div>
 
             <div className="form-grid">
@@ -707,12 +787,34 @@ export default function EditBranchAgent() {
               </div>
               <div className="form-group">
                 <label>كلمة المرور (اتركها فارغة إذا لم ترد التغيير)</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="كلمة المرور"
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="كلمة المرور"
+                    style={{ width: '100%', paddingLeft: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      left: '10px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      color: '#6b7280'
+                    }}
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
                 {formErrors.password && <span className="error-message">{formErrors.password}</span>}
               </div>
             </div>
@@ -804,7 +906,7 @@ export default function EditBranchAgent() {
               </div>
 
               {/* النسب الخاصة بالوثائق المصرح بها */}
-              {(formData.authorized_documents.length > 0 || (formData.authorized_documents.includes('تأمين سيارات إجباري') && formData.document_percentages['تأمين سيارات'] !== undefined)) && (
+              {formData.authorized_documents.some(doc => INSURANCE_TYPES.includes(doc)) && (
                 <div style={{ marginTop: '20px' }}>
                   <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
                     النسب الخاصة بالوكيل/الفرع (من القسط المقرر)
@@ -834,7 +936,7 @@ export default function EditBranchAgent() {
                       </div>
                     )}
                     {/* عرض باقي الوثائق المصرح بها (عدا "تأمين سيارات إجباري") */}
-                    {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري').map((docType) => (
+                    {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
                       <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
                         <select

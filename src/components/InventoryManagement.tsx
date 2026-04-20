@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { exportToExcel } from '../utils/excelExport';
 
 interface StoreItem {
   id: number;
@@ -652,12 +653,56 @@ export default function InventoryManagement() {
                   <i className="fa-solid fa-magnifying-glass"></i>
                 </button>
               </div>
-              <button 
-                className="primary add-user-btn" 
-                onClick={openAddItemModal}
-              >
-                <i className="fa-solid fa-plus"></i> إضافة صنف 
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  className="secondary" 
+                  onClick={() => {
+                    exportToExcel({
+                      title: 'تقرير المخزن الرئيسي',
+                      fileName: 'المخزن_الرئيسي',
+                      columnCount: 8,
+                      summaryRight: `إجمالي الأصناف: ${filteredItems.length}`,
+                      summaryLeft: `تاريخ التصدير: ${new Date().toLocaleDateString('ar-LY')}`,
+                      tableHeaders: `
+                        <tr height="40">
+                          <th width="50">#</th>
+                          <th width="200">الصنف</th>
+                          <th width="120">النوع</th>
+                          <th width="120">التصنيف</th>
+                          <th width="120">السعر</th>
+                          <th width="100">الكمية</th>
+                          <th width="80">الوحدة</th>
+                          <th width="150">الموقع</th>
+                        </tr>
+                      `,
+                      tableBody: filteredItems.map((item, index) => `
+                        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+                          <td>${index + 1}</td>
+                          <td style="text-align:right; font-weight:bold;">${item.name}</td>
+                          <td>${getInventoryTypeName(item.inventory_type)}</td>
+                          <td>${getCategoryName(item.category)}</td>
+                          <td>${getItemPrice(item) ? item.price + ' د.ل' : '-'}</td>
+                          <td class="${(item.stocks?.[0]?.quantity || 0) <= item.min_threshold ? 'red bold' : 'green bold'}">
+                            ${item.stocks?.[0]?.quantity || 0}
+                          </td>
+                          <td>${item.unit}</td>
+                          <td>${item.stocks?.[0]?.warehouse_location || '-'}</td>
+                        </tr>
+                      `).join('')
+                    });
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
+                >
+                  <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+                  تصدير إكسيل
+                </button>
+                <button 
+                  className="primary add-user-btn" 
+                  onClick={openAddItemModal}
+                >
+                  <i className="fa-solid fa-plus"></i> إضافة صنف 
+                </button>
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>

@@ -70,7 +70,13 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     const fetchStatistics = async () => {
       try {
         const userStr = localStorage.getItem('user');
-        const userId = userStr ? JSON.parse(userStr).id : null;
+        let userId = null;
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userId = user.id;
+          } catch (e) {}
+        }
         
         const headers: HeadersInit = { 'Accept': 'application/json' };
         if (userId) {
@@ -97,7 +103,13 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     const fetchLatestDocuments = async () => {
       try {
         const userStr = localStorage.getItem('user');
-        const userId = userStr ? JSON.parse(userStr).id : null;
+        let userId = null;
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userId = user.id;
+          } catch (e) {}
+        }
         
         const headers: HeadersInit = { 'Accept': 'application/json' };
         if (userId) {
@@ -256,13 +268,24 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       .filter(route => authorizedRoutesMap.has(route))
       .map(route => authorizedRoutesMap.get(route)!);
 
-    // إضافة الخدمات الأخرى التي لا تحتاج صلاحيات (مثل وثيقة تأمين حمايه طلاب المدارس)
-    const otherServices = allServices.filter(service => 
-      service.route === '#' || 
-      (service.route.startsWith('/reports/branch-agent-account') && isAdmin)
-    );
+    // إضافة الخدمات العامة للجميع (مثل ملفي الوظيفي للموظفين)
+    let currentUserId = '';
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        currentUserId = JSON.parse(userStr).id;
+      } catch (e) {}
+    }
 
-    return [...authorizedServices, ...otherServices];
+    const personalServices: ServiceCard[] = [
+      { label: 'ملفي الوظيفي وطلباتي', icon: 'fa-solid fa-address-card', route: `/users/${currentUserId}`, color: 'blue' }
+    ];
+
+    if (authorizedServices.length === 0 && !isAdmin) {
+      return personalServices;
+    }
+
+    return [...authorizedServices, ...personalServices];
   };
 
   const services = getFilteredServices();

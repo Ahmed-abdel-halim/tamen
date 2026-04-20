@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
+import { exportToExcel as exportUtil } from '../utils/excelExport';
 
 interface RevenueSource {
   name: string;
@@ -60,76 +61,29 @@ export default function RevenueManagement() {
 
   const exportToExcel = () => {
     if (!stats) return;
-    const logoUrl = window.location.origin + '/img/logo.png';
-    const tableHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; }
-          .co-name { font-size: 20pt; font-weight: 900; color: #014cb1; text-align: right; }
-          .co-sub { font-size: 12pt; color: #64748b; text-align: right; }
-          .report-subtitle { font-size: 14pt; font-weight: bold; background-color: #f0f7ff; color: #014cb1; text-align: center; border: 1px solid #dbeafe; }
-          table { border-collapse: collapse; width: 100%; }
-          th { background-color: #014cb1; color: #ffffff; font-weight: bold; border: 1px solid #003173; padding: 12px; text-align: center; }
-          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; }
-          .total-box { background-color: #f8fafc; font-weight: bold; border: 1px solid #e2e8f0; }
-          .meta-info { color: #94a3b8; font-size: 9pt; text-align: right; }
-        </style>
-      </head>
-      <body dir="rtl">
-        <table>
-          <tr>
-            <td colspan="4" style="border:none; text-align:right; vertical-align: top;">
-              <div class="co-name">شركة المدار الليبي للتأمين</div>
-              <div class="co-sub">Al Madar Libyan Insurance</div>
-              <div class="co-sub">قسم الشؤون المالية والمحاسبية</div>
-            </td>
-            <td colspan="2" style="border:none; text-align:left; vertical-align: top;">
-              <img src="${logoUrl}" width="100" height="80">
-            </td>
-          </tr>
-          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
-          <tr><td colspan="6" class="report-subtitle">تقرير الإيرادات والمقبوضات المالية - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</td></tr>
-          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
-          
-          <tr style="height: 50px;">
-            <td colspan="2" class="total-box">إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل</td>
-            <td colspan="2" class="total-box">إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل</td>
-            <td colspan="2" class="total-box" style="color: #ef4444;">الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل</td>
-          </tr>
-          <tr><td colspan="6" style="border:none; height:20px;"></td></tr>
-          
-          <thead>
-            <tr>
-              <th colspan="3">نوع التأمين</th>
-              <th colspan="2">عدد الوثائق الصادرة</th>
-              <th colspan="1">نسبة المساهمة</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${stats.sources.map(s => `
-              <tr>
-                <td colspan="3" style="text-align:right; font-weight:bold;">${s.name}</td>
-                <td colspan="2">${s.value.toLocaleString()} وثيقة</td>
-                <td colspan="1">100%</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <br>
-        <p class="meta-info">تاريخ الطباعة: ${new Date().toLocaleString('ar-LY')} | تم استخراج هذا التقرير آلياً</p>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `تقرير_إيرادات_المدار_${new Date().getTime()}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
+    
+    exportUtil({
+      title: 'تقرير الإيرادات والمقبوضات المالية',
+      fileName: 'تقرير_إيرادات_المدار',
+      columnCount: 6,
+      summaryRight: `إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل    |    إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل`,
+      summaryLeft: `الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل`,
+      tableHeaders: `
+        <tr height="40">
+          <th colspan="3">نوع التأمين</th>
+          <th colspan="2">عدد الوثائق الصادرة</th>
+          <th colspan="1">نسبة المساهمة</th>
+        </tr>
+      `,
+      tableBody: stats.sources.map((s, index) => `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td colspan="3" style="text-align:right; font-weight:bold;">${s.name}</td>
+          <td colspan="2">${s.value.toLocaleString()} وثيقة</td>
+          <td colspan="1">100%</td>
+        </tr>
+      `).join('')
+    });
+    
     showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
   };
 

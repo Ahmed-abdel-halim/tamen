@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showToast } from './Toast';
 import { API_BASE_URL } from "../config/api";
+import { exportToExcel } from '../utils/excelExport';
 
 type Employee = {
   id: number;
@@ -85,9 +86,15 @@ export default function EmployeeSalaries() {
   const loadAll = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      
       const [employeesRes, payrollsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/employee-payrolls/employees`),
-        fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`),
+        fetch(`${API_BASE_URL}/employee-payrolls/employees`, { headers }),
+        fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`, { headers }),
       ]);
       const employeesData = await employeesRes.json();
       const payrollsData = await payrollsRes.json();
@@ -176,9 +183,14 @@ export default function EmployeeSalaries() {
     if (!payrollForm) return;
     setSaving(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/employee-payrolls`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           user_id: payrollForm.user_id,
           year,
@@ -217,7 +229,13 @@ export default function EmployeeSalaries() {
   const openHistory = async (employee: Employee) => {
     setHistoryFor(employee);
     try {
-      const res = await fetch(`${API_BASE_URL}/users/${employee.id}/salary-history`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/users/${employee.id}/salary-history`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       const data = await res.json();
       setHistory(Array.isArray(data) ? data : []);
     } catch {
@@ -226,100 +244,59 @@ export default function EmployeeSalaries() {
   };
 
   const handleExportCsv = () => {
-    const logoUrl = window.location.origin + '/img/logo.png';
-    // We'll use the HTML-as-Excel trick to support styling (backgrounds, colors, etc.)
-    const tableHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-        <style>
-          .header-main { font-family: 'Cairo', sans-serif; }
-          .co-name { font-size: 22pt; font-weight: 900; color: #1e293b; text-align: right; }
-          .co-sub { font-size: 14pt; color: #64748b; text-align: right; }
-          .report-subtitle { font-size: 16pt; font-weight: bold; background-color: #f8fafc; color: #1e293b; text-align: center; border: 1px solid #e2e8f0; }
-          table { border-collapse: collapse; width: 100%; }
-          th { background-color: #1e293b; color: #ffffff; font-weight: bold; border: 1px solid #000; padding: 12px; text-align: center; }
-          td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; }
-          .total-row { background-color: #f1f5f9; font-weight: bold; }
-          .net-salary { color: #10b981; font-weight: bold; font-size: 12pt; }
-          .emp-name { text-align: right; font-weight: bold; }
-        </style>
-      </head>
-      <body dir="rtl">
-        <table>
-          <tr>
-            <td colspan="${8 + Math.floor(allExtraLabels.length/2)}" style="border:none; text-align:right;">
-              <div class="co-name">المدار الليبي للتأمين</div>
-              <div class="co-sub">Al Madar Libyan Insurance</div>
-              <div class="co-sub">قسم الشؤون المالية والموارد البشرية</div>
-            </td>
-            <td colspan="${5 + Math.ceil(allExtraLabels.length/2)}" style="border:none; text-align:left;">
-              <img src="${logoUrl}" width="100" height="80">
-            </td>
-          </tr>
-          <tr><td colspan="${13 + allExtraLabels.length}" style="border:none; height:20px;"></td></tr>
-          <tr><td colspan="${13 + allExtraLabels.length}" class="report-subtitle">كشف مرتبات الموظفين لشهر (${month}) سنة (${year})</td></tr>
-          <tr><td colspan="${13 + allExtraLabels.length}" style="border:none; height:20px;"></td></tr>
-          <thead>
-            <tr>
-              <th>الموظف</th>
-              <th>الأساسي</th>
-              <th>سكن</th>
-              <th>مواصلات</th>
-              <th>اتصالات</th>
-              <th>مكافآت</th>
-              <th>خصومات</th>
-              <th>سلف</th>
-              <th>غرامات</th>
-              ${allExtraLabels.map(l => `<th>${l}</th>`).join('')}
-              <th>الصافي</th>
-              <th>الحالة</th>
-              <th>التسليم</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(r => `
-              <tr>
-                <td style="text-align:right; font-weight:bold;">${r.e.name}</td>
-                <td>${r.base}</td>
-                <td>${r.housing}</td>
-                <td>${r.transport}</td>
-                <td>${r.communication}</td>
-                <td>${r.bonus}</td>
-                <td>${r.deduction}</td>
-                <td>${r.advance}</td>
-                <td>${r.penalty}</td>
-                ${allExtraLabels.map(label => {
-                  const f = r.extra_fields.find(x => x.label === label);
-                  return `<td>${f ? f.amount : 0}</td>`;
-                }).join('')}
-                <td class="net-salary">${r.net}</td>
-                <td>${r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
-                <td>${r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method || 'أخرى' : (r.p?.delivery_method || '-')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-          <tfoot>
-            <tr class="total-row">
-              <td colspan="1">الإجمالي العام</td>
-              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-              ${allExtraLabels.map(() => `<td>-</td>`).join('')}
-              <td class="net-salary">${totals.total}</td>
-              <td colspan="2">عدد الموظفين: ${rows.length}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `employee-payroll-${year}-${month}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportToExcel({
+      title: 'كشف مرتبات الموظفين',
+      fileName: 'كشف_مرتبات',
+      columnCount: 13 + allExtraLabels.length,
+      summaryRight: `كشف مرتبات شهر (${month}) سنة (${year})`,
+      summaryLeft: `إجمالي الصافي للموظفين: ${totals.total.toLocaleString()} د.ل    |    عدد الموظفين: ${rows.length}`,
+      tableHeaders: `
+        <tr height="40">
+          <th width="200">الموظف</th>
+          <th width="100">الأساسي</th>
+          <th width="80">سكن</th>
+          <th width="80">مواصلات</th>
+          <th width="80">اتصالات</th>
+          <th width="100">مكافآت</th>
+          <th width="100">خصومات</th>
+          <th width="80">سلف</th>
+          <th width="80">غرامات</th>
+          ${allExtraLabels.map(l => `<th width="100">${l}</th>`).join('')}
+          <th width="150">الصافي</th>
+          <th width="120">الحالة</th>
+          <th width="150">التسليم</th>
+        </tr>
+      `,
+      tableBody: rows.map((r, index) => `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td style="text-align:right; font-weight:bold;">${r.e.name}</td>
+          <td>${r.base}</td>
+          <td>${r.housing}</td>
+          <td>${r.transport}</td>
+          <td>${r.communication}</td>
+          <td>${r.bonus}</td>
+          <td>${r.deduction}</td>
+          <td>${r.advance}</td>
+          <td>${r.penalty}</td>
+          ${allExtraLabels.map(label => {
+            const f = r.extra_fields.find(x => x.label === label);
+            return `<td>${f ? f.amount : 0}</td>`;
+          }).join('')}
+          <td class="green">${r.net}</td>
+          <td>${r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
+          <td>${r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method || 'أخرى' : (r.p?.delivery_method || '-')}</td>
+        </tr>
+      `).join('') + `
+        <tr height="35" style="background-color: #f3f4f6; font-weight: bold;">
+          <td colspan="9" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
+          ${allExtraLabels.map(() => `<td></td>`).join('')}
+          <td class="bold">${totals.total}</td>
+          <td colspan="2">موظفين ( ${rows.length} )</td>
+        </tr>
+      `
+    });
+    
+    showToast('تم تصدير الكشف الاحترافي بنجاح', 'success');
   };
 
   const handleBulkPay = async () => {
@@ -333,9 +310,14 @@ export default function EmployeeSalaries() {
     if (!ok) return;
     setBulkPaying(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/employee-payrolls/bulk-pay`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ year, month }),
       });
       const data = await res.json().catch(() => ({}));
