@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { showToast } from './Toast';
 import { exportToExcel } from '../utils/excelExport';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../config/api';
 
 interface Expense {
   id: number;
@@ -1067,7 +1067,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       <td>
                         {u.receipt_image ? (
                           <button
-                            onClick={() => setSelectedImage(u.receipt_image ? `${API_BASE_URL.replace('/api', '')}${u.receipt_image}` : null)}
+                            onClick={() => setSelectedImage(u.receipt_image ? `${BACKEND_URL}${u.receipt_image}` : null)}
                             style={{ background: '#e0f2fe', color: '#0284c7', padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
                           >
                             <i className="fa-solid fa-image"></i> عرض الواصل
