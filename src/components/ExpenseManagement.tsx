@@ -39,12 +39,7 @@ interface UnionPurchase {
   notes: string;
 }
 
-interface UnionStats {
-  total_deposit: number;
-  original_deposit?: number;
-  total_cards: number;
-  total_indemnities_deducted?: number;
-}
+
 
 const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة', 'التعويضات'];
 
@@ -91,8 +86,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     setActiveTab(activeTabOverride);
   }, [activeTabOverride]);
   const [unionPurchases, setUnionPurchases] = useState<UnionPurchase[]>([]);
-  const [unionStats, setUnionStats] = useState<UnionStats>({ total_deposit: 0, total_cards: 0 });
   const [showUnionModal, setShowUnionModal] = useState(false);
+  const [editingUnionPurchase, setEditingUnionPurchase] = useState<UnionPurchase | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Union Form States
@@ -106,7 +101,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [unionNotes, setUnionNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
 
-
+  // Union Filter States
+  const [unionSearchFilter, setUnionSearchFilter] = useState('');
+  const [unionYearFilter, setUnionYearFilter] = useState('الكل');
+  const [unionMonthFilter, setUnionMonthFilter] = useState('الكل');
+  const [unionFromDate, setUnionFromDate] = useState('');
+  const [unionToDate, setUnionToDate] = useState('');
 
   // Calculated derived state for Union UI
   const cardsCount = React.useMemo(() => {
@@ -118,15 +118,36 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const totalUnionFee = React.useMemo(() => cardsCount * (parseFloat(unionFeePerCard) || 0), [cardsCount, unionFeePerCard]);
   const totalCompanyDeposit = React.useMemo(() => cardsCount * (parseFloat(companyDepositPerCard) || 0), [cardsCount, companyDepositPerCard]);
 
-  const unionTotalStats = React.useMemo(() => {
+  const filteredUnion = React.useMemo(() => {
+    return unionPurchases.filter(u => {
+      const matchesSearch = !unionSearchFilter || u.request_number?.toLowerCase().includes(unionSearchFilter.toLowerCase());
+      
+      const purchaseDate = new Date(u.purchase_date);
+      const matchesYear = unionYearFilter === 'الكل' || purchaseDate.getFullYear().toString() === unionYearFilter;
+      const matchesMonth = unionMonthFilter === 'الكل' || (purchaseDate.getMonth() + 1).toString() === unionMonthFilter;
+      
+      const pDateClean = new Date(purchaseDate.toISOString().split('T')[0]);
+      const matchesFrom = !unionFromDate || pDateClean >= new Date(unionFromDate);
+      const matchesTo = !unionToDate || pDateClean <= new Date(unionToDate);
+      
+      return matchesSearch && matchesYear && matchesMonth && matchesFrom && matchesTo;
+    });
+  }, [unionPurchases, unionSearchFilter, unionYearFilter, unionMonthFilter, unionFromDate, unionToDate]);
+
+  const unionFilteredStats = React.useMemo(() => {
     let totalPaid = 0;
     let totalFee = 0;
-    unionPurchases.forEach(u => {
+    let totalDeposit = 0;
+    let totalCards = 0;
+    filteredUnion.forEach(u => {
       totalPaid += parseFloat(u.amount_paid.toString()) || 0;
-      totalFee += (parseFloat(u.cards_count.toString()) || 0) * (parseFloat(u.union_fee_per_card.toString()) || 0);
+      const cards = (parseFloat(u.cards_count.toString()) || 0);
+      totalCards += cards;
+      totalFee += cards * (parseFloat(u.union_fee_per_card.toString()) || 0);
+      totalDeposit += cards * (parseFloat(u.company_deposit_per_card.toString()) || 0);
     });
-    return { totalPaid, totalFee };
-  }, [unionPurchases]);
+    return { totalPaid, totalFee, totalDeposit, totalCards };
+  }, [filteredUnion]);
 
   const dynamicCategories = React.useMemo(() => {
     const existing = expenses.map(e => e.category);
@@ -160,23 +181,21 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
   const paginatedUnion = React.useMemo(() => {
     const startIndex = (currentUnionPage - 1) * unionItemsPerPage;
-    return unionPurchases.slice(startIndex, startIndex + unionItemsPerPage);
-  }, [unionPurchases, currentUnionPage]);
+    return filteredUnion.slice(startIndex, startIndex + unionItemsPerPage);
+  }, [filteredUnion, currentUnionPage]);
 
-  const totalUnionPages = Math.ceil(unionPurchases.length / unionItemsPerPage);
+  const totalUnionPages = Math.ceil(filteredUnion.length / unionItemsPerPage);
 
   const getPaginationRange = (current: number, total: number) => {
     const delta = 1;
     const range = [];
     const rangeWithDots: (number | string)[] = [];
     let l;
-
     for (let i = 1; i <= total; i++) {
       if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
         range.push(i);
       }
     }
-
     for (const i of range) {
       if (l) {
         if (i - l === 2) {
@@ -188,7 +207,6 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       rangeWithDots.push(i);
       l = i;
     }
-
     return rangeWithDots;
   };
 
@@ -206,10 +224,14 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     fetchUnionBalances();
   }, []);
 
-  // Reset page when filters change
+  // Reset pages when filters change
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
+
+  React.useEffect(() => {
+    setCurrentUnionPage(1);
+  }, [unionSearchFilter, unionYearFilter, unionMonthFilter, unionFromDate, unionToDate]);
 
   const fetchUnionBalances = async () => {
     try {
@@ -217,7 +239,6 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       const data = await response.json();
       if (data.success) {
         setUnionPurchases(data.data);
-        setUnionStats(data.statistics);
       }
     } catch (e) {
       console.error(e);
@@ -269,32 +290,21 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !amount) return;
-
     setLoading(true);
     try {
-      const url = editingExpense
-        ? `${API_BASE_URL}/expenses/${editingExpense.id}`
-        : `${API_BASE_URL}/expenses`;
-
+      const url = editingExpense ? `${API_BASE_URL}/expenses/${editingExpense.id}` : `${API_BASE_URL}/expenses`;
       const method = editingExpense ? 'PUT' : 'POST';
-
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          recipient,
-          category: category.includes('أخرى') ? customCategory : category,
-          amount: parseFloat(amount),
-          expense_date: date,
-          status,
-          notes,
+          name, recipient, category: category.includes('أخرى') ? customCategory : category,
+          amount: parseFloat(amount), expense_date: date, status, notes,
           is_indemnity: category === 'التعويضات',
           indemnity_type: category === 'التعويضات' ? indemnityType : null,
           payment_source: category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : 'bank'
         }),
       });
-
       if (response.ok) {
         showToast(editingExpense ? 'تم تحديث المصروف بنجاح' : 'تم إضافة المصروف بنجاح', 'success');
         setShowModal(false);
@@ -314,11 +324,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
   const handleDeleteExpense = async (id: number) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
-
     try {
-      const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' });
       if (response.ok) {
         showToast('تم حذف المصروف بنجاح', 'success');
         fetchExpenses();
@@ -331,25 +338,29 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     }
   };
 
-  const handlePayExpense = async (expense: Expense) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/expenses/${expense.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...expense,
-          status: 'مدفوع'
-        }),
-      });
-      if (response.ok) {
-        showToast('تم تحديث الحالة لمدفوع بنجاح', 'success');
-        fetchExpenses();
-      } else {
-        showToast('فشل تحديث الحالة', 'error');
-      }
-    } catch (error) {
-      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+  const handleOpenUnionModal = (purchase: UnionPurchase | null = null) => {
+    if (purchase) {
+      setEditingUnionPurchase(purchase);
+      setRequestNumber(purchase.request_number || '');
+      setAmountPaid(purchase.amount_paid.toString());
+      setCardPrice(purchase.card_price.toString());
+      setUnionFeePerCard(purchase.union_fee_per_card.toString());
+      setCompanyDepositPerCard(purchase.company_deposit_per_card.toString());
+      setPaymentMethod(purchase.payment_method);
+      setUnionPurchaseDate(purchase.purchase_date ? purchase.purchase_date.split('T')[0] : '');
+      setUnionNotes(purchase.notes || '');
+    } else {
+      setEditingUnionPurchase(null);
+      setRequestNumber('');
+      setAmountPaid('');
+      setCardPrice('20');
+      setUnionFeePerCard('5');
+      setCompanyDepositPerCard('15');
+      setPaymentMethod('حوالة مصرفية');
+      setUnionPurchaseDate(new Date().toISOString().split('T')[0]);
+      setUnionNotes('');
     }
+    setShowUnionModal(true);
   };
 
   const handleAddUnionPurchase = async (e: React.FormEvent) => {
@@ -366,26 +377,22 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       formData.append('payment_method', paymentMethod);
       formData.append('purchase_date', unionPurchaseDate);
       formData.append('notes', unionNotes);
-      if (receiptImage) {
-        formData.append('receipt_image', receiptImage);
-      }
+      if (receiptImage) formData.append('receipt_image', receiptImage);
+      if (editingUnionPurchase) formData.append('_method', 'PUT');
 
-      const response = await fetch(`${API_BASE_URL}/union-balances`, {
-        method: 'POST',
-        body: formData,
-      });
-
+      const url = editingUnionPurchase ? `${API_BASE_URL}/union-balances/${editingUnionPurchase.id}` : `${API_BASE_URL}/union-balances`;
+      const response = await fetch(url, { method: 'POST', body: formData });
       if (response.ok) {
-        showToast('تم تسجيل إيصال رصيد الاتحاد بنجاح', 'success');
+        showToast(editingUnionPurchase ? 'تم تحديث الإيصال بنجاح' : 'تم تسجيل إيصال رصيد الاتحاد بنجاح', 'success');
         setShowUnionModal(false);
         setReceiptImage(null);
         setAmountPaid('');
         setRequestNumber('');
+        setEditingUnionPurchase(null);
         fetchUnionBalances();
       } else {
         const errorText = await response.text();
         showToast(`فشل: ${errorText.substring(0, 50)}`, 'error');
-        console.error("Backend Error Response:", errorText);
       }
     } catch (e) {
       showToast(`خطأ: ${(e as Error).message}`, 'error');
@@ -403,22 +410,18 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         fetchUnionBalances();
       }
     } catch (e) {
-      showToast('خطأ أثناء החذف', 'error');
+      showToast('خطأ أثناء الحذف', 'error');
     }
   };
 
   const exportToExcelFunc = () => {
-    if (expenses.length === 0) {
-      showToast('لا توجد بيانات لتصديرها', 'error');
-      return;
-    }
-
+    if (expenses.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
     exportToExcel({
       title: 'تقرير المصروفات التشغيلية',
       fileName: 'تقرير_مصروفات_المدار',
       columnCount: 6,
       summaryRight: `يوميات وتقارير الصرف`,
-      summaryLeft: `الإجمالي: ${statistics.monthly_total.toLocaleString()} د.ل    |    عدد العمليات: ${statistics.monthly_count}`,
+      summaryLeft: `الإجمالي: ${statistics.monthly_total.toLocaleString()} د.ل  |  العمليات: ${statistics.monthly_count}`,
       tableHeaders: `
         <tr height="40">
           <th width="300">البند (الوصف)</th>
@@ -440,26 +443,17 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         </tr>
       `).join('')
     });
-    
-    showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
-  };
-
-  const handlePrint = () => {
-    window.print();
+    showToast('تم تصدير التقرير باحترافية', 'success');
   };
 
   const exportUnionToExcelFunc = () => {
-    if (unionPurchases.length === 0) {
-      showToast('لا توجد بيانات لتصديرها', 'error');
-      return;
-    }
-
+    if (unionPurchases.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
     exportToExcel({
       title: 'تقرير رصيد الاتحاد والتكاليف',
       fileName: 'تقرير_سجل_الاتحاد',
       columnCount: 7,
-      summaryRight: `خصم الاتحاد: ${unionTotalStats.totalFee.toLocaleString()} د.ل  |  وديعة الشركة: ${unionStats.total_deposit.toLocaleString()} د.ل`,
-      summaryLeft: `المبلغ المدفوع: ${unionTotalStats.totalPaid.toLocaleString()} د.ل  |  البطاقات: ${unionStats.total_cards}`,
+      summaryRight: `خصم الاتحاد: ${unionFilteredStats.totalFee.toLocaleString()} د.ل  |  وديعة الشركة: ${unionFilteredStats.totalDeposit.toLocaleString()} د.ل`,
+      summaryLeft: `المبلغ المدفوع: ${unionFilteredStats.totalPaid.toLocaleString()} د.ل  |  البطاقات: ${unionFilteredStats.totalCards}`,
       tableHeaders: `
         <tr height="40">
           <th width="200">رقم الواصل/الطلب</th>
@@ -471,7 +465,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
           <th width="250">البيان/ملاحظات</th>
         </tr>
       `,
-      tableBody: unionPurchases.map((u, index) => `
+      tableBody: filteredUnion.map((u, index) => `
         <tr class="${index % 2 === 0 ? 'row-even' : ''}">
           <td style="text-align:center; font-weight:bold; mso-number-format:'\@';">${u.request_number || '-'}</td>
           <td class="blue">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
@@ -483,918 +477,501 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         </tr>
       `).join('')
     });
-    
     showToast('تم تصدير سجل الاتحاد بنجاح', 'success');
   };
 
   return (
     <section className="users-management">
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 15mm; }
+          body { background: #fff !important; direction: rtl !important; font-family: 'Arial', sans-serif !important; }
+          .no-print, .sidebar, .topbar { display: none !important; }
+          .print-official-header { display: flex !important; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+          .users-management { padding: 0 !important; }
+          .users-table-wrapper { border: none !important; box-shadow: none !important; overflow: visible !important; }
+          .users-table { width: 100% !important; border-collapse: collapse !important; border: 1.5px solid #000 !important; }
+          .users-table th, .users-table td { border: 1px solid #000 !important; padding: 10px !important; color: #000 !important; font-size: 11pt !important; text-align: center !important; }
+          .users-table th { background: #f0f0f0 !important; font-weight: bold !important; }
+          * { visibility: hidden; }
+          .print-official-header, .print-official-header *, 
+          .users-table-wrapper, .users-table-wrapper * { visibility: visible; }
+          .print-official-header { position: static; }
+          .users-table-wrapper { position: relative; top: 0; }
+        }
+        .print-official-header { display: none; }
+      `}</style>
 
-      {/* التبويبات تمت إزالتها بناءً على طلب المستخدم ليتم التعامل معها من القائمة الجانبية كـ sub-section */}
-
-      {/* Professional Print-only Header (Employee Salaries Style) */}
-      <div className="print-only-header" style={{ display: 'none' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '3px double #e2e8f0' }}>
+      {/* Official Corporate Header for Print */}
+      <div className="print-official-header" style={{ width: '100%', direction: 'rtl' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <img src="/img/logo.png" alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
-            <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b', fontWeight: '900' }}>المدار الليبي للتأمين</h1>
-            <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>Al Madar Libyan Insurance</p>
-            <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>قسم الشؤون المالية والموارد البشرية</p>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#000' }}>المدار الليبي للتأمين</h1>
+            <p style={{ margin: '5px 0 0 0', fontSize: '1rem', color: '#000' }}>قسم الشؤون المالية والموارد البشرية</p>
           </div>
-          <img src="/img/logo.png" alt="Logo" style={{ height: '80px', width: 'auto' }} />
         </div>
 
-        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-          <h2 style={{
-            display: 'inline-block',
-            margin: 0,
-            padding: '10px 40px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '50px',
-            fontSize: '18px',
-            color: '#1e293b'
-          }}>
-          </h2>
+        <div style={{ textAlign: 'center', flex: 1, marginTop: '15px' }}>
+          <div style={{ display: 'inline-block', border: '1.5px solid #000', padding: '12px 40px', borderRadius: '15px', backgroundColor: '#f9f9f9' }}>
+            <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800 }}>
+              {activeTab === 'union' ? 'سجل تداول أرصدة بطاقة الاتحاد (البرتقالية)' : 
+               activeTab === 'expenses' ? 'كشف المصروفات التشغيلية المعتمدة' : 'كشف التعويضات والمطالبات المالية'}
+            </h2>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.1rem', fontWeight: 600 }}>
+              بتاريخ: {new Date().toLocaleDateString('ar-LY')}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'left', minWidth: '180px', marginTop: '10px' }}>
+          <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>الرقم المرجعي: {Math.floor(Math.random() * 900000 + 100000)}</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '1rem' }}>الحالة: وثيقة رسمية معتمدة</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '1rem' }}>المستخدم: المدير المالي</p>
         </div>
       </div>
 
-      <style>{`
-        @media print {
-          @page { size: auto; margin: 10mm; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .no-print, .sidebar, .topbar, th:last-child, td:last-child, th:nth-child(7), td:nth-child(7) { display: none !important; }
-          .print-only-header { display: block !important; }
-          .print-only-footer { display: flex !important; }
-          .print-date { display: block !important; }
-          
-          body, html { 
-            background: #fff !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            width: 100% !important; 
-            direction: rtl !important; 
-            font-family: 'Cairo', sans-serif !important;
-            color: #1e293b !important;
-          }
-          
-          .app-shell { display: block !important; position: static !important; }
-          .main-area { padding: 0 !important; margin: 0 !important; width: 100% !important; display: block !important; position: static !important; }
-          
-          .users-management { padding: 0 !important; margin: 0 !important; width: 100% !important; display: block !important; }
-          .users-card { border: none !important; box-shadow: none !important; width: 100% !important; background: transparent !important; }
-          .users-table-wrapper { width: 100% !important; overflow: visible !important; }
-          
-          .users-table { 
-            width: 100% !important; 
-            border-collapse: collapse !important; 
-            margin-bottom: 40px !important; 
-            font-size: 9px !important;
-            table-layout: auto !important;
-          }
-          .users-table th { 
-            background-color: #f1f5f9 !important; 
-            color: #475569 !important; 
-            font-weight: 700 !important; 
-            padding: 6px 4px !important; 
-            border: 1px solid #cbd5e1 !important;
-            text-align: center !important;
-            -webkit-print-color-adjust: exact;
-          }
-          .users-table td { 
-            padding: 6px 4px !important; 
-            border: 1px solid #e2e8f0 !important; 
-            text-align: center !important;
-            color: #1e293b !important;
-          }
-          tr:nth-child(even) { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
-          
-          /* Summary boxes */
-          div[style*="display: grid"] { 
-            display: flex !important; 
-            justify-content: flex-start !important; 
-            gap: 25px !important; 
-            margin-bottom: 30px !important;
-          }
-          div[style*="background: #fff"] { 
-            background: #f8fafc !important; 
-            border: 1px solid #e2e8f0 !important; 
-            padding: 15px 25px !important; 
-            border-radius: 12px !important;
-            width: auto !important;
-            min-width: 200px !important;
-            -webkit-print-color-adjust: exact;
-          }
-        }
-
-        /* Dark Mode Overrides */
-        [data-theme='dark'] .users-table th {
-          background-color: var(--table-header) !important;
-          color: var(--text) !important;
-          border-color: var(--border) !important;
-        }
-        [data-theme='dark'] .users-table td {
-          border-color: var(--border) !important;
-          color: var(--text) !important;
-        }
-        [data-theme='dark'] .users-table tr:nth-child(even) {
-          background-color: rgba(255, 255, 255, 0.02) !important;
-        }
-        [data-theme='dark'] .stat-box {
-          background-color: var(--card-bg) !important;
-          border-color: var(--border) !important;
-          box-shadow: none !important;
-        }
-        [data-theme='dark'] .stat-title {
-          color: var(--muted) !important;
-        }
-        [data-theme='dark'] .stat-value-dark {
-          color: var(--text) !important;
-        }
-      `}</style>
-
-      { (activeTab === 'expenses' || activeTab === 'indemnities') && (
-        <>
-
+      {/* Expense/Indemnity Tab */}
+      {(activeTab === 'expenses' || activeTab === 'indemnities') && (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
           <div className="users-breadcrumb no-print" style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '25px 30px',
-            background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
-            borderRadius: '16px',
-            marginBottom: '30px',
-            color: '#fff',
-            boxShadow: '0 10px 20px rgba(1, 76, 177, 0.15)'
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '30px',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '16px', marginBottom: '30px', color: '#fff',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', position: 'relative', overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
+            <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.1, pointerEvents: 'none' }}>
+              <i className={activeTab === 'expenses' ? "fa-solid fa-file-invoice-dollar" : "fa-solid fa-scale-unbalanced"} style={{ fontSize: '150px', position: 'absolute', left: '-20px', bottom: '-20px' }}></i>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', zIndex: 1 }}>
+              <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <i className={activeTab === 'expenses' ? "fa-solid fa-file-invoice-dollar" : "fa-solid fa-scale-unbalanced"} style={{ color: activeTab === 'expenses' ? '#38bdf8' : '#fcd34d' }}></i>
-                {activeTab === 'expenses' ? 'إدارة المصروفات التشغيلية' : 'إدارة التعويضات'}
+                {activeTab === 'expenses' ? 'إدارة المصروفات التشغيلية' : 'إدارة التعويضات والمطالبات المالية'}
               </h2>
-              <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>
-                {activeTab === 'expenses' ? 'تتبع جميع النفقات والتكاليف التشغيلية والمصاريف العمومية' : 'إدارة جميع التعويضات وإصداراتها للمستفيدين'}
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>
+                {activeTab === 'expenses' ? 'سجل متابعة المصاريف اليومية والتشغيلية للشركة' : 'سجل التعويضات والمطالبات المالية المعتمدة'}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={exportToExcelFunc}
-                className="btn-secondary"
-                style={{
-                  background: '#10b981',
-                  color: '#fff',
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <i className="fa-solid fa-file-excel"></i>
-                تصدير Excel
+
+            <div style={{ display: 'flex', gap: '12px', zIndex: 1 }}>
+              <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-file-excel"></i> تصدير Excel
               </button>
-              <button
-                onClick={handlePrint}
-                className="btn-secondary"
-                style={{
-                  background: '#64748b',
-                  color: '#fff',
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <i className="fa-solid fa-print"></i>
-                طباعة
-              </button>
-              <button
-                onClick={() => handleOpenModal()}
-                className="btn-primary"
-                style={{
-                  background: '#ef4444',
-                  color: '#fff',
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <i className="fa-solid fa-plus"></i>
-                {activeTab === 'expenses' ? 'تسجيل مصروف جديد' : 'تسجيل تعويض جديد'}
+              <button onClick={() => handleOpenModal()} className="btn-primary" style={{ background: activeTab === 'expenses' ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
+                <i className="fa-solid fa-plus"></i> {activeTab === 'expenses' ? 'إضافة مصروف' : 'إضافة تعويض'}
               </button>
             </div>
-
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>إجمالي المصروفات (المصفاة)</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-                {filteredStats.total.toLocaleString()} د.ل
-              </div>
+            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <div style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 600, marginBottom: '5px' }}>إجمالي مبلغ {activeTab === 'expenses' ? 'المصروفات' : 'التعويضات'}</div>
+              <div style={{ fontSize: '26px', fontWeight: '900', color: '#ef4444' }}>{filteredStats.total.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
-            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>عدد العمليات</div>
-              <div className="stat-value-dark" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text)' }}>{filteredStats.count} عملية</div>
+            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <div style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 600, marginBottom: '5px' }}>عدد العمليات المفلترة</div>
+              <div style={{ fontSize: '26px', fontWeight: '900', color: 'var(--text)' }}>{filteredStats.count} <span style={{ fontSize: '14px' }}>عملية</span></div>
             </div>
-            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              <div className="stat-title" style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '8px' }}>متوسط الصرف</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>
-                {filteredStats.average.toFixed(2)} د.ل
-              </div>
+            <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <div style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 600, marginBottom: '5px' }}>متوسط العملية الواحد</div>
+              <div style={{ fontSize: '26px', fontWeight: '900', color: '#10b981' }}>{filteredStats.average.toLocaleString(undefined, {maximumFractionDigits:2})} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
           </div>
 
-          {/* Modern Filter Bar - Strictly hidden from print and excel generated code */}
-          <div className="no-print" style={{ marginBottom: '20px' }}>
-            <div style={{
-              background: 'var(--card-bg)',
-              padding: '20px',
-              borderRadius: '15px',
-              border: '1px solid var(--border)',
-              display: 'grid',
-              gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr auto',
-              gap: '15px',
-              alignItems: 'end'
-            }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>بحث بالبند</label>
-                <div style={{ position: 'relative' }}>
-                  <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}></i>
-                  <input
-                    type="text"
-                    placeholder="ابحث عن مصروف..."
-                    value={searchFilter}
-                    onChange={(e) => setSearchFilter(e.target.value)}
-                    style={{ paddingRight: '35px' }}
-                  />
-                </div>
+          <div className="no-print" style={{ background: 'var(--card-bg)', padding: '25px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '30px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text)', fontWeight: 800 }}>فلاتر البحث والتقارير</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 500 }}>
+                  {activeTab === 'expenses' ? 'تخصيص عرض المصروفات والبحث عن بند محدد' : 'تصفية قائمة التعويضات والمطالبات المالية'}
+                </p>
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الفئة</label>
-                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                  <i className="fa-solid fa-file-excel"></i> تصدير Excel
+                </button>
+                <button onClick={() => handleOpenModal()} className="btn-primary" style={{ background: activeTab === 'expenses' ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                  <i className="fa-solid fa-plus"></i> {activeTab === 'expenses' ? 'إضافة مصروف' : 'إضافة تعويض'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>بحث بالوصف</label>
+                <input type="text" placeholder="بحث..." value={searchFilter} onChange={e => setSearchFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>الفئة</label>
+                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600 }}>
                   <option value="الكل">كل الفئات</option>
                   {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>الحالة</label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>الحالة</label>
+                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600 }}>
                   <option value="الكل">كل الحالات</option>
                   <option value="مدفوع">مدفوع</option>
-                  <option value="غير مدفوع">غير مدفوع</option>
+                  <option value="معلق">معلق</option>
                 </select>
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>من تاريخ</label>
-                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>من تاريخ</label>
+                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }} />
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>إلى تاريخ</label>
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>إلى تاريخ</label>
+                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }} />
               </div>
-              <button
-                onClick={() => {
-                  setSearchFilter('');
-                  setCategoryFilter('الكل');
-                  setStatusFilter('الكل');
-                  setFromDate('');
-                  setToDate('');
-                }}
-                style={{
-                  background: 'var(--input-bg)',
-                  border: '1px solid var(--border)',
-                  padding: '10px',
-                  borderRadius: '10px',
-                  color: 'var(--text)',
-                  cursor: 'pointer'
-                }}
-                title="تصفير الفلاتر"
-              >
-                <i className="fa-solid fa-rotate-left"></i>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button onClick={() => { setSearchFilter(''); setCategoryFilter('الكل'); setStatusFilter('الكل'); setFromDate(''); setToDate(''); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>تصفير</button>
+              </div>
             </div>
           </div>
 
-          <div className="users-card" style={{ padding: '0', overflow: 'hidden', background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
-            <div className="users-table-wrapper">
-              <table className="users-table">
-                <thead>
-                  <tr>
-                    <th>البند</th>
-                    <th>المستلم</th>
-                    <th>الفئة</th>
-                    <th>المبلغ</th>
-                    <th>التاريخ</th>
-                    <th>الحالة</th>
-                    <th className="no-print">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedExpenses.map((expense) => (
-                    <tr key={expense.id}>
-                      <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{expense.name}</td>
-                      <td style={{ color: 'var(--text)' }}>{expense.recipient || '-'}</td>
-                      <td style={{ color: 'var(--text)' }}>
-                        {expense.category}
-                        {expense.is_indemnity && (
-                          <div style={{ fontSize: '10px', marginTop: '4px', color: expense.indemnity_type === 'orange_card' ? '#d97706' : '#475569', background: expense.indemnity_type === 'orange_card' ? '#fef3c7' : '#f1f5f9', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', whiteSpace: 'nowrap' }}>
-                            {expense.indemnity_type === 'orange_card' ? 'تُخصم من الوديعة' : 'تعويض بنكي'}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{expense.amount.toLocaleString()} د.ل</td>
-                      <td style={{ color: 'var(--text)' }}>{expense.expense_date}</td>
+          <div className="users-table-wrapper" style={{ background: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>البند / الوصف</th>
+                  <th>المستلم</th>
+                  <th>الفئة</th>
+                  <th>المبلغ</th>
+                  <th>التاريخ</th>
+                  <th>الحالة</th>
+                  <th className="no-print">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedExpenses.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>لا توجد بيانات تطابق البحث الحالي</td></tr>
+                ) : (
+                  paginatedExpenses.map(e => (
+                    <tr key={e.id}>
+                      <td style={{ fontWeight: 700 }}>{e.name}</td>
+                      <td>{e.recipient || '-'}</td>
+                      <td><span style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg)', fontSize: '0.85rem', fontWeight: 600 }}>{e.category}</span></td>
+                      <td style={{ fontWeight: '900', color: '#ef4444' }}>{e.amount.toLocaleString()} د.ل</td>
+                      <td style={{ fontSize: '0.9rem' }}>{e.expense_date}</td>
                       <td>
-                        <span style={{
-                          padding: '4px 12px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          background: expense.status === 'مدفوع' ? '#dcfce7' : '#fef3c7',
-                          color: expense.status === 'مدفوع' ? '#166534' : '#92400e',
-                          fontWeight: '800'
+                        <span className={`status-badge ${e.status === 'مدفوع' ? 'active' : 'inactive'}`} style={{ 
+                          background: e.status === 'مدفوع' ? '#dcfce7' : '#fee2e2', 
+                          color: e.status === 'مدفوع' ? '#166534' : '#991b1b',
+                          padding: '4px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700
                         }}>
-                          {expense.status}
+                          {e.status}
                         </span>
                       </td>
                       <td className="no-print">
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          {expense.status !== 'مدفوع' && (
-                            <button
-                              onClick={() => handlePayExpense(expense)}
-                              style={{ background: '#ecfdf5', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#059669' }}
-                              title="تغيير الحالة لمدفوع"
-                            >
-                              <i className="fa-solid fa-check-double"></i>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleOpenModal(expense)}
-                            style={{ background: '#f0f9ff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#0369a1' }}
-                            title="تعديل"
-                          >
-                            <i className="fa-solid fa-pen-to-square"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteExpense(expense.id)}
-                            style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#991b1b' }}
-                            title="حذف"
-                          >
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
+                          <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
+                          <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                  {filteredExpenses.length === 0 && (
-                    <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا توجد مصروفات مسجلة</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* Expense Pagination */}
-              {totalPages > 1 && (
-                <div className="no-print" style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  gap: '10px', 
-                  padding: '20px',
-                  borderTop: '1px solid var(--border)',
-                  background: 'var(--panel)'
-                }}>
-                  <button 
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
-                  >
-                    السابق
-                  </button>
-                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                    {getPaginationRange(currentPage, totalPages).map((page, idx) => (
-                      page === '...' ? (
-                        <span key={`dots-${idx}`} style={{ color: 'var(--muted)', padding: '0 5px' }}>...</span>
-                      ) : (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(Number(page))}
-                          style={{
-                            width: '35px',
-                            height: '35px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: currentPage === page ? '#014cb1' : 'transparent',
-                            color: currentPage === page ? '#fff' : 'var(--text)',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {page}
-                        </button>
-                      )
-                    ))}
-                  </div>
-                  <button 
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
-                  >
-                    التالي
-                  </button>
-                </div>
-              )}
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </>
+
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '30px', paddingBottom: '20px' }}>
+              {getPaginationRange(currentPage, totalPages).map((p, idx) => (
+                <button key={idx} onClick={() => typeof p === 'number' && setCurrentPage(p)} disabled={p === '...' || p === currentPage} style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', border: '1px solid var(--border)', background: p === currentPage ? '#014cb1' : 'var(--card-bg)', color: p === currentPage ? '#fff' : 'var(--text)', fontWeight: 700, cursor: p === '...' ? 'default' : 'pointer', boxShadow: p === currentPage ? '0 4px 12px rgba(1, 76, 177, 0.3)' : 'none' }}>{p}</button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
+      {/* Union Balance Tab */}
       {activeTab === 'union' && (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
           <div className="users-breadcrumb no-print" style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '25px 30px',
-            background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
-            borderRadius: '16px',
-            marginBottom: '30px',
-            color: '#fff',
-            boxShadow: '0 10px 20px rgba(1, 76, 177, 0.15)'
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '30px',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '16px', marginBottom: '30px', color: '#fff',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', position: 'relative', overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
-                <i className="fa-solid fa-id-card" style={{ color: '#f59e0b' }}></i>
-                سجل شراء رصيد البطاقة البرتقالية (الاتحاد)
-              </h2>
-              <p style={{ margin: 0, opacity: 0.8, fontSize: '14px', color: '#fff' }}>إدارة المدفوعات وحصص الاتحاد وودائع الشركة</p>
+            <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.1, pointerEvents: 'none' }}>
+              <i className="fa-solid fa-id-card" style={{ fontSize: '150px', position: 'absolute', left: '-20px', bottom: '-20px' }}></i>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={exportUnionToExcelFunc}
-                className="btn-secondary"
-                style={{
-                  background: '#10b981',
-                  color: '#fff',
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <i className="fa-solid fa-file-excel"></i>
-                تصدير Excel
-              </button>
-              <button
-                onClick={handlePrint}
-                className="btn-secondary"
-                style={{
-                  background: '#64748b',
-                  color: '#fff',
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <i className="fa-solid fa-print"></i>
-                طباعة
-              </button>
-              <button
-                onClick={() => {
-                  setAmountPaid('');
-                  setUnionPurchaseDate(new Date().toISOString().split('T')[0]);
-                  setReceiptImage(null);
-                  setUnionNotes('');
-                  setShowUnionModal(true);
-                }}
-                className="btn-primary"
-                style={{
-                  background: '#f59e0b',
-                  color: '#fff',
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <i className="fa-solid fa-plus"></i>
-                طلب رصيد جديد
-              </button>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-            <div className="stat-box" style={{ background: '#eff6ff', padding: '20px', borderRadius: '15px', border: '1px solid #bfdbfe' }}>
-              <div className="stat-title" style={{ color: '#1d4ed8', fontSize: '13px', marginBottom: '8px' }}>إجمالي المبلغ المدفوع</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                {unionTotalStats.totalPaid.toLocaleString()} د.ل
-              </div>
-            </div>
-            <div className="stat-box" style={{ background: '#ecfdf5', padding: '20px', borderRadius: '15px', border: '1px solid #a7f3d0' }}>
-              <div className="stat-title" style={{ color: '#047857', fontSize: '13px', marginBottom: '8px' }}>إجمالي البطاقات المُشتراة</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#047857' }}>
-                {unionStats.total_cards.toLocaleString()} بطاقة
-              </div>
-            </div>
-            <div className="stat-box" style={{ background: '#fef2f2', padding: '20px', borderRadius: '15px', border: '1px solid #fecaca' }}>
-              <div className="stat-title" style={{ color: '#b91c1c', fontSize: '13px', marginBottom: '8px' }}>إجمالي خصم الاتحاد</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#b91c1c' }}>
-                {unionTotalStats.totalFee.toLocaleString()} د.ل
-              </div>
-            </div>
-            <div className="stat-box" style={{ background: '#fef3c7', padding: '20px', borderRadius: '15px', border: '1px solid #fde68a' }}>
-              <div className="stat-title" style={{ color: '#b45309', fontSize: '13px', marginBottom: '8px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#b45309' }}>
-                {unionStats.total_deposit.toLocaleString()} د.ل
-              </div>
-              {unionStats.total_indemnities_deducted ? (
-                <div style={{ fontSize: '11px', color: '#d97706', marginTop: '5px' }}>
-                  بعد خصم تعويضات بقيمة {unionStats.total_indemnities_deducted.toLocaleString()} د.ل
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="users-card" style={{ padding: '0', overflow: 'hidden', background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
-            <div className="users-table-wrapper">
-              <table className="users-table">
-                <thead>
-                  <tr>
-                    <th>رقم الواصل/الطلب</th>
-                    <th>المبلغ المدفوع</th>
-                    <th>عدد البطاقات</th>
-                    <th>خصم الاتحاد (المصروفات)</th>
-                    <th>وديعة الشركة</th>
-                    <th>تاريخ الطلب</th>
-                    <th>صورة الواصل</th>
-                    <th>الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedUnion.map((u) => (
-                    <tr key={u.id}>
-                      <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{u.request_number}</td>
-                      <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#10b981', fontWeight: 'bold' }}>{u.cards_count}</td>
-                      <td style={{ color: 'var(--text)' }}>{parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#f59e0b', fontWeight: 'bold' }}>{parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
-                      <td style={{ color: 'var(--text)' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : ''}</td>
-                      <td>
-                        {u.receipt_image ? (
-                          <button
-                            onClick={() => setSelectedImage(u.receipt_image ? `${BACKEND_URL}${u.receipt_image}` : null)}
-                            style={{ background: '#e0f2fe', color: '#0284c7', padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
-                          >
-                            <i className="fa-solid fa-image"></i> عرض الواصل
-                          </button>
-                        ) : (
-                          <span style={{ color: '#94a3b8' }}>لا يوجد</span>
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => handleDeleteUnionPurchase(u.id)}
-                          style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#991b1b' }}
-                          title="حذف"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {unionPurchases.length === 0 && (
-                    <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>لا يوجد سجل شراء لرصيد الاتحاد</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* Union Pagination */}
-              {totalUnionPages > 1 && (
-                <div className="no-print" style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  gap: '10px', 
-                  padding: '20px',
-                  borderTop: '1px solid var(--border)',
-                  background: 'var(--panel)'
-                }}>
-                  <button 
-                    disabled={currentUnionPage === 1}
-                    onClick={() => setCurrentUnionPage(prev => prev - 1)}
-                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentUnionPage === 1 ? 'not-allowed' : 'pointer', opacity: currentUnionPage === 1 ? 0.5 : 1 }}
-                  >
-                    السابق
-                  </button>
-                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                    {getPaginationRange(currentUnionPage, totalUnionPages).map((page, idx) => (
-                      page === '...' ? (
-                        <span key={`dots-u-${idx}`} style={{ color: 'var(--muted)', padding: '0 5px' }}>...</span>
-                      ) : (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentUnionPage(Number(page))}
-                          style={{
-                            width: '35px',
-                            height: '35px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: currentUnionPage === page ? '#f59e0b' : 'transparent',
-                            color: currentUnionPage === page ? '#fff' : 'var(--text)',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {page}
-                        </button>
-                      )
-                    ))}
-                  </div>
-                  <button 
-                    disabled={currentUnionPage === totalUnionPages}
-                    onClick={() => setCurrentUnionPage(prev => prev + 1)}
-                    style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentUnionPage === totalUnionPages ? 'not-allowed' : 'pointer', opacity: currentUnionPage === totalUnionPages ? 0.5 : 1 }}
-                  >
-                    التالي
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showModal && (<div className="modal-overlay no-print" style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.5)', display: 'grid', placeItems: 'center', zIndex: 1000
-      }}>
-        <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '20px', width: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-          <h3 style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', color: '#ef4444' }}>
-            {editingExpense ? 'تعديل المصروف التشغيلي' : 'تسجيل مصروف تشغيلي جديد'}
-          </h3>
-          <form onSubmit={handleAddExpense}>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>وصف البند (البضاعة/الخدمة)</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="مثال: فاتورة مياه، قرطاسية.."
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم المستلم / المورد</label>
-              <input
-                type="text"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                placeholder="اسم الشخص أو الشركة المستلمة للمبلغ..."
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-              {activeTab === 'expenses' ? (
-                <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  >
-                    {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    <option value="أخرى (إضافة فئة جديدة)">أخرى (إضافة فئة جديدة)</option>
-                  </select>
-                </div>
-              ) : (
-                <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>الفئة</label>
-                  <div style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', background: '#f8fafc', color: '#64748b' }}>التعويضات</div>
-                </div>
-              )}
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>المبلغ (د.ل)</label>
-                <input
-                  type="number"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                />
-              </div>
-            </div>
-
-            {category.includes('أخرى') && (
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>اسم الفئة الجديدة <span style={{ color: '#ef4444' }}>*</span></label>
-                <input
-                  type="text"
-                  required
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  placeholder="مثال: دعاية وإعلان"
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                />
-              </div>
-            )}
             
-            {category === 'التعويضات' && (
-              <div className="form-group" style={{ marginBottom: '15px', background: '#fffbeb', padding: '15px', border: '1px solid #fde68a', borderRadius: '10px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold', color: '#b45309' }}>
-                  <i className="fa-solid fa-scale-unbalanced text-amber-500 mr-2"></i> نوع التعويض ومصدر الدفع <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={indemnityType}
-                  onChange={(e) => setIndemnityType(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #fcd34d', background: '#fff' }}
-                >
-                  <option value="orange_card">بطاقة برتقالية / عربية (تُخصم من وديعة الاتحاد)</option>
-                  <option value="general">تعويضات أخرى (تُخصم من الحساب الجاري/المصرف)</option>
-                </select>
-                <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#b45309' }}>
-                  {indemnityType === 'orange_card' ? 'ملاحظة: سيتم خصم هذا المبلغ من رصيد وديعة الشركة لدى الاتحاد تلقائياً.' : 'ملاحظة: سيتم تسجيل هذا المصروف كتعويض ولن يؤثر على وديعة الاتحاد.'}
-                </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', zIndex: 1 }}>
+              <h2 style={{ margin: 0, fontSize: '26px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <i className="fa-solid fa-id-card" style={{ color: '#fcd34d' }}></i> سجل شراء رصيد البطاقة البرتقالية (الاتحاد)
+              </h2>
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>إدارة المدفوعات وحصص الاتحاد وودائع الشركة</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', zIndex: 1 }}>
+              <button onClick={() => handleOpenUnionModal()} className="btn-primary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)' }}>
+                <i className="fa-solid fa-plus"></i> طلب رصيد جديد
+              </button>
+              <button onClick={exportUnionToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-file-excel"></i> تصدير Excel
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
+            <div className="stat-box" style={{ background: '#fef3c7', padding: '25px', borderRadius: '15px', border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#92400e', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#92400e' }}>{unionFilteredStats.totalDeposit.toLocaleString()} <span style={{fontSize: '16px'}}>د.ل</span></div>
+            </div>
+            <div className="stat-box" style={{ background: '#fee2e2', padding: '25px', borderRadius: '15px', border: '1px solid #fecaca', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#991b1b', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي خصم الاتحاد</div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#991b1b' }}>{unionFilteredStats.totalFee.toLocaleString()} <span style={{fontSize: '16px'}}>د.ل</span></div>
+            </div>
+            <div className="stat-box" style={{ background: '#d1fae5', padding: '25px', borderRadius: '15px', border: '1px solid #a7f3d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#065f46', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي البطاقات المشتراة</div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#065f46' }}>{unionFilteredStats.totalCards} <span style={{fontSize: '16px'}}>بطاقة</span></div>
+            </div>
+            <div className="stat-box" style={{ background: '#dbeafe', padding: '25px', borderRadius: '15px', border: '1px solid #bfdbfe', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#1e40af', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي المبلغ المدفوع</div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#1e40af' }}>{unionFilteredStats.totalPaid.toLocaleString()} <span style={{fontSize: '16px'}}>د.ل</span></div>
+            </div>
+          </div>
+
+          <div className="no-print" style={{ background: '#fff', padding: '25px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '30px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>تصفية بيانات سجل الاتحاد</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
+              <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>بحث برقم الواصل</label>
+                <input type="text" placeholder="رقم الطلب / الواصل..." value={unionSearchFilter} onChange={e => setUnionSearchFilter(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
-            )}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>تاريخ الصرف</label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-              />
+              <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>السنة</label>
+                <select value={unionYearFilter} onChange={e => setUnionYearFilter(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  <option value="الكل">كل السنين</option>
+                  {['2023','2024','2025','2026'].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>الشهر</label>
+                <select value={unionMonthFilter} onChange={e => setUnionMonthFilter(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  <option value="الكل">كل الشهور</option>
+                  {Array.from({length:12}, (_,i)=>i+1).map(m => <option key={m} value={m.toString()}>{m}</option>)}
+                </select>
+              </div>
+              <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>من تاريخ</label>
+                <input type="date" value={unionFromDate} onChange={e => setUnionFromDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+              <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>إلى تاريخ</label>
+                <input type="date" value={unionToDate} onChange={e => setUnionToDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button onClick={() => { setUnionSearchFilter(''); setUnionYearFilter('الكل'); setUnionMonthFilter('الكل'); setUnionFromDate(''); setUnionToDate(''); }} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>تصفير</button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1, padding: '14px', background: '#ef4444', border: 'none', color: '#fff', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
-                {loading ? 'جاري الحفظ...' : (editingExpense ? 'تحديث المصروف' : 'حفظ المصروف')}
-              </button>
-              <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>إلغاء</button>
+          </div>
+
+          <div className="users-table-wrapper" style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>رقم الواصل/الطلب</th>
+                  <th>المبلغ المدفوع</th>
+                  <th>عدد البطاقات</th>
+                  <th>خصم الاتحاد (المصروفات)</th>
+                  <th>وديعة الشركة</th>
+                  <th>تاريخ الطلب</th>
+                  <th>صورة الواصل</th>
+                  <th className="no-print">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedUnion.length === 0 ? (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>لا توجد بيانات سجل رصيد الاتحاد</td></tr>
+                ) : (
+                  paginatedUnion.map(u => (
+                    <tr key={u.id}>
+                      <td style={{ fontWeight: 'bold' }}>{u.request_number || '-'}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 800 }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#065f46', fontWeight: 'bold' }}>{u.cards_count}</td>
+                      <td>{(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#92400e', fontWeight: 700 }}>{(u.cards_count * u.company_deposit_per_card).toLocaleString()} د.ل</td>
+                      <td>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          {u.receipt_image ? (
+                            <button onClick={() => setSelectedImage(`${BACKEND_URL}${u.receipt_image}`)} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                              <i className="fa-solid fa-image"></i> عرض الواصل
+                            </button>
+                          ) : <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>لا يوجد</span>}
+                        </div>
+                      </td>
+                      <td className="no-print">
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
+                          <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {totalUnionPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '30px' }}>
+              {getPaginationRange(currentUnionPage, totalUnionPages).map((p, idx) => (
+                <button key={idx} onClick={() => typeof p === 'number' && setCurrentUnionPage(p)} disabled={p === '...' || p === currentUnionPage} style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', border: '1px solid var(--border)', background: p === currentUnionPage ? '#014cb1' : 'var(--card-bg)', color: p === currentUnionPage ? '#fff' : 'var(--text)', fontWeight: 700, cursor: p === '...' ? 'default' : 'pointer' }}>{p}</button>
+              ))}
             </div>
-          </form>
+          )}
         </div>
-      </div>
       )}
+      <div style={{ display: 'none' }}></div>
 
-      {/* Union Balance Modal */}
-      {showUnionModal && (
-        <div className="modal" onClick={(e) => { if ((e.target as HTMLElement).className === 'modal') setShowUnionModal(false); }}>
-          <div className="modal-content user-form-modal" style={{ maxWidth: '650px' }}>
-            <div className="modal-header">
-              <h3>تسجيل رصيد اتحاد جديد (بطاقة برتقالية)</h3>
-              <button className="modal-close" onClick={() => setShowUnionModal(false)}>
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
 
-            <form onSubmit={handleAddUnionPurchase} className="user-form">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-
-                <div className="form-group">
-                  <label>المبلغ المدفوع للاتحاد (د.ل) <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input
-                    type="number"
-                    required
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(e.target.value)}
-                    placeholder="مثال: 10000"
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', fontSize: '18px', fontWeight: 'bold' }}
-                  />
+      {/* Modal for Expense/Indemnity */}
+      {showModal && (
+        <div className="modal-overlay no-print" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px'
+        }}>
+          <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '600px', borderRadius: '15px', padding: '30px', position: 'relative' }}>
+            <h3>{editingExpense ? 'تعديل بيانات' : (activeTab === 'expenses' ? 'تسجيل مصروف' : 'تسجيل تعويض')}</h3>
+            <form onSubmit={handleAddExpense} style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label>الوصف / البيان</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+              <div>
+                <label>المستلم</label>
+                <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+              <div>
+                <label>الفئة</label>
+                <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  <option value="أخرى">أخرى...</option>
+                </select>
+              </div>
+              {category === 'أخرى' && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label>فئة جديدة</label>
+                  <input type="text" value={customCategory} onChange={e => setCustomCategory(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
                 </div>
-
-                <div className="form-group">
-                  <label>تاريخ الشراء / الطلب <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input
-                    type="date"
-                    required
-                    value={unionPurchaseDate}
-                    onChange={(e) => setUnionPurchaseDate(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>رقم الطلب (إن وجد)</label>
-                  <input
-                    type="text"
-                    value={requestNumber}
-                    onChange={(e) => setRequestNumber(e.target.value)}
-                    placeholder="مثال: 837530"
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>طريقة الدفع</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
-                  >
-                    <option value="صك بقيمة">صك بقيمة</option>
-                    <option value="نقداً بقيمة">نقداً بقيمة</option>
-                    <option value="حوالة مصرفية">حوالة مصرفية</option>
-                    <option value="خصم من الوديعة">خصم من الوديعة</option>
+              )}
+              {activeTab === 'indemnities' && (
+                <div>
+                  <label>نوع التعويض</label>
+                  <select value={indemnityType} onChange={e => setIndemnityType(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                    <option value="orange_card">خصم من رصيد الاتحاد</option>
+                    <option value="bank">صرف بنكي (شيك/حوالة)</option>
                   </select>
                 </div>
+              )}
+              <div>
+                <label>المبلغ (د.ل)</label>
+                <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+              <div>
+                <label>التاريخ</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label>ملاحظات</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', minHeight: '80px' }} />
+              </div>
+              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button type="submit" className="btn-primary" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#014cb1', color: '#fff', fontWeight: 'bold' }}>حفظ</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#475569' }}>إلغاء</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
+      {/* Modal for Union Purchase */}
+      {showUnionModal && (
+        <div className="modal-overlay no-print" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px', backdropFilter: 'blur(5px)'
+        }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: '850px', borderRadius: '24px', padding: '40px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '95vh', overflowY: 'auto' }}>
+            <button onClick={() => setShowUnionModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+            
+            <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '28px', fontWeight: 900, color: '#1e293b' }}>تسجيل رصيد اتحاد جديد (بطاقة برتقالية)</h2>
+            
+            <form onSubmit={handleAddUnionPurchase}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b', textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#ef4444' }}>*</span> المبلغ المدفوع للاتحاد (د.ل)
+                  </label>
+                  <input type="number" step="0.01" placeholder="مثال: 10000" value={amountPaid} onChange={e => setAmountPaid(e.target.value)} required style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b', textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#ef4444' }}>*</span> تاريخ الشراء / الطلب
+                  </label>
+                  <input type="date" value={unionPurchaseDate} onChange={e => setUnionPurchaseDate(e.target.value)} required style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>رقم الطلب (إن وجد)</label>
+                  <input type="text" placeholder="مثال: 837530" value={requestNumber} onChange={e => setRequestNumber(e.target.value)} style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>طريقة الدفع</label>
+                  <select style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center', appearance: 'none' }}>
+                    <option>حوالة مصرفية</option>
+                    <option>نقداً</option>
+                    <option>صك مصدق</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Advanced Settings for Union breakdown */}
-              <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px', marginTop: '15px', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b' }}>إعدادات حساب الوديعة (قابلة للتغيير مستقبلاً)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '11px' }}>سعر البطاقة الكلي</label>
-                    <input type="number" required value={cardPrice} onChange={(e) => setCardPrice(e.target.value)} style={{ padding: '8px' }} />
+              <div style={{ background: '#f8fafc', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+                <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>إعدادات حساب الوديعة (قابلة للتغيير مستقبلاً)</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e293b' }}>سعر البطاقة الكلي</label>
+                    <input type="number" value={cardPrice} onChange={e => setCardPrice(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 700 }} />
                   </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '11px' }}>خصم الاتحاد الفعلي (مصروف)</label>
-                    <input type="number" required value={unionFeePerCard} onChange={(e) => setUnionFeePerCard(e.target.value)} style={{ padding: '8px' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e293b' }}>خصم الاتحاد الفعلي (مصروف)</label>
+                    <input type="number" value={unionFeePerCard} onChange={e => setUnionFeePerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 700 }} />
                   </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '11px' }}>رصيد/وديعة الشركة للبطاقة</label>
-                    <input type="number" required value={companyDepositPerCard} onChange={(e) => setCompanyDepositPerCard(e.target.value)} style={{ padding: '8px' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e293b' }}>رصيد/وديعة الشركة للبطاقة</label>
+                    <input type="number" value={companyDepositPerCard} onChange={e => setCompanyDepositPerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 700 }} />
                   </div>
                 </div>
               </div>
 
-              {/* Automatic Calculation Results */}
-              <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: '#f0fdf4', padding: '15px', borderRadius: '10px', border: '1px dashed #10b981' }}>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>الكمية المُستلمة</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#10b981' }}>{cardsCount} بطاقة</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', border: '2px dashed #10b981', borderRadius: '20px', padding: '25px', marginBottom: '30px', background: '#f0fdf4' }}>
+                <div style={{ textAlign: 'center', borderLeft: '1px solid #d1fae5' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>الكمية المستلمة</p>
+                  <p style={{ margin: '10px 0 0 0', fontSize: '1.8rem', fontWeight: 900, color: '#10b981' }}>{cardsCount} <span style={{ fontSize: '1rem' }}>بطاقة</span></p>
                 </div>
-                <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>خصم الاتحاد (المصروفات)</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#ef4444' }}>{totalUnionFee} د.ل</div>
+                <div style={{ textAlign: 'center', borderLeft: '1px solid #d1fae5' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>خصم الاتحاد (المصروفات)</p>
+                  <p style={{ margin: '10px 0 0 0', fontSize: '1.8rem', fontWeight: 900, color: '#ef4444' }}>{totalUnionFee.toLocaleString()} <span style={{ fontSize: '1rem' }}>د.ل</span></p>
                 </div>
-                <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>تُضاف كوديعة للشركة</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#f59e0b' }}>{totalCompanyDeposit} د.ل</div>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>تضاف كوديعة للشركة</p>
+                  <p style={{ margin: '10px 0 0 0', fontSize: '1.8rem', fontWeight: 900, color: '#f59e0b' }}>{totalCompanyDeposit.toLocaleString()} <span style={{ fontSize: '1rem' }}>د.ل</span></p>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>صورة الواصل المرفق</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setReceiptImage(e.target.files[0]);
-                    }
-                  }}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', background: '#fff' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>ملاحظات إضافية</label>
+                  <textarea value={unionNotes} onChange={e => setUnionNotes(e.target.value)} rows={2} style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', marginTop: '10px' }} placeholder="أضف أي ملاحظات هنا..." />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>إرفاق صورة الإيصال</label>
+                  <input type="file" accept="image/*" onChange={e => setReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '15px', marginTop: '10px', borderRadius: '14px', border: '1px dashed #cbd5e1' }} />
+                  {editingUnionPurchase?.receipt_image && <p style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '5px' }}>✓ يوجد إيصال مرفق مسبقاً</p>}
+                </div>
               </div>
 
-              <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label>ملاحظات إضافية</label>
-                <textarea
-                  value={unionNotes}
-                  onChange={(e) => setUnionNotes(e.target.value)}
-                  placeholder="أي تفاصيل إضافية..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', minHeight: '60px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1, padding: '14px', background: '#f59e0b', border: 'none', color: '#fff', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
-                  {loading ? 'جاري التسجيل...' : 'اعتماد وتسجيل الإيصال'}
+              <div style={{ display: 'flex', gap: '20px' }}>
+                <button type="submit" disabled={loading} style={{ flex: 2, padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)', color: '#fff', fontSize: '1.1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(1, 76, 177, 0.3)' }}>
+                  {loading ? 'جاري الحفظ...' : (editingUnionPurchase ? 'تحديث البيانات' : 'تأكيد التسجيل')}
                 </button>
-                <button type="button" onClick={() => setShowUnionModal(false)} style={{ flex: 1, padding: '14px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>إلغاء</button>
+                <button type="button" onClick={() => setShowUnionModal(false)} style={{ flex: 1, padding: '18px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '1.1rem', fontWeight: 800, cursor: 'pointer' }}>إلغاء</button>
               </div>
             </form>
           </div>
@@ -1403,29 +980,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
       {/* Image Preview Modal */}
       {selectedImage && (
-        <div className="modal" onClick={() => setSelectedImage(null)} style={{ zIndex: 9999 }}>
-          <div className="modal-content" style={{ background: 'transparent', boxShadow: 'none', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}>
-            <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }} />
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => setSelectedImage(null)}>
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+            <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} />
+            <button onClick={() => setSelectedImage(null)} style={{ position: 'absolute', top: '-15px', right: '-15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' }}>&times;</button>
           </div>
         </div>
       )}
-
-      {/* Professional Print-only Footer (Employee Salaries Style) */}
-      <div className="print-only-footer" style={{ display: 'none', marginTop: '50px', justifyContent: 'space-between', textAlign: 'center' }}>
-        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المحاسب المسؤول</p>
-        </div>
-        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>مدير الشؤون المالية</p>
-        </div>
-        <div style={{ paddingTop: '50px', borderTop: '1px solid #94a3b8', width: '25%' }}>
-          <p style={{ margin: 0, fontWeight: '600', color: '#475569' }}>المدير العام</p>
-        </div>
-      </div>
-
-      <div className="print-date" style={{ display: 'none', marginTop: '30px', fontSize: '11px', color: '#94a3b8', textAlign: 'left' }}>
-        تم استخراج هذا الكشف بتاريخ: {new Date().toLocaleString('ar-LY')}
-      </div>
     </section>
   );
 }

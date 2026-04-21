@@ -47,6 +47,9 @@ type User = {
   fixed_fines?: number;
   hourly_leave_deduction?: number;
   daily_leave_deduction?: number;
+  is_active?: boolean;
+  social_security_percentage?: number;
+  tax_percentage?: number;
   // URLs
   profile_photo_url?: string | null;
   personal_id_proof_url?: string | null;
@@ -331,6 +334,7 @@ export default function EmployeeProfile() {
                   <InfoItem label="فصيلة الدم" value={user.blood_type} />
                   <InfoItem label="رقم الهاتف الشخصي" value={user.personal_phone} />
                   <InfoItem label="هاتف ولي الأمر" value={user.guardian_phone} />
+                  <InfoItem label="حالة الموظف" value={user.is_active === false ? 'غير نشط (لا يمكنه الدخول)' : 'نشط'} />
                   <div className="full-width">
                     <InfoItem label="العنوان بالتفصيل" value={user.address} />
                   </div>
@@ -370,6 +374,8 @@ export default function EmployeeProfile() {
                   <FinancialCard label="خصومات ثابتة" value={user.fixed_fines} type="fine" />
                   <FinancialCard label="خصم غياب (ساعة)" value={user.hourly_leave_deduction} type="penalty" />
                   <FinancialCard label="خصم غياب (يوم)" value={user.daily_leave_deduction} type="penalty" />
+                  <PercentCard label="حصة مصلحة الضرائب" value={user.tax_percentage} type="penalty" />
+                  <PercentCard label="حصة الضمان الاجتماعي" value={user.social_security_percentage} type="penalty" />
                 </div>
               </div>
             )}
@@ -495,6 +501,18 @@ function FinancialCard({ label, value, type }: { label: string, value?: number, 
       <div className="fin-value-row">
         <span className="fin-num">{value ? Number(value).toLocaleString() : '0.00'}</span>
         <span className="fin-currency">د.ل</span>
+      </div>
+    </div>
+  );
+}
+
+function PercentCard({ label, value, type }: { label: string, value?: number, type: string }) {
+  return (
+    <div className={`financial-card-box ${type}`}>
+      <span className="fin-label">{label}</span>
+      <div className="fin-value-row">
+        <span className="fin-num">{value !== undefined ? Number(value).toLocaleString() : '0.000'}</span>
+        <span className="fin-currency">%</span>
       </div>
     </div>
   );

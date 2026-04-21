@@ -9,6 +9,8 @@ type Employee = {
   name: string;
   email?: string;
   salary?: number | string | null;
+  tax_percentage?: number | string;
+  social_security_percentage?: number | string;
 };
 
 type Payroll = {
@@ -24,6 +26,8 @@ type Payroll = {
   bonus_amount: number | string;
   other_additions: number | string;
   penalty_amount: number | string;
+  tax_amount: number | string;
+  social_security_amount: number | string;
   deduction_amount: number | string;
   advance_amount: number | string;
   net_salary: number | string;
@@ -91,7 +95,7 @@ export default function EmployeeSalaries() {
         'Accept': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
-      
+
       const [employeesRes, payrollsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/employee-payrolls/employees`, { headers }),
         fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`, { headers }),
@@ -135,16 +139,25 @@ export default function EmployeeSalaries() {
     const advance = p ? toNum(p.advance_amount) : 0;
     const penalty = p ? toNum(p.penalty_amount) : 0;
 
-    const extra_fields = p?.extra_fields || [];
+    const extra_fields = (p && p.extra_fields) ? p.extra_fields : [];
     const extra_total = extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0);
 
-    const net = p ? toNum(p.net_salary) : (base + housing + transport + communication + bonus + other + misc + extra_total - deduction - advance - penalty);
-    return { e, p, base, housing, transport, communication, misc, bonus, other, deduction, advance, penalty, extra_fields, extra_total, net };
+    const tax_pct = toNum(e.tax_percentage || 10);
+    const ss_pct = toNum(e.social_security_percentage || 19.475);
+
+    // إذا كانت القيمة في قاعدة البيانات 0 والمرتب لم يصرف بعد، نعرض القيمة المحسوبة تلقائياً
+    const tax_val = (p && toNum(p.tax_amount) > 0) ? toNum(p.tax_amount) : (base * tax_pct / 100);
+    const ss_val = (p && toNum(p.social_security_amount) > 0) ? toNum(p.social_security_amount) : (base * ss_pct / 100);
+
+    // حساب الصافي بناءً على القيم المعروضة لضمان الدقة في العرض
+    const net = (base + housing + transport + communication + bonus + other + misc + extra_total - deduction - advance - penalty - tax_val - ss_val);
+
+    return { e, p, base, housing, transport, communication, misc, bonus, other, deduction, advance, penalty, tax_val, ss_val, extra_fields, extra_total, net };
   });
 
   const allExtraLabels = useMemo(() => {
     const labels = new Set<string>();
-    rows.forEach(r => r.extra_fields.forEach(f => { if(f.label) labels.add(f.label); }));
+    rows.forEach(r => r.extra_fields.forEach(f => { if (f.label) labels.add(f.label); }));
     return Array.from(labels);
   }, [rows]);
 
@@ -186,7 +199,7 @@ export default function EmployeeSalaries() {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/employee-payrolls`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -258,6 +271,8 @@ export default function EmployeeSalaries() {
           <th width="80">مواصلات</th>
           <th width="80">اتصالات</th>
           <th width="100">مكافآت</th>
+          <th width="100">ضرائب</th>
+          <th width="100">ضمان</th>
           <th width="100">خصومات</th>
           <th width="80">سلف</th>
           <th width="80">غرامات</th>
@@ -275,27 +290,29 @@ export default function EmployeeSalaries() {
           <td>${r.transport}</td>
           <td>${r.communication}</td>
           <td>${r.bonus}</td>
+          <td>${r.tax_val.toFixed(2)}</td>
+          <td>${r.ss_val.toFixed(2)}</td>
           <td>${r.deduction}</td>
           <td>${r.advance}</td>
           <td>${r.penalty}</td>
           ${allExtraLabels.map(label => {
-            const f = r.extra_fields.find(x => x.label === label);
-            return `<td>${f ? f.amount : 0}</td>`;
-          }).join('')}
+        const f = r.extra_fields.find(x => x.label === label);
+        return `<td>${f ? f.amount : 0}</td>`;
+      }).join('')}
           <td class="green">${r.net}</td>
           <td>${r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
           <td>${r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method || 'أخرى' : (r.p?.delivery_method || '-')}</td>
         </tr>
       `).join('') + `
         <tr height="35" style="background-color: #f3f4f6; font-weight: bold;">
-          <td colspan="9" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
+          <td colspan="11" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
           ${allExtraLabels.map(() => `<td></td>`).join('')}
-          <td class="bold">${totals.total}</td>
+          <td class="bold">${totals.total.toFixed(2)}</td>
           <td colspan="2">موظفين ( ${rows.length} )</td>
         </tr>
       `
     });
-    
+
     showToast('تم تصدير الكشف الاحترافي بنجاح', 'success');
   };
 
@@ -313,7 +330,7 @@ export default function EmployeeSalaries() {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/employee-payrolls/bulk-pay`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -343,13 +360,15 @@ export default function EmployeeSalaries() {
       <tr>
         <td style="font-weight:bold">${r.e.name}</td>
         <td>${money.format(r.base)}</td>
-        <td>${money.format(r.housing)}</td>
-        <td>${money.format(r.transport)}</td>
-        <td>${money.format(r.communication)}</td>
-        <td>${money.format(r.bonus)}</td>
-        <td>${money.format(r.deduction)}</td>
-        <td>${money.format(r.advance)}</td>
-        <td>${money.format(r.penalty)}</td>
+        <td style="color:#10b981">${money.format(r.housing)}</td>
+        <td style="color:#10b981">${money.format(r.transport)}</td>
+        <td style="color:#10b981">${money.format(r.communication)}</td>
+        <td style="color:#10b981">${money.format(r.bonus)}</td>
+        <td style="color:#ef4444">${money.format(r.tax_val)}</td>
+        <td style="color:#ef4444">${money.format(r.ss_val)}</td>
+        <td style="color:#ef4444">${money.format(r.deduction)}</td>
+        <td style="color:#ef4444">${money.format(r.advance)}</td>
+        <td style="color:#ef4444">${money.format(r.penalty)}</td>
         ${allExtraLabels.map(label => {
           const f = r.extra_fields.find(x => x.label === label);
           return `<td>${money.format(toNum(f ? f.amount : 0))}</td>`;
@@ -365,100 +384,118 @@ export default function EmployeeSalaries() {
       <html dir="rtl">
       <head>
         <title>كشف مرتبات الموظفين - ${month}/${year}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
         <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
           @media print { 
-            @page { margin: 10mm; size: auto; } 
+            @page { margin: 8mm; size: landscape; } 
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
           body { 
             font-family: 'Cairo', sans-serif; 
             margin: 0; 
-            padding: 20px; 
-            color: #334155;
+            padding: 15px; 
+            color: #1e293b;
             background: #fff;
           }
           .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px double #e2e8f0;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px double #1a365d;
           }
-          .header-info h1 { margin: 0; font-size: 24px; color: #1e293b; font-weight: 900; }
-          .header-info p { margin: 5px 0 0; color: #64748b; font-size: 14px; }
-          .logo { height: 80px; width: auto; }
+          .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          .header-left {
+            text-align: left;
+            font-size: 13px;
+            color: #1a365d;
+            font-weight: 600;
+          }
+          .header-info h1 { margin: 0; font-size: 22px; color: #1a365d; font-weight: 900; line-height: 1.2; }
+          .header-info p { margin: 2px 0; color: #4a5568; font-size: 14px; }
+          .logo { height: 75px; width: 75px; object-fit: contain; }
           
-          .report-title {
+          .report-title-container {
             text-align: center;
-            margin-bottom: 25px;
+            margin: 15px 0;
           }
-          .report-title h2 { 
+          .report-title-pill { 
             display: inline-block;
-            margin: 0; 
-            padding: 10px 40px;
+            padding: 8px 50px;
             background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            border: 2px solid #e2e8f0;
             border-radius: 50px;
-            font-size: 18px;
-            color: #1e293b;
+            font-size: 19px;
+            font-weight: 700;
+            color: #1a365d;
           }
 
           table { 
             width: 100%; 
             border-collapse: collapse; 
-            margin-bottom: 40px; 
-            font-size: 12px;
+            margin-bottom: 25px; 
+            font-size: 11px;
           }
           th { 
             background-color: #f1f5f9; 
-            color: #475569; 
+            color: #1e293b; 
             font-weight: 700; 
-            padding: 12px 8px; 
-            border: 1px solid #cbd5e1;
+            padding: 10px 4px; 
+            border: 1px solid #1a365d;
             text-align: center;
           }
           td { 
-            padding: 10px 8px; 
-            border: 1px solid #e2e8f0; 
+            padding: 8px 4px; 
+            border: 1px solid #cbd5e1; 
             text-align: center;
+            vertical-align: middle;
           }
           tr:nth-child(even) { background-color: #f8fafc; }
           
-          .footer {
+          .footer-signatures {
             margin-top: 50px;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 40px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+          }
+          .sig-box {
+            width: 220px;
             text-align: center;
           }
-          .signature-box {
-            padding-top: 50px;
+          .sig-line {
+            border-top: 1.5px solid #1a365d;
+            margin-bottom: 8px;
           }
-          .signature-box p {
-            margin: 0;
-            padding-top: 10px;
-            border-top: 1px solid #94a3b8;
-            font-weight: 600;
-            color: #475569;
+          .sig-label {
+            font-weight: 700;
+            font-size: 15px;
+            color: #1a365d;
           }
-          .print-date {
+          .print-meta {
             margin-top: 30px;
             font-size: 11px;
-            color: #94a3b8;
             text-align: left;
           }
         </style>
       </head>
       <body onload="window.print()">
         <div class="header">
-          <div class="header-info">
-            <h1>المدار الليبي للتأمين</h1>
-            <p>Al Madar Libyan Insurance</p>
-            <p>قسم الشؤون المالية والموارد البشرية</p>
+          <div class="header-right">
+            <img src="/img/logo.png" style="height: 85px; width: auto;" alt="Logo">
+            <div class="header-info" style="margin-right: 15px;">
+              <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
+              <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>
+            </div>
           </div>
-          <img src="/img/logo.png" class="logo" alt="Logo">
+          <div class="header-left">
+            التاريخ: ${new Date().toLocaleDateString('ar-LY')}<br/>
+            الوقت: ${new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' })}
+          </div>
         </div>
 
         <div class="report-title">
@@ -474,6 +511,8 @@ export default function EmployeeSalaries() {
               <th>مواصلات</th>
               <th>اتصالات</th>
               <th>مكافآت</th>
+              <th>ضرائب</th>
+              <th>ضمان</th>
               <th>خصومات</th>
               <th>سلف</th>
               <th>غرامات</th>
@@ -615,13 +654,15 @@ export default function EmployeeSalaries() {
               <tr>
                 <th>الموظف</th>
                 <th>الأساسي</th>
-                <th>سكن</th>
-                <th>مواصلات</th>
-                <th>اتصالات</th>
-                <th>مكافآت</th>
-                <th>خصومات</th>
-                <th>سلف</th>
-                <th>غرامات</th>
+                <th style={{ color: '#10b981' }}>سكن</th>
+                <th style={{ color: '#10b981' }}>مواصلات</th>
+                <th style={{ color: '#10b981' }}>اتصالات</th>
+                <th style={{ color: '#10b981' }}>مكافآت</th>
+                <th style={{ color: '#ef4444' }}>ضرائب</th>
+                <th style={{ color: '#ef4444' }}>ضمان</th>
+                <th style={{ color: '#ef4444' }}>خصومات</th>
+                <th style={{ color: '#ef4444' }}>سلف</th>
+                <th style={{ color: '#ef4444' }}>غرامات</th>
                 {allExtraLabels.map(label => <th key={label}>{label}</th>)}
                 <th>الصافي</th>
                 <th>الحالة</th>
@@ -638,13 +679,15 @@ export default function EmployeeSalaries() {
                 <tr key={r.e.id}>
                   <td style={{ minWidth: '120px' }}>{r.e.name}</td>
                   <td>{money.format(r.base)}</td>
-                  <td>{money.format(r.housing)}</td>
-                  <td>{money.format(r.transport)}</td>
-                  <td>{money.format(r.communication)}</td>
-                  <td>{money.format(r.bonus)}</td>
-                  <td>{money.format(r.deduction)}</td>
-                  <td>{money.format(r.advance)}</td>
-                  <td>{money.format(r.penalty)}</td>
+                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.housing)}</td>
+                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.transport)}</td>
+                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.communication)}</td>
+                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.bonus)}</td>
+                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.tax_val)}</td>
+                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.ss_val)}</td>
+                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.deduction)}</td>
+                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.advance)}</td>
+                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.penalty)}</td>
                   {allExtraLabels.map(label => {
                     const f = r.extra_fields.find(x => x.label === label);
                     return <td key={label}>{money.format(toNum(f ? f.amount : 0))}</td>;
@@ -676,7 +719,30 @@ export default function EmployeeSalaries() {
                 <div className="form-group"><label>بدل مواصلات</label><input type="number" value={payrollForm.transportation_allowance} onChange={(e) => setPayrollForm({ ...payrollForm, transportation_allowance: e.target.value })} /></div>
                 <div className="form-group"><label>بدل اتصالات</label><input type="number" value={payrollForm.communication_allowance} onChange={(e) => setPayrollForm({ ...payrollForm, communication_allowance: e.target.value })} /></div>
                 <div className="form-group"><label>مكافآت</label><input type="number" value={payrollForm.bonus_amount} onChange={(e) => setPayrollForm({ ...payrollForm, bonus_amount: e.target.value })} /></div>
-                
+                <div className="form-group"><label>إضافات أخرى</label><input type="number" value={payrollForm.other_additions} onChange={(e) => setPayrollForm({ ...payrollForm, other_additions: e.target.value })} /></div>
+
+                <div className="form-group">
+                  <label style={{ color: '#ef4444' }}>ضرائب (%{employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10})</label>
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold' }}
+                    value={money.format(toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label style={{ color: '#ef4444' }}>ضمان (%{employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475})</label>
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold' }}
+                    value={money.format(toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100)}
+                  />
+                </div>
+
                 <div className="form-group"><label style={{ color: '#ef4444' }}>خصومات</label><input type="number" value={payrollForm.deduction_amount} onChange={(e) => setPayrollForm({ ...payrollForm, deduction_amount: e.target.value })} /></div>
                 <div className="form-group"><label style={{ color: '#ef4444' }}>سلف</label><input type="number" value={payrollForm.advance_amount} onChange={(e) => setPayrollForm({ ...payrollForm, advance_amount: e.target.value })} /></div>
                 <div className="form-group"><label style={{ color: '#ef4444' }}>غرامات</label><input type="number" value={payrollForm.penalty_amount} onChange={(e) => setPayrollForm({ ...payrollForm, penalty_amount: e.target.value })} /></div>
@@ -699,16 +765,16 @@ export default function EmployeeSalaries() {
               <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <h4 style={{ margin: 0, fontSize: '14px' }}>بنود إضافية أخرى</h4>
-                  <button 
-                    type="button" 
-                    className="btn-submit" 
+                  <button
+                    type="button"
+                    className="btn-submit"
                     style={{ padding: '4px 12px', fontSize: '12px' }}
                     onClick={() => setPayrollForm({ ...payrollForm, extra_fields: [...payrollForm.extra_fields, { label: '', amount: 0 }] })}
                   >
                     <i className="fa-solid fa-plus" style={{ marginLeft: '5px' }}></i> إضافة بند
                   </button>
                 </div>
-                
+
                 {payrollForm.extra_fields.length === 0 ? (
                   <p style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center' }}>لا توجد بنود إضافية مخصصة</p>
                 ) : (
@@ -731,8 +797,8 @@ export default function EmployeeSalaries() {
                             setPayrollForm({ ...payrollForm, extra_fields: newFields });
                           }} />
                         </div>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '10px' }}
                           onClick={() => {
                             const newFields = payrollForm.extra_fields.filter((_, i) => i !== idx);
@@ -746,28 +812,30 @@ export default function EmployeeSalaries() {
                   </div>
                 )}
               </div>
-              
+
               <div style={{ marginTop: '20px', padding: '15px', background: 'var(--panel)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
                 <span style={{ fontSize: '18px', fontWeight: 'bold' }}>إجمالي الصافي للموظف:</span>
                 <span style={{ fontSize: '24px', fontWeight: 900, color: '#10b981' }}>
                   {money.format(
-                    toNum(payrollForm.base_salary) + 
-                    toNum(payrollForm.housing_allowance) + 
-                    toNum(payrollForm.transportation_allowance) + 
-                    toNum(payrollForm.communication_allowance) + 
-                    toNum(payrollForm.bonus_amount) + 
-                    toNum(payrollForm.other_additions) + 
+                    toNum(payrollForm.base_salary) +
+                    toNum(payrollForm.housing_allowance) +
+                    toNum(payrollForm.transportation_allowance) +
+                    toNum(payrollForm.communication_allowance) +
+                    toNum(payrollForm.bonus_amount) +
+                    toNum(payrollForm.other_additions) +
                     toNum(payrollForm.allowance_amount) +
-                    payrollForm.extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0) - 
-                    toNum(payrollForm.deduction_amount) - 
-                    toNum(payrollForm.advance_amount) - 
+                    payrollForm.extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0) -
+                    (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100) -
+                    (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100) -
+                    toNum(payrollForm.deduction_amount) -
+                    toNum(payrollForm.advance_amount) -
                     toNum(payrollForm.penalty_amount)
                   )} د.ل
                 </span>
               </div>
 
               <div className="form-group" style={{ marginTop: '15px' }}><label>ملاحظات</label><textarea rows={2} value={payrollForm.notes} onChange={(e) => setPayrollForm({ ...payrollForm, notes: e.target.value })} /></div>
-              
+
               <div className="form-actions" style={{ marginTop: '20px' }}>
                 <button className="btn-cancel" onClick={() => setPayrollForm(null)}>إلغاء</button>
                 <button className="btn-submit" onClick={savePayroll} disabled={saving}>{saving ? 'جاري الحفظ...' : 'حفظ بيان المرتب'}</button>

@@ -30,6 +30,8 @@ export default function BranchesAgentsList() {
   const [showDeleteModal, setShowDeleteModal] = useState<BranchAgent | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const perPage = 10;
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function BranchesAgentsList() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, branchesAgents.length]);
+  }, [searchQuery, filterType, filterStatus, branchesAgents.length]);
 
   const fetchBranchesAgents = async () => {
     try {
@@ -57,13 +59,18 @@ export default function BranchesAgentsList() {
     }
   };
 
-  const filteredBranchesAgents = branchesAgents.filter((ba: BranchAgent) => 
-    ba.agency_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ba.agent_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ba.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (ba.phone && ba.phone.includes(searchQuery)) ||
-    (ba.agency_number && ba.agency_number.includes(searchQuery))
-  );
+  const filteredBranchesAgents = branchesAgents.filter((ba: BranchAgent) => {
+    const matchesSearch = ba.agency_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ba.agent_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ba.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ba.phone && ba.phone.includes(searchQuery)) ||
+      (ba.agency_number && ba.agency_number.includes(searchQuery));
+    
+    const matchesType = filterType === 'all' || ba.type === filterType;
+    const matchesStatus = filterStatus === 'all' || ba.status === filterStatus;
+    
+    return matchesSearch && matchesType && matchesStatus;
+  });
 
   const totalBranchesAgents = filteredBranchesAgents.length;
   const totalPages = totalBranchesAgents > 0 ? Math.ceil(totalBranchesAgents / perPage) : 1;
@@ -308,28 +315,78 @@ export default function BranchesAgentsList() {
         <span>إدارة الفروع والوكلاء / قائمة الفروع والوكلاء</span>
       </div>
 
-      <div className="users-card">
-        <div className="users-header">
-          <div className="users-search-bar">
-            <input 
-              type="text" 
-              placeholder="بحث باسم الوكالة، الوكيل، الكود، رقم الترخيص أو الهاتف..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="users-search-input"
-            />
-            <button className="users-search-btn" type="button">
-              <i className="fa-solid fa-magnifying-glass"></i>
-            </button>
+      <div className="users-filters-box" style={{ 
+        background: '#ffffff', 
+        padding: '25px', 
+        borderRadius: '16px', 
+        border: '1px solid #e2e8f0', 
+        marginBottom: '30px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 800 }}>الفلاتر والبحث</h3>
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>إدارة وتصفية قائمة الفروع والوكلاء المعتمدين في النظام</p>
           </div>
-          <button
-            className="primary add-user-btn"
+          <button 
+            className="primary add-user-btn" 
             onClick={() => navigate('/branches-agents/create')}
+            style={{ height: '42px', padding: '0 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700 }}
           >
             <i className="fa-solid fa-plus"></i>
             إضافة فرع أو وكيل جديد
           </button>
         </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+          <div className="filter-group">
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>بحث سريع</label>
+            <div className="users-search-bar" style={{ marginBottom: 0, width: '100%' }}>
+              <input 
+                type="text" 
+                placeholder="اسم الوكالة، الكود، الهاتف..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="users-search-input"
+                style={{ width: '100%', height: '42px', borderRadius: '10px' }}
+              />
+              <button className="users-search-btn" type="button" style={{ height: '42px' }}>
+                <i className="fa-solid fa-magnifying-glass"></i>
+              </button>
+            </div>
+          </div>
+
+          <div className="filter-group">
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>نوع المنشأة</label>
+            <select 
+              value={filterType} 
+              onChange={(e) => setFilterType(e.target.value)}
+              className="users-search-input"
+              style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+            >
+              <option value="all">الكل (فرع/وكيل)</option>
+              <option value="فرع من شركة">الفروع</option>
+              <option value="وكيل">الوكلاء</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>حالة النشاط</label>
+            <select 
+              value={filterStatus} 
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="users-search-input"
+              style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+            >
+              <option value="all">كل الحالات</option>
+              <option value="نشط">نشط</option>
+              <option value="غير نشط">غير نشط</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="users-card">
 
         {loading ? (
           <p style={{textAlign: 'center', padding: '20px'}}>جار التحميل...</p>

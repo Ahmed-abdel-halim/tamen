@@ -65,6 +65,9 @@ type User = {
   educational_certificate_url?: string;
   health_certificate_url?: string;
   contract_conditions_photo_url?: string;
+  is_active?: boolean;
+  social_security_percentage?: number;
+  tax_percentage?: number;
 };
 
 function escapeHtml(s: string): string {
@@ -102,8 +105,10 @@ const INSURANCE_TYPES = [
   'تأمين زائرين ليبيا',
   'تأمين الوافدين',
   'تأمين الهياكل البحرية',
-  'تأمين المسؤولية المهنية (الطبية)',
   'تأمين الحوادث الشخصية',
+  'تأمين حماية طلاب المدارس',
+  'تأمين نقل النقدية',
+  'تأمين شحن البضائع',
 ];
 
 const REPORT_PERMISSIONS = [
@@ -111,13 +116,17 @@ const REPORT_PERMISSIONS = [
   'إغلاق حساب شهري',
   'كشف إغلاق الحساب الشهري',
   'إيصالات القبض',
-  'إدارة المصروفات',
+  'إدارة المصروفات التشغيلية',
+  'التعويضات',
+  'رصيد الاتحاد (البطاقة البرتقالية)',
   'التسويات والعمولات',
   'الديون المستحقة',
   'الأرشيف المالي',
   'المخازن والعهدة',
   'الإحصائيات المالية',
   'مرتبات الموظفين',
+  'تقرير مصلحة الضرائب',
+  'تقرير الضمان الاجتماعي',
 ];
 
 const ADMIN_SECTION_PERMISSIONS = [
@@ -186,6 +195,9 @@ export default function UsersList() {
     fixed_fines: '' as string | number,
     hourly_leave_deduction: '' as string | number,
     daily_leave_deduction: '' as string | number,
+    is_active: true,
+    social_security_percentage: 19.475 as string | number,
+    tax_percentage: 10.000 as string | number,
   });
 
   const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
@@ -209,14 +221,15 @@ export default function UsersList() {
   const [filterRole, setFilterRole] = useState("all");
   const [filterJobTitle, setFilterJobTitle] = useState("all");
   const [filterPermission, setFilterPermission] = useState("all");
+  const [filterActive, setFilterActive] = useState("all");
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, searchQuery, perPage, filterRole, filterJobTitle, filterPermission]);
+  }, [currentPage, searchQuery, perPage, filterRole, filterJobTitle, filterPermission, filterActive]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterRole, filterJobTitle, filterPermission]);
+  }, [searchQuery, filterRole, filterJobTitle, filterPermission, filterActive]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -228,7 +241,8 @@ export default function UsersList() {
         search: searchQuery,
         role: filterRole,
         job_title: filterJobTitle,
-        permission: filterPermission
+        permission: filterPermission,
+        active: filterActive
       });
 
       const response = await fetch(`${API_BASE_URL}/users?${params}`, {
@@ -624,6 +638,9 @@ export default function UsersList() {
         fixed_fines: showForm.user.fixed_fines || '',
         hourly_leave_deduction: showForm.user.hourly_leave_deduction || '',
         daily_leave_deduction: showForm.user.daily_leave_deduction || '',
+        is_active: showForm.user.is_active !== undefined ? showForm.user.is_active : true,
+        social_security_percentage: showForm.user.social_security_percentage ?? 19.475,
+        tax_percentage: showForm.user.tax_percentage ?? 10.000,
       });
     } else {
       setFormData({
@@ -667,6 +684,9 @@ export default function UsersList() {
         fixed_fines: '',
         hourly_leave_deduction: '',
         daily_leave_deduction: '',
+        is_active: true,
+        social_security_percentage: 19.475,
+        tax_percentage: 10.000,
       });
     }
     setFormErrors({});
@@ -762,6 +782,9 @@ export default function UsersList() {
         fixed_fines: formData.fixed_fines || 0,
         hourly_leave_deduction: formData.hourly_leave_deduction || 0,
         daily_leave_deduction: formData.daily_leave_deduction || 0,
+        is_active: formData.is_active,
+        social_security_percentage: formData.social_security_percentage || 0,
+        tax_percentage: formData.tax_percentage || 0,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -861,6 +884,9 @@ export default function UsersList() {
         fixed_fines: '',
         hourly_leave_deduction: '',
         daily_leave_deduction: '',
+        is_active: true,
+        social_security_percentage: '',
+        tax_percentage: '',
       });
       if (uploadError) {
         showToast(`تم حفظ البيانات. ${uploadError}`, 'error');
@@ -881,76 +907,120 @@ export default function UsersList() {
       </div>
       
       <div className="users-card">
-        <div className="users-header">
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
-            <div className="users-search-bar" style={{ marginBottom: 0, flex: '1', minWidth: '200px' }}>
-              <input 
-                type="text" 
-                placeholder="بحث باسم المستخدم..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="users-search-input"
-              />
-              <button className="users-search-btn" type="button">
-                <i className="fa-solid fa-magnifying-glass"></i>
-              </button>
+        <div className="users-filters-box" style={{ 
+          background: '#ffffff', 
+          padding: '25px', 
+          borderRadius: '16px', 
+          border: '1px solid #e2e8f0', 
+          marginBottom: '30px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 800 }}>الفلاتر والبحث</h3>
+              <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>استخدم الخيارات أدناه لتصفية قائمة الموظفين أو البحث عن موظف محدد</p>
             </div>
-
-            <select 
-              value={filterRole} 
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="users-search-input"
-              style={{ padding: '0 10px', height: '42px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+            <button 
+              className="primary add-user-btn" 
+              onClick={() => setShowForm({ mode: 'add' })}
+              style={{ height: '42px', padding: '0 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700 }}
             >
-              <option value="all">درجة الوصول (الكل)</option>
-              <option value="admin">مدير</option>
-              <option value="user">موظف عادي</option>
-            </select>
-
-            <select 
-              value={filterPermission} 
-              onChange={(e) => setFilterPermission(e.target.value)}
-              className="users-search-input"
-              style={{ padding: '0 10px', height: '42px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
-            >
-              <option value="all">حسب الصلاحية</option>
-              {[
-                'تأمين سيارات إجباري',
-                'تأمين سيارات دولي',
-                'تأمين المسافرين',
-                'تأمين الوافدين للمقيمين',
-                'تأمين الهياكل البحرية',
-                'تأمين المسؤولية المهنية (الطبية)',
-                'تأمين الحوادث الشخصية',
-                'تأمين طلبة المدارس',
-                'تأمين نقل النقدية',
-                'تأمين البضائع',
-                'إدارة الإيرادات',
-                'إدارة المصروفات',
-                'إدارة الفروع والوكلاء',
-                'إدارة الموظفين',
-                'الأرشيف',
-              ].map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-
-            <input 
-              type="text" 
-              placeholder="المسمى الوظيفي..." 
-              value={filterJobTitle === 'all' ? '' : filterJobTitle}
-              onChange={(e) => setFilterJobTitle(e.target.value || 'all')}
-              className="users-search-input"
-              style={{ padding: '0 15px', height: '42px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, width: '150px' }}
-            />
+              <i className="fa-solid fa-plus"></i>
+              إضافة موظف جديد
+            </button>
           </div>
 
-          <button 
-            className="primary add-user-btn" 
-            onClick={() => setShowForm({ mode: 'add' })}
-            style={{ height: '42px', whiteSpace: 'nowrap' }}
-          >
-            <i className="fa-solid fa-plus"></i>
-            إضافة موظف
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
+            <div className="filter-group">
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>بحث بالاسم</label>
+              <div className="users-search-bar" style={{ marginBottom: 0, width: '100%' }}>
+                <input 
+                  type="text" 
+                  placeholder="بحث باسم المستخدم..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="users-search-input"
+                  style={{ width: '100%', height: '42px', borderRadius: '10px' }}
+                />
+                <button className="users-search-btn" type="button" style={{ height: '42px' }}>
+                  <i className="fa-solid fa-magnifying-glass"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>حالة الحساب</label>
+              <select 
+                value={filterActive} 
+                onChange={(e) => setFilterActive(e.target.value)}
+                className="users-search-input"
+                style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="1">حسابات نشطة</option>
+                <option value="0">حسابات متوقفة</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>درجة الوصول</label>
+              <select 
+                value={filterRole} 
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="users-search-input"
+                style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+              >
+                <option value="all">جميع الدرجات</option>
+                <option value="admin">مدراء النظام</option>
+                <option value="user">موظفين</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>الصلاحية الممنوحة</label>
+              <select 
+                value={filterPermission} 
+                onChange={(e) => setFilterPermission(e.target.value)}
+                className="users-search-input"
+                style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
+              >
+                <option value="all">حسب نوع التأمين</option>
+                {[
+                  'تأمين سيارات إجباري',
+                  'تأمين سيارات دولي',
+                  'تأمين المسافرين',
+                  'تأمين الوافدين للمقيمين',
+                  'تأمين الهياكل البحرية',
+                  'تأمين المسؤولية المهنية (الطبية)',
+                  'تأمين الحوادث الشخصية',
+                  'تأمين حماية طلاب المدارس',
+                  'تأمين نقل النقدية',
+                  'تأمين شحن البضائع',
+                  'إدارة الإيرادات',
+                  'إدارة المصروفات التشغيلية',
+                  'التعويضات',
+                  'رصيد الاتحاد (البطاقة البرتقالية)',
+                  'إدارة الفروع والوكلاء',
+                  'إدارة الموظفين',
+                  'الأرشيف',
+                  'تقرير مصلحة الضرائب',
+                  'تقرير الضمان الاجتماعي',
+                ].map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>المسمى الوظيفي</label>
+              <input 
+                type="text" 
+                placeholder="بحث بالمسمى..." 
+                value={filterJobTitle === 'all' ? '' : filterJobTitle}
+                onChange={(e) => setFilterJobTitle(e.target.value || 'all')}
+                className="users-search-input"
+                style={{ width: '100%', padding: '0 15px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600 }}
+              />
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -997,7 +1067,11 @@ export default function UsersList() {
                         <td>{u.name}</td>
                         <td>{u.email || '-'}</td>
                         <td>
-                          <span className="status-badge active">مفعل</span>
+                          {u.is_active ? (
+                            <span className="status-badge active">نشط</span>
+                          ) : (
+                            <span className="status-badge inactive" style={{ background: '#fee2e2', color: '#991b1b' }}>غير نشط</span>
+                          )}
                         </td>
                         <td>
                           {u.user_type === 'مدير' && (
@@ -1356,6 +1430,15 @@ export default function UsersList() {
                     </label>
                   </div>
                   <div className="form-group flex-1">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox" checked={formData.is_active}
+                        onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                      />
+                      <span>الموظف نشط (يمكنه تسجيل الدخول)</span>
+                    </label>
+                  </div>
+                  <div className="form-group flex-1">
                     <label htmlFor="email">البريد الإلكتروني</label>
                     <input
                       type="email" id="email"
@@ -1540,7 +1623,17 @@ export default function UsersList() {
                     <label>خصم غياب (يوم)</label>
                     <input type="number" value={formData.daily_leave_deduction} onChange={(e)=>setFormData({...formData, daily_leave_deduction: e.target.value})} placeholder="0.00" />
                   </div>
-                  <div className="form-group flex-1"></div> {/* Spacer */}
+                  <div className="form-group flex-1">
+                    <label>حصة الضرائب %</label>
+                    <input type="number" step="0.001" value={formData.tax_percentage} onChange={(e)=>setFormData({...formData, tax_percentage: e.target.value})} placeholder="10" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>حصة الضمان الاجتماعي %</label>
+                    <input type="number" step="0.001" value={formData.social_security_percentage} onChange={(e)=>setFormData({...formData, social_security_percentage: e.target.value})} placeholder="19.475" />
+                  </div>
+                  <div className="form-group flex-2"></div> {/* Spacer for formatting */}
                 </div>
               </div>
 

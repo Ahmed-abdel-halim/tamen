@@ -11,10 +11,8 @@ interface ExcelExportOptions {
 export function exportToExcel(options: ExcelExportOptions) {
   const { title, fileName, columnCount, tableHeaders, tableBody, summaryRight, summaryLeft } = options;
   const printDate = new Date().toLocaleDateString('ar-LY', { year: 'numeric', month: 'long', day: 'numeric' });
-  
-  const logoColspan = 2;
-  const titleColspan = Math.max(1, columnCount - logoColspan);
-  
+
+
   const summaryRightColspan = Math.floor(columnCount / 2);
   const summaryLeftColspan = Math.ceil(columnCount / 2);
 
@@ -48,14 +46,18 @@ export function exportToExcel(options: ExcelExportOptions) {
       </style>
     </head>
     <body dir="rtl">
-      <table style="border: none; margin-bottom: 20px;">
-        <tr height="100">
-          <td colspan="${titleColspan}" style="border: none; text-align: right; vertical-align: middle; font-size: 26px; font-weight: bold; color: #111827;">
-            ${title}<br/>
-            <span style="font-size: 15px; color: #4b5563; font-weight: normal;">تاريخ الإصدار: ${printDate}</span>
+      <table style="border: none; margin-bottom: 5px;">
+        <tr height="60">
+          <td colspan="${columnCount - 3}" style="background-color: #f1f5f9; border: 1.5px solid #cbd5e1; text-align: right; vertical-align: middle; padding-right: 15px; font-size: 22px; font-weight: bold; color: #1a365d;">
+            ${title}
           </td>
-          <td colspan="${logoColspan}" style="border: none; text-align: left; vertical-align: middle;">
-            <img src="${window.location.origin}/img/logo3.png" width="90" height="90" alt="المدار الليبي للتأمين" />
+          <td colspan="3" rowspan="2" style="border: none; text-align: center; vertical-align: middle; padding: 10px;">
+            <img src="${window.location.origin}/img/logo.png" width="140" height="90" style="display: block; margin: 0 auto;" />
+          </td>
+        </tr>
+        <tr height="35">
+          <td colspan="${columnCount - 3}" style="border: none; text-align: right; vertical-align: middle; padding-right: 15px; font-size: 13px; color: #64748b;">
+            تاريخ الإصدار: ${printDate}
           </td>
         </tr>
         ${(summaryRight || summaryLeft) ? `
@@ -84,7 +86,7 @@ export function exportToExcel(options: ExcelExportOptions) {
     </body>
     </html>
   `;
-  
+
   const blob = new Blob(['\uFEFF' + tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
