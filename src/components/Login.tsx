@@ -91,7 +91,9 @@ export default function Login() {
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
         console.error('Expected JSON but got:', text.substring(0, 200));
-        throw new Error('استجابة غير صحيحة من الخادم. تأكد من أن الـ API يعمل بشكل صحيح.');
+        let additionalInfo = text.substring(0, 50).replace(/\n/g, '').trim();
+        if (additionalInfo) additionalInfo = ` (${additionalInfo}...)`;
+        throw new Error(`استجابة غير صحيحة من الخادم. تأكد من أن الـ API يعمل بشكل صحيح.${additionalInfo}`);
       }
       
       const data = await res.json();
