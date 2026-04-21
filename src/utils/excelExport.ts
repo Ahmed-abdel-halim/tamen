@@ -52,7 +52,7 @@ export function exportToExcel(options: ExcelExportOptions) {
             ${title}
           </td>
           <td colspan="3" rowspan="2" style="border: none; text-align: center; vertical-align: middle; padding: 10px;">
-            <img src="${window.location.origin}/img/logo.png" width="140" height="90" style="display: block; margin: 0 auto;" />
+            <img src="${window.location.origin}/img/official_logo.PNG" width="140" height="90" style="display: block; margin: 0 auto;" />
           </td>
         </tr>
         <tr height="35">

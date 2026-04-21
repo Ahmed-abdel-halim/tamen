@@ -221,7 +221,7 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
       <body onload="window.print(); window.close();">
         <div class="header">
           <div class="header-right">
-            <img src="/img/logo.png" style="height: 90px; width: auto;" alt="Logo">
+            <img src="/img/official_logo.PNG" style="height: 90px; width: auto;" alt="Logo">
             <div class="header-info" style="margin-right: 15px;">
               <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
               <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>

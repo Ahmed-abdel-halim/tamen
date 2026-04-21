@@ -486,7 +486,7 @@ export default function EmployeeSalaries() {
       <body onload="window.print()">
         <div class="header">
           <div class="header-right">
-            <img src="/img/logo.png" style="height: 85px; width: auto;" alt="Logo">
+            <img src="/img/official_logo.PNG" style="height: 85px; width: auto;" alt="Logo">
             <div class="header-info" style="margin-right: 15px;">
               <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
               <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>

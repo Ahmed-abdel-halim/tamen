@@ -440,7 +440,7 @@ export default function InventoryManagement() {
             <h1>شركة المدار الليبي للتأمين</h1>
             <h2>نموذج إقرار استلام عهدة (أصول / مستندات)</h2>
           </div>
-          <img src="/img/logo.png" alt="المدار الليبي للتأمين" class="logo" />
+          <img src="/img/official_logo.PNG" alt="المدار الليبي للتأمين" class="logo" />
         </div>
 
         <p><strong>تاريخ وتوقيت الصرف:</strong> ${main.assigned_at}</p>

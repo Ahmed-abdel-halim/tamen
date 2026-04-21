@@ -505,7 +505,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       {/* Official Corporate Header for Print */}
       <div className="print-official-header" style={{ width: '100%', direction: 'rtl' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src="/img/logo.png" alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
+          <img src="/img/official_logo.PNG" alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#000' }}>المدار الليبي للتأمين</h1>
             <p style={{ margin: '5px 0 0 0', fontSize: '1rem', color: '#000' }}>قسم الشؤون المالية والموارد البشرية</p>

@@ -183,7 +183,7 @@ export default function CommissionManagement() {
               <h1>تقرير التسويات والعمولات</h1>
             </div>
             <div style="flex: 1; text-align: left;">
-              <img src="${window.location.origin}/img/logo.png" class="logo" alt="المدار الليبي للتأمين" />
+              <img src="${window.location.origin}/img/official_logo.PNG" class="logo" alt="المدار الليبي للتأمين" />
             </div>
           </div>
 
