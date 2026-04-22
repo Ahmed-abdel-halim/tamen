@@ -102,7 +102,7 @@ export default function EmployeeSalaries() {
       ]);
       const employeesData = await employeesRes.json();
       const payrollsData = await payrollsRes.json();
-      setEmployees(Array.isArray(employeesData) ? employeesData : []);
+      setEmployees(Array.isArray(employeesData) ? employeesData.map((emp: any) => ({ ...emp, id: Number(emp.id) })) : []);
       setPayrolls(Array.isArray(payrollsData) ? payrollsData : []);
     } catch (error: any) {
       showToast(error?.message || 'حدث خطأ أثناء تحميل بيانات المرتبات', 'error');
@@ -117,7 +117,7 @@ export default function EmployeeSalaries() {
 
   const payrollMap = useMemo(() => {
     const map = new Map<number, Payroll>();
-    payrolls.forEach((p) => map.set(p.user_id, p));
+    payrolls.forEach((p) => map.set(Number(p.user_id), p));
     return map;
   }, [payrolls]);
 
