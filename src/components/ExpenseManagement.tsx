@@ -311,8 +311,14 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         fetchExpenses();
         fetchUnionBalances();
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        showToast(errorData.message || 'حدث خطأ أثناء الحفظ', 'error');
+        const errData = await response.json().catch(() => ({}));
+        let errMsg = errData.message || 'حدث خطأ أثناء الحفظ';
+        if (errData.errors) {
+          // If there are validation errors, pick the first one
+          const firstKey = Object.keys(errData.errors)[0];
+          errMsg = errData.errors[firstKey][0];
+        }
+        showToast(errMsg, 'error');
       }
     } catch (error) {
       console.error('Error saving expense:', error);
@@ -391,8 +397,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         setEditingUnionPurchase(null);
         fetchUnionBalances();
       } else {
-        const errorText = await response.text();
-        showToast(`فشل: ${errorText.substring(0, 50)}`, 'error');
+        const errData = await response.json().catch(() => ({}));
+        let errMsg = errData.message || 'فشلت العملية';
+        if (errData.errors) {
+          const firstKey = Object.keys(errData.errors)[0];
+          errMsg = errData.errors[firstKey][0];
+        }
+        showToast(errMsg, 'error');
       }
     } catch (e) {
       showToast(`خطأ: ${(e as Error).message}`, 'error');
@@ -505,7 +516,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       {/* Official Corporate Header for Print */}
       <div className="print-official-header" style={{ width: '100%', direction: 'rtl' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src="/img/official_logo.PNG" alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
+          <img src="/img/logo.png" alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#000' }}>المدار الليبي للتأمين</h1>
             <p style={{ margin: '5px 0 0 0', fontSize: '1rem', color: '#000' }}>قسم الشؤون المالية والموارد البشرية</p>

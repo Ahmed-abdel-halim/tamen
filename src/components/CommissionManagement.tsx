@@ -48,7 +48,7 @@ export default function CommissionManagement() {
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
-  
+
 
   useEffect(() => {
     fetchAgents();
@@ -96,7 +96,7 @@ export default function CommissionManagement() {
 
   const handlePayCommission = async (id: number) => {
     if (!window.confirm('هل أنت متأكد من وضع علامة "مدفوع" لهذه العمولات؟')) return;
-    
+
     // Logic to update status
     setCommissions(prev => prev.map(c => c.id === id ? { ...c, status: 'paid' } : c));
     showToast('تم تحديث حالة العمولة بنجاح', 'success');
@@ -106,14 +106,14 @@ export default function CommissionManagement() {
     const commissionDate = new Date(c.date);
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
-    if (start) start.setHours(0,0,0,0);
-    if (end) end.setHours(23,59,59,999);
+    if (start) start.setHours(0, 0, 0, 0);
+    if (end) end.setHours(23, 59, 59, 999);
 
     return (selectedAgent === '' || c.agent_id.toString() === selectedAgent) &&
-           (selectedType === '' || c.document_type === selectedType) &&
-           (statusFilter === 'all' || c.status === statusFilter) &&
-           (!start || commissionDate >= start) &&
-           (!end || commissionDate <= end);
+      (selectedType === '' || c.document_type === selectedType) &&
+      (statusFilter === 'all' || c.status === statusFilter) &&
+      (!start || commissionDate >= start) &&
+      (!end || commissionDate <= end);
   });
 
   // Calculate pagination
@@ -183,7 +183,7 @@ export default function CommissionManagement() {
               <h1>تقرير التسويات والعمولات</h1>
             </div>
             <div style="flex: 1; text-align: left;">
-              <img src="${window.location.origin}/img/official_logo.PNG" class="logo" alt="المدار الليبي للتأمين" />
+              <img src="${window.location.origin}/img/logo.png" class="logo" alt="المدار الليبي للتأمين" />
             </div>
           </div>
 
@@ -257,11 +257,11 @@ export default function CommissionManagement() {
       iframeDoc.open();
       iframeDoc.write(htmlContent);
       iframeDoc.close();
-      
+
       const images = iframeDoc.getElementsByTagName('img');
       let imagesLoaded = 0;
       const totalImages = images.length;
-      
+
       if (totalImages === 0) {
         printFrame();
       } else {
@@ -288,7 +288,7 @@ export default function CommissionManagement() {
   const handleExportExcel = () => {
     const total = totalCommission.toLocaleString();
     const period = startDate && endDate ? `من: ${startDate} إلى: ${endDate}` : (startDate ? `من: ${startDate}` : (endDate ? `إلى: ${endDate}` : 'جميع الفترات'));
-    
+
     exportToExcel({
       title: 'تقرير التسويات والعمولات',
       fileName: 'تقرير_العمولات',
@@ -324,9 +324,9 @@ export default function CommissionManagement() {
 
   return (
     <section className="users-management">
-      <div className="users-breadcrumb" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div className="users-breadcrumb" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         padding: '15px 20px',
         background: 'var(--panel)',
@@ -339,15 +339,15 @@ export default function CommissionManagement() {
           نظام التسويات والعمولات
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            style={{ padding: '8px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} 
+          <button
+            style={{ padding: '8px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={handleExportExcel}
           >
             <i className="fa-solid fa-file-excel"></i>
             تصدير إكسيل
           </button>
-          <button 
-            style={{ padding: '8px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} 
+          <button
+            style={{ padding: '8px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={handlePrintReport}
           >
             <i className="fa-solid fa-print"></i>
@@ -448,7 +448,7 @@ export default function CommissionManagement() {
                 <td style={{ color: '#139625', fontWeight: 'bold' }}>{comm.commission_amount.toLocaleString()} د.ل</td>
                 <td>{comm.date}</td>
                 <td>
-                  <span style={{ 
+                  <span style={{
                     padding: '4px 10px', borderRadius: '20px', fontSize: '11px',
                     background: comm.status === 'paid' ? '#dcfce7' : '#fef2f2',
                     color: comm.status === 'paid' ? '#166534' : '#991b1b',
@@ -459,7 +459,7 @@ export default function CommissionManagement() {
                 </td>
                 <td>
                   {comm.status === 'pending' && (
-                    <button 
+                    <button
                       onClick={() => handlePayCommission(comm.id)}
                       style={{ background: '#139625', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
                     >

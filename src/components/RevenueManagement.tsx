@@ -99,7 +99,7 @@ export default function RevenueManagement() {
             <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>Al Madar Libyan Insurance</p>
             <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>قسم الشؤون المالية والموارد البشرية</p>
           </div>
-          <img src="/img/official_logo.PNG" alt="Logo" style={{ height: '80px', width: 'auto' }} />
+          <img src="/img/logo.png" alt="Logo" style={{ height: '80px', width: 'auto' }} />
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '25px' }}>

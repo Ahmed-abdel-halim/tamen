@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { exportToExcel } from '../utils/excelExport';
@@ -113,6 +113,9 @@ export default function InventoryManagement() {
 
   const [agents, setAgents] = useState<{id: number, agent_name: string, agency_name: string}[]>([]);
   const [employees, setEmployees] = useState<{id: number, name: string}[]>([]);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
+  const recipientDropdownRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [assignInventoryType, setAssignInventoryType] = useState<'fixed' | 'consumable'>('fixed');
   const [assignmentItems, setAssignmentItems] = useState<Array<{
@@ -178,6 +181,16 @@ export default function InventoryManagement() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (recipientDropdownRef.current && !recipientDropdownRef.current.contains(event.target as Node)) {
+        setShowRecipientDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,6 +379,7 @@ export default function InventoryManagement() {
         item_id: '', recipient_id: '', recipient_type: 'agent', 
         quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' 
       });
+      setRecipientSearch('');
       setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
       fetchData();
       setActiveTab('custody');
@@ -440,7 +454,7 @@ export default function InventoryManagement() {
             <h1>شركة المدار الليبي للتأمين</h1>
             <h2>نموذج إقرار استلام عهدة (أصول / مستندات)</h2>
           </div>
-          <img src="/img/official_logo.PNG" alt="المدار الليبي للتأمين" class="logo" />
+          <img src="/img/logo.png" alt="المدار الليبي للتأمين" class="logo" />
         </div>
 
         <p><strong>تاريخ وتوقيت الصرف:</strong> ${main.assigned_at}</p>
@@ -644,6 +658,115 @@ export default function InventoryManagement() {
     alignItems: 'center',
     gap: '8px',
   });
+  
+  const handleExportFixedAssetsReport = () => {
+    const fixedCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
+    let grandTotalValue = 0;
+    let grandTotalDepreciation = 0;
+    
+    const tableRows = fixedCustodies.map((c, index) => {
+      const price = getItemPrice(c.item) || 0;
+      const totalValue = price * c.quantity;
+      
+      const assignedDate = new Date(c.assigned_at);
+      const years = Math.max(0, (new Date().getTime() - assignedDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+      const depreciationRate = 0.10; 
+      const depreciationValue = totalValue * depreciationRate * years;
+      
+      grandTotalValue += totalValue;
+      grandTotalDepreciation += depreciationValue;
+      
+      return `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td>${index + 1}</td>
+          <td style="text-align:right; font-weight:bold;">${c.item.name}</td>
+          <td>${c.quantity} ${c.item.unit}</td>
+          <td>${c.recipient.agency_name || c.recipient.name}</td>
+          <td>${totalValue.toLocaleString()} د.ل</td>
+          <td style="color:#ef4444;">${depreciationValue.toFixed(2)} د.ل</td>
+          <td>${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const footerRow = `
+      <tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #000;">
+        <td colspan="4" style="text-align: center;">الإجمالي العام</td>
+        <td>${grandTotalValue.toLocaleString()} د.ل</td>
+        <td style="color:#ef4444;">${grandTotalDepreciation.toLocaleString()} د.ل</td>
+        <td>-</td>
+      </tr>
+    `;
+
+    exportToExcel({
+      title: 'تقرير العهد والأصول الثابتة',
+      fileName: 'العهد_الثابتة',
+      columnCount: 7,
+      summaryRight: `إجمالي عدد الأصول: ${fixedCustodies.length}`,
+      summaryLeft: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
+      tableHeaders: `
+        <tr height="40">
+          <th width="50">#</th>
+          <th width="150">الصنف</th>
+          <th width="120">الكمية</th>
+          <th width="150">المستلم</th>
+          <th width="120">إجمالي القيمة</th>
+          <th width="120">قيمة الاستهلاك</th>
+          <th width="200">التفاصيل</th>
+        </tr>
+      `,
+      tableBody: tableRows + footerRow
+    });
+  };
+
+  const handleExportConsumableAssetsReport = () => {
+    const consumableCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'consumable' && c.status === 'active');
+    let grandTotalValue = 0;
+
+    const tableRows = consumableCustodies.map((c, index) => {
+      const price = getItemPrice(c.item) || 0;
+      const totalValue = price * c.quantity;
+      grandTotalValue += totalValue;
+      
+      return `
+        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
+          <td>${index + 1}</td>
+          <td style="text-align:right; font-weight:bold;">${c.item.name}</td>
+          <td>${c.quantity} ${c.item.unit}</td>
+          <td>${c.recipient.agency_name || c.recipient.name}</td>
+          <td>${totalValue.toLocaleString()} د.ل</td>
+          <td>${c.notes || '-'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const footerRow = `
+      <tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #000;">
+        <td colspan="4" style="text-align: center;">إجمالي قيمة العهد المستهلكة</td>
+        <td>${grandTotalValue.toLocaleString()} د.ل</td>
+        <td>-</td>
+      </tr>
+    `;
+
+    exportToExcel({
+      title: 'تقرير العهد والمخازن (المواد المستهلكة)',
+      fileName: 'العهد_المستهلكة',
+      columnCount: 6,
+      summaryRight: `إجمالي عدد العهد: ${consumableCustodies.length}`,
+      summaryLeft: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
+      tableHeaders: `
+        <tr height="40">
+          <th width="50">#</th>
+          <th width="200">الصنف</th>
+          <th width="120">الكمية</th>
+          <th width="150">المستلم</th>
+          <th width="120">إجمالي القيمة</th>
+          <th width="200">التفاصيل</th>
+        </tr>
+      `,
+      tableBody: tableRows + footerRow
+    });
+  };
 
   return (
     <section className="users-management">
@@ -903,9 +1026,28 @@ export default function InventoryManagement() {
                 className="btn-submit custody-print-btn"
                 onClick={() => handlePrintAllCustodyReceipts(filteredCustodyGroups.flat())}
                 disabled={filteredCustodyGroups.length === 0}
+                style={{backgroundColor: 'var(--accent)'}}
               >
                 <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
-                طباعة كل العهد الحالية
+                إيصالات التسليم
+              </button>
+              
+              <button
+                className="secondary"
+                onClick={handleExportFixedAssetsReport}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
+              >
+                <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#014cb1' }}></i>
+                تقرير العهد الثابتة
+              </button>
+
+              <button
+                className="secondary"
+                onClick={handleExportConsumableAssetsReport}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
+              >
+                <i className="fa-solid fa-file-lines" style={{ color: '#166534' }}></i>
+                تقرير العهد المستهلكة
               </button>
             </div>
             <div className="users-mobile-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: 0 }}>
@@ -937,7 +1079,7 @@ export default function InventoryManagement() {
                       </div>
                       <div className="user-mobile-row">
                         <span className="user-mobile-label">الأصناف المسلمة:</span>
-                        <span className="user-mobile-value" style={{ display: 'block', width: '100%' }}>
+<span className="user-mobile-value" style={{ display: 'block', width: '100%' }}>
                           <ul style={{ margin: '6px 0 0 0', paddingInlineStart: '16px' }}>
                             {group.map((entry) => (
                               <li key={entry.id} style={{ marginBottom: '4px' }}>
@@ -987,162 +1129,433 @@ export default function InventoryManagement() {
         )}
 
         {activeTab === 'assign' && (
-          <div style={{ padding: '30px', maxWidth: '800px', margin: '0 auto' }}>
-            <h3 style={{ marginBottom: '25px', color: 'var(--text)', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
-              <i className="fa-solid fa-arrow-up-right-from-square text-accent" style={{ color: 'var(--accent)', marginLeft: '10px' }}></i>
-              إصدار نموذج صرف عهدة
-            </h3>
-            
-            <form onSubmit={handleAssignCustody} className="user-form">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>نوع الصنف المصروف <span className="required">*</span></label>
-                  <select
-                    value={assignInventoryType}
-                    onChange={(e) => {
-                      const nextType = e.target.value as 'fixed' | 'consumable';
-                      setAssignInventoryType(nextType);
-                      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
-                    }}
-                  >
-                    <option value="fixed">مخزون ثابت</option>
-                    <option value="consumable">مخزون مستهلك</option>
-                  </select>
+          <div style={{ padding: '30px', maxWidth: '1000px', margin: '0 auto' }}>
+            <div className="form-card" style={{ 
+              backgroundColor: 'var(--card-bg)', 
+              borderRadius: '20px', 
+              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+              padding: '35px',
+              border: '1px solid var(--border)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '35px', borderBottom: '2px solid var(--border)', paddingBottom: '20px' }}>
+                <h3 style={{ margin: 0, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.5rem' }}>
+                  <i className="fa-solid fa-file-signature" style={{ color: 'var(--accent)', fontSize: '1.8rem' }}></i>
+                  إصدار نموذج صرف عهدة جديد
+                </h3>
+                <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent)', padding: '6px 15px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  رقم الحركة: {Date.now().toString().slice(-6)}
+                </span>
+              </div>
+              
+              <form onSubmit={handleAssignCustody} className="user-form">
+                {/* 1. Global Type Selection */}
+                <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: 'var(--bg-light)', borderRadius: '15px', border: '1px dashed var(--accent)' }}>
+                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', color: 'var(--accent)' }}>
+                    <i className="fa-solid fa-layer-group" style={{ marginLeft: '8px' }}></i>
+                    نوع الصنف المصروف حالياً
+                  </label>
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <label style={{ 
+                      flex: 1, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px', 
+                      padding: '12px 20px', 
+                      borderRadius: '12px', 
+                      border: `2px solid ${assignInventoryType === 'fixed' ? 'var(--accent)' : 'var(--border)'}`,
+                      backgroundColor: assignInventoryType === 'fixed' ? 'rgba(59, 130, 246, 0.05)' : 'var(--card-bg)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <input 
+                        type="radio" 
+                        name="assignType" 
+                        value="fixed" 
+                        checked={assignInventoryType === 'fixed'} 
+                        onChange={() => {
+                          setAssignInventoryType('fixed');
+                          setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
+                        }}
+                      />
+                      <span style={{ fontWeight: assignInventoryType === 'fixed' ? 'bold' : 'normal' }}>مخزون ثابت (أجهزة، أثاث)</span>
+                    </label>
+                    <label style={{ 
+                      flex: 1, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px', 
+                      padding: '12px 20px', 
+                      borderRadius: '12px', 
+                      border: `2px solid ${assignInventoryType === 'consumable' ? 'var(--accent)' : 'var(--border)'}`,
+                      backgroundColor: assignInventoryType === 'consumable' ? 'rgba(59, 130, 246, 0.05)' : 'var(--card-bg)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <input 
+                        type="radio" 
+                        name="assignType" 
+                        value="consumable" 
+                        checked={assignInventoryType === 'consumable'} 
+                        onChange={() => {
+                          setAssignInventoryType('consumable');
+                          setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
+                        }}
+                      />
+                      <span style={{ fontWeight: assignInventoryType === 'consumable' ? 'bold' : 'normal' }}>مخزون مستهلك (قرطاسية، مطبوعات)</span>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>الأصناف المراد صرفها <span className="required">*</span></label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* 2. Items List */}
+                <div style={{ marginBottom: '35px' }}>
+                  <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    الأصناف المراد صرفها للمستلم
+                  </label>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {assignmentItems.map((row, index) => (
-                      <div key={`assign-row-${index}`} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>الصنف #{index + 1}</label>
-                            <select
-                              required
-                              value={row.item_id}
-                              onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
-                            >
-                              <option value="">اختر الصنف من المخزن...</option>
-                              {assignableItems.map(i => (
-                                <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
-                                  {i.name} (المتوفر: {i.stocks?.[0]?.quantity || 0})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>الكمية</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={row.quantity}
-                              onChange={(e) => updateAssignmentItemRow(index, 'quantity', parseInt(e.target.value || '1'))}
-                            />
-                          </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>السيريال الأول</label>
-                            <input
-                              type="text"
-                              dir="ltr"
-                              value={row.serial_start}
-                              onChange={(e) => updateAssignmentItemRow(index, 'serial_start', e.target.value)}
-                            />
-                          </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>السيريال الأخير</label>
-                            <input
-                              type="text"
-                              dir="ltr"
-                              value={row.serial_end}
-                              onChange={(e) => updateAssignmentItemRow(index, 'serial_end', e.target.value)}
-                            />
-                          </div>
+                      <div key={`assign-row-${index}`} className="assignment-item-card" style={{ 
+                        border: '1px solid var(--border)', 
+                        borderRadius: '15px', 
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
+                        backgroundColor: 'var(--card-bg)'
+                      }}>
+                        <div style={{ 
+                          backgroundColor: 'var(--bg-light)', 
+                          padding: '10px 20px', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          borderBottom: '1px solid var(--border)'
+                        }}>
+                          <span style={{ fontWeight: 'bold', color: 'var(--text)', fontSize: '0.9rem' }}>
+                            <i className="fa-solid fa-box-open" style={{ marginLeft: '8px', color: 'var(--accent)' }}></i>
+                            صنف رقم {index + 1}
+                          </span>
                           <button
                             type="button"
-                            className="btn-cancel"
                             onClick={() => removeAssignmentItemRow(index)}
                             disabled={assignmentItems.length === 1}
-                            style={{ padding: '8px 10px' }}
-                            title="حذف الصنف"
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              color: '#ef4444', 
+                              cursor: 'pointer',
+                              padding: '5px',
+                              opacity: assignmentItems.length === 1 ? 0.3 : 1
+                            }}
+                            title="حذف هذا الصنف"
                           >
-                            <i className="fa-solid fa-trash"></i>
+                            <i className="fa-solid fa-trash-can"></i>
                           </button>
                         </div>
-                        <div className="form-group" style={{ marginTop: '10px', marginBottom: 0 }}>
-                          <label>حالة الصنف المسلم</label>
-                          <select
-                            value={row.condition}
-                            onChange={(e) => updateAssignmentItemRow(index, 'condition', e.target.value)}
-                          >
-                            <option value="new">جديد بقراطيسه</option>
-                            <option value="used">مستعمل سابقاً</option>
-                          </select>
-                        </div>
-                        <div className="form-group" style={{ marginTop: '10px', marginBottom: 0 }}>
-                          <label>تفاصيل للصنف (مثل: رقم الموديل، ملاحظات خاصة)</label>
-                          <textarea
-                            rows={1}
-                            placeholder="تفاصيل إضافية لهذا الصنف..."
-                            style={{ minHeight: '45px' }}
-                            value={row.notes}
-                            onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
-                          />
+                        
+                        <div style={{ padding: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label>اختر الصنف من المخازن <span className="required">*</span></label>
+                              <select
+                                required
+                                value={row.item_id}
+                                onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
+                                style={{ width: '100%' }}
+                              >
+                                <option value="">اختر الصنف...</option>
+                                {assignableItems.map(i => (
+                                  <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
+                                    {i.name} (المتوفر حالياً: {i.stocks?.[0]?.quantity || 0})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label>الكمية</label>
+                              <input
+                                type="number"
+                                min="1"
+                                required
+                                value={row.quantity}
+                                onChange={(e) => updateAssignmentItemRow(index, 'quantity', parseInt(e.target.value || '1'))}
+                                style={{ textAlign: 'center' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label>حالة الصنف</label>
+                              <select
+                                value={row.condition}
+                                onChange={(e) => updateAssignmentItemRow(index, 'condition', e.target.value)}
+                              >
+                                <option value="new">جديد</option>
+                                <option value="used">مستعمل</option>
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label>السيريال الأول</label>
+                              <input
+                                type="text"
+                                dir="ltr"
+                                placeholder="اختياري"
+                                value={row.serial_start}
+                                onChange={(e) => updateAssignmentItemRow(index, 'serial_start', e.target.value)}
+                              />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label>السيريال الأخير</label>
+                              <input
+                                type="text"
+                                dir="ltr"
+                                placeholder="اختياري"
+                                value={row.serial_end}
+                                onChange={(e) => updateAssignmentItemRow(index, 'serial_end', e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>ملاحظات خاصة بهذا الصنف</label>
+                            <textarea
+                              rows={1}
+                              placeholder="مثال: رقم الموديل، حالة استثنائية..."
+                              style={{ minHeight: '45px', fontSize: '0.9rem' }}
+                              value={row.notes}
+                              onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
-                    <button type="button" className="btn-submit" onClick={addAssignmentItemRow} style={{ width: 'fit-content' }}>
-                      <i className="fa-solid fa-plus" style={{ marginLeft: '6px' }}></i>
-                      إضافة صنف آخر
+                    
+                    <button 
+                      type="button" 
+                      className="btn-submit" 
+                      onClick={addAssignmentItemRow} 
+                      style={{ 
+                        width: 'fit-content', 
+                        backgroundColor: 'transparent', 
+                        color: 'var(--accent)', 
+                        border: '2px dashed var(--accent)',
+                        padding: '12px 25px',
+                        alignSelf: 'center',
+                        marginTop: '10px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <i className="fa-solid fa-plus-circle" style={{ marginLeft: '10px' }}></i>
+                      إضافة صنف إضافي لهذه العهدة
                     </button>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label>نوع المستلم <span className="required">*</span></label>
-                  <select 
-                    value={assignment.recipient_type}
-                    onChange={(e) => setAssignment({...assignment, recipient_type: e.target.value, recipient_id: ''})}
-                  >
-                    <option value="agent">وكيل / فرع</option>
-                    <option value="employee">موظف عام</option>
-                  </select>
-                </div>
+                {/* 3. Recipient Section */}
+                <div style={{ 
+                  backgroundColor: 'rgba(15, 23, 42, 0.02)', 
+                  padding: '25px', 
+                  borderRadius: '15px', 
+                  marginBottom: '35px',
+                  border: '1px solid var(--border)'
+                }}>
+                  <h4 style={{ marginTop: 0, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <i className="fa-solid fa-user-tag" style={{ color: 'var(--accent)' }}></i>
+                    بيانات المستلم (الجهة المسؤولة)
+                  </h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+                    <div className="form-group">
+                      <label>تصنيف المستلم <span className="required">*</span></label>
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setAssignment({...assignment, recipient_type: 'agent', recipient_id: ''});
+                            setRecipientSearch('');
+                          }}
+                          style={{ 
+                            flex: 1, 
+                            padding: '10px', 
+                            borderRadius: '8px', 
+                            border: '1px solid var(--border)',
+                            backgroundColor: assignment.recipient_type === 'agent' ? 'var(--accent)' : 'var(--card-bg)',
+                            color: assignment.recipient_type === 'agent' ? '#fff' : 'var(--text)',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          وكيل / فرع
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setAssignment({...assignment, recipient_type: 'employee', recipient_id: ''});
+                            setRecipientSearch('');
+                          }}
+                          style={{ 
+                            flex: 1, 
+                            padding: '10px', 
+                            borderRadius: '8px', 
+                            border: '1px solid var(--border)',
+                            backgroundColor: assignment.recipient_type === 'employee' ? 'var(--accent)' : 'var(--card-bg)',
+                            color: assignment.recipient_type === 'employee' ? '#fff' : 'var(--text)',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          موظف عام
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="form-group">
-                  <label>اسم المستلم <span className="required">*</span></label>
-                  <select 
-                    required 
-                    value={assignment.recipient_id}
-                    onChange={(e) => setAssignment({...assignment, recipient_id: e.target.value})}
-                  >
-                    <option value="">اختر اسم المستلم...</option>
-                    {assignment.recipient_type === 'agent' ? (
-                      agents.map(a => <option key={a.id} value={a.id}>{a.agency_name || a.agent_name}</option>)
-                    ) : (
-                      employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)
-                    )}
-                  </select>
+                    <div className="form-group" style={{ position: 'relative' }} ref={recipientDropdownRef}>
+                      <label>بحث واختيار المستلم <span className="required">*</span></label>
+                      <div className="searchable-select-container" style={{ position: 'relative' }}>
+                        <input 
+                          type="text" 
+                          placeholder="ابحث عن الاسم هنا..." 
+                          value={recipientSearch}
+                          onChange={(e) => {
+                            setRecipientSearch(e.target.value);
+                            setShowRecipientDropdown(true);
+                          }}
+                          onFocus={() => setShowRecipientDropdown(true)}
+                          className="form-control"
+                          style={{ 
+                            width: '100%', 
+                            padding: '12px 15px', 
+                            borderRadius: '8px', 
+                            border: '1px solid var(--border)',
+                            backgroundColor: 'var(--card-bg)',
+                            color: 'var(--text)',
+                            paddingLeft: '35px'
+                          }}
+                        />
+                        <i 
+                          className={`fa-solid ${showRecipientDropdown ? 'fa-chevron-up' : 'fa-chevron-down'}`} 
+                          style={{ 
+                            position: 'absolute', 
+                            left: '12px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)', 
+                            color: 'var(--muted)',
+                            pointerEvents: 'none'
+                          }}
+                        ></i>
+
+                        {showRecipientDropdown && (
+                          <div className="searchable-dropdown" style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            left: 0,
+                            zIndex: 1000,
+                            backgroundColor: 'var(--card-bg)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                            maxHeight: '250px',
+                            overflowY: 'auto',
+                            marginTop: '8px'
+                          }}>
+                            {assignment.recipient_type === 'agent' ? (
+                              agents
+                                .filter(a => 
+                                  (a.agency_name || '').toLowerCase().includes(recipientSearch.toLowerCase()) || 
+                                  (a.agent_name || '').toLowerCase().includes(recipientSearch.toLowerCase())
+                                )
+                                .map(a => (
+                                  <div 
+                                    key={a.id} 
+                                    className="dropdown-item"
+                                    onClick={() => {
+                                      setAssignment({...assignment, recipient_id: a.id.toString()});
+                                      setRecipientSearch(a.agency_name || a.agent_name);
+                                      setShowRecipientDropdown(false);
+                                    }}
+                                    style={{ 
+                                      padding: '12px 20px', 
+                                      cursor: 'pointer', 
+                                      borderBottom: '1px solid var(--border)',
+                                      backgroundColor: assignment.recipient_id === a.id.toString() ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                      fontSize: '0.95rem'
+                                    }}
+                                  >
+                                    <i className="fa-solid fa-building-user" style={{ marginLeft: '10px', color: 'var(--muted)', fontSize: '0.8rem' }}></i>
+                                    {a.agency_name || a.agent_name}
+                                  </div>
+                                ))
+                            ) : (
+                              employees
+                                .filter(e => (e.name || '').toLowerCase().includes(recipientSearch.toLowerCase()))
+                                .map(e => (
+                                  <div 
+                                    key={e.id} 
+                                    className="dropdown-item"
+                                    onClick={() => {
+                                      setAssignment({...assignment, recipient_id: e.id.toString()});
+                                      setRecipientSearch(e.name);
+                                      setShowRecipientDropdown(false);
+                                    }}
+                                    style={{ 
+                                      padding: '12px 20px', 
+                                      cursor: 'pointer', 
+                                      borderBottom: '1px solid var(--border)',
+                                      backgroundColor: assignment.recipient_id === e.id.toString() ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                      fontSize: '0.95rem'
+                                    }}
+                                  >
+                                    <i className="fa-solid fa-user-tie" style={{ marginLeft: '10px', color: 'var(--muted)', fontSize: '0.8rem' }}></i>
+                                    {e.name}
+                                  </div>
+                                ))
+                            )}
+                            {((assignment.recipient_type === 'agent' && agents.filter(a => (a.agency_name || '').toLowerCase().includes(recipientSearch.toLowerCase()) || (a.agent_name || '').toLowerCase().includes(recipientSearch.toLowerCase())).length === 0) ||
+                              (assignment.recipient_type === 'employee' && employees.filter(e => (e.name || '').toLowerCase().includes(recipientSearch.toLowerCase())).length === 0)) && (
+                              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic' }}>
+                                لا توجد نتائج مطابقة لبحثك
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>ملاحظات الاستلام والتسليم</label>
+                  <label>ملاحظات عامة على نموذج الصرف (تظهر في الإيصال)</label>
                   <textarea 
-                    rows={3}
-                    placeholder="ضع أي تفاصيل إضافية متعلقة بالتسليم..."
+                    rows={2}
+                    placeholder="ضع أي تفاصيل إضافية متعلقة بالتسليم ككل..."
+                    style={{ borderRadius: '12px' }}
                     value={assignment.notes}
                     onChange={(e) => setAssignment({...assignment, notes: e.target.value})}
                   ></textarea>
                 </div>
-              </div>
 
-              <div className="form-actions" style={{ marginTop: '30px' }}>
-                <button type="button" className="btn-cancel" onClick={() => setActiveTab('store')}>العودة</button>
-                <button type="submit" className="btn-submit" disabled={submitting}>
-                  <i className="fa-solid fa-check"></i> {submitting ? 'جاري الصرف والخصم من المخزن...' : 'اعتماد وتسجيل العهدة'}
-                </button>
-              </div>
-            </form>
+                <div style={{ display: 'flex', gap: '15px', marginTop: '40px', paddingTop: '25px', borderTop: '2px solid var(--border)' }}>
+                  <button 
+                    type="button" 
+                    className="btn-cancel" 
+                    onClick={() => setActiveTab('store')}
+                    style={{ flex: 1, padding: '15px', borderRadius: '12px', fontSize: '1.1rem' }}
+                  >
+                    إلغاء والعودة
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-submit" 
+                    disabled={submitting}
+                    style={{ flex: 2, padding: '15px', borderRadius: '12px', fontSize: '1.1rem', boxShadow: '0 5px 15px rgba(59, 130, 246, 0.3)' }}
+                  >
+                    <i className="fa-solid fa-check-double" style={{ marginLeft: '10px' }}></i> 
+                    {submitting ? 'جاري تسجيل الحركة...' : 'اعتماد وصرف العهدة الآن'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

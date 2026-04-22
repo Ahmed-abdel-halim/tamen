@@ -8,6 +8,7 @@ interface BranchAgent {
   agency_name: string;
   agent_name: string;
   code: string;
+  phone?: string;
 }
 
 interface Voucher {
@@ -15,6 +16,7 @@ interface Voucher {
   voucher_number: string;
   agent_id: number;
   agent_name: string;
+  agent_phone?: string;
   amount: number;
   payment_method: string;
   bank_name?: string;
@@ -74,6 +76,7 @@ export default function PaymentVouchers() {
           voucher_number: v.voucher_number,
           agent_id: v.branch_agent_id,
           agent_name: v.agent?.agency_name || 'وكيل مجهول',
+          agent_phone: v.agent?.phone || '',
           amount: parseFloat(v.amount),
           payment_method: v.payment_method,
           payment_date: v.payment_date,
@@ -149,9 +152,28 @@ export default function PaymentVouchers() {
       });
 
       if (response.ok) {
+        const savedVoucher = await response.json();
         showToast(editingVoucher ? 'تم تحديث الإيصال بنجاح' : 'تم إصدار الإيصال بنجاح', 'success');
         setShowModal(false);
         fetchVouchers(); // تحديث القائمة
+
+        // إذا كان إيصال جديد، نفتح الواتساب تلقائياً
+        if (!editingVoucher) {
+          const agent = agents.find(a => a.id === parseInt(selectedAgent));
+          const voucherToShare: Voucher = {
+            id: savedVoucher.id,
+            voucher_number: voucherNumber,
+            agent_id: parseInt(selectedAgent),
+            agent_name: agent?.agency_name || 'وكيل',
+            agent_phone: agent?.phone || '', // Need to ensure phone is in agent interface
+            amount: parseFloat(amount),
+            payment_method: paymentMethod === 'أخرى' ? customMethod : paymentMethod,
+            payment_date: paymentDate,
+            notes: notes,
+            created_at: new Date().toISOString()
+          };
+          handleWhatsAppShare(voucherToShare);
+        }
       } else {
         const errData = await response.json().catch(() => ({}));
         showToast(errData.message || 'فشلت العملية', 'error');
@@ -189,6 +211,35 @@ export default function PaymentVouchers() {
     setTimeout(() => {
       window.print();
     }, 100);
+  };
+
+  const handleWhatsAppShare = (voucher: Voucher) => {
+    if (!voucher.agent_phone) {
+      showToast('رقم هاتف الوكيل غير مسجل', 'error');
+      // Even if no phone, we can still generate a generic link
+    }
+
+    const message = `*المدار الليبي للتأمين* 🏢%0A` +
+      `*إيصال قبض مالي جديد*%0A%0A` +
+      `📌 *رقم الإيصال:* ${voucher.voucher_number}%0A` +
+      `👤 *السيد / المكتب:* ${voucher.agent_name}%0A` +
+      `💰 *المبلغ:* ${voucher.amount.toLocaleString()} د.ل%0A` +
+      `📅 *التاريخ:* ${voucher.payment_date}%0A` +
+      `💳 *طريقة الدفع:* ${voucher.payment_method}%0A%0A` +
+      `شكراً لتعاملكم معنا. ✨`;
+
+    // تنظيف رقم الهاتف (إزالة أي مسافات أو رموز)
+    let cleanPhone = (voucher.agent_phone || '').replace(/\D/g, '');
+    
+    // تحويل الرقم الليبي المحلي للدولي إذا لزم الأمر
+    if (cleanPhone.startsWith('09')) {
+      cleanPhone = '218' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('9')) {
+      cleanPhone = '218' + cleanPhone;
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   return (
@@ -316,6 +367,13 @@ export default function PaymentVouchers() {
                         title="طباعة الإيصال"
                       >
                         <i className="fa-solid fa-print"></i>
+                      </button>
+                      <button 
+                        onClick={() => handleWhatsAppShare(voucher)}
+                        style={{ background: '#dcfce7', border: 'none', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', color: '#166534' }}
+                        title="إرسال عبر واتساب"
+                      >
+                        <i className="fa-brands fa-whatsapp"></i>
                       </button>
                       <button 
                         onClick={() => handleOpenModal(voucher)}

@@ -90,10 +90,10 @@ export default function Login() {
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
-        console.error('Expected JSON but got:', text.substring(0, 200));
-        let additionalInfo = text.substring(0, 50).replace(/\n/g, '').trim();
-        if (additionalInfo) additionalInfo = ` (${additionalInfo}...)`;
-        throw new Error(`استجابة غير صحيحة من الخادم. تأكد من أن الـ API يعمل بشكل صحيح.${additionalInfo}`);
+        console.error('Expected JSON but got:', text.substring(0, 500));
+        let additionalInfo = text.substring(0, 100).replace(/\n/g, ' ').trim();
+        if (additionalInfo) additionalInfo = ` | محتوى الاستجابة: (${additionalInfo}...)`;
+        throw new Error(`استجابة غير صحيحة من الخادم (Status: ${res.status}). تأكد من أن الـ API يعمل بشكل صحيح.${additionalInfo}`);
       }
       
       const data = await res.json();

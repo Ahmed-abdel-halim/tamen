@@ -29,6 +29,7 @@ type MarineStructureInsuranceDocument = {
 export default function MarineStructureInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<MarineStructureInsuranceDocument[]>([]);
+  const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState<MarineStructureInsuranceDocument | null>(null);
@@ -39,8 +40,11 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
 
   useEffect(() => {
     loadUserPermissions();
-    fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [currentPage, searchQuery, isArchive]);
 
   const loadUserPermissions = () => {
     try {
@@ -56,11 +60,13 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
 
 
 
+  // Reset to page 1 when searching
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, documents.length]);
+  }, [searchQuery]);
 
   const fetchDocuments = async () => {
+    setLoading(true);
     try {
       const userStr = localStorage.getItem('user');
       const userId = userStr ? JSON.parse(userStr).id : null;
@@ -70,14 +76,20 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
         headers['X-User-Id'] = userId.toString();
       }
       
-      
-      const url = `${API_BASE_URL}/marine-structure-insurance-documents${isArchive ? '?archived=true' : ''}`;
-      const res = await fetch(url, {
-        headers
-      });
+      const params = new URLSearchParams();
+      if (isArchive) params.append('archived', 'true');
+      if (searchQuery) params.append('search', searchQuery);
+      params.append('page', currentPage.toString());
+      params.append('per_page', perPage.toString());
+
+      const url = `${API_BASE_URL}/marine-structure-insurance-documents?${params.toString()}`;
+      const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
-      setDocuments(Array.isArray(data) ? data : []);
+      
+      // Laravel pagination structure: { data: [], total: 100, ... }
+      setDocuments(data.data || []);
+      setTotalDocuments(data.total || 0);
     } catch (error: any) {
       showToast(`حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`, 'error');
     } finally {
@@ -85,18 +97,10 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
     }
   };
 
-  const filteredDocuments = documents.filter((doc) =>
-    doc.insurance_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.insured_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.structure_type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalDocuments = filteredDocuments.length;
   const totalPages = totalDocuments > 0 ? Math.ceil(totalDocuments / perPage) : 1;
   const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-  const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
+  const endIndex = startIndex + documents.length;
+  const paginatedDocuments = documents;
 
   const handleDelete = async () => {
     if (!showDeleteModal) return;
@@ -156,7 +160,7 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
 
         {loading ? (
           <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
-        ) : filteredDocuments.length === 0 ? (
+        ) : totalDocuments === 0 ? (
           <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
             <i className="fa-solid fa-folder-open" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
@@ -276,7 +280,7 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
 
             {/* Mobile Cards View */}
             <div className="users-mobile-cards">
-              {filteredDocuments.length === 0 ? (
+              {totalDocuments === 0 ? (
                 <div className="empty-state">لا توجد نتائج</div>
               ) : (
                 paginatedDocuments.map((doc) => {

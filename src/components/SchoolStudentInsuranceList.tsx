@@ -16,9 +16,12 @@ type SchoolStudentInsuranceDocument = {
 export default function SchoolStudentInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<SchoolStudentInsuranceDocument[]>([]);
+  const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 10;
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; isOpen: boolean }>({ id: null, isOpen: false });
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -29,19 +32,35 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
       const user = JSON.parse(userStr);
       setIsAdmin(user.is_admin || false);
     }
-    fetchDocuments();
   }, []);
 
+  useEffect(() => {
+    fetchDocuments();
+  }, [currentPage, searchQuery]);
+
+  // Reset to page 1 when searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const fetchDocuments = async () => {
+    setLoading(true);
     try {
       const userStr = localStorage.getItem('user');
       const userId = userStr ? JSON.parse(userStr).id : null;
       const headers: HeadersInit = { 'Accept': 'application/json' };
       if (userId) headers['X-User-Id'] = userId.toString();
       
-      const res = await fetch(`${API_BASE_URL}/school-student-insurance`, { headers });
+      const params = new URLSearchParams();
+      params.append('page', currentPage.toString());
+      params.append('per_page', perPage.toString());
+      if (searchQuery) params.append('search', searchQuery);
+
+      const res = await fetch(`${API_BASE_URL}/school-student-insurance?${params.toString()}`, { headers });
       const data = await res.json();
-      setDocuments(Array.isArray(data) ? data : []);
+      
+      setDocuments(data.data || []);
+      setTotalDocuments(data.total || 0);
     } catch (error: any) {
       showToast(`خطأ في جلب الوثائق: ${error.message || error}`, 'error');
       console.error(error);
@@ -50,11 +69,10 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
     }
   };
 
-  const filteredDocuments = documents.filter((doc) =>
-    doc.policy_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.school_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const totalPages = totalDocuments > 0 ? Math.ceil(totalDocuments / perPage) : 1;
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + documents.length;
+  const paginatedDocuments = documents;
 
   const handleDelete = async () => {
     if (!deleteConfirm.id) return;
@@ -113,7 +131,7 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
 
         {loading ? (
           <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
-        ) : filteredDocuments.length === 0 ? (
+        ) : totalDocuments === 0 ? (
           <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
             <i className="fa-solid fa-folder-open" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
@@ -121,7 +139,8 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
             </p>
           </div>
         ) : (
-          <div className="users-table-wrapper">
+          <>
+            <div className="users-table-wrapper">
             <table className="users-table">
               <thead>
                 <tr>
@@ -135,7 +154,7 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
                 </tr>
               </thead>
               <tbody>
-                {filteredDocuments.map((doc) => (
+                {paginatedDocuments.map((doc) => (
                   <tr key={doc.id}>
                     <td>{doc.policy_number}</td>
                     <td>{new Date(doc.created_at).toLocaleDateString('ar-LY')}</td>
@@ -192,6 +211,31 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+              <div className="pagination-wrapper" style={{ marginTop: '20px' }}>
+                <div className="pagination-info">
+                  عرض {startIndex + 1} إلى {endIndex} من {totalDocuments} وثيقة
+                </div>
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn pagination-prev"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <i className="fa-solid fa-chevron-right"></i>
+                  </button>
+                  <span className="pagination-current">{currentPage} / {totalPages}</span>
+                  <button
+                    className="pagination-btn pagination-next"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <i className="fa-solid fa-chevron-left"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

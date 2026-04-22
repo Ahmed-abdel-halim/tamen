@@ -39,6 +39,7 @@ type InsuranceDocument = {
 export default function InsuranceDocumentsList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<InsuranceDocument[]>([]);
+  const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState<InsuranceDocument | null>(null);
@@ -49,8 +50,11 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
   useEffect(() => {
     loadUserPermissions();
-    fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [currentPage, searchQuery, isArchive]);
 
   const loadUserPermissions = () => {
     try {
@@ -66,27 +70,36 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
 
 
+  // Reset to page 1 when searching
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, documents.length]);
+  }, [searchQuery]);
 
   const fetchDocuments = async () => {
+    setLoading(true);
     try {
       const userStr = localStorage.getItem('user');
       const userId = userStr ? JSON.parse(userStr).id : null;
-      
+
       const headers: HeadersInit = { 'Accept': 'application/json' };
       if (userId) {
         headers['X-User-Id'] = userId.toString();
       }
-      
-      const url = `${API_BASE_URL}/insurance-documents${isArchive ? '?archived=true' : ''}`;
-      const res = await fetch(url, {
-        headers
-      });
+
+      const params = new URLSearchParams();
+      if (isArchive) params.append('archived', 'true');
+      if (searchQuery) params.append('search', searchQuery);
+      params.append('page', currentPage.toString());
+      params.append('per_page', perPage.toString());
+
+      const url = `${API_BASE_URL}/insurance-documents?${params.toString()}`;
+      const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
-      setDocuments(Array.isArray(data) ? data : []);
+      
+      // Laravel pagination structure: { data: [], total: 100, ... }
+      setDocuments(data.data || []);
+      setTotalDocuments(data.total || 0);
     } catch (error: any) {
       showToast(`حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`, 'error');
     } finally {
@@ -94,18 +107,10 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
     }
   };
 
-  const filteredDocuments = documents.filter((doc) =>
-    doc.insurance_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.insured_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.insurance_type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalDocuments = filteredDocuments.length;
   const totalPages = totalDocuments > 0 ? Math.ceil(totalDocuments / perPage) : 1;
   const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-  const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
+  const endIndex = startIndex + documents.length;
+  const paginatedDocuments = documents;
 
   const handleDelete = async () => {
     if (!showDeleteModal) return;
@@ -165,7 +170,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
         {loading ? (
           <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
-        ) : filteredDocuments.length === 0 ? (
+        ) : totalDocuments === 0 ? (
           <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
             <i className="fa-solid fa-folder-open" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
@@ -191,17 +196,17 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                 <tbody>
                   {paginatedDocuments.map((doc) => {
                     // تنسيق تاريخ الإصدار مع الوقت
-                    const issueDate = doc.issue_date 
+                    const issueDate = doc.issue_date
                       ? new Date(doc.issue_date).toLocaleString('ar-LY', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit'
-                        })
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })
                       : '-';
-                    
+
                     return (
                       <tr key={doc.id}>
                         <td>{doc.insurance_number}</td>
@@ -241,21 +246,21 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                         <td>
                           <div className="action-buttons">
                             <button
-                                onClick={() => {
-                                  const iframe = document.createElement('iframe');
-                                  iframe.style.position = 'fixed';
-                                  iframe.style.right = '-9999px';
-                                  iframe.style.width = '0';
-                                  iframe.style.height = '0';
-                                  iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
-                                  document.body.appendChild(iframe);
-                                  
-                                  setTimeout(() => {
-                                    if (document.body.contains(iframe)) {
-                                      document.body.removeChild(iframe);
-                                    }
-                                  }, 5000);
-                                }}
+                              onClick={() => {
+                                const iframe = document.createElement('iframe');
+                                iframe.style.position = 'fixed';
+                                iframe.style.right = '-9999px';
+                                iframe.style.width = '0';
+                                iframe.style.height = '0';
+                                iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
+                                document.body.appendChild(iframe);
+
+                                setTimeout(() => {
+                                  if (document.body.contains(iframe)) {
+                                    document.body.removeChild(iframe);
+                                  }
+                                }, 5000);
+                              }}
                               className="action-btn"
                               aria-label="طباعة الوثيقة"
                               title="طباعة الوثيقة"
@@ -303,21 +308,21 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
             {/* Mobile Cards View */}
             <div className="users-mobile-cards">
-              {filteredDocuments.length === 0 ? (
+              {totalDocuments === 0 ? (
                 <div className="empty-state">لا توجد نتائج</div>
               ) : (
                 paginatedDocuments.map((doc) => {
-                  const issueDate = doc.issue_date 
+                  const issueDate = doc.issue_date
                     ? new Date(doc.issue_date).toLocaleString('ar-LY', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                      })
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })
                     : '-';
-                  
+
                   return (
                     <div key={doc.id} className="user-mobile-card">
                       <div className="user-mobile-header">
@@ -386,7 +391,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               iframe.style.height = '0';
                               iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
                               document.body.appendChild(iframe);
-                              
+
                               setTimeout(() => {
                                 if (document.body.contains(iframe)) {
                                   document.body.removeChild(iframe);

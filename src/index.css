@@ -108,6 +108,52 @@
   background: var(--hover-bg);
 }
 
+/* تصميم القسم النشط (Active) في الوضع الليلي */
+[data-theme='dark'] .sidebar-section button.active,
+[data-theme='dark'] .sidebar-section .sidebar-link.active {
+  background: rgba(6, 182, 212, 0.1) !important; /* خلفية سماوية شفافة */
+  color: #00e5ff !important; /* لون سماوي ساطع للنص */
+  border-left: 3px solid #00e5ff !important; /* خط سماوي على اليسار */
+  border-right: none !important;
+  border-radius: 4px 12px 12px 4px !important;
+}
+
+[data-theme='dark'] .sidebar-section button.active .sidebar-icon,
+[data-theme='dark'] .sidebar-section .sidebar-link.active .sidebar-icon {
+  color: #00e5ff !important; /* لون سماوي للأيقونة */
+}
+
+/* توحيد لون الأزرار للسماوي في الوضع الليلي */
+[data-theme='dark'] button.primary,
+[data-theme='dark'] .btn-submit,
+[data-theme='dark'] button[type="submit"] {
+  background: #00bcd4 !important; /* سماوي قوي */
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.2) !important;
+}
+
+[data-theme='dark'] button.primary:hover,
+[data-theme='dark'] .btn-submit:hover,
+[data-theme='dark'] button[type="submit"]:hover {
+  background: #00acc1 !important;
+  box-shadow: 0 6px 16px rgba(0, 188, 212, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+[data-theme='dark'] button.ghost,
+[data-theme='dark'] button.secondary {
+  background: rgba(0, 188, 212, 0.1) !important;
+  color: #00e5ff !important;
+  border: 1px solid rgba(0, 188, 212, 0.2) !important;
+}
+
+[data-theme='dark'] button.ghost:hover,
+[data-theme='dark'] button.secondary:hover {
+  background: rgba(0, 188, 212, 0.2) !important;
+  border-color: #00e5ff !important;
+}
+
+
 [data-theme='dark'] .latest-documents-table tbody tr:hover,
 [data-theme='dark'] table tbody tr:hover {
   background: var(--hover-bg);
@@ -772,6 +818,20 @@ button:hover {
 }
 
 .sidebar-section button:hover .sidebar-icon {
+  color: #014cb1;
+}
+
+/* تصميم القسم النشط (Active) في الوضع العادي (الفاتح) */
+.sidebar-section button.active,
+.sidebar-section .sidebar-link.active {
+  background: rgba(1, 76, 177, 0.08);
+  color: #014cb1;
+  border-left: 3px solid #014cb1;
+  border-radius: 4px 12px 12px 4px;
+}
+
+.sidebar-section button.active .sidebar-icon,
+.sidebar-section .sidebar-link.active .sidebar-icon {
   color: #014cb1;
 }
 
@@ -7891,33 +7951,36 @@ tbody tr:last-child td {
   padding: 10px 12px;
   cursor: pointer;
   background: transparent;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
 }
 
 .dropdown-item:hover {
-  background: #f9fafb;
+  background: var(--hover-bg);
 }
 
 .dropdown-item.active {
-  background: #f3f4f6;
+  background: var(--input-bg);
 }
 
 .dropdown-empty {
   padding: 12px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--muted);
 }
 
 .chevron-icon {
-  color: #9ca3af;
+  color: var(--muted);
 }
 
 .info-box {
-  background: #f3f4f6;
+  background: var(--input-bg);
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 14px;
   margin-top: 12px;
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
 .info-box p {
@@ -7964,7 +8027,7 @@ tbody tr:last-child td {
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 15px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .payment-card-header {
@@ -7978,7 +8041,7 @@ tbody tr:last-child td {
   margin-top: 30px;
   margin-bottom: 20px;
   padding: 24px;
-  background: #fff;
+  background: var(--panel);
   border-radius: 8px;
   border: 1px solid var(--border);
 }
