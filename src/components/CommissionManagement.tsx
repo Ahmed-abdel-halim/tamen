@@ -57,12 +57,27 @@ export default function CommissionManagement() {
 
   const fetchAgents = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/branches-agents`);
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userId = user?.id;
+
+      const url = new URL(`${API_BASE_URL}/branches-agents`, window.location.origin);
+      if (userId) url.searchParams.append('user_id', userId.toString());
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'X-User-Id': userId.toString() } : {})
+        }
+      });
       if (response.ok) {
         const data = await response.json();
-        setAgents(data);
+        setAgents(Array.isArray(data) ? data : (data.data || []));
       }
     } catch (error) {
+      console.error('Error fetching agents:', error);
       showToast('حدث خطأ أثناء جلب الوكلاء', 'error');
     }
   };
@@ -70,7 +85,13 @@ export default function CommissionManagement() {
   const fetchCommissions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/commissions`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/commissions`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         const mappedData = data.map((item: any) => ({

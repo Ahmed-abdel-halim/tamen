@@ -111,6 +111,7 @@ export default function MonthlyAccountClosuresReport() {
   const fetchReport = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (filterMode === 'monthly') {
         if (selectedYear) params.append('year', selectedYear);
@@ -122,7 +123,10 @@ export default function MonthlyAccountClosuresReport() {
       }
 
       const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closures-report?${params}`, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
 
       const data = await res.json();

@@ -81,11 +81,11 @@ export default function BranchAgentAccountReport() {
   }, [datePreset]);
 
   useEffect(() => {
-    // جلب الوكلاء بعد تحميل معلومات المستخدم
-    if (!isLoadingUser && (currentAgentId !== null || isAdmin)) {
+    // جلب الوكلاء لكل المستخدمين المصرح لهم بمجرد تحميل معلومات المستخدم
+    if (!isLoadingUser) {
       fetchAgents();
     }
-  }, [currentAgentId, isAdmin, isLoadingUser]);
+  }, [isLoadingUser]);
 
 
 
@@ -123,14 +123,19 @@ export default function BranchAgentAccountReport() {
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
-        headers: { 'Accept': 'application/json' }
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/branches-agents`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
-      if (!res.ok) throw new Error('فشل في جلب الوكلاء');
-      const data = await res.json();
-      setAgents(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      showToast(`حدث خطأ: ${error.message}`, 'error');
+      if (!response.ok) throw new Error('فشل جلب قائمة الوكلاء');
+      const data = await response.json();
+      setAgents(Array.isArray(data) ? data : (data.data || []));
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      showToast('حدث خطأ أثناء جلب الوكلاء', 'error');
     }
   };
 
@@ -150,11 +155,14 @@ export default function BranchAgentAccountReport() {
     }
   }, [agents, currentAgentId, isAdmin]);
 
-  const filteredAgents = agents.filter(agent =>
-    agent.agency_name.toLowerCase().includes(agentSearch.toLowerCase()) ||
-    agent.agent_name.toLowerCase().includes(agentSearch.toLowerCase()) ||
-    agent.code.toLowerCase().includes(agentSearch.toLowerCase())
-  );
+  const filteredAgents = agents.filter(agent => {
+    const search = agentSearch.toLowerCase();
+    return (
+      (agent.agency_name?.toLowerCase().includes(search) ?? false) ||
+      (agent.agent_name?.toLowerCase().includes(search) ?? false) ||
+      (agent.code?.toLowerCase().includes(search) ?? false)
+    );
+  });
 
   const handlePrint = async () => {
     // للوكلاء (غير admin)، استخدام الوكيل الحالي تلقائياً
@@ -308,8 +316,8 @@ export default function BranchAgentAccountReport() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-          {/* الوكيل (select2) - يظهر فقط للـ admin */}
-          {isAdmin ? (
+          {/* الوكيل (select2) - يظهر للأدمن أو للموظفين الذين ليس لديهم وكيل محدد */}
+          {(isAdmin || !currentAgentId) ? (
             <div
               className="form-group"
               style={{ marginBottom: 0, position: 'relative' }}

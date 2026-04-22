@@ -46,8 +46,12 @@ export default function BranchesAgentsList() {
 
   const fetchBranchesAgents = async () => {
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/branches-agents`, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();

@@ -134,8 +134,12 @@ export default function MonthlyAccountClosure() {
 
   const fetchAgents = async () => {
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/branches-agents`, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       if (!res.ok) throw new Error('فشل في جلب الوكلاء');
       const data = await res.json();
