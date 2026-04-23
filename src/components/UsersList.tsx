@@ -510,7 +510,7 @@ export default function UsersList() {
             flex-direction: column;
             align-items: flex-start; /* Align to Right in RTL */
             justify-content: center;
-            padding: 4mm 8mm 4mm 2mm; /* Increased right padding */
+            padding: 4mm 4mm 4mm 2mm; /* Reduced right padding to move content closer to edge */
             box-sizing: border-box;
             color: #ffffff;
             z-index: 10;
