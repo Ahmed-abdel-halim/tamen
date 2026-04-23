@@ -65,7 +65,7 @@ type User = {
 
 type EmployeeRequest = {
   id: number;
-  type: 'termination' | 'leave_hourly' | 'leave_daily' | 'other';
+  type: 'termination' | 'leave_hourly' | 'leave_daily' | 'salary_advance' | 'allowance' | 'complaint' | 'maintenance' | 'other';
   status: 'pending' | 'approved' | 'rejected';
   with_salary: boolean;
   reason: string;
@@ -421,12 +421,30 @@ export default function EmployeeProfile() {
                   ) : (
                     requests.map((req) => (
                       <div key={req.id} className="request-item">
-                        <div className={`request-icon ${req.type === 'termination' ? 'red' : 'blue'}`}>
-                          <i className={`fa-solid ${req.type === 'termination' ? 'fa-user-slash' : (req.type === 'leave_hourly' ? 'fa-clock' : 'fa-calendar-day')}`}></i>
-                        </div>
-                        <div className="request-body">
-                          <div className="request-top">
-                            <h4 className="request-type-title">{req.type === 'termination' ? 'طلب إنهاء خدمة' : (req.type === 'leave_hourly' ? 'طلب إجازة ساعية' : 'طلب إجازة يومية')}</h4>
+                          <div className={`request-icon ${req.type === 'termination' ? 'red' : (req.type === 'complaint' ? 'red' : 'blue')}`}>
+                            <i className={`fa-solid ${
+                              req.type === 'termination' ? 'fa-user-slash' : 
+                              req.type === 'leave_hourly' ? 'fa-clock' : 
+                              req.type === 'leave_daily' ? 'fa-calendar-day' :
+                              req.type === 'salary_advance' ? 'fa-money-bill-transfer' :
+                              req.type === 'allowance' ? 'fa-hand-holding-dollar' :
+                              req.type === 'complaint' ? 'fa-circle-exclamation' :
+                              req.type === 'maintenance' ? 'fa-screwdriver-wrench' :
+                              'fa-envelope'
+                            }`}></i>
+                          </div>
+                          <div className="request-body">
+                            <div className="request-top">
+                              <h4 className="request-type-title">
+                                {req.type === 'termination' ? 'طلب إنهاء خدمة' : 
+                                 req.type === 'leave_hourly' ? 'طلب إجازة ساعية' : 
+                                 req.type === 'leave_daily' ? 'طلب إجازة يومية' :
+                                 req.type === 'salary_advance' ? 'طلب سلفة مرتب' :
+                                 req.type === 'allowance' ? 'طلب بدلات' :
+                                 req.type === 'complaint' ? 'تقديم شكوى' :
+                                 req.type === 'maintenance' ? 'طلب صيانة مرافق' :
+                                 'طلب آخر'}
+                              </h4>
                             <span className={`status-pill ${req.status}`}>{req.status === 'approved' ? 'تمت الموافقة' : req.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}</span>
                           </div>
                           <p className="request-reason">{req.reason || 'بدون تفاصيل'}</p>
@@ -465,6 +483,10 @@ export default function EmployeeProfile() {
                   <option value="leave_daily">إجازة يومية</option>
                   <option value="leave_hourly">إجازة ساعية</option>
                   <option value="termination">إنهاء خدمة (استقالة)</option>
+                  <option value="salary_advance">سلفة مرتب</option>
+                  <option value="allowance">طلب بدلات</option>
+                  <option value="complaint">تقديم شكوى</option>
+                  <option value="maintenance">صيانة (مرافق)</option>
                   <option value="other">أخرى</option>
                 </select>
               </div>

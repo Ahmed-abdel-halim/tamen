@@ -86,12 +86,24 @@ function employeeCardNumber(u: User): string {
 /** Use absolute URL for <img> and print windows (about:blank cannot resolve /storage). */
 function resolvePublicUrl(path: string | null | undefined): string {
   if (!path) return '';
+  if (path.startsWith('data:')) return path;
   if (path.startsWith('http')) return path;
-  if (path.startsWith('/img/')) return `${BACKEND_URL}${path}`;
-  if (path.startsWith('img/')) return `${BACKEND_URL}/${path}`;
-  if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
-  if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
-  return `${BACKEND_URL}/storage/${path}`;
+  
+  // Clean path
+  let cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  // Special case for /img/ which might be in frontend or backend
+  // In development, they are often in frontend/public
+  // In production, we expect them to be in backend/public/img
+  if (cleanPath.startsWith('img/')) {
+    return `${BACKEND_URL}/${cleanPath}`;
+  }
+  
+  if (cleanPath.startsWith('storage/')) {
+    return `${BACKEND_URL}/${cleanPath}`;
+  }
+  
+  return `${BACKEND_URL}/storage/${cleanPath}`;
 }
 
 const INSURANCE_TYPES = [
@@ -221,7 +233,7 @@ export default function UsersList() {
   const [filterRole, setFilterRole] = useState("all");
   const [filterJobTitle, setFilterJobTitle] = useState("all");
   const [filterPermission, setFilterPermission] = useState("all");
-  const [filterActive, setFilterActive] = useState("all");
+  const [filterActive, setFilterActive] = useState("1");
 
   useEffect(() => {
     fetchUsers();
@@ -348,9 +360,10 @@ export default function UsersList() {
         .header-info h1 { margin: 0; color: #1e40af; font-size: 1.6rem; font-weight: 800; }
         .header-info p { margin: 2px 0 0 0; color: #64748b; font-size: 0.9rem; font-weight: 600; }
         
-        .header-branding { display: flex; align-items: center; gap: 10px; }
-        .brand-text { text-align: left; }
-        .brand-text div { font-size: 8pt; font-weight: 800; color: #1e40af; line-height: 1.1; }
+        .header-branding { display: flex; align-items: center; gap: 4px; }
+        .brand-text { display: flex; flex-direction: column; align-items: center; line-height: 1.2; white-space: nowrap; margin-right: 0; }
+        .brand-text div:first-child { font-size: 13pt; font-weight: 800; margin-bottom: 2px; line-height: 1; color: #139625; font-family: 'Times New Roman', serif; text-align: center; }
+        .brand-text div:last-child { font-size: 5.6pt; font-weight: 800; line-height: 1; font-family: 'Times New Roman', serif; text-align: center; letter-spacing: 0; }
         .header-branding img { height: 50px; width: auto; }
 
         .content-body { display: flex; gap: 20px; }
@@ -393,8 +406,8 @@ export default function UsersList() {
           </div>
           <div class="header-branding">
             <div class="brand-text">
-              <div>المدار الليبي للتأمين</div>
-              <div>Al Madar Libyan Insurance</div>
+              <div>المدار الليبي <span style="color: #1e40af;">للتأمين</span></div>
+              <div><span style="color: #1e40af;">ALMADAR</span> <span style="color: #139625;">LIBYAN INSURANCE</span></div>
             </div>
             <img src="${escapeHtml(logoSrc)}" alt="Logo" />
           </div>
@@ -444,141 +457,186 @@ export default function UsersList() {
     w.document.close();
   };
 
-  const printEmployeeIdCard = (u: User) => {
+  const printEmployeeIdCard = (employee: User) => {
     const w = window.open('', '_blank', 'width=520,height=420');
     if (!w) return;
-    const num = escapeHtml(employeeCardNumber(u));
-    const name = escapeHtml(u.name);
-    const job = escapeHtml((u.job_title || '').trim() || '—');
-    const idPhotoSrc = resolvePublicUrl(u.profile_photo_url);
-    const logoSrc = resolvePublicUrl('/img/logo3.png');
     
-    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>بطاقة موظف</title>
-      <style>
-        @page { margin: 0; size: 85.6mm 53.98mm; }
-        body { font-family: Cairo, 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; background: #e2e8f0; }
-        
-        .card {
-          width: 85.6mm;
-          height: 53.98mm;
-          background: #ffffff;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-          position: relative;
-          color: #0f172a;
-          border: 1px solid #cbd5e1;
-          display: flex;
-          flex-direction: column;
-        }
+    const num = escapeHtml(employeeCardNumber(employee));
+    const name = escapeHtml(employee.name);
+    const job = escapeHtml((employee.job_title || '').trim() || '—');
+    const idPhotoSrc = resolvePublicUrl(employee.profile_photo_url);
+    const logoSrc = resolvePublicUrl('/img/logo.png');
 
-        .card-header {
-          height: 16mm;
-          background: #1e40af;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 0 4mm;
-          color: #ffffff;
-        }
-        .header-title { font-size: 10pt; font-weight: 800; margin: 0; }
-        .header-logo-box { display: flex; align-items: center; gap: 3mm; }
-        .logo-circle { width: 12mm; height: 12mm; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .header-logo-box img { height: 10mm; width: 10mm; object-fit: contain; }
-        .header-company-name { font-size: 8.5pt; font-weight: 700; text-align: left; line-height: 1.2; white-space: nowrap; }
-        .header-company-name div:first-child { font-size: 12pt; font-weight: 800; margin-bottom: 0.5mm; line-height: 1; }
-        .header-company-name div:last-child { font-size: 8.5pt; opacity: 0.95; font-weight: 800; line-height: 1; }
+    // Adjusted wave to make blue section visually equal/larger
+    const bgSvg = `data:image/svg+xml;utf8,<svg viewBox="0 0 830 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M856 0 L428 0 C328 150 528 350 428 540 L856 540 Z" fill="%231e40af"/><path d="M428 0 C328 150 528 350 428 540 L408 540 C508 350 308 150 408 0 Z" fill="%23139625"/></svg>`;
 
-        .card-body {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          padding: 2mm 5mm;
-          gap: 5mm;
-        }
-        .photo-section {
-          flex-shrink: 0;
-          width: 25mm;
-          height: 28mm;
-          border: 1px solid #e2e8f0;
-          border-radius: 4px;
-          overflow: hidden;
-          background: #f8fafc;
-        }
-        .photo-section img { width: 100%; height: 100%; object-fit: cover; }
-
-        .info-section {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 2mm;
-        }
-        .info-row {
-          display: flex;
-          gap: 2mm;
-          font-size: 9pt;
-          line-height: 1.2;
-        }
-        .info-label {
-          color: #64748b;
-          font-weight: 700;
-          min-width: 14mm;
-        }
-        .info-val {
-          color: #0f172a;
-          font-weight: 800;
-        }
-
-        .card-footer-note {
-          position: absolute;
-          bottom: 3mm;
-          left: 4mm;
-          font-size: 6pt;
-          color: #94a3b8;
-          font-weight: 700;
-        }
-      </style></head><body onload="window.print()">
-      <div class="card">
-        <div class="card-header">
-          <div class="header-title">بطاقة موظف</div>
-          <div class="header-logo-box">
-             <div class="header-company-name">
-               <div>المدار الليبي للتأمين</div>
-               <div>Al Madar Libyan Insurance</div>
-             </div>
-             <div class="logo-circle"><img src="${escapeHtml(logoSrc)}" alt="Logo" /></div>
+    w.document.write(`<!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="utf-8">
+        <title>طباعة بطاقة الموظف</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          @page { margin: 0; size: 85.6mm 53.98mm; }
+          body { 
+            font-family: Cairo, 'Segoe UI', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: #e2e8f0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .card { 
+            width: 85.6mm; 
+            height: 53.98mm; 
+            background-color: #ffffff; 
+            background-image: url('${bgSvg}');
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px; 
+            overflow: hidden; 
+            position: relative; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex; 
+          }
+          
+          /* Dark Blue Section (Logical Right in RTL, Physical Right) - Visually balanced */
+          .right-section {
+            width: 55%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Align to Right in RTL */
+            justify-content: center;
+            padding: 4mm 8mm 4mm 2mm; /* Increased right padding */
+            box-sizing: border-box;
+            color: #ffffff;
+            z-index: 10;
+          }
+          
+          .photo-circle {
+            width: 23mm;
+            height: 23mm;
+            border-radius: 50%;
+            border: 2px solid #139625;
+            background: #ffffff;
+            overflow: hidden;
+            margin-bottom: 4mm;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .photo-circle img { width: 100%; height: 100%; object-fit: cover; }
+          .photo-circle .no-img { font-size: 7pt; color: #94a3b8; }
+          
+          .id-data {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5mm;
+            padding: 0 2mm;
+            box-sizing: border-box;
+          }
+          .id-row {
+            display: flex;
+            justify-content: flex-start; /* Group label and value together */
+            gap: 3mm; /* Gap between label and value */
+            font-size: 7.5pt;
+            font-weight: 700;
+          }
+          .id-row span:first-child { color: #93c5fd; }
+          
+          /* White Left Section (Physical Left) - Visually balanced */
+          .left-section {
+            width: 45%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4mm;
+            box-sizing: border-box;
+            z-index: 10;
+          }
+          
+          .header-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 6mm;
+            width: 100%;
+          }
+          .logo-wrapper {
+            display: flex; align-items: center; justify-content: center; 
+          }
+          .logo-wrapper img { height: 18mm; width: auto; object-fit: contain; max-width: 90%; }
+          
+          .employee-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+          }
+          .emp-name { font-size: 11pt; font-weight: 800; color: #1e40af; margin-bottom: 1mm; line-height: 1.2; }
+          .emp-role { font-size: 8pt; font-weight: 700; color: #139625; }
+          
+          .footer-note {
+            font-size: 5pt;
+            color: #64748b;
+            text-align: center;
+            width: 100%;
+            margin-top: auto;
+          }
+          
+          .badge-type {
+            position: absolute;
+            top: 3mm;
+            left: 3mm;
+            background: #1e40af;
+            color: white;
+            padding: 1mm 2mm;
+            border-radius: 4px;
+            font-size: 6.5pt;
+            font-weight: 800;
+          }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <div class="card">
+          <div class="right-section">
+            <div class="photo-circle">
+              ${idPhotoSrc ? `<img src="${escapeHtml(idPhotoSrc)}" alt="Photo" onerror="this.style.display='none'" />` : '<div class="no-img">بلا صورة</div>'}
+            </div>
+            <div class="id-data">
+              <div class="id-row"><span>المعرف:</span> <span>${escapeHtml(num)}</span></div>
+              <div class="id-row"><span>الإصدار:</span> <span>${new Date().toLocaleDateString('en-GB')}</span></div>
+            </div>
+          </div>
+          
+          <div class="left-section">
+            <div class="badge-type">بطاقة موظف</div>
+            
+            <div class="header-box">
+               <div class="logo-wrapper"><img src="${escapeHtml(logoSrc)}" alt="Logo" onerror="this.src='/img/logo.png'" /></div>
+            </div>
+            
+            <div class="employee-info">
+              <div class="emp-name">${escapeHtml(name)}</div>
+              <div class="emp-role">${escapeHtml(job)}</div>
+            </div>
+            
+            <div class="footer-note">صدرت عن قسم الموارد البشرية</div>
           </div>
         </div>
-        
-        <div class="card-body">
-          <div class="photo-section">
-            ${idPhotoSrc ? `<img src="${escapeHtml(idPhotoSrc)}" alt="" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:7pt">بلا صورة</div>`}
-          </div>
-          <div class="info-section">
-            <div class="info-row">
-              <span class="info-label">المعرف:</span>
-              <span class="info-val">${num}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">الاسم:</span>
-              <span class="info-val">${name}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">المهنة:</span>
-              <span class="info-val">${job}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">الإصدار:</span>
-              <span class="info-val">${new Date().toLocaleDateString('ar-LY')}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-footer-note">
-          صدرت عن قسم الموارد البشرية
-        </div>
-      </div>
-      </body></html>`);
+      </body>
+      </html>
+    `);
     w.document.close();
   };
 

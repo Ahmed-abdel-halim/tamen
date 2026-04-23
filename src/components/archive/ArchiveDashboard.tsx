@@ -146,8 +146,8 @@ export default function ArchiveDashboard() {
                 gap: '10px',
                 padding: '12px 24px',
                 border: '1px solid',
-                borderColor: activeTab === tab.id ? '#014cb1' : 'transparent',
-                backgroundColor: activeTab === tab.id ? '#014cb1' : 'var(--input-bg)',
+                borderColor: activeTab === tab.id ? 'var(--accent-cyan)' : 'transparent',
+                backgroundColor: activeTab === tab.id ? 'var(--accent-cyan)' : 'var(--input-bg)',
                 color: activeTab === tab.id ? '#fff' : 'var(--text)',
                 borderRadius: '12px',
                 cursor: 'pointer',
@@ -155,7 +155,7 @@ export default function ArchiveDashboard() {
                 fontSize: '14px',
                 transition: 'all 0.3s',
                 whiteSpace: 'nowrap',
-                boxShadow: activeTab === tab.id ? '0 8px 15px rgba(1, 76, 177, 0.2)' : 'none',
+                boxShadow: activeTab === tab.id ? '0 8px 15px var(--accent-shadow)' : 'none',
               }}
             >
               <div 

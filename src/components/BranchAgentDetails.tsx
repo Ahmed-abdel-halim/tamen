@@ -28,9 +28,21 @@ type BranchAgent = {
   contract_photo?: string;
   user?: { id: number; username: string; name: string };
   notes?: string;
+  contract_conditions?: string;
   status: 'نشط' | 'غير نشط';
   created_at: string;
   updated_at: string;
+};
+
+type AgentRequest = {
+  id: number;
+  type: 'stock' | 'support' | 'financial' | 'commission' | 'maintenance' | 'marketing' | 'training' | 'legal' | 'limit_increase' | 'other';
+  status: 'pending' | 'processing' | 'completed' | 'rejected';
+  priority: 'normal' | 'urgent';
+  subject: string;
+  message: string;
+  created_at: string;
+  admin_notes?: string;
 };
 
 export default function BranchAgentDetails() {
@@ -38,10 +50,25 @@ export default function BranchAgentDetails() {
   const navigate = useNavigate();
   const [branchAgent, setBranchAgent] = useState<BranchAgent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'agency' | 'contact' | 'custody' | 'permissions' | 'requests'>('agency');
+  const [requests, setRequests] = useState<AgentRequest[]>([]);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [newRequest, setNewRequest] = useState({
+    type: 'stock' as any,
+    priority: 'normal' as any,
+    subject: '',
+    message: '',
+  });
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<{id: number, status: string} | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [submittingStatus, setSubmittingStatus] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchBranchAgent(parseInt(id));
+      fetchRequests();
     }
   }, [id]);
 
@@ -51,687 +78,527 @@ export default function BranchAgentDetails() {
       const res = await fetch(`${API_BASE_URL}/branches-agents/${branchAgentId}`, {
         headers: { 'Accept': 'application/json' }
       });
-      if (!res.ok) {
-        let errorMessage = `HTTP error! status: ${res.status}`;
-        try {
-          const contentType = res.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const error = await res.json();
-            errorMessage = error.message || error.error || errorMessage;
-            console.error('API Error:', error);
-          }
-        } catch (e) {
-          console.error('Error parsing response:', e);
-        }
-        throw new Error(errorMessage);
-      }
+      if (!res.ok) throw new Error("فشل جلب بيانات الوكيل");
       const data = await res.json();
-      console.log('BranchAgent data:', data);
       setBranchAgent(data);
     } catch (error: any) {
-      console.error('Error fetching branch agent:', error);
-      showToast(
-        `حدث خطأ أثناء جلب التفاصيل: ${error.message || 'تأكد من أن الخادم يعمل'}`,
-        'error'
-      );
+      showToast(error.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchRequests = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-requests?branch_agent_id=${id}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRequests(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {}
+  };
+
+  const handleCreateRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingRequest(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-requests`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ ...newRequest, branch_agent_id: id }),
+      });
+      
+      if (!res.ok) throw new Error("فشل تقديم الطلب");
+      
+      showToast("تم تقديم الطلب بنجاح", 'success');
+      setShowRequestModal(false);
+      setNewRequest({ type: 'stock', priority: 'normal', subject: '', message: '' });
+      fetchRequests();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
+  const openStatusModal = (requestId: number, newStatus: string) => {
+    setSelectedRequest({ id: requestId, status: newStatus });
+    setAdminNotes('');
+    setShowStatusModal(true);
+  };
+
+  const handleUpdateRequestStatus = async () => {
+    if (!selectedRequest) return;
+    setSubmittingStatus(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-requests/${selectedRequest.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ status: selectedRequest.status, admin_notes: adminNotes }),
+      });
+      
+      if (!res.ok) throw new Error("فشل تحديث حالة الطلب");
+      
+      showToast("تم تحديث حالة الطلب", 'success');
+      setShowStatusModal(false);
+      fetchRequests();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setSubmittingStatus(false);
+    }
+  };
+
   const handlePrint = () => {
     if (!id) return;
-    // إنشاء iframe مخفي للطباعة
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
     iframe.src = `${API_BASE_URL}/branches-agents/${id}/print?t=${new Date().getTime()}`;
     document.body.appendChild(iframe);
-
     iframe.onload = () => {
-      // انتظار قصير جداً لتحميل المحتوى
       setTimeout(() => {
         if (iframe.contentWindow) {
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
         }
-        // إزالة iframe بعد الطباعة
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-          }
-        }, 300);
+        setTimeout(() => document.body.removeChild(iframe), 300);
       }, 100);
     };
   };
 
-  if (loading) {
-    return (
-      <section className="users-management">
-        <div className="users-breadcrumb">
-          <span>إدارة الفروع والوكلاء / تفاصيل</span>
-        </div>
-        <div className="users-card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p>جار التحميل...</p>
-        </div>
-      </section>
-    );
-  }
+  const loggedInUserStr = localStorage.getItem('user');
+  let isAdmin = false;
+  try {
+    if (loggedInUserStr) isAdmin = JSON.parse(loggedInUserStr).is_admin;
+  } catch {}
 
-  if (!branchAgent) {
-    return (
-      <section className="users-management">
-        <div className="users-breadcrumb">
-          <span>إدارة الفروع والوكلاء / تفاصيل</span>
-        </div>
-        <div className="users-card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p>لم يتم العثور على السجل</p>
-          <button
-            className="btn-cancel"
-            onClick={() => navigate('/branches-agents')}
-            style={{ marginTop: '20px' }}
-          >
-            العودة للقائمة
-          </button>
-        </div>
-      </section>
-    );
-  }
+  if (loading) return <div className="loading-container font-cairo">جارِ التحميل...</div>;
+  if (!branchAgent) return <div className="error-container font-cairo">الوكيل غير موجود.</div>;
+
+  const getRequestTypeName = (type: string) => {
+    const types: any = {
+      stock: 'طلب عهدة/مستندات',
+      support: 'دعم فني',
+      financial: 'تسوية مالية',
+      commission: 'طلب عمولة',
+      maintenance: 'طلب صيانة',
+      marketing: 'دعاية وإعلان',
+      training: 'تدريب',
+      legal: 'استشارة قانونية',
+      limit_increase: 'زيادة سقف الإصدار',
+      other: 'أخرى'
+    };
+    return types[type] || type;
+  };
+
+  const getStatusName = (status: string) => {
+    const statuses: any = {
+      pending: 'قيد الانتظار',
+      processing: 'جاري المعالجة',
+      completed: 'تم التنفيذ',
+      rejected: 'مرفوض'
+    };
+    return statuses[status] || status;
+  };
 
   return (
-    <section className="users-management">
-      <div className="users-breadcrumb">
-        <span>إدارة الفروع والوكلاء / تفاصيل</span>
-      </div>
-
-      <div className="users-card">
-        <div className="page-header-professional" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', padding: '30px', borderRadius: '16px', color: 'white', marginBottom: '30px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
-            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', border: '4px solid rgba(255,255,255,0.2)', background: 'white' }}>
-              {branchAgent.personal_photo ? (
-                <img src={`${BACKEND_URL}/storage/${branchAgent.personal_photo}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', textAlign: 'center', background: '#f1f5f9', color: '#cbd5e1' }}>
-                  <i className="fa-solid fa-user-tie" style={{ fontSize: '40px', margin: 'auto' }}></i>
-                </div>
-              )}
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800' }}>{branchAgent.agency_name}</h2>
-              <div style={{ display: 'flex', gap: '15px', marginTop: '10px', opacity: 0.9 }}>
-                <span><i className="fa-solid fa-user-tie" style={{ marginLeft: '8px' }}></i> {branchAgent.agent_name}</span>
-                <span><i className="fa-solid fa-hashtag" style={{ marginLeft: '8px' }}></i> {branchAgent.code}</span>
-                <span><i className="fa-solid fa-building" style={{ marginLeft: '8px' }}></i> {branchAgent.type}</span>
+    <div className="profile-container font-cairo">
+      {/* Header Card */}
+      <div className="profile-header-card">
+        <div className="header-content">
+          <div className="profile-avatar-large">
+            {branchAgent.personal_photo ? (
+              <img src={`${BACKEND_URL}/storage/${branchAgent.personal_photo}`} alt="Profile" />
+            ) : (
+              <div className="avatar-placeholder">
+                <i className="fa-solid fa-building"></i>
               </div>
-            </div>
-            <div style={{ marginRight: 'auto', display: 'flex', gap: '10px' }}>
-              <button
-                className="back-button"
-                onClick={() => navigate('/branches-agents')}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '12px',
-                  fontWeight: '700',
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <i className="fa-solid fa-arrow-right"></i>
-                العودة للقائمة
-              </button>
-              <button
-                className="back-button print-button"
-                onClick={handlePrint}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '12px',
-                  fontWeight: '700',
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <i className="fa-solid fa-print"></i>
-                طباعة العقد
-              </button>
-            </div>
+            )}
           </div>
-        </div>
-
-        <div className="engineer-info-card-wrapper">
-          <div className="engineer-info-card">
-            <div className="engineer-info-content">
-              <div className="engineer-info-label">اسم الوكالة</div>
-              <div className="engineer-info-value">
-                {branchAgent.agency_name}
-              </div>
-              <div className="engineer-info-detail">
-                <i className="fa-solid fa-user"></i>
-                {branchAgent.agent_name}
-              </div>
-              {branchAgent.activity && (
-                <div className="engineer-info-detail">
-                  <i className="fa-solid fa-briefcase"></i>
-                  {branchAgent.activity}
-                </div>
-              )}
-              {branchAgent.phone && (
-                <div className="engineer-info-detail">
-                  <i className="fa-solid fa-phone"></i>
-                  {branchAgent.phone}
-                </div>
-              )}
-              <div className="engineer-info-detail">
+          <div className="header-info-main">
+            <h1 className="profile-name-title">{branchAgent.agency_name}</h1>
+            <p className="profile-job-subtitle">{branchAgent.agent_name} - {branchAgent.type}</p>
+            <div className="profile-badges-row">
+              <span className="profile-badge">
                 <i className="fa-solid fa-hashtag"></i>
-                الكود: {branchAgent.code}
-              </div>
-              <div className="engineer-info-detail">
+                كود: {branchAgent.code}
+              </span>
+              <span className="profile-badge">
                 <i className="fa-solid fa-map-marker-alt"></i>
                 {branchAgent.city}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="engineer-stats-grid">
-          <div className="engineer-stat-card">
-            <i className="fa-solid fa-tag engineer-stat-icon" style={{ color: '#014cb1' }}></i>
-            <div className="engineer-stat-label">النوع</div>
-            <div className="engineer-stat-value">
-              <span className={`status-badge ${branchAgent.type === 'وكيل' ? 'active' : 'inactive'}`}>
-                {branchAgent.type}
               </span>
-            </div>
-          </div>
-
-          <div className="engineer-stat-card">
-            <i className="fa-solid fa-circle-check engineer-stat-icon" style={{ color: '#10b981' }}></i>
-            <div className="engineer-stat-label">الحالة</div>
-            <div className="engineer-stat-value">
-              <span className={`status-badge ${branchAgent.status === 'نشط' ? 'active' : 'inactive'}`}>
+              <span className="profile-badge">
+                <i className="fa-solid fa-calendar-alt"></i>
+                تعاقد: {new Date(branchAgent.contract_date).toLocaleDateString('ar-LY')}
+              </span>
+              <span className={`profile-badge ${branchAgent.status === 'نشط' ? 'status-active' : 'status-inactive'}`}>
+                <i className={`fa-solid ${branchAgent.status === 'نشط' ? 'fa-check-circle' : 'fa-times-circle'}`}></i>
                 {branchAgent.status}
               </span>
             </div>
           </div>
-
-
-          <div className="engineer-stat-card">
-            <i className="fa-solid fa-boxes-stacked engineer-stat-icon" style={{ color: '#f59e0b' }}></i>
-            <div className="engineer-stat-label">العهدة الثابتة</div>
-            <div className="engineer-stat-value">
-              {branchAgent.fixed_custodies?.length || 0} بنود
-            </div>
+          <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => navigate('/branches-agents')} className="btn-outline-sm">العودة للقائمة</button>
+            <button className="btn-primary-sm" onClick={() => navigate(`/branches-agents/${branchAgent.id}/edit`)} style={{ background: 'var(--sidebar)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fa-solid fa-pencil"></i> تعديل البيانات
+            </button>
+            <button className="btn-primary-sm" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fa-solid fa-print"></i> طباعة العقد
+            </button>
           </div>
-
-          <div className="engineer-stat-card">
-            <i className="fa-solid fa-box-open engineer-stat-icon" style={{ color: '#ef4444' }}></i>
-            <div className="engineer-stat-label">العهدة المستهلكة</div>
-            <div className="engineer-stat-value">
-              {branchAgent.consumed_custodies?.length || 0} بنود
-            </div>
-          </div>
-
-          <div className="engineer-stat-card">
-            <i className="fa-solid fa-calendar engineer-stat-icon"></i>
-            <div className="engineer-stat-label">تاريخ التعاقد</div>
-            <div className="engineer-stat-value">
-              {new Date(branchAgent.contract_date).toLocaleDateString('ar')}
-            </div>
-          </div>
-
-          {branchAgent.contract_end_date && (
-            <div className="engineer-stat-card">
-              <i className="fa-solid fa-calendar-times engineer-stat-icon"></i>
-              <div className="engineer-stat-label">تاريخ انتهاء العقد</div>
-              <div className="engineer-stat-value">
-                {new Date(branchAgent.contract_end_date).toLocaleDateString('ar')}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* المعلومات الأساسية ومعلومات الاتصال */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '15px', marginTop: '30px' }}>
-          {/* المعلومات الأساسية */}
-          <div className="details-section-card">
-            <h3 className="section-title-with-icon">
-              <i className="fa-solid fa-circle-info"></i>
-              المعلومات الأساسية
-            </h3>
-            <div className="info-table-wrapper">
-              <table className="info-display-table">
-                <tbody>
-                  <tr>
-                    <td className="info-label">
-                      <i className="fa-solid fa-building" style={{ marginLeft: '10px', color: '#3b82f6' }}></i>
-                      اسم الوكالة
-                    </td>
-                    <td className="info-value">{branchAgent.agency_name}</td>
-                  </tr>
-                  <tr>
-                    <td className="info-label">
-                      <i className="fa-solid fa-user-tie" style={{ marginLeft: '10px', color: '#10b981' }}></i>
-                      اسم الوكيل
-                    </td>
-                    <td className="info-value">{branchAgent.agent_name}</td>
-                  </tr>
-                  {branchAgent.activity && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-briefcase" style={{ marginLeft: '10px', color: '#f59e0b' }}></i>
-                        نشاط الوكيل
-                      </td>
-                      <td className="info-value">{branchAgent.activity}</td>
-                    </tr>
-                  )}
-                  {branchAgent.agency_number && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-id-card" style={{ marginLeft: '10px', color: '#6366f1' }}></i>
-                        رقم الوكالة
-                      </td>
-                      <td className="info-value">
-                        <span style={{ padding: '4px 10px', background: '#f1f5f9', borderRadius: '6px', fontFamily: 'monospace' }}>
-                          {branchAgent.agency_number}
-                        </span>
-                      </td>
-                    </tr>
-                  )}
-                  {branchAgent.stamp_number && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-stamp" style={{ marginLeft: '10px', color: '#ec4899' }}></i>
-                        رقم الختم
-                      </td>
-                      <td className="info-value">
-                        <span style={{ padding: '4px 10px', background: '#f1f5f9', borderRadius: '6px', fontFamily: 'monospace' }}>
-                          {branchAgent.stamp_number}
-                        </span>
-                      </td>
-                    </tr>
-                  )}
-                  {branchAgent.contract_duration && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-clock-rotate-left" style={{ marginLeft: '10px', color: '#8b5cf6' }}></i>
-                        مدة العقد
-                      </td>
-                      <td className="info-value">{branchAgent.contract_duration}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* معلومات الاتصال */}
-          <div className="details-section-card">
-            <h3 className="section-title-with-icon">
-              <i className="fa-solid fa-address-book"></i>
-              معلومات الاتصال والهوية
-            </h3>
-            <div className="info-table-wrapper">
-              <table className="info-display-table">
-                <tbody>
-                  <tr>
-                    <td className="info-label">
-                      <i className="fa-solid fa-city" style={{ marginLeft: '10px', color: '#3b82f6' }}></i>
-                      المدينة
-                    </td>
-                    <td className="info-value">
-                      <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{branchAgent.city}</span>
-                    </td>
-                  </tr>
-                  {branchAgent.address && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-location-dot" style={{ marginLeft: '10px', color: '#ef4444' }}></i>
-                        العنوان
-                      </td>
-                      <td className="info-value">{branchAgent.address}</td>
-                    </tr>
-                  )}
-                  {branchAgent.phone && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-phone-volume" style={{ marginLeft: '10px', color: '#10b981' }}></i>
-                        رقم الهاتف
-                      </td>
-                      <td className="info-value" style={{ direction: 'ltr', textAlign: 'right' }}>
-                        {branchAgent.phone}
-                      </td>
-                    </tr>
-                  )}
-                  {branchAgent.nationality && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-flag" style={{ marginLeft: '10px', color: '#f59e0b' }}></i>
-                        الجنسية
-                      </td>
-                      <td className="info-value">{branchAgent.nationality}</td>
-                    </tr>
-                  )}
-                  {branchAgent.national_id && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-fingerprint" style={{ marginLeft: '10px', color: '#6366f1' }}></i>
-                        الرقم الوطني
-                      </td>
-                      <td className="info-value">
-                        <span style={{ letterSpacing: '2px', fontFamily: 'monospace' }}>{branchAgent.national_id}</span>
-                      </td>
-                    </tr>
-                  )}
-                  {branchAgent.identity_number && (
-                    <tr>
-                      <td className="info-label">
-                        <i className="fa-solid fa-id-card-clip" style={{ marginLeft: '10px', color: '#ec4899' }}></i>
-                        رقم إثبات الشخصية
-                      </td>
-                      <td className="info-value">{branchAgent.identity_number}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        {/* العهد */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px', marginTop: '30px' }}>
-          {/* عهد الوكيل الثابتة */}
-          <div className="details-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 className="section-title-with-icon">
-              <i className="fa-solid fa-boxes-stacked" style={{ color: '#f59e0b' }}></i>
-              عهدة الوكيل الثابتة
-            </h3>
-            <div className="users-table-wrapper no-scroll-wrapper" style={{ flex: 1 }}>
-              <table className="users-table compact-table" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '60px' }}>#</th>
-                    <th>البيان والوصف</th>
-                    <th style={{ width: '100px', textAlign: 'center' }}>الكمية</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {branchAgent.fixed_custodies && branchAgent.fixed_custodies.length > 0 ? (
-                    branchAgent.fixed_custodies.map((custody, index) => (
-                      <tr key={index}>
-                        <td>{index + 1}</td>
-                        <td>{custody.description}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{custody.quantity}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={3} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px' }}>لا توجد عهد ثابتة مسجلة</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* عهد مستهلكة */}
-          <div className="details-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 className="section-title-with-icon">
-              <i className="fa-solid fa-box-open" style={{ color: '#ef4444' }}></i>
-              العهدة المستهلكة
-            </h3>
-            <div className="users-table-wrapper no-scroll-wrapper" style={{ flex: 1 }}>
-              <table className="users-table compact-table" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '60px' }}>#</th>
-                    <th>البيان والوصف</th>
-                    <th style={{ width: '100px', textAlign: 'center' }}>الكمية</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {branchAgent.consumed_custodies && branchAgent.consumed_custodies.length > 0 ? (
-                    branchAgent.consumed_custodies.map((custody, index) => (
-                      <tr key={index}>
-                        <td>{index + 1}</td>
-                        <td>{custody.description}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{custody.quantity}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={3} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px' }}>لا توجد عهد مستهلكة مسجلة</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* الصور */}
-        {(branchAgent.personal_photo || branchAgent.identity_photo || branchAgent.contract_photo) && (
-          <div style={{ marginTop: '40px' }}>
-            <h3 className="section-title-with-icon">
-              <i className="fa-solid fa-images"></i>
-              المرفقات والصور
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
-              {branchAgent.personal_photo && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>صورة شخصية</label>
-                  <img
-                    src={`${BACKEND_URL}/storage/${branchAgent.personal_photo}`}
-                    alt="صورة شخصية"
-                    style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '8px' }}
-                  />
-                </div>
-              )}
-              {branchAgent.identity_photo && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>صورة إثبات الهوية</label>
-                  <img
-                    src={`${BACKEND_URL}/storage/${branchAgent.identity_photo}`}
-                    alt="صورة إثبات الهوية"
-                    style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '8px' }}
-                  />
-                </div>
-              )}
-              {branchAgent.contract_photo && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>صورة العقد</label>
-                  {branchAgent.contract_photo.endsWith('.pdf') ? (
-                    <a
-                      href={`${BACKEND_URL}/storage/${branchAgent.contract_photo}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ display: 'block', padding: '20px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '8px' }}
-                    >
-                      <i className="fa-solid fa-file-pdf" style={{ fontSize: '48px', color: '#ef4444' }}></i>
-                      <div style={{ marginTop: '10px' }}>عرض PDF</div>
-                    </a>
-                  ) : (
-                    <img
-                      src={`${BACKEND_URL}/storage/${branchAgent.contract_photo}`}
-                      alt="صورة العقد"
-                      style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '8px' }}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* الصلاحيات والأذونات */}
-        <div style={{ marginTop: '40px' }}>
-          <h3 className="section-title-with-icon">
-            <i className="fa-solid fa-shield-halved" style={{ color: '#0ea5e9' }}></i>
-            الصلاحيات والأذونات الممنوحة
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-            {/* الوثائق المصرح بها */}
-            <div className="details-section-card">
-              <h4 style={{ marginBottom: '16px', fontSize: '1rem', fontWeight: 'bold', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fa-solid fa-file-contract"></i>
-                أنواع وثائق التأمين
-              </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {(branchAgent as any).authorized_documents && (branchAgent as any).authorized_documents.filter((doc: string) => !['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).length > 0 ? (
-                  (branchAgent as any).authorized_documents.filter((doc: string) => !['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).map((doc: string, index: number) => (
-                    <span key={index} style={{
-                      padding: '8px 14px',
-                      background: '#f0f9ff',
-                      color: '#0369a1',
-                      borderRadius: '12px',
-                      fontSize: '0.85rem',
-                      fontWeight: '700',
-                      border: '1px solid #bae6fd',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                    }}>
-                      <i className="fa-solid fa-check-circle" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                      {doc}
-                    </span>
-                  ))
-                ) : (
-                  <div style={{ color: '#9ca3af', fontSize: '0.9rem', padding: '10px' }}>لا توجد وثائق مصرح بها</div>
-                )}
-              </div>
-            </div>
-
-            {/* التقارير والعمليات الإضافية */}
-            <div className="details-section-card">
-              <h4 style={{ marginBottom: '16px', fontSize: '1rem', fontWeight: 'bold', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fa-solid fa-chart-line"></i>
-                التقارير والصلاحيات المالية
-              </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {(branchAgent as any).authorized_documents && (branchAgent as any).authorized_documents.filter((doc: string) => ['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).length > 0 ? (
-                  (branchAgent as any).authorized_documents.filter((doc: string) => ['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).map((doc: string, index: number) => (
-                    <span key={index} style={{
-                      padding: '8px 14px',
-                      background: '#f0fdf4',
-                      color: '#15803d',
-                      borderRadius: '12px',
-                      fontSize: '0.85rem',
-                      fontWeight: '700',
-                      border: '1px solid #bbf7d0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                    }}>
-                      <i className="fa-solid fa-star" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                      {doc}
-                    </span>
-                  ))
-                ) : (
-                  <div style={{ color: '#9ca3af', fontSize: '0.9rem', padding: '10px' }}>لا توجد صلاحيات إضافية</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* معلومات المستخدم والملاحظات */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px', marginTop: '40px' }}>
-          {/* معلومات المستخدم */}
-          {branchAgent.user && (
-            <div className="details-section-card">
-              <h3 className="section-title-with-icon">
-                <i className="fa-solid fa-user-gear" style={{ color: '#64748b' }}></i>
-                معلومات الحساب
-              </h3>
-              <div className="info-table-wrapper">
-                <table className="info-display-table">
-                  <tbody>
-                    <tr>
-                      <td className="info-label">اسم المستخدم</td>
-                      <td className="info-value">{branchAgent.user.username}</td>
-                    </tr>
-                    <tr>
-                      <td className="info-label">الاسم الكامل</td>
-                      <td className="info-value">{branchAgent.user.name}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* الملاحظات */}
-          {branchAgent.notes && (
-            <div className="details-section-card">
-              <h3 className="section-title-with-icon">
-                <i className="fa-solid fa-comment-dots" style={{ color: '#6366f1' }}></i>
-                ملاحظات إضافية
-              </h3>
-              <div style={{
-                padding: '15px',
-                background: '#f8fafc',
-                borderRadius: '10px',
-                border: '1px dashed #cbd5e1',
-                minHeight: '100px',
-                color: '#475569',
-                lineHeight: '1.7',
-                whiteSpace: 'pre-wrap'
-              }}>
-                {branchAgent.notes}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* أزرار الإجراءات */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-start',
-          gap: '15px',
-          marginTop: '50px',
-          padding: '24px',
-          background: 'white',
-          borderRadius: '16px',
-          border: '1px solid var(--border)',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
-        }}>
-          <button
-            onClick={() => navigate(`/branches-agents/${branchAgent.id}/edit`)}
-            className="btn-submit"
-            style={{
-              padding: '12px 36px',
-              borderRadius: '10px',
-              fontWeight: '700',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'var(--sidebar)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <i className="fa-solid fa-pencil"></i>
-            تعديل البيانات
-          </button>
         </div>
       </div>
-    </section>
+
+      <div className="profile-main-layout">
+        <aside className="profile-sidebar">
+          <nav className="tab-navigation">
+            {[
+              { id: 'agency', label: 'بيانات الوكالة', icon: 'fa-building' },
+              { id: 'contact', label: 'الاتصال والهوية', icon: 'fa-address-card' },
+              { id: 'custody', label: 'العهدة والعهد', icon: 'fa-boxes-stacked' },
+              { id: 'permissions', label: 'الصلاحيات', icon: 'fa-shield-halved' },
+              { id: 'requests', label: 'طلبات الوكيل', icon: 'fa-paper-plane' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+              >
+                <i className={`fa-solid ${tab.icon}`}></i>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <section className="profile-content-area">
+          <div className="content-card">
+            {activeTab === 'agency' && (
+              <div className="tab-pane">
+                <h3 className="tab-title">المعلومات الأساسية للوكالة</h3>
+                <div className="info-grid">
+                  <InfoItem label="اسم الوكالة" value={branchAgent.agency_name} icon="fa-building" />
+                  <InfoItem label="اسم الوكيل المسئول" value={branchAgent.agent_name} icon="fa-user-tie" />
+                  <InfoItem label="كود الوكالة" value={branchAgent.code} icon="fa-hashtag" />
+                  <InfoItem label="نوع النشاط" value={branchAgent.activity} icon="fa-briefcase" />
+                  <InfoItem label="رقم الوكالة" value={branchAgent.agency_number} icon="fa-id-card" />
+                  <InfoItem label="رقم الختم" value={branchAgent.stamp_number} icon="fa-stamp" />
+                  <InfoItem label="تاريخ التعاقد" value={new Date(branchAgent.contract_date).toLocaleDateString('ar-LY')} icon="fa-calendar-day" />
+                  <InfoItem label="تاريخ انتهاء العقد" value={branchAgent.contract_end_date ? new Date(branchAgent.contract_end_date).toLocaleDateString('ar-LY') : '—'} icon="fa-calendar-xmark" />
+                  <div className="full-width">
+                    <InfoItem label="ملاحظات إضافية" value={branchAgent.notes} icon="fa-comment-dots" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'contact' && (
+              <div className="tab-pane">
+                <h3 className="tab-title">معلومات الاتصال والبيانات الشخصية</h3>
+                <div className="info-grid">
+                  <InfoItem label="المدينة" value={branchAgent.city} icon="fa-city" />
+                  <InfoItem label="رقم الهاتف" value={branchAgent.phone} icon="fa-phone" />
+                  <InfoItem label="الجنسية" value={branchAgent.nationality} icon="fa-flag" />
+                  <InfoItem label="الرقم الوطني" value={branchAgent.national_id} icon="fa-id-card" />
+                  <InfoItem label="رقم إثبات الشخصية" value={branchAgent.identity_number} icon="fa-passport" />
+                  <InfoItem label="العنوان التفصيلي" value={branchAgent.address} icon="fa-location-dot" />
+                </div>
+                
+                <div style={{ marginTop: '40px' }}>
+                  <h4 className="section-title-sm"><i className="fa-solid fa-images"></i> المستندات المرفقة</h4>
+                  <div className="documents-grid-layout" style={{ marginTop: '20px' }}>
+                    {branchAgent.personal_photo && <DocCard label="الصورة الشخصية" url={branchAgent.personal_photo} />}
+                    {branchAgent.identity_photo && <DocCard label="إثبات الهوية" url={branchAgent.identity_photo} />}
+                    {branchAgent.contract_photo && <DocCard label="صورة العقد" url={branchAgent.contract_photo} />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'custody' && (
+              <div className="tab-pane">
+                <h3 className="tab-title">سجل العهد والمستندات</h3>
+                
+                <div style={{ marginBottom: '40px' }}>
+                  <h4 className="section-title-sm"><i className="fa-solid fa-boxes-stacked" style={{ color: '#3b82f6' }}></i> العهدة الثابتة</h4>
+                  <div className="premium-table-container">
+                    <table className="premium-table">
+                      <thead>
+                        <tr>
+                          <th>البيان والوصف</th>
+                          <th style={{ width: '120px' }}>الكمية</th>
+                        </tr>
+                      </thead>
+                       <tbody>
+                        {branchAgent.fixed_custodies && branchAgent.fixed_custodies.length > 0 ? (
+                          branchAgent.fixed_custodies.map((c, i) => (
+                            <tr key={i}>
+                              <td>{c.description}</td>
+                              <td><span className="perm-badge-blue">{c.quantity}</span></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td style={{ padding: '20px', color: '#6b7280' }}>لا يوجد عهد ثابتة</td>
+                            <td style={{ color: '#e2e8f0' }}>—</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="section-divider"></div>
+
+                <div>
+                  <h4 className="section-title-sm"><i className="fa-solid fa-box-open" style={{ color: '#ef4444' }}></i> العهدة المستهلكة</h4>
+                  <div className="premium-table-container">
+                    <table className="premium-table">
+                      <thead>
+                        <tr>
+                          <th>البيان والوصف</th>
+                          <th style={{ width: '120px' }}>الكمية</th>
+                        </tr>
+                      </thead>
+                       <tbody>
+                        {branchAgent.consumed_custodies && branchAgent.consumed_custodies.length > 0 ? (
+                          branchAgent.consumed_custodies.map((c, i) => (
+                            <tr key={i}>
+                              <td>{c.description}</td>
+                              <td><span className="perm-badge-blue" style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' }}>{c.quantity}</span></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td style={{ padding: '20px', color: '#6b7280' }}>لا يوجد عهد مستهلكة</td>
+                            <td style={{ color: '#e2e8f0' }}>—</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'permissions' && (
+              <div className="tab-pane">
+                <h3 className="tab-title">صلاحيات إصدار الوثائق والتقارير</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                  <div className="details-section-card">
+                    <h4 className="section-title-sm"><i className="fa-solid fa-file-contract"></i> وثائق التأمين المتاحة</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
+                      {(branchAgent as any).authorized_documents?.filter((doc: string) => !['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).map((doc: string, i: number) => (
+                        <span key={i} className="perm-badge-blue">{doc}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="details-section-card">
+                    <h4 className="section-title-sm"><i className="fa-solid fa-chart-line"></i> الصلاحيات الإدارية والمالية</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
+                      {(branchAgent as any).authorized_documents?.filter((doc: string) => ['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).map((doc: string, i: number) => (
+                        <span key={i} className="perm-badge-green">{doc}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {branchAgent.user && (
+                  <div style={{ marginTop: '40px' }}>
+                    <h4 className="section-title-sm"><i className="fa-solid fa-user-lock"></i> بيانات الحساب المرتبط</h4>
+                    <div className="info-grid" style={{ marginTop: '15px' }}>
+                      <InfoItem label="اسم المستخدم" value={branchAgent.user.username} />
+                      <InfoItem label="الاسم الكامل" value={branchAgent.user.name} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'requests' && (
+              <div className="tab-pane">
+                <div className="tab-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                  <h3 className="tab-title" style={{ margin: 0, border: 'none' }}>طلبات الوكيل</h3>
+                  <button onClick={() => setShowRequestModal(true)} className="btn-add-request"><i className="fa-solid fa-paper-plane"></i> تقديم طلب جديد</button>
+                </div>
+                <div className="requests-list">
+                  {requests.length === 0 ? (
+                    <div className="empty-requests"><i className="fa-solid fa-inbox"></i><p>لا توجد طلبات سابقة لهذا الوكيل</p></div>
+                  ) : (
+                    requests.map((req) => (
+                      <div key={req.id} className="request-item">
+                        <div className={`request-icon ${req.priority === 'urgent' ? 'red' : 'blue'}`}>
+                          <i className={`fa-solid ${
+                            req.type === 'stock' ? 'fa-boxes-stacked' : 
+                            req.type === 'support' ? 'fa-headset' : 
+                            req.type === 'commission' ? 'fa-money-bill-trend-up' : 
+                            req.type === 'maintenance' ? 'fa-screwdriver-wrench' :
+                            req.type === 'marketing' ? 'fa-bullhorn' :
+                            req.type === 'training' ? 'fa-user-graduate' :
+                            req.type === 'legal' ? 'fa-scale-balanced' :
+                            req.type === 'limit_increase' ? 'fa-arrow-up-right-dots' :
+                            'fa-envelope'
+                          }`}></i>
+                        </div>
+                        <div className="request-body">
+                          <div className="request-top">
+                            <h4 className="request-type-title">{getRequestTypeName(req.type)} - {req.subject}</h4>
+                            <span className={`status-pill ${req.status}`}>{getStatusName(req.status)}</span>
+                          </div>
+                          <p className="request-reason">{req.message}</p>
+                          <div className="request-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                            <div className="request-date">بتاريخ: {new Date(req.created_at).toLocaleString('ar-LY', { dateStyle: 'medium' })}</div>
+                            {isAdmin && req.status === 'pending' && (
+                              <div className="request-actions" style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={() => openStatusModal(req.id, 'processing')} className="btn-approve" title="جاري المعالجة" style={{ background: '#3b82f6' }}><i className="fa-solid fa-clock"></i> جاري المعالجة</button>
+                                <button onClick={() => openStatusModal(req.id, 'completed')} className="btn-approve" title="تم التنفيذ"><i className="fa-solid fa-check"></i> تم التنفيذ</button>
+                                <button onClick={() => openStatusModal(req.id, 'rejected')} className="btn-reject" title="رفض"><i className="fa-solid fa-xmark"></i> رفض</button>
+                              </div>
+                            )}
+                          </div>
+                          {req.admin_notes && (
+                            <div className="admin-note-box" style={{ marginTop: '10px' }}>
+                              <strong>ملاحظة الإدارة:</strong> {req.admin_notes}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* New Request Modal */}
+      {showRequestModal && (
+        <div className="modal-overlay">
+          <div className="modal-inner">
+            <div className="modal-top">
+              <h3>تقديم طلب جديد للوكالة</h3>
+              <button onClick={() => setShowRequestModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <form onSubmit={handleCreateRequest} className="modal-form">
+              <div className="input-group">
+                <label>نوع الطلب</label>
+                <select value={newRequest.type} onChange={(e) => setNewRequest({...newRequest, type: e.target.value})}>
+                  <option value="stock">طلب عهدة/مستندات</option>
+                  <option value="support">دعم فني</option>
+                  <option value="financial">تسوية مالية</option>
+                  <option value="commission">طلب عمولة</option>
+                  <option value="maintenance">طلب صيانة</option>
+                  <option value="marketing">دعاية وإعلان</option>
+                  <option value="training">تدريب</option>
+                  <option value="legal">استشارة قانونية</option>
+                  <option value="limit_increase">زيادة سقف الإصدار</option>
+                  <option value="other">أخرى</option>
+                </select>
+              </div>
+              <div className="input-group">
+                <label>الأولوية</label>
+                <select value={newRequest.priority} onChange={(e) => setNewRequest({...newRequest, priority: e.target.value})}>
+                  <option value="normal">عادي</option>
+                  <option value="urgent">عاجل</option>
+                </select>
+              </div>
+              <div className="input-group">
+                <label>الموضوع</label>
+                <input type="text" placeholder="عنوان مختصر للطلب..." value={newRequest.subject} onChange={(e) => setNewRequest({...newRequest, subject: e.target.value})} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px', fontWeight: '700' }} />
+              </div>
+              <div className="input-group">
+                <label>التفاصيل</label>
+                <textarea placeholder="اكتب تفاصيل طلبك هنا..." value={newRequest.message} onChange={(e) => setNewRequest({...newRequest, message: e.target.value})} style={{ minHeight: '120px' }}></textarea>
+              </div>
+              <button type="submit" className="btn-submit-full" disabled={submittingRequest}>{submittingRequest ? 'جاري الإرسال...' : 'إرسال الطلب'}</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Notes Modal */}
+      {showStatusModal && (
+        <div className="modal-overlay">
+          <div className="modal-inner" style={{ maxWidth: '450px' }}>
+            <div className="modal-top">
+              <h3>معالجة طلب الوكيل</h3>
+              <button onClick={() => setShowStatusModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <div className="modal-form" style={{ padding: '20px' }}>
+              <div className="input-group">
+                <label style={{ marginBottom: '10px', display: 'block', fontWeight: 800 }}>ملاحظات الإدارة</label>
+                <textarea 
+                  placeholder="اكتب ردك أو ملاحظاتك هنا..." 
+                  value={adminNotes} 
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  style={{ minHeight: '120px', width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                ></textarea>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button 
+                  onClick={handleUpdateRequestStatus} 
+                  className="btn-submit-full" 
+                  disabled={submittingStatus}
+                  style={{ flex: 1 }}
+                >
+                  {submittingStatus ? 'جاري الحفظ...' : 'تأكيد وحفظ'}
+                </button>
+                <button 
+                  onClick={() => setShowStatusModal(false)} 
+                  className="btn-outline-sm"
+                  style={{ flex: 1, height: 'auto' }}
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoItem({ label, value, icon }: { label: string, value?: string, icon?: string }) {
+  return (
+    <div className="info-item-box">
+      <span className="info-label-text">
+        {icon && <i className={`fa-solid ${icon}`}></i>}
+        {label}
+      </span>
+      <span className="info-value-text">{value || '—'}</span>
+    </div>
+  );
+}
+
+function DocCard({ label, url }: { label: string, url: string }) {
+  return (
+    <div className="doc-card">
+      <div className="doc-preview">
+        <img src={`${BACKEND_URL}/storage/${url}`} alt={label} />
+        <div className="doc-overlay">
+          <a href={`${BACKEND_URL}/storage/${url}`} target="_blank" className="overlay-btn" rel="noreferrer"><i className="fa-solid fa-expand"></i></a>
+        </div>
+      </div>
+      <p className="doc-label">{label}</p>
+    </div>
   );
 }

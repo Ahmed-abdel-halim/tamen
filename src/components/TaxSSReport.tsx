@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { exportToExcel } from '../utils/excelExport';
 
 type PayrollData = {
@@ -221,7 +221,7 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
       <body onload="window.print(); window.close();">
         <div class="header">
           <div class="header-right">
-            <img src="/img/logo.png" style="height: 90px; width: auto;" alt="Logo">
+            <img src="${BACKEND_URL}/img/logo.png" style="height: 90px; width: auto;" alt="Logo" onerror="this.src='/img/logo.png'">
             <div class="header-info" style="margin-right: 15px;">
               <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
               <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>

@@ -31,7 +31,7 @@ export default function BranchesAgentsList() {
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("نشط");
   const perPage = 10;
 
   useEffect(() => {
@@ -158,9 +158,10 @@ export default function BranchesAgentsList() {
         .page-container { border: 1px solid #e2e8f0; padding: 8mm; position: relative; min-height: 275mm; box-sizing: border-box; display: flex; flex-direction: column; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #1e40af; padding-bottom: 12px; }
         .header-info h1 { margin: 0; color: #1e40af; font-size: 1.7rem; font-weight: 800; }
-        .header-branding { display: flex; align-items: center; gap: 12px; }
-        .brand-text { text-align: left; }
-        .brand-text div { font-size: 9pt; font-weight: 800; color: #1e40af; line-height: 1.2; }
+        .header-branding { display: flex; align-items: center; gap: 4px; }
+        .brand-text { display: flex; flex-direction: column; align-items: center; line-height: 1.2; white-space: nowrap; margin-right: 0; }
+        .brand-text div:first-child { font-size: 13pt; font-weight: 800; margin-bottom: 2px; line-height: 1; color: #139625; font-family: 'Times New Roman', serif; text-align: center; }
+        .brand-text div:last-child { font-size: 5.6pt; font-weight: 800; line-height: 1; font-family: 'Times New Roman', serif; text-align: center; letter-spacing: 0; }
         .header-branding img { height: 50px; width: auto; }
         .content-body { display: flex; gap: 15px; }
         .main-data { flex: 1; }
@@ -192,7 +193,7 @@ export default function BranchesAgentsList() {
       <div class="page-container">
         <div class="header">
           <div class="header-info"><h1>بيانات الوكيل المعتمد</h1><p>قسم الفروع والوكلاء</p></div>
-          <div class="header-branding"><div class="brand-text"><div>المدار الليبي للتأمين</div><div>Al Madar Libyan Insurance</div></div><div class="logo-wrapper"><img src="${escapeHtml(logoSrc)}" alt="Logo" /></div></div>
+          <div class="header-branding"><div class="brand-text"><div>المدار الليبي <span style="color: #1e40af;">للتأمين</span></div><div><span style="color: #1e40af;">ALMADAR</span> <span style="color: #139625;">LIBYAN INSURANCE</span></div></div><div class="logo-wrapper"><img src="${escapeHtml(logoSrc)}" alt="Logo" /></div></div>
         </div>
         <div class="content-body">
           <div class="main-data">
@@ -225,51 +226,179 @@ export default function BranchesAgentsList() {
     const w = window.open('', '_blank', 'width=520,height=420');
     if (!w) return;
     const photoSrc = ba.personal_photo ? resolvePublicUrl(ba.personal_photo) : '';
-    const logoSrc = resolvePublicUrl('/img/logo3.png');
+    const logoSrc = resolvePublicUrl('/img/logo.png');
 
-    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>بطاقة وكيل</title>
-      <style>
-        @page { margin: 0; size: 85.6mm 53.98mm; }
-        body { font-family: Cairo, 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; background: #e2e8f0; }
-        .card { width: 85.6mm; height: 53.98mm; background: #fff; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid #cbd5e1; display: flex; flex-direction: column; }
-        .header { height: 16mm; background: #1e40af; display: flex; justify-content: space-between; align-items: center; padding: 0 4mm; color: #fff; }
-        .header-branding { display: flex; align-items: center; gap: 2.5mm; }
-        .logo-wrapper { width: 12mm; height: 12mm; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .header-branding img { height: 10mm; width: 10mm; object-fit: contain; }
-        .brand-text { font-size: 8.5pt; font-weight: 700; text-align: left; line-height: 1.2; color: #fff; white-space: nowrap; }
-        .brand-text div:first-child { font-size: 12pt; font-weight: 800; margin-bottom: 0.5mm; line-height: 1; }
-        .brand-text div:last-child { font-size: 8.5pt; opacity: 0.95; font-weight: 800; line-height: 1; }
-        .card-body { flex: 1; display: flex; align-items: center; padding: 2mm 5mm; gap: 4mm; }
-        .photo-box { width: 24mm; height: 30mm; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; flex-shrink: 0; }
-        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
-        .info-box { flex: 1; display: flex; flex-direction: column; gap: 2mm; }
-        .info-row { display: flex; gap: 2mm; font-size: 9.5pt; }
-        .info-label { color: #64748b; font-weight: 700; min-width: 18mm; }
-        .info-val { color: #0f172a; font-weight: 800; }
-        .footer-note { position: absolute; bottom: 2mm; left: 4mm; font-size: 6.5pt; color: #94a3b8; font-weight: 700; }
-      </style></head><body onload="window.print()">
-      <div class="card">
-        <div class="header">
-          <div style="font-size: 11pt; font-weight: 800; color: #fff;">بطاقة وكيل معتمد</div>
-          <div class="header-branding">
-            <div class="brand-text"><div>المدار الليبي للتأمين</div><div>Al Madar Libyan Insurance</div></div>
-            <div class="logo-wrapper"><img src="${escapeHtml(logoSrc)}" alt="Logo" /></div>
+    // Adjusted wave to make blue section visually equal/larger
+    const bgSvg = `data:image/svg+xml;utf8,<svg viewBox="0 0 830 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M856 0 L428 0 C328 150 528 350 428 540 L856 540 Z" fill="%231e40af"/><path d="M428 0 C328 150 528 350 428 540 L408 540 C508 350 308 150 408 0 Z" fill="%23139625"/></svg>`;
+
+    w.document.write(`<!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>بطاقة وكيل معتمد</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          @page { margin: 0; size: 85.6mm 53.98mm; }
+          body { 
+            font-family: Cairo, 'Segoe UI', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: #e2e8f0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .card { 
+            width: 85.6mm; 
+            height: 53.98mm; 
+            background-color: #ffffff; 
+            background-image: url('${bgSvg}');
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px; 
+            overflow: hidden; 
+            position: relative; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex; 
+          }
+          
+          /* Dark Blue Section (Logical Right in RTL, Physical Right) - Visually balanced */
+          .right-section {
+            width: 55%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Align to Right in RTL */
+            justify-content: center;
+            padding: 4mm 8mm 4mm 2mm; /* Increased right padding */
+            box-sizing: border-box;
+            color: #ffffff;
+            z-index: 10;
+          }
+          
+          .photo-circle {
+            width: 23mm;
+            height: 23mm;
+            border-radius: 50%;
+            border: 2px solid #139625;
+            background: #ffffff;
+            overflow: hidden;
+            margin-bottom: 4mm;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .photo-circle img { width: 100%; height: 100%; object-fit: cover; }
+          .photo-circle .no-img { font-size: 7pt; color: #94a3b8; }
+          
+          .id-data {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5mm;
+            padding: 0 2mm;
+            box-sizing: border-box;
+          }
+          .id-row {
+            display: flex;
+            justify-content: flex-start; /* Group label and value together */
+            gap: 3mm; /* Gap between label and value */
+            font-size: 7.5pt;
+            font-weight: 700;
+          }
+          .id-row span:first-child { color: #93c5fd; }
+          
+          /* White Left Section (Physical Left) - Visually balanced */
+          .left-section {
+            width: 45%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4mm;
+            box-sizing: border-box;
+            z-index: 10;
+          }
+          
+          .header-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 6mm;
+            width: 100%;
+          }
+          .logo-wrapper {
+            display: flex; align-items: center; justify-content: center; 
+          }
+          .logo-wrapper img { height: 18mm; width: auto; object-fit: contain; max-width: 90%; }
+          
+          .employee-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+          }
+          .emp-name { font-size: 11pt; font-weight: 800; color: #1e40af; margin-bottom: 1mm; line-height: 1.2; }
+          .emp-role { font-size: 8pt; font-weight: 700; color: #139625; }
+          
+          .footer-note {
+            font-size: 5pt;
+            color: #64748b;
+            text-align: center;
+            width: 100%;
+            margin-top: auto;
+          }
+          
+          .badge-type {
+            position: absolute;
+            top: 3mm;
+            left: 3mm;
+            background: #1e40af;
+            color: white;
+            padding: 1mm 2mm;
+            border-radius: 4px;
+            font-size: 6.5pt;
+            font-weight: 800;
+          }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <div class="card">
+          <div class="right-section">
+            <div class="photo-circle">
+              ${photoSrc ? `<img src="${escapeHtml(photoSrc)}" alt="Photo" onerror="this.style.display='none'" />` : '<div class="no-img">بلا صورة</div>'}
+            </div>
+            <div class="id-data">
+              <div class="id-row"><span>رقم الوكالة:</span> <span>${escapeHtml(ba.agency_number || '—')}</span></div>
+              <div class="id-row"><span>كود الوكيل:</span> <span>${escapeHtml(ba.code)}</span></div>
+              <div class="id-row"><span>الإصدار:</span> <span>${new Date().toLocaleDateString('en-GB')}</span></div>
+            </div>
+          </div>
+          
+          <div class="left-section">
+            <div class="badge-type">بطاقة وكيل معتمد</div>
+            
+            <div class="header-box">
+               <div class="logo-wrapper"><img src="${escapeHtml(logoSrc)}" alt="Logo" onerror="this.src='/img/logo.png'" /></div>
+            </div>
+            
+            <div class="employee-info">
+              <div class="emp-name">${escapeHtml(ba.agent_name)}</div>
+              <div class="emp-role">وكيل معتمد</div>
+            </div>
+            
+            <div class="footer-note">إدارة الفروع والوكلاء - المدار الليبي للتأمين</div>
           </div>
         </div>
-        <div class="card-body">
-          <div class="photo-box">
-            ${photoSrc ? `<img src="${escapeHtml(photoSrc)}" alt="" />` : `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:7pt">بلا صورة</div>`}
-          </div>
-          <div class="info-box">
-            <div class="info-row"><span class="info-label">اسم الوكيل:</span><span class="info-val">${escapeHtml(ba.agent_name)}</span></div>
-            <div class="info-row"><span class="info-label">رقم الوكالة:</span><span class="info-val">${escapeHtml(ba.agency_number || '—')}</span></div>
-            <div class="info-row"><span class="info-label">كود الوكيل:</span><span class="info-val">${escapeHtml(ba.code)}</span></div>
-            <div class="info-row"><span class="info-label">الإصدار:</span><span class="info-val">${new Date().toLocaleDateString('ar-LY')}</span></div>
-          </div>
-        </div>
-        <div class="footer-note">إدارة الفروع والوكلاء - شركة المدار الليبي للتأمين</div>
-      </div>
-      </body></html>`);
+      </body>
+      </html>
+    `);
     w.document.close();
   };
 

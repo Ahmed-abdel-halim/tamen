@@ -94,6 +94,7 @@ import FinancialArchive from './components/FinancialArchive';
 import OutstandingDebts from './components/OutstandingDebts';
 import InventoryManagement from './components/InventoryManagement';
 import AllEmployeeRequests from './components/AllEmployeeRequests';
+import AllAgentRequests from './components/AllAgentRequests';
 import EmployeeSalaries from './components/EmployeeSalaries';
 import { ToastContainer } from './components/Toast';
 import { TaxSSReport } from './components/TaxSSReport';
@@ -260,7 +261,12 @@ const menuSections: SidebarSection[] = [
   {
     title: 'الشؤون الادارية',
     items: [
-      { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
+      { 
+        label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
+          { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+          { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
+        ]
+      },
       { 
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
@@ -363,6 +369,7 @@ const createMenuSections = (
     'إدارة الفروع والوكلاء': { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
     'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
     'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+    'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
     'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' }, // للتوافق القديم
     'الأرشيف': { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
@@ -407,7 +414,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
   ];
-  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/archive'];
+  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/archive'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -513,12 +520,32 @@ const createMenuSections = (
     }
   }
 
-  // إضافة قسم التقارير إذا كان هناك تقارير مصرح بها
+  // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
   if (adminItems.length > 0) {
     const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
-    const otherAdmin = adminItems.filter(i => i.to !== '/users' && i.to !== '/employee-requests');
+    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
+    const otherAdmin = adminItems.filter(i => 
+      !hrGroup.some(g => g.to === i.to) && 
+      !agentsGroup.some(g => g.to === i.to)
+    );
     
     const finalAdmin = [...otherAdmin];
+
+    if (agentsGroup.length > 0) {
+      if (agentsGroup.length === 1 && agentsGroup[0].to === '/branches-agents') {
+        finalAdmin.push(agentsGroup[0]);
+      } else {
+        finalAdmin.push({
+          label: 'إدارة الفروع والوكلاء',
+          icon: 'fa-solid fa-building',
+          children: agentsGroup.map(item => ({
+            ...item,
+            label: item.to === '/branches-agents' ? 'قائمة الفروع والوكلاء' : 'طلبات الوكلاء'
+          }))
+        });
+      }
+    }
+
     if (hrGroup.length > 0) {
       // إذا كان هناك عنصر واحد فقط، لا حاجة للمجموعة
       if (hrGroup.length === 1 && hrGroup[0].to === '/users') {
@@ -793,6 +820,7 @@ export default function App() {
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
+                  <Route path="/agent-requests" element={<AllAgentRequests />} />
                   {/* إدارة الفروع والوكلاء */}
                   <Route path="/branches-agents" element={<BranchesAgentsList />} />
                   <Route path="/branches-agents/create" element={<CreateBranchAgent />} />

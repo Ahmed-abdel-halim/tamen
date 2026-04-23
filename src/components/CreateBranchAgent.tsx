@@ -77,6 +77,21 @@ const REPORT_PERMISSIONS = [
   'تقرير الضمان الاجتماعي',
 ];
 
+const DEFAULT_CONTRACT_TERMS = `1. يتعهد الطرف الثاني بأن يعمل لحساب ولصالح الطرف الأول وتحت إشرافه بصفته وكيلاً عنه بإصدار وثائق التأمين الإجبارية التي تقوم الشركة بإصدارها، وذلك وفقاً للقانون والنظام المعمول به والأحكام والضوابط المبينة بهذا العقد.
+2. تقوم الشركة بدفع العمولة المستحقة للطرف الثاني وذلك عند نهاية كل شهر بناءً على حوافظ اصدار الوثائق المحالة من الطرف الثاني إلى الطرف الأول بعد استيفاء المراجعة المالية والفنية.
+3. 1- اتفق الطرفان على مدة هذا العقد (سنة واحدة) اعتباراً من تاريخ إبرامه. 2- يجدد العقد بحضور الطرف الثاني أو من ينوب عنه ويبرم عقد تجديد العقد في الشركة / الطرف الأول. 3- يلغى الطرف الأول العقد مع الطرف الثاني برسالة إخطار موجهه للطرف الثاني في حال عدم التقيد في شروط هذا العقد.
+4. يلتزم الطرف الثاني بشأن تنفيذ أحكام هذا العقد بما يلي:
+   أ. مباشرة العمل خلال مدة لا تتجاوز شهر من تاريخ ابرام العقد.
+   ب. العمل على إصدار وثائق التأمين عن طريق منظومة الاصدار الخاصة بالشركة فقط.
+   ج. عدم مخالفة اسعار الوثائق التي يصدرها وعدم التعهد بأية التزامات أو وعود.
+   د. مراعاة الطرف الثاني مبدأ حسن النية في عمليات إصدار الوثائق.
+   هـ. عدم قبول التأمين على أخطار قد تحققت فعلاً قبل إصدار وثيقة تأمين.
+5. يحق للطرف الأول فسخ العقد دون اخطار الطرف الثاني في حالة ثبوت مخالفته للوائح المالية والفنية النافذة بالشركة.
+6. اتفق الطرفان بأنه يحق للطرف الثاني إنهاء العقد ويشترط الحصول على براءة ذمة من الطرف الأول.
+7. اتفق الطرفان بأن أي نزاع ينشأ بينهما يختص به القضاء الليبي بعد استنفاذ جميع محاولات التسوية الودية.
+8. اتفق الطرفان بأن المراسلات الرسمية التي يتم تبادلها بينهما توجه إلى الطرف الآخر رسالة رسمية صادره من أحدهما.
+9. وقع الطرفان على هذا العقد بما يفيد اعتماده والعمل بما جاء فيه من أحكام وشروط من تاريخ إبرامه.`;
+
 export default function CreateBranchAgent() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -99,6 +114,7 @@ export default function CreateBranchAgent() {
     password: '',
     notes: '',
     status: 'نشط' as 'نشط' | 'غير نشط',
+    contract_conditions: DEFAULT_CONTRACT_TERMS,
     authorized_documents: [] as string[],
     document_percentages: {} as Record<string, number>,
   });
@@ -265,6 +281,7 @@ export default function CreateBranchAgent() {
       formDataToSend.append('username', formData.username);
       formDataToSend.append('password', formData.password);
       if (formData.notes) formDataToSend.append('notes', formData.notes);
+      formDataToSend.append('contract_conditions', formData.contract_conditions || '');
       formDataToSend.append('status', formData.status);
       
       // إرسال الوثائق المصرح بها والنسب (حتى لو كانت فارغة)
@@ -666,6 +683,16 @@ export default function CreateBranchAgent() {
                 </div>
                 {formErrors.password && <span className="error-message">{formErrors.password}</span>}
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>شروط العقد</label>
+              <textarea
+                value={formData.contract_conditions}
+                onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })}
+                placeholder="أدخل شروط العقد هنا..."
+                rows={4}
+              />
             </div>
 
             <div className="form-group">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { showToast } from './Toast';
 import { exportToExcel } from '../utils/excelExport';
 
@@ -204,7 +204,7 @@ export default function CommissionManagement() {
               <h1>تقرير التسويات والعمولات</h1>
             </div>
             <div style="flex: 1; text-align: left;">
-              <img src="${window.location.origin}/img/logo.png" class="logo" alt="المدار الليبي للتأمين" />
+              <img src="${BACKEND_URL}/img/logo.png" class="logo" alt="المدار الليبي للتأمين" onerror="this.src='/img/logo.png'" />
             </div>
           </div>
 

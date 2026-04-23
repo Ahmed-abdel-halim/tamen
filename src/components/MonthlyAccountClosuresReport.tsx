@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 import { exportToExcel } from "../utils/excelExport";
 
 type MonthlyAccountClosure = {
@@ -166,7 +166,12 @@ export default function MonthlyAccountClosuresReport() {
   };
 
   // حساب الإجماليات بدقة
-  const totalDue = closures.reduce((sum, closure) => sum + (Number(closure.due_amount) || 0), 0);
+  const totalCompanyShare = closures.reduce((sum, closure) => sum + (Number(closure.due_amount) || 0), 0);
+  const totalAgentShare = closures.reduce((sum, closure) => {
+    const agentAmount = closure.documents_data?.reduce((s, doc) => s + (Number(doc.agent_amount) || 0), 0) || 0;
+    return sum + agentAmount;
+  }, 0);
+  const totalGrand = totalCompanyShare + totalAgentShare;
   const totalPaid = closures.reduce((sum, closure) => sum + (Number(closure.paid_amount) || 0), 0);
   const totalRemaining = closures.reduce((sum, closure) => sum + (Number(closure.remaining_amount) || 0), 0);
 
@@ -182,36 +187,45 @@ export default function MonthlyAccountClosuresReport() {
       fileName: 'كشف_إغلاق_الحسابات',
       columnCount: 8,
       summaryRight: `الفترة: ${reportLabel}`,
-      summaryLeft: `إجمالي المستحقات: ${totalDue.toLocaleString()} د.ل    |    المدفوع: ${totalPaid.toLocaleString()} د.ل`,
+      summaryLeft: `إجمالي الشركة: ${totalCompanyShare.toLocaleString()} د.ل    |    حصة الوكلاء: ${totalAgentShare.toLocaleString()} د.ل    |    المدفوع: ${totalPaid.toLocaleString()} د.ل`,
       tableHeaders: `
         <tr height="40">
-          <th width="300">الوكيل</th>
-          <th width="100">رقم الوكيل</th>
-          <th width="100">السنة</th>
-          <th width="100">الشهر</th>
-          <th width="150">القيمة المستحقة</th>
-          <th width="150">المدفوع</th>
-          <th width="150">المتبقي</th>
-          <th width="150">تاريخ الإغلاق</th>
+          <th width="250">الوكيل</th>
+          <th width="80">السنة</th>
+          <th width="80">الشهر</th>
+          <th width="120">الإجمالي الكلي</th>
+          <th width="120">حصة الوكلاء</th>
+          <th width="120">حصة الشركة</th>
+          <th width="120">المدفوع</th>
+          <th width="120">المتبقي</th>
+          <th width="120">تاريخ الإغلاق</th>
         </tr>
       `,
-      tableBody: closures.map((closure, index) => `
+      tableBody: closures.map((closure, index) => {
+        const agentShare = closure.documents_data?.reduce((sum, doc) => sum + (Number(doc.agent_amount) || 0), 0) || 0;
+        const companyShare = Number(closure.due_amount) || 0;
+        const grandTotal = agentShare + companyShare;
+        
+        return `
         <tr class="${index % 2 === 0 ? 'row-even' : ''}">
           <td>${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}</td>
-          <td align="center" style="mso-number-format:'\@';">${closure.branch_agent.code}</td>
           <td align="center">${closure.year}</td>
           <td align="center">${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</td>
-          <td class="bold">${closure.due_amount}</td>
+          <td class="bold">${grandTotal.toFixed(2)}</td>
+          <td style="color: #6366f1;">${agentShare.toFixed(2)}</td>
+          <td class="bold" style="color: #139625;">${companyShare.toFixed(2)}</td>
           <td class="green">${closure.paid_amount}</td>
           <td class="red">${closure.remaining_amount}</td>
           <td align="center">${formatDate(closure.created_at)}</td>
         </tr>
-      `).join('') + `
+      `}).join('') + `
         <tr height="35" style="background-color: #f3f4f6; font-weight: bold;">
-          <td colspan="4" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
-          <td class="bold">${totalDue}</td>
-          <td class="green">${totalPaid}</td>
-          <td class="red">${totalRemaining}</td>
+          <td colspan="3" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
+          <td class="bold">${totalGrand.toFixed(2)}</td>
+          <td style="color: #6366f1;">${totalAgentShare.toFixed(2)}</td>
+          <td class="bold" style="color: #139625;">${totalCompanyShare.toFixed(2)}</td>
+          <td class="green">${totalPaid.toFixed(2)}</td>
+          <td class="red">${totalRemaining.toFixed(2)}</td>
           <td></td>
         </tr>
       `
@@ -295,9 +309,13 @@ export default function MonthlyAccountClosuresReport() {
           {/* الجانب الأيمن (في RTL): اللوجو */}
           <div style={{ flex: 1, textAlign: 'right' }}>
             <img 
-              src="/img/logo3.png" 
+              src={`${BACKEND_URL}/img/logo3.png`} 
               alt="Logo" 
               style={{ maxHeight: '110px', width: 'auto' }} 
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = '/img/logo3.png'; // fallback to local if backend fails
+              }}
             />
             <p style={{ margin: '8px 0 0', fontSize: '13px', fontWeight: 'bold', color: '#003173' }}>شركة المدار الليبي للتأمين</p>
             <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#666' }}>Al Madar Libyan Insurance</p>
@@ -463,24 +481,34 @@ export default function MonthlyAccountClosuresReport() {
                       <th>الوكيل</th>
                       <th>السنة</th>
                       <th>الشهر</th>
-                      <th>القيمة المستحقة</th>
+                      <th>الإجمالي الكلي</th>
+                      <th>حصة الوكلاء</th>
+                      <th>حصة الشركة</th>
                       <th>المدفوع</th>
                       <th>المتبقي</th>
                       <th>تاريخ الإغلاق</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {closures.map((closure) => (
-                      <tr key={closure.id}>
-                        <td>{closure.branch_agent.agency_name} - {closure.branch_agent.agent_name} ({closure.branch_agent.code})</td>
-                        <td>{closure.year}</td>
-                        <td>{MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</td>
-                        <td>{formatCurrency(closure.due_amount)}</td>
-                        <td>{formatCurrency(closure.paid_amount)}</td>
-                        <td>{formatCurrency(closure.remaining_amount)}</td>
-                        <td>{formatDate(closure.created_at)}</td>
-                      </tr>
-                    ))}
+                    {closures.map((closure) => {
+                      const agentShare = closure.documents_data?.reduce((sum, doc) => sum + (Number(doc.agent_amount) || 0), 0) || 0;
+                      const companyShare = Number(closure.due_amount) || 0;
+                      const grandTotal = agentShare + companyShare;
+                      
+                      return (
+                        <tr key={closure.id}>
+                          <td>{closure.branch_agent.agency_name} - {closure.branch_agent.agent_name} ({closure.branch_agent.code})</td>
+                          <td>{closure.year}</td>
+                          <td>{MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</td>
+                          <td style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotal)}</td>
+                          <td style={{ color: '#6366f1', fontWeight: 'bold' }}>{formatCurrency(agentShare)}</td>
+                          <td style={{ color: '#139625', fontWeight: 'bold' }}>{formatCurrency(companyShare)}</td>
+                          <td style={{ color: '#059669' }}>{formatCurrency(closure.paid_amount)}</td>
+                          <td style={{ color: '#dc2626' }}>{formatCurrency(closure.remaining_amount)}</td>
+                          <td>{formatDate(closure.created_at)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
               </table>
             </div>
@@ -538,10 +566,10 @@ export default function MonthlyAccountClosuresReport() {
                 gap: '20px',
               }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>إجمالي المستحقات</label>
+                  <label>إجمالي الشركة (الصافي)</label>
                   <input
                     type="text"
-                    value={formatCurrency(totalDue)}
+                    value={formatCurrency(totalCompanyShare)}
                     readOnly
                     disabled
                     style={{
@@ -549,8 +577,52 @@ export default function MonthlyAccountClosuresReport() {
                       padding: '10px 12px',
                       border: '1px solid var(--border)',
                       borderRadius: 8,
-                      background: '#f5f5f5',
+                      background: '#ecfdf5',
+                      color: '#065f46',
                       fontSize: 14,
+                      fontWeight: 'bold',
+                      minHeight: 42,
+                      cursor: 'not-allowed',
+                    }}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>إجمالي حصة الوكلاء</label>
+                  <input
+                    type="text"
+                    value={formatCurrency(totalAgentShare)}
+                    readOnly
+                    disabled
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      background: '#eef2ff',
+                      color: '#3730a3',
+                      fontSize: 14,
+                      fontWeight: 'bold',
+                      minHeight: 42,
+                      cursor: 'not-allowed',
+                    }}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>الإجمالي الكلي</label>
+                  <input
+                    type="text"
+                    value={formatCurrency(totalGrand)}
+                    readOnly
+                    disabled
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      background: '#f3f4f6',
+                      color: '#111827',
+                      fontSize: 14,
+                      fontWeight: 'bold',
                       minHeight: 42,
                       cursor: 'not-allowed',
                     }}
@@ -568,8 +640,10 @@ export default function MonthlyAccountClosuresReport() {
                       padding: '10px 12px',
                       border: '1px solid var(--border)',
                       borderRadius: 8,
-                      background: '#f5f5f5',
+                      background: '#f0fdf4',
+                      color: '#166534',
                       fontSize: 14,
+                      fontWeight: 'bold',
                       minHeight: 42,
                       cursor: 'not-allowed',
                     }}
@@ -587,8 +661,10 @@ export default function MonthlyAccountClosuresReport() {
                       padding: '10px 12px',
                       border: '1px solid var(--border)',
                       borderRadius: 8,
-                      background: '#f5f5f5',
+                      background: '#fef2f2',
+                      color: '#991b1b',
                       fontSize: 14,
+                      fontWeight: 'bold',
                       minHeight: 42,
                       cursor: 'not-allowed',
                     }}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
@@ -25,6 +25,27 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; isOpen: boolean }>({ id: null, isOpen: false });
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [agents, setAgents] = useState<{id: number, agency_name: string}[]>([]);
+  const [filters, setFilters] = useState({
+    agentId: '',
+    year: '',
+    month: '',
+    day: ''
+  });
+  const [agentSearch, setAgentSearch] = useState("");
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+  const agentDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (agentDropdownRef.current && !agentDropdownRef.current.contains(event.target as Node)) {
+        setShowAgentDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -36,7 +57,27 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
 
   useEffect(() => {
     fetchDocuments();
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, filters]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAgents();
+    }
+  }, [isAdmin]);
+
+  const fetchAgents = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAgents(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+    }
+  };
 
   // Reset to page 1 when searching
   useEffect(() => {
@@ -55,6 +96,10 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
       params.append('page', currentPage.toString());
       params.append('per_page', perPage.toString());
       if (searchQuery) params.append('search', searchQuery);
+      if (filters.agentId) params.append('branch_agent_id', filters.agentId);
+      if (filters.year) params.append('year', filters.year);
+      if (filters.month) params.append('month', filters.month);
+      if (filters.day) params.append('day', filters.day);
 
       const res = await fetch(`${API_BASE_URL}/school-student-insurance?${params.toString()}`, { headers });
       const data = await res.json();
@@ -127,6 +172,145 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
               إصدار وثيقة جديدة
             </button>
           )}
+        </div>
+
+        {/* Advanced Filters Box */}
+        <div className="filters-box-premium" style={{ 
+          background: 'var(--panel)', 
+          padding: '20px', 
+          borderRadius: '16px', 
+          marginBottom: '20px', 
+          border: '1px solid var(--border)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: '15px',
+          alignItems: 'end'
+        }}>
+          {isAdmin && (
+            <div className="filter-group" ref={agentDropdownRef} style={{ position: 'relative' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '8px', display: 'block' }}>الوكيل</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="ابحث عن وكيل..."
+                  value={agentSearch}
+                  onChange={(e) => {
+                    setAgentSearch(e.target.value);
+                    setShowAgentDropdown(true);
+                  }}
+                  onFocus={() => setShowAgentDropdown(true)}
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                />
+                {showAgentDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    background: 'var(--panel)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    zIndex: 1000,
+                    marginTop: '5px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div
+                      onClick={() => {
+                        setFilters({ ...filters, agentId: '' });
+                        setAgentSearch("كل الوكلاء");
+                        setShowAgentDropdown(false);
+                      }}
+                      style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text)' }}
+                    >
+                      كل الوكلاء
+                    </div>
+                    {agents.filter(a => a.agency_name.toLowerCase().includes(agentSearch.toLowerCase())).map(agent => (
+                      <div
+                        key={agent.id}
+                        onClick={() => {
+                          setFilters({ ...filters, agentId: agent.id.toString() });
+                          setAgentSearch(agent.agency_name);
+                          setShowAgentDropdown(false);
+                        }}
+                        style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text)' }}
+                      >
+                        {agent.agency_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="filter-group">
+            <label style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '8px', display: 'block' }}>السنة</label>
+            <select 
+              value={filters.year} 
+              onChange={(e) => setFilters({...filters, year: e.target.value})}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+            >
+              <option value="">كل السنوات</option>
+              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '8px', display: 'block' }}>الشهر</label>
+            <select 
+              value={filters.month} 
+              onChange={(e) => setFilters({...filters, month: e.target.value})}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+            >
+              <option value="">كل الشهور</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '8px', display: 'block' }}>اليوم</label>
+            <select 
+              value={filters.day} 
+              onChange={(e) => setFilters({...filters, day: e.target.value})}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+            >
+              <option value="">كل الأيام</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            onClick={() => {
+              setFilters({ agentId: '', year: '', month: '', day: '' });
+              setAgentSearch("");
+              setSearchQuery("");
+            }}
+            style={{ 
+              padding: '10px 20px', 
+              borderRadius: '10px', 
+              border: 'none', 
+              background: 'var(--accent-cyan)', 
+              color: 'white', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fa-solid fa-rotate-left"></i>
+            تفريغ
+          </button>
         </div>
 
         {loading ? (
