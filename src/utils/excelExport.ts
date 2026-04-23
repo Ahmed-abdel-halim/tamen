@@ -1,5 +1,3 @@
-import { BACKEND_URL } from "../config/api";
-
 interface ExcelExportOptions {
   title: string;
   fileName?: string;
