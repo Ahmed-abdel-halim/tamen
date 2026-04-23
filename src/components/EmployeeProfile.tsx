@@ -76,6 +76,8 @@ type EmployeeRequest = {
 function resolvePublicUrl(path: string | null | undefined): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
+  if (path.startsWith('/img/')) return `${window.location.origin}${path}`;
+  if (path.startsWith('img/')) return `${window.location.origin}/${path}`;
   if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
   if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
   return `${BACKEND_URL}/storage/${path}`;

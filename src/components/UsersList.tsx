@@ -96,7 +96,7 @@ function resolvePublicUrl(path: string | null | undefined): string {
   // In development, they are often in frontend/public
   // In production, we expect them to be in backend/public/img
   if (cleanPath.startsWith('img/')) {
-    return `${BACKEND_URL}/${cleanPath}`;
+    return `${window.location.origin}/${cleanPath}`;
   }
   
   if (cleanPath.startsWith('storage/')) {

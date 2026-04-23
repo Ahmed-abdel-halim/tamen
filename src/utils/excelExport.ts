@@ -50,15 +50,15 @@ export function exportToExcel(options: ExcelExportOptions) {
     <body dir="rtl">
       <table style="border: none; margin-bottom: 5px;">
         <tr height="60">
+          <td colspan="3" rowspan="2" style="background-color: #f1f5f9; border: 1.5px solid #cbd5e1; text-align: center; vertical-align: middle; padding: 10px;">
+            <img src="${window.location.origin}/img/logo.png" width="140" height="90" style="display: block; margin: 0 auto;" />
+          </td>
           <td colspan="${columnCount - 3}" style="background-color: #f1f5f9; border: 1.5px solid #cbd5e1; text-align: right; vertical-align: middle; padding-right: 15px; font-size: 22px; font-weight: bold; color: #1a365d;">
             ${title}
           </td>
-          <td colspan="3" rowspan="2" style="border: none; text-align: center; vertical-align: middle; padding: 10px;">
-            <img src="${BACKEND_URL}/img/logo.png" width="140" height="90" style="display: block; margin: 0 auto;" />
-          </td>
         </tr>
         <tr height="35">
-          <td colspan="${columnCount - 3}" style="border: none; text-align: right; vertical-align: middle; padding-right: 15px; font-size: 13px; color: #64748b;">
+          <td colspan="${columnCount - 3}" style="background-color: #f1f5f9; border: 1.5px solid #cbd5e1; text-align: right; vertical-align: middle; padding-right: 15px; font-size: 13px; color: #64748b;">
             تاريخ الإصدار: ${printDate}
           </td>
         </tr>
