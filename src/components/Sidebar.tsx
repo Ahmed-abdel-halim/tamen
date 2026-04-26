@@ -38,16 +38,17 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
   };
 
   const isActive = (item: SidebarItem): boolean => {
-    if (item.to && location.pathname === item.to) {
+    const currentPath = location.pathname + location.search;
+    if (item.to && (location.pathname === item.to || currentPath === item.to)) {
       return true;
     }
     if (item.children) {
       return item.children.some(child => {
-        if (child.to && location.pathname === child.to) {
+        if (child.to && (location.pathname === child.to || currentPath === child.to)) {
           return true;
         }
         if (child.children) {
-          return child.children.some(grandchild => grandchild.to && location.pathname === grandchild.to);
+          return child.children.some(grandchild => grandchild.to && (location.pathname === grandchild.to || currentPath === grandchild.to));
         }
         return false;
       });
@@ -164,7 +165,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                             <LinkTag to={grandchild.to}
                                               className={
                                                 "sidebar-link" +
-                                                (location.pathname === grandchild.to ? " active" : "")
+                                                ((location.pathname === grandchild.to || location.pathname + location.search === grandchild.to) ? " active" : "")
                                               }
                                               style={{ 
                                                 paddingRight: '40px',
@@ -206,7 +207,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                 <LinkTag to={child.to}
                                   className={
                                     "sidebar-link" +
-                                    (location.pathname === child.to ? " active" : "")
+                                    ((location.pathname === child.to || location.pathname + location.search === child.to) ? " active" : "")
                                   }
                                   style={{ 
                                     paddingRight: '32px',
@@ -250,7 +251,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                         <LinkTag to={item.to}
                           className={
                             "sidebar-link" +
-                            (location.pathname === item.to ? " active" : "")
+                            ((location.pathname === item.to || location.pathname + location.search === item.to) ? " active" : "")
                           }
                           onClick={() => {
                             setOpenDropdowns(new Set())

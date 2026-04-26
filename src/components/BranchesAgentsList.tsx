@@ -19,7 +19,7 @@ type BranchAgent = {
   fixed_custodies?: Array<{ description: string; quantity: number }>;
   personal_photo?: string;
   city?: string;
-  user?: { id: number; username: string; name: string };
+  user?: { id: number; username: string; name: string; is_blocked?: boolean };
 };
 
 export default function BranchesAgentsList() {
@@ -442,6 +442,46 @@ export default function BranchesAgentsList() {
     }
   };
 
+  const handleToggleBlock = async (ba: BranchAgent) => {
+    if (!ba.user) {
+      showToast('هذا الوكيل ليس لديه حساب مستخدم مرتبط', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${ba.id}/toggle-block`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'حدث خطأ أثناء تحديث حالة الحظر');
+      }
+
+      const data = await res.json();
+      showToast(data.message, 'success');
+      
+      // Update local state
+      setBranchesAgents(prev => prev.map(item => {
+        if (item.id === ba.id && item.user) {
+          return {
+            ...item,
+            user: { ...item.user, is_blocked: data.is_blocked }
+          };
+        }
+        return item;
+      }));
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -606,6 +646,18 @@ export default function BranchesAgentsList() {
                              >
                                <i className="fa-solid fa-print"></i>
                              </button>
+                             <button
+                               onClick={() => handleToggleBlock(branchAgent)}
+                               className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
+                               aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
+                               title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
+                               style={{ 
+                                 background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444', 
+                                 color: '#fff' 
+                               }}
+                             >
+                               <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
+                             </button>
                             <button
                               onClick={() => setShowDeleteModal(branchAgent)}
                               className="action-btn delete"
@@ -703,6 +755,18 @@ export default function BranchesAgentsList() {
                            style={{ background: '#3b82f6', color: '#fff' }}
                          >
                            <i className="fa-solid fa-print"></i>
+                         </button>
+                         <button
+                           onClick={() => handleToggleBlock(branchAgent)}
+                           className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
+                           aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
+                           title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
+                           style={{ 
+                             background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444', 
+                             color: '#fff' 
+                           }}
+                         >
+                           <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
                          </button>
                         <button
                           onClick={() => setShowDeleteModal(branchAgent)}

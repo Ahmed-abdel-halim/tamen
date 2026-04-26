@@ -112,9 +112,11 @@
   background: var(--hover-bg);
 }
 
-/* تصميم القسم النشط (Active) في الوضع الليلي */
+/* تصميم القسم النشط وتأثير التمرير (Active & Hover) في الوضع الليلي */
 [data-theme='dark'] .sidebar-section button.active,
-[data-theme='dark'] .sidebar-section .sidebar-link.active {
+[data-theme='dark'] .sidebar-section .sidebar-link.active,
+[data-theme='dark'] .sidebar-section button:hover,
+[data-theme='dark'] .sidebar-section .sidebar-link:hover {
   background: rgba(6, 182, 212, 0.1) !important; /* خلفية سماوية شفافة */
   color: #00e5ff !important; /* لون سماوي ساطع للنص */
   border-left: 3px solid #00e5ff !important; /* خط سماوي على اليسار */
@@ -123,7 +125,9 @@
 }
 
 [data-theme='dark'] .sidebar-section button.active .sidebar-icon,
-[data-theme='dark'] .sidebar-section .sidebar-link.active .sidebar-icon {
+[data-theme='dark'] .sidebar-section .sidebar-link.active .sidebar-icon,
+[data-theme='dark'] .sidebar-section button:hover .sidebar-icon,
+[data-theme='dark'] .sidebar-section .sidebar-link:hover .sidebar-icon {
   color: #00e5ff !important; /* لون سماوي للأيقونة */
 }
 
@@ -210,6 +214,7 @@
 [data-theme='dark'] .summary-box {
   background: var(--panel) !important;
   color: var(--text) !important;
+  border: 1px solid rgba(6, 182, 212, 0.3) !important;
 }
 
 [data-theme='dark'] .service-label,
@@ -1018,6 +1023,11 @@ button.ghost {
 
 .user-menu button:hover {
   background: #f5f7fb;
+}
+
+[data-theme='dark'] .user-menu button:hover {
+  background: var(--input-bg);
+  color: var(--accent-cyan);
 }
 
 .user-menu i {
@@ -4965,6 +4975,52 @@ tbody tr:last-child td {
 
 .login-toast {
   margin: 22px auto 0;
+}
+
+/* Dark Mode Overrides for Login */
+[data-theme='dark'] .login-container {
+  background: var(--panel) !important;
+  box-shadow: 0 8px 38px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme='dark'] .login-title {
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .login-label {
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .login-captcha-question {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme='dark'] .login-captcha-number {
+  color: var(--accent-cyan) !important;
+}
+
+[data-theme='dark'] .login-captcha-operator,
+[data-theme='dark'] .login-captcha-equals {
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .login-captcha-refresh {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .login-submit-btn {
+  background: var(--accent-cyan) !important;
+  color: #fff !important;
+}
+
+[data-theme='dark'] .login-password-toggle {
+  color: var(--muted) !important;
+}
+[data-theme='dark'] .login-password-toggle:hover {
+  color: var(--accent-cyan) !important;
 }
 
 /* Responsive Login Page */

@@ -1,7 +1,26 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
+import SearchableSelect from "./SearchableSelect";
+
+const documentTypeOptions = [
+  { value: 'تأمين سيارات', label: 'تأمين سيارات' },
+  { value: 'تأمين سيارات دولي', label: 'تأمين سيارات دولي' },
+  { value: 'تأمين طبي (مسافرين)', label: 'تأمين طبي (مسافرين)' },
+  { value: 'تأمين طبي (وافدين)', label: 'تأمين طبي (وافدين)' },
+  { value: 'تأمين هياكل بحرية', label: 'تأمين هياكل بحرية' },
+  { value: 'تأمين مسؤولية مهنية', label: 'تأمين مسؤولية مهنية' },
+  { value: 'تأمين حوادث شخصية', label: 'تأمين حوادث شخصية' },
+  { value: 'تأمين نقل نقدية', label: 'تأمين نقل نقدية' },
+  { value: 'تأمين نقل بضائع', label: 'تأمين نقل بضائع' },
+  { value: 'تأمين حماية طلاب مدارس', label: 'تأمين حماية طلاب مدارس' },
+  { value: 'تأمين أخطار هندسية', label: 'تأمين أخطار هندسية' },
+  { value: 'تأمين خيانة أمانة', label: 'تأمين خيانة أمانة' },
+  { value: 'تأمين سطو', label: 'تأمين سطو' },
+  { value: 'تأمين حريق', label: 'تأمين حريق' },
+  { value: 'أخرى', label: 'أخرى' },
+];
 
 type BranchAgent = {
   id: number;
@@ -45,12 +64,36 @@ type AgentRequest = {
   admin_notes?: string;
 };
 
+type DocumentRequest = {
+  id: number;
+  request_type: 'modification' | 'cancellation';
+  document_type?: string;
+  document_number: string;
+  subject: string;
+  description: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  admin_message?: string;
+  created_at: string;
+};
+
 export default function BranchAgentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [branchAgent, setBranchAgent] = useState<BranchAgent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'agency' | 'contact' | 'custody' | 'permissions' | 'requests'>('agency');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<'agency' | 'contact' | 'custody' | 'permissions' | 'requests' | 'doc_requests'>(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get('tab') as any) || 'agency';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab as any);
+    }
+  }, [location.search]);
   const [requests, setRequests] = useState<AgentRequest[]>([]);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [submittingRequest, setSubmittingRequest] = useState(false);
@@ -64,11 +107,24 @@ export default function BranchAgentDetails() {
   const [selectedRequest, setSelectedRequest] = useState<{id: number, status: string} | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [submittingStatus, setSubmittingStatus] = useState(false);
+  const [docRequests, setDocRequests] = useState<DocumentRequest[]>([]);
+  const [showDocStatusModal, setShowDocStatusModal] = useState(false);
+  const [selectedDocRequest, setSelectedDocRequest] = useState<DocumentRequest | null>(null);
+  const [adminMessage, setAdminMessage] = useState('');
+  const [showNewDocRequestModal, setShowNewDocRequestModal] = useState(false);
+  const [newDocRequest, setNewDocRequest] = useState({
+    request_type: 'modification',
+    document_type: '',
+    document_number: '',
+    subject: '',
+    description: ''
+  });
 
   useEffect(() => {
     if (id) {
       fetchBranchAgent(parseInt(id));
       fetchRequests();
+      fetchDocRequests();
     }
   }, [id]);
 
@@ -104,6 +160,43 @@ export default function BranchAgentDetails() {
     } catch (error) {}
   };
 
+  const fetchDocRequests = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-requests?branch_agent_id=${id}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocRequests(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {}
+  };
+
+  const handleUpdateDocStatus = async (status: string) => {
+    if (!selectedDocRequest) return;
+    setSubmittingStatus(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-requests/${selectedDocRequest.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ status, admin_message: adminMessage }),
+      });
+      
+      if (!res.ok) throw new Error("فشل تحديث حالة الطلب");
+      
+      showToast("تم تحديث حالة طلب الوثيقة", 'success');
+      setShowDocStatusModal(false);
+      fetchDocRequests();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setSubmittingStatus(false);
+    }
+  };
+
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingRequest(true);
@@ -119,12 +212,48 @@ export default function BranchAgentDetails() {
         body: JSON.stringify({ ...newRequest, branch_agent_id: id }),
       });
       
-      if (!res.ok) throw new Error("فشل تقديم الطلب");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "فشل تقديم الطلب");
+      }
       
       showToast("تم تقديم الطلب بنجاح", 'success');
       setShowRequestModal(false);
       setNewRequest({ type: 'stock', priority: 'normal', subject: '', message: '' });
       fetchRequests();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
+  const handleCreateDocRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingRequest(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      const res = await fetch(`${API_BASE_URL}/document-requests`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Id': user?.id?.toString() || ''
+        },
+        body: JSON.stringify({ ...newDocRequest, branch_agent_id: id, user_id: user?.id }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "فشل تقديم الطلب");
+      }
+      
+      showToast("تم تقديم الطلب بنجاح", 'success');
+      setShowNewDocRequestModal(false);
+      setNewDocRequest({ request_type: 'modification', document_type: '', document_number: '', subject: '', description: '' });
+      fetchDocRequests();
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
@@ -255,10 +384,12 @@ export default function BranchAgentDetails() {
             </div>
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => navigate('/branches-agents')} className="btn-outline-sm">العودة للقائمة</button>
-            <button className="btn-primary-sm" onClick={() => navigate(`/branches-agents/${branchAgent.id}/edit`)} style={{ background: 'var(--sidebar)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fa-solid fa-pencil"></i> تعديل البيانات
-            </button>
+            {isAdmin && <button onClick={() => navigate('/branches-agents')} className="btn-outline-sm">العودة للقائمة</button>}
+            {isAdmin && (
+              <button className="btn-primary-sm" onClick={() => navigate(`/branches-agents/${branchAgent.id}/edit`)} style={{ background: 'var(--sidebar)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-pencil"></i> تعديل البيانات
+              </button>
+            )}
             <button className="btn-primary-sm" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className="fa-solid fa-print"></i> طباعة العقد
             </button>
@@ -275,10 +406,11 @@ export default function BranchAgentDetails() {
               { id: 'custody', label: 'العهدة والعهد', icon: 'fa-boxes-stacked' },
               { id: 'permissions', label: 'الصلاحيات', icon: 'fa-shield-halved' },
               { id: 'requests', label: 'طلبات الوكيل', icon: 'fa-paper-plane' },
+              { id: 'doc_requests', label: 'طلبات الوثائق', icon: 'fa-file-circle-exclamation' },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => { setActiveTab(tab.id as any); navigate(`/branches-agents/${id}?tab=${tab.id}`, { replace: true }); }}
                 className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
               >
                 <i className={`fa-solid ${tab.icon}`}></i>
@@ -485,6 +617,54 @@ export default function BranchAgentDetails() {
                 </div>
               </div>
             )}
+
+            {activeTab === 'doc_requests' && (
+              <div className="tab-pane">
+                <div className="tab-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                  <h3 className="tab-title" style={{ margin: 0, border: 'none' }}>طلبات تعديل وإلغاء الوثائق</h3>
+                  {!isAdmin && <button onClick={() => setShowNewDocRequestModal(true)} className="btn-add-request"><i className="fa-solid fa-file-circle-plus"></i> تقديم طلب جديد</button>}
+                </div>
+                <div className="requests-list">
+                  {docRequests.length === 0 ? (
+                    <div className="empty-requests"><i className="fa-solid fa-inbox"></i><p>لا توجد طلبات وثائق لهذا الوكيل</p></div>
+                  ) : (
+                    docRequests.map((req) => (
+                      <div key={req.id} className="request-item">
+                        <div className={`request-icon ${req.request_type === 'cancellation' ? 'red' : 'blue'}`}>
+                          <i className={`fa-solid ${req.request_type === 'cancellation' ? 'fa-file-circle-xmark' : 'fa-file-signature'}`}></i>
+                        </div>
+                        <div className="request-body">
+                          <div className="request-top">
+                            <h4 className="request-type-title">
+                              {req.request_type === 'modification' ? 'تعديل' : 'إلغاء'} {req.document_type ? `- ${req.document_type}` : ''} - {req.document_number}
+                            </h4>
+                            <span className={`status-pill ${req.status}`}>
+                              {req.status === 'pending' ? 'في الانتظار' : req.status === 'accepted' ? 'مقبول' : 'مرفوض'}
+                            </span>
+                          </div>
+                          <div style={{ fontWeight: 700, marginBottom: '5px' }}>{req.subject}</div>
+                          <p className="request-reason">{req.description}</p>
+                          <div className="request-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                            <div className="request-date">بتاريخ: {new Date(req.created_at).toLocaleDateString('ar-LY')}</div>
+                            {isAdmin && req.status === 'pending' && (
+                              <div className="request-actions" style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={() => { setSelectedDocRequest(req); setAdminMessage(''); setShowDocStatusModal(true); }} className="btn-approve" title="قبول" style={{ background: '#10b981' }}><i className="fa-solid fa-check-double"></i> قبول</button>
+                                <button onClick={() => { setSelectedDocRequest(req); setAdminMessage(''); setShowDocStatusModal(true); }} className="btn-reject" title="رفض"><i className="fa-solid fa-ban"></i> رفض</button>
+                              </div>
+                            )}
+                          </div>
+                          {req.admin_message && (
+                            <div className="admin-note-box" style={{ marginTop: '10px' }}>
+                              <strong>رد الإدارة:</strong> {req.admin_message}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -570,6 +750,100 @@ export default function BranchAgentDetails() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Doc Request Status Modal */}
+      {showDocStatusModal && selectedDocRequest && (
+        <div className="modal-overlay">
+          <div className="modal-inner" style={{ maxWidth: '450px' }}>
+            <div className="modal-top">
+              <h3>الرد على طلب الوثيقة</h3>
+              <button onClick={() => setShowDocStatusModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <div className="modal-form" style={{ padding: '20px' }}>
+              <div className="input-group">
+                <label style={{ marginBottom: '10px', display: 'block', fontWeight: 800 }}>رسالة الإدارة</label>
+                <textarea 
+                  placeholder="اكتب ردك هنا..." 
+                  value={adminMessage} 
+                  onChange={(e) => setAdminMessage(e.target.value)}
+                  style={{ minHeight: '120px', width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                ></textarea>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button onClick={() => handleUpdateDocStatus('accepted')} className="btn-submit-full" style={{ flex: 1, background: '#10b981' }} disabled={submittingStatus}>قبول</button>
+                <button onClick={() => handleUpdateDocStatus('rejected')} className="btn-submit-full" style={{ flex: 1, background: '#ef4444' }} disabled={submittingStatus}>رفض</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Doc Request Modal */}
+      {showNewDocRequestModal && (
+        <div className="modal-overlay">
+          <div className="modal-inner" style={{ maxWidth: '800px' }}>
+            <div className="modal-top">
+              <h3>تقديم طلب وثيقة جديد</h3>
+              <button onClick={() => setShowNewDocRequestModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <form onSubmit={handleCreateDocRequest} className="modal-form">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="input-group">
+                  <label>نوع الطلب</label>
+                  <select value={newDocRequest.request_type} onChange={(e) => setNewDocRequest({...newDocRequest, request_type: e.target.value as any})}>
+                    <option value="modification">تعديل وثيقة</option>
+                    <option value="cancellation">إلغاء وثيقة</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>نوع الوثيقة</label>
+                  <SearchableSelect 
+                    options={documentTypeOptions}
+                    placeholder="ابحث واختر نوع الوثيقة..."
+                    value={newDocRequest.document_type}
+                    onChange={(val) => setNewDocRequest({...newDocRequest, document_type: val})}
+                  />
+                </div>
+                <div className="input-group">
+                  <label>رقم الوثيقة</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="مثال: LBY0001" 
+                    value={newDocRequest.document_number} 
+                    onChange={(e) => setNewDocRequest({...newDocRequest, document_number: e.target.value})}
+                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px', fontWeight: '800' }}
+                  />
+                </div>
+                <div className="input-group">
+                  <label>الموضوع</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="عنوان مختصر للطلب..." 
+                    value={newDocRequest.subject} 
+                    onChange={(e) => setNewDocRequest({...newDocRequest, subject: e.target.value})}
+                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px', fontWeight: '700' }}
+                  />
+                </div>
+                <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>التفاصيل (الوصف)</label>
+                  <textarea 
+                    required
+                    placeholder="اكتب تفاصيل التعديل أو سبب الإلغاء هنا..." 
+                    value={newDocRequest.description} 
+                    onChange={(e) => setNewDocRequest({...newDocRequest, description: e.target.value})}
+                    style={{ minHeight: '120px' }}
+                  ></textarea>
+                </div>
+              </div>
+              <button type="submit" className="btn-submit-full" disabled={submittingRequest} style={{ marginTop: '20px' }}>
+                {submittingRequest ? 'جاري الإرسال...' : 'إرسال الطلب'}
+              </button>
+            </form>
           </div>
         </div>
       )}

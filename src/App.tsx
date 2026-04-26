@@ -18,6 +18,7 @@ type SidebarSection = {
 import { Topbar } from './components/Topbar'
 import { DashboardPanels } from './components/DashboardPanels'
 import UsersList from './components/UsersList';
+import DocumentRequestsList from './components/DocumentRequestsList';
 import Login from './components/Login';
 import BranchAgentAccountReport from './components/BranchAgentAccountReport';
 import MonthlyAccountClosure from './components/MonthlyAccountClosure';
@@ -265,6 +266,7 @@ const menuSections: SidebarSection[] = [
         label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
           { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
+          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
         ]
       },
       { 
@@ -370,6 +372,7 @@ const createMenuSections = (
     'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
     'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
     'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
+    'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
     'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' }, // للتوافق القديم
     'الأرشيف': { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
@@ -414,7 +417,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
   ];
-  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/archive'];
+  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/document-requests', '/archive'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -523,7 +526,7 @@ const createMenuSections = (
   // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
   if (adminItems.length > 0) {
     const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
-    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
+    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests' || i.to === '/document-requests');
     const otherAdmin = adminItems.filter(i => 
       !hrGroup.some(g => g.to === i.to) && 
       !agentsGroup.some(g => g.to === i.to)
@@ -540,7 +543,8 @@ const createMenuSections = (
           icon: 'fa-solid fa-building',
           children: agentsGroup.map(item => ({
             ...item,
-            label: item.to === '/branches-agents' ? 'قائمة الفروع والوكلاء' : 'طلبات الوكلاء'
+            label: item.to === '/branches-agents' ? 'قائمة الفروع والوكلاء' : 
+                   item.to === '/agent-requests' ? 'طلبات الوكلاء' : 'طلبات الوثائق'
           }))
         });
       }
@@ -639,17 +643,31 @@ const createMenuSections = (
     });
   }
 
-  // إضافة قسم "حسابي الشخصي" للموظفين والأدمن فقط (مع استبعاد الوكلاء)
-  if (userId && !branchAgentId) {
-    sections.push({
-      title: 'حسابي الشخصي',
-      items: [
-        { label: 'ملفي الوظيفي', icon: 'fa-solid fa-address-card', to: `/users/${userId}?tab=personal` },
-        { label: 'بياناتي الوظيفية', icon: 'fa-solid fa-briefcase', to: `/users/${userId}?tab=job` },
-        { label: 'طلباتي الشخصية', icon: 'fa-solid fa-paper-plane', to: `/users/${userId}?tab=requests` },
-        { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
-      ],
-    });
+  // إضافة قسم "حسابي الشخصي"
+  if (userId) {
+    if (branchAgentId) {
+      // للوكلاء والفرع
+      sections.push({
+        title: 'حسابي الشخصي',
+        items: [
+          { label: 'بيانات الوكالة', icon: 'fa-solid fa-building-user', to: `/branches-agents/${branchAgentId}?tab=agency` },
+          { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
+          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests` },
+          { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
+        ],
+      });
+    } else {
+      // للموظفين والأدمن فقط
+      sections.push({
+        title: 'حسابي الشخصي',
+        items: [
+          { label: 'ملفي الوظيفي', icon: 'fa-solid fa-address-card', to: `/users/${userId}?tab=personal` },
+          { label: 'بياناتي الوظيفية', icon: 'fa-solid fa-briefcase', to: `/users/${userId}?tab=job` },
+          { label: 'طلباتي الشخصية', icon: 'fa-solid fa-paper-plane', to: `/users/${userId}?tab=requests` },
+          { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
+        ],
+      });
+    }
   }
 
   return sections;
@@ -820,7 +838,8 @@ export default function App() {
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
-                  <Route path="/agent-requests" element={<AllAgentRequests />} />
+                  <Route path="/agent-requests" element={<AuthorizedRoute requiredPath="/agent-requests"><AllAgentRequests /></AuthorizedRoute>} />
+                  <Route path="/document-requests" element={<AuthorizedRoute requiredPath="/document-requests"><DocumentRequestsList /></AuthorizedRoute>} />
                   {/* إدارة الفروع والوكلاء */}
                   <Route path="/branches-agents" element={<BranchesAgentsList />} />
                   <Route path="/branches-agents/create" element={<CreateBranchAgent />} />
