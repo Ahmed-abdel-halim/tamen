@@ -92,6 +92,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [showUnionModal, setShowUnionModal] = useState(false);
   const [editingUnionPurchase, setEditingUnionPurchase] = useState<UnionPurchase | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [previewRotation, setPreviewRotation] = useState<number>(0);
 
   // Union Form States
   const [requestNumber, setRequestNumber] = useState('');
@@ -859,7 +860,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {u.receipt_image ? (
-                            <button onClick={() => setSelectedImage(resolveImageUrl(u.receipt_image))} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                            <button onClick={() => { setSelectedImage(resolveImageUrl(u.receipt_image)); setPreviewRotation(0); }} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
                               <i className="fa-solid fa-image"></i> عرض الواصل
                             </button>
                           ) : <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>لا يوجد</span>}
@@ -1086,13 +1087,22 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => setSelectedImage(null)}>
           <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', width: selectedImage.toLowerCase().endsWith('.pdf') ? '80vw' : 'auto', height: selectedImage.toLowerCase().endsWith('.pdf') ? '85vh' : 'auto', background: '#fff', borderRadius: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             {selectedImage.toLowerCase().endsWith('.pdf') ? (
-              <div dir="ltr" style={{ width: '100%', height: '100%', direction: 'ltr' }}>
+              <div dir="ltr" style={{ width: '100%', height: '100%', direction: 'ltr', transform: `rotate(${previewRotation}deg)`, transition: 'transform 0.3s ease' }}>
                 <iframe src={selectedImage} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '24px' }} title="Receipt PDF" />
               </div>
             ) : (
-              <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} />
+              <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', transform: `rotate(${previewRotation}deg)`, transition: 'transform 0.3s ease' }} />
             )}
-            <button onClick={() => setSelectedImage(null)} style={{ position: 'absolute', top: '10px', right: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', zIndex: 10, boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>&times;</button>
+            
+            {/* Action Buttons */}
+            <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', gap: '10px', zIndex: 10 }}>
+              <button onClick={() => setPreviewRotation(prev => prev + 90)} style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '50%', width: '45px', height: '45px', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="تدوير الصورة">
+                <i className="fa-solid fa-rotate-right"></i>
+              </button>
+              <button onClick={() => setSelectedImage(null)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '45px', height: '45px', cursor: 'pointer', fontSize: '22px', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="إغلاق">
+                &times;
+              </button>
+            </div>
           </div>
         </div>
       )}
