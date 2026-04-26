@@ -160,8 +160,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
-      if (activeTab === 'indemnities' && !e.is_indemnity) return false;
-      if (activeTab === 'expenses' && e.is_indemnity) return false;
+      const isIndemnity = e.is_indemnity === true || e.is_indemnity === 1 || e.is_indemnity === '1';
+      if (activeTab === 'indemnities' && !isIndemnity) return false;
+      if (activeTab === 'expenses' && isIndemnity) return false;
 
       const matchesSearch = e.name.toLowerCase().includes(searchFilter.toLowerCase());
       const matchesCategory = categoryFilter === 'الكل' || e.category === categoryFilter;
