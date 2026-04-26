@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import SearchableSelect from './SearchableSelect';
 import { showToast } from './Toast';
 import { exportToExcel } from '../utils/excelExport';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
@@ -78,11 +79,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [notes, setNotes] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [indemnityType, setIndemnityType] = useState('orange_card');
+  const [employees, setEmployees] = useState<{ id: number; name: string }[]>([]);
+  const [isCustomRecipient, setIsCustomRecipient] = useState(false);
 
   // Union Balance States
   const [activeTab, setActiveTab] = useState<'expenses' | 'union' | 'indemnities'>(activeTabOverride);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setActiveTab(activeTabOverride);
   }, [activeTabOverride]);
   const [unionPurchases, setUnionPurchases] = useState<UnionPurchase[]>([]);
@@ -109,16 +112,16 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [unionToDate, setUnionToDate] = useState('');
 
   // Calculated derived state for Union UI
-  const cardsCount = React.useMemo(() => {
+  const cardsCount = useMemo(() => {
     const paid = parseFloat(amountPaid) || 0;
     const price = parseFloat(cardPrice) || 1;
     return Math.floor(paid / price);
   }, [amountPaid, cardPrice]);
 
-  const totalUnionFee = React.useMemo(() => cardsCount * (parseFloat(unionFeePerCard) || 0), [cardsCount, unionFeePerCard]);
-  const totalCompanyDeposit = React.useMemo(() => cardsCount * (parseFloat(companyDepositPerCard) || 0), [cardsCount, companyDepositPerCard]);
+  const totalUnionFee = useMemo(() => cardsCount * (parseFloat(unionFeePerCard) || 0), [cardsCount, unionFeePerCard]);
+  const totalCompanyDeposit = useMemo(() => cardsCount * (parseFloat(companyDepositPerCard) || 0), [cardsCount, companyDepositPerCard]);
 
-  const filteredUnion = React.useMemo(() => {
+  const filteredUnion = useMemo(() => {
     return unionPurchases.filter(u => {
       const matchesSearch = !unionSearchFilter || u.request_number?.toLowerCase().includes(unionSearchFilter.toLowerCase());
       
@@ -134,7 +137,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     });
   }, [unionPurchases, unionSearchFilter, unionYearFilter, unionMonthFilter, unionFromDate, unionToDate]);
 
-  const unionFilteredStats = React.useMemo(() => {
+  const unionFilteredStats = useMemo(() => {
     let totalPaid = 0;
     let totalFee = 0;
     let totalDeposit = 0;
@@ -149,13 +152,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     return { totalPaid, totalFee, totalDeposit, totalCards };
   }, [filteredUnion]);
 
-  const dynamicCategories = React.useMemo(() => {
+  const dynamicCategories = useMemo(() => {
     const existing = expenses.map(e => e.category);
     const combined = [...DEFAULT_CATEGORIES, ...existing];
     return Array.from(new Set(combined)).filter(cat => cat && !cat.includes('أخرى'));
   }, [expenses]);
 
-  const filteredExpenses = React.useMemo(() => {
+  const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
       if (activeTab === 'indemnities' && !e.is_indemnity) return false;
       if (activeTab === 'expenses' && e.is_indemnity) return false;
@@ -172,14 +175,14 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     });
   }, [expenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
-  const paginatedExpenses = React.useMemo(() => {
+  const paginatedExpenses = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredExpenses.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredExpenses, currentPage]);
 
   const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
 
-  const paginatedUnion = React.useMemo(() => {
+  const paginatedUnion = useMemo(() => {
     const startIndex = (currentUnionPage - 1) * unionItemsPerPage;
     return filteredUnion.slice(startIndex, startIndex + unionItemsPerPage);
   }, [filteredUnion, currentUnionPage]);
@@ -210,7 +213,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     return rangeWithDots;
   };
 
-  const filteredStats = React.useMemo(() => {
+  const filteredStats = useMemo(() => {
     const total = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     return {
       total,
@@ -219,17 +222,34 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     };
   }, [filteredExpenses]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchExpenses();
     fetchUnionBalances();
+    fetchEmployees();
   }, []);
 
+  const fetchEmployees = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/employee-payrolls/employees`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const data = await response.json();
+      setEmployees(data);
+    } catch (e) {
+      console.error('Error fetching employees:', e);
+    }
+  };
+
   // Reset pages when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentUnionPage(1);
   }, [unionSearchFilter, unionYearFilter, unionMonthFilter, unionFromDate, unionToDate]);
 
@@ -273,6 +293,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       setStatus(expense.status);
       setNotes(expense.notes || '');
       setIndemnityType(expense.indemnity_type || 'orange_card');
+      
+      const isEmployee = employees.some(emp => emp.name === expense.recipient);
+      setIsCustomRecipient(expense.recipient && !isEmployee ? true : false);
     } else {
       setEditingExpense(null);
       setName('');
@@ -283,11 +306,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       setStatus('مدفوع');
       setNotes('');
       setIndemnityType('orange_card');
+      setIsCustomRecipient(false);
     }
     setShowModal(true);
   };
 
-  const handleAddExpense = async (e: React.FormEvent) => {
+  const handleAddExpense = async (e: FormEvent) => {
     e.preventDefault();
     if (!name || !amount) return;
     setLoading(true);
@@ -369,7 +393,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     setShowUnionModal(true);
   };
 
-  const handleAddUnionPurchase = async (e: React.FormEvent) => {
+  const handleAddUnionPurchase = async (e: FormEvent) => {
     e.preventDefault();
     if (!amountPaid || !cardPrice) return;
     setLoading(true);
@@ -848,9 +872,48 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 <label>الوصف / البيان</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label>المستلم</label>
-                <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {!isCustomRecipient ? (
+                    <div style={{ flex: 1 }}>
+                      <SearchableSelect 
+                        options={employees.map(emp => ({ value: emp.name, label: emp.name }))}
+                        value={recipient}
+                        onChange={(val) => setRecipient(val)}
+                        placeholder="اختر موظف..."
+                      />
+                    </div>
+                  ) : (
+                    <input 
+                      type="text" 
+                      value={recipient} 
+                      onChange={e => setRecipient(e.target.value)} 
+                      placeholder="ادخل اسم المستلم..."
+                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }} 
+                    />
+                  )}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsCustomRecipient(!isCustomRecipient);
+                      setRecipient('');
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: isCustomRecipient ? '#014cb1' : 'var(--bg)',
+                      color: isCustomRecipient ? '#fff' : 'var(--text)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {isCustomRecipient ? 'إلغاء' : 'اسم آخر'}
+                  </button>
+                </div>
               </div>
               <div>
                 <label>الفئة</label>

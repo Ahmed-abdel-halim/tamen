@@ -1153,35 +1153,35 @@ export default function UsersList() {
                         </td>
                         <td>
                           {u.salary ? (
-                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{Number(u.salary).toLocaleString()} د.ل</span>
+                            <span style={{ fontWeight: '700', color: 'var(--text)' }}>{Number(u.salary).toLocaleString()} د.ل</span>
                           ) : (
-                            <span style={{ color: '#94a3b8' }}>-</span>
+                            <span style={{ color: 'var(--muted)' }}>-</span>
                           )}
                         </td>
-                        <td style={{ fontSize: '0.8rem' }}>{u.national_id_number || <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                        <td style={{ fontSize: '0.8rem' }}>{u.national_id_number || <span style={{ color: 'var(--muted)' }}>—</span>}</td>
                         <td style={{ fontSize: '0.8rem', maxWidth: 140 }} title={u.job_title || ''}>
                           {u.job_title ? (
                             u.job_title.length > 28 ? `${u.job_title.slice(0, 28)}…` : u.job_title
                           ) : (
-                            <span style={{ color: '#94a3b8' }}>—</span>
+                            <span style={{ color: 'var(--muted)' }}>—</span>
                           )}
                         </td>
                         <td>
                           {u.is_admin ? (
-                            <span style={{ color: '#64748b', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
+                            <span style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
                           ) : u.authorized_documents && u.authorized_documents.length > 0 ? (
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                               {u.authorized_documents.slice(0, 2).map((doc, idx) => (
                                 <div key={idx} style={{ marginBottom: '0.25rem' }}>{doc}</div>
                               ))}
                               {u.authorized_documents.length > 2 && (
-                                <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                                <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
                                   +{u.authorized_documents.length - 2} أكثر
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <span style={{ color: '#94a3b8' }}>لا توجد صلاحيات</span>
+                            <span style={{ color: 'var(--muted)' }}>لا توجد صلاحيات</span>
                           )}
                         </td>
                         <td>
@@ -1313,20 +1313,20 @@ export default function UsersList() {
                         <span className="user-mobile-label">الصلاحيات:</span>
                         <span className="user-mobile-value">
                           {u.is_admin ? (
-                            <span style={{ color: '#64748b', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
+                            <span style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
                           ) : u.authorized_documents && u.authorized_documents.length > 0 ? (
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                               {u.authorized_documents.slice(0, 3).map((doc, idx) => (
                                 <div key={idx} style={{ marginBottom: '0.25rem' }}>{doc}</div>
                               ))}
                               {u.authorized_documents.length > 3 && (
-                                <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                                <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
                                   +{u.authorized_documents.length - 3} أكثر
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <span style={{ color: '#94a3b8' }}>لا توجد صلاحيات</span>
+                            <span style={{ color: 'var(--muted)' }}>لا توجد صلاحيات</span>
                           )}
                         </span>
                       </div>
