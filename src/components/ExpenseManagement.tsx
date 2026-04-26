@@ -1084,9 +1084,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       {/* Image Preview Modal */}
       {selectedImage && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => setSelectedImage(null)}>
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
-            <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} />
-            <button onClick={() => setSelectedImage(null)} style={{ position: 'absolute', top: '-15px', right: '-15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' }}>&times;</button>
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', width: selectedImage.toLowerCase().endsWith('.pdf') ? '80vw' : 'auto', height: selectedImage.toLowerCase().endsWith('.pdf') ? '85vh' : 'auto', background: '#fff', borderRadius: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            {selectedImage.toLowerCase().endsWith('.pdf') ? (
+              <iframe src={selectedImage} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '24px' }} title="Receipt PDF" />
+            ) : (
+              <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} />
+            )}
+            <button onClick={() => setSelectedImage(null)} style={{ position: 'absolute', top: '10px', right: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', zIndex: 10, boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>&times;</button>
           </div>
         </div>
       )}
