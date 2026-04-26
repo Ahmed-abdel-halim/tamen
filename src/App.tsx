@@ -275,7 +275,7 @@ const menuSections: SidebarSection[] = [
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
         ]
       },
-      { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
+      { label: 'ارشيف الوثائق المنتهيه', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
   },
   {
@@ -374,7 +374,7 @@ const createMenuSections = (
     'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
     'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' }, // للتوافق القديم
-    'الأرشيف': { label: 'الأرشيف', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'الأرشيف': { label: 'ارشيف الوثائق المنتهيه', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
     'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },

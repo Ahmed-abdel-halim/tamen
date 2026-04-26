@@ -150,7 +150,7 @@ export default function CashInTransitInsuranceList({ isArchive = false }: { isAr
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / تأمين نقل النقدية' : 'تأمين نقل النقدية / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين نقل النقدية' : 'تأمين نقل النقدية / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

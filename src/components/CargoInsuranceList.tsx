@@ -151,7 +151,7 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / تأمين شحن البضائع' : 'تأمين شحن البضائع / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين شحن البضائع' : 'تأمين شحن البضائع / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

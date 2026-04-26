@@ -149,7 +149,7 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / تأمين حماية طلاب المدارس' : 'تأمين حماية طلاب المدارس / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين حماية طلاب المدارس' : 'تأمين حماية طلاب المدارس / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

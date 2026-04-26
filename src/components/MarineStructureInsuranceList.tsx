@@ -174,7 +174,7 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / وثائق تأمين الهياكل البحرية' : ' وثائق تأمين الهياكل البحرية / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / وثائق تأمين الهياكل البحرية' : ' وثائق تأمين الهياكل البحرية / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

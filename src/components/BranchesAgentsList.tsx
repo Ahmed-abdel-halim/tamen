@@ -569,7 +569,7 @@ export default function BranchesAgentsList() {
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th style={{ width: '60px' }}>الصورة</th>
                     <th>كود الوكيل</th>
                     <th>اسم الوكالة</th>
                     <th>اسم الوكيل</th>
@@ -588,9 +588,26 @@ export default function BranchesAgentsList() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedBranchesAgents.map((branchAgent: BranchAgent, index: number) => (
+                    paginatedBranchesAgents.map((branchAgent: BranchAgent) => (
                       <tr key={branchAgent.id}>
-                        <td>{startIndex + index + 1}</td>
+                        <td>
+                          <div style={{ width: '45px', height: '45px', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                            {branchAgent.personal_photo ? (
+                              <img 
+                                src={resolvePublicUrl(branchAgent.personal_photo)} 
+                                alt="" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/img/default-avatar.png';
+                                }}
+                              />
+                            ) : (
+                              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
+                                <i className="fa-solid fa-user" style={{ fontSize: '1.2rem' }}></i>
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td>{branchAgent.code}</td>
                         <td>{branchAgent.agency_name}</td>
                         <td>{branchAgent.agent_name}</td>
@@ -658,14 +675,6 @@ export default function BranchesAgentsList() {
                              >
                                <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
                              </button>
-                            <button
-                              onClick={() => setShowDeleteModal(branchAgent)}
-                              className="action-btn delete"
-                              aria-label="حذف"
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -768,14 +777,6 @@ export default function BranchesAgentsList() {
                          >
                            <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
                          </button>
-                        <button
-                          onClick={() => setShowDeleteModal(branchAgent)}
-                          className="action-btn delete"
-                          aria-label="حذف"
-                          title="حذف"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
                       </div>
                     </div>
                   </div>

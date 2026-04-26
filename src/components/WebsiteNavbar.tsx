@@ -57,13 +57,19 @@ export default function WebsiteNavbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const resolveImageUrl = (path: string) => {
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return `${window.location.origin}/${cleanPath}`;
+  };
+
   return (
     <>
       <nav className={`website-navbar ${isScrolled ? 'scrolled' : ''}`}>
         <div className="navbar-container">
           <Link to="/" className="navbar-logo">
             <div className="logo-icon">
-              <img src="/img/logo3.png" alt="المدار الليبي للتأمين" />
+              <img src={resolveImageUrl('/img/logo3.png')} alt="المدار الليبي للتأمين" />
             </div>
             <div className="logo-text">
               <span className="logo-title">{t.logoTitle}</span>

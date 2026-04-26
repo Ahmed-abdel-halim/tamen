@@ -163,7 +163,7 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / تأمين المسؤولية المهنية (الطبية)' : ' تأمين المسؤولية المهنية (الطبية) / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين المسؤولية المهنية (الطبية)' : ' تأمين المسؤولية المهنية (الطبية) / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

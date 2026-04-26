@@ -170,7 +170,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / تأمين السيارات الدولي (البطاقة البرتقالية)' : 'تأمين السيارات الدولي / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين السيارات الدولي (البطاقة البرتقالية)' : 'تأمين السيارات الدولي / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

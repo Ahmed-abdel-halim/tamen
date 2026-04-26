@@ -104,6 +104,24 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [unionNotes, setUnionNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
 
+  // Helper to resolve image URLs correctly
+  const resolveImageUrl = (path: string | null | undefined) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    
+    // Ensure the path doesn't have double slashes when concatenated
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    
+    // If it's a storage path, it must come from the backend
+    if (cleanPath.startsWith('storage') || cleanPath.startsWith('union_receipts')) {
+      const actualPath = cleanPath.startsWith('storage') ? cleanPath : `storage/${cleanPath}`;
+      return `${BACKEND_URL}/${actualPath}`;
+    }
+    
+    // Static assets in the frontend public folder
+    return `/${cleanPath}`;
+  };
+
   // Union Filter States
   const [unionSearchFilter, setUnionSearchFilter] = useState('');
   const [unionYearFilter, setUnionYearFilter] = useState('الكل');
@@ -541,7 +559,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       {/* Official Corporate Header for Print */}
       <div className="print-official-header" style={{ width: '100%', direction: 'rtl' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src="/img/logo.png" alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
+          <img src={resolveImageUrl('/img/logo.png')} alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#000' }}>المدار الليبي للتأمين</h1>
             <p style={{ margin: '5px 0 0 0', fontSize: '1rem', color: '#000' }}>قسم الشؤون المالية والموارد البشرية</p>
@@ -831,7 +849,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {u.receipt_image ? (
-                            <button onClick={() => setSelectedImage(`${BACKEND_URL}${u.receipt_image}`)} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                            <button onClick={() => setSelectedImage(resolveImageUrl(u.receipt_image))} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
                               <i className="fa-solid fa-image"></i> عرض الواصل
                             </button>
                           ) : <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>لا يوجد</span>}

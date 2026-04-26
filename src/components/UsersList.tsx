@@ -68,6 +68,8 @@ type User = {
   is_active?: boolean;
   social_security_percentage?: number;
   tax_percentage?: number;
+  salary_type?: string;
+  hourly_rate?: number;
 };
 
 function escapeHtml(s: string): string {
@@ -88,21 +90,21 @@ function resolvePublicUrl(path: string | null | undefined): string {
   if (!path) return '';
   if (path.startsWith('data:')) return path;
   if (path.startsWith('http')) return path;
-  
+
   // Clean path
   let cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  
+
   // Special case for /img/ which might be in frontend or backend
   // In development, they are often in frontend/public
   // In production, we expect them to be in backend/public/img
   if (cleanPath.startsWith('img/')) {
     return `${window.location.origin}/${cleanPath}`;
   }
-  
+
   if (cleanPath.startsWith('storage/')) {
     return `${BACKEND_URL}/${cleanPath}`;
   }
-  
+
   return `${BACKEND_URL}/storage/${cleanPath}`;
 }
 
@@ -210,6 +212,8 @@ export default function UsersList() {
     is_active: true,
     social_security_percentage: 19.475 as string | number,
     tax_percentage: 10.000 as string | number,
+    salary_type: 'monthly',
+    hourly_rate: '' as string | number,
   });
 
   const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
@@ -288,7 +292,7 @@ export default function UsersList() {
       const r = await fetch(`${API_BASE_URL}/users/${userId}/employee-files`, {
         method: 'POST',
         body: fd,
-        headers: { 
+        headers: {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -304,7 +308,7 @@ export default function UsersList() {
     // جلب بيانات العهدة للموظف
     let userFixedCustodies: any[] = [];
     let userConsumedCustodies: any[] = [];
-    
+
     try {
       const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${u.id}&recipient_type=employee`);
       if (res.ok) {
@@ -327,11 +331,11 @@ export default function UsersList() {
       ? (u.authorized_documents || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')
       : '<li>لا توجد صلاحيات محددة</li>';
 
-    const fixedCustodyHtml = userFixedCustodies.length > 0 
+    const fixedCustodyHtml = userFixedCustodies.length > 0
       ? userFixedCustodies.map(c => `<tr><td>${escapeHtml(c.item?.name || 'صنف عهدة')}</td><td>${c.quantity}</td></tr>`).join('')
       : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة ثابتة</td></tr>';
 
-    const consumedCustodyHtml = userConsumedCustodies.length > 0 
+    const consumedCustodyHtml = userConsumedCustodies.length > 0
       ? userConsumedCustodies.map(c => `<tr><td>${escapeHtml(c.item?.name || 'صنف عهدة')}</td><td>${c.quantity}</td></tr>`).join('')
       : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة مستهلكة</td></tr>';
 
@@ -460,7 +464,7 @@ export default function UsersList() {
   const printEmployeeIdCard = (employee: User) => {
     const w = window.open('', '_blank', 'width=520,height=420');
     if (!w) return;
-    
+
     const num = escapeHtml(employeeCardNumber(employee));
     const name = escapeHtml(employee.name);
     const job = escapeHtml((employee.job_title || '').trim() || '—');
@@ -699,6 +703,8 @@ export default function UsersList() {
         is_active: showForm.user.is_active !== undefined ? showForm.user.is_active : true,
         social_security_percentage: showForm.user.social_security_percentage ?? 19.475,
         tax_percentage: showForm.user.tax_percentage ?? 10.000,
+        salary_type: showForm.user.salary_type || 'monthly',
+        hourly_rate: showForm.user.hourly_rate || '',
       });
     } else {
       setFormData({
@@ -745,13 +751,15 @@ export default function UsersList() {
         is_active: true,
         social_security_percentage: 19.475,
         tax_percentage: 10.000,
+        salary_type: 'monthly',
+        hourly_rate: '',
       });
     }
     setFormErrors({});
   }, [showForm]);
 
   // إلغاء الفلترة المحلية والاعتماد على بيانات الخادم مباشرة
-  const paginatedUsers = users; 
+  const paginatedUsers = users;
   const filteredUsers = users; // للملفات التي تعتمد على هذا المسمى
   const displayTotalPages = totalPages;
   // const displayTotalUsers = total;
@@ -762,11 +770,11 @@ export default function UsersList() {
 
   const confirmDelete = async () => {
     if (!deleteConfirmation) return;
-    
+
     setDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/users/${deleteConfirmation.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/users/${deleteConfirmation.id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -821,12 +829,12 @@ export default function UsersList() {
 
     setSubmitting(true);
     try {
-      const url = showForm?.mode === 'edit' 
-        ? `${API_BASE_URL}/users/${showForm.user?.id}` 
+      const url = showForm?.mode === 'edit'
+        ? `${API_BASE_URL}/users/${showForm.user?.id}`
         : `${API_BASE_URL}/users`;
-      
+
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
-      
+
       const body: any = {
         ...formData,
         email: formData.email || null,
@@ -843,6 +851,8 @@ export default function UsersList() {
         is_active: formData.is_active,
         social_security_percentage: formData.social_security_percentage || 0,
         tax_percentage: formData.tax_percentage || 0,
+        salary_type: formData.salary_type || 'monthly',
+        hourly_rate: formData.hourly_rate || 0,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -897,7 +907,7 @@ export default function UsersList() {
             // أرسل حدث لتحديث Topbar
             window.dispatchEvent(new CustomEvent('userUpdated', { detail: updatedData }));
           }
-        } catch {}
+        } catch { }
       }
 
       setShowForm(null);
@@ -945,6 +955,8 @@ export default function UsersList() {
         is_active: true,
         social_security_percentage: '',
         tax_percentage: '',
+        salary_type: 'شهري',
+        hourly_rate: '',
       });
       if (uploadError) {
         showToast(`تم حفظ البيانات. ${uploadError}`, 'error');
@@ -963,13 +975,13 @@ export default function UsersList() {
       <div className="users-breadcrumb">
         <span>إدارة الموظفين / قائمة الموظفين</span>
       </div>
-      
+
       <div className="users-card">
-        <div className="users-filters-box" style={{ 
-          background: '#ffffff', 
-          padding: '25px', 
-          borderRadius: '16px', 
-          border: '1px solid #e2e8f0', 
+        <div className="users-filters-box" style={{
+          background: '#ffffff',
+          padding: '25px',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
           marginBottom: '30px',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
@@ -978,8 +990,8 @@ export default function UsersList() {
               <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 800 }}>الفلاتر والبحث</h3>
               <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>استخدم الخيارات أدناه لتصفية قائمة الموظفين أو البحث عن موظف محدد</p>
             </div>
-            <button 
-              className="primary add-user-btn" 
+            <button
+              className="primary add-user-btn"
               onClick={() => setShowForm({ mode: 'add' })}
               style={{ height: '42px', padding: '0 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700 }}
             >
@@ -992,9 +1004,9 @@ export default function UsersList() {
             <div className="filter-group">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>بحث بالاسم</label>
               <div className="users-search-bar" style={{ marginBottom: 0, width: '100%' }}>
-                <input 
-                  type="text" 
-                  placeholder="بحث باسم المستخدم..." 
+                <input
+                  type="text"
+                  placeholder="بحث باسم المستخدم..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="users-search-input"
@@ -1008,8 +1020,8 @@ export default function UsersList() {
 
             <div className="filter-group">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>حالة الحساب</label>
-              <select 
-                value={filterActive} 
+              <select
+                value={filterActive}
                 onChange={(e) => setFilterActive(e.target.value)}
                 className="users-search-input"
                 style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
@@ -1022,8 +1034,8 @@ export default function UsersList() {
 
             <div className="filter-group">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>درجة الوصول</label>
-              <select 
-                value={filterRole} 
+              <select
+                value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
                 className="users-search-input"
                 style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
@@ -1036,8 +1048,8 @@ export default function UsersList() {
 
             <div className="filter-group">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>الصلاحية الممنوحة</label>
-              <select 
-                value={filterPermission} 
+              <select
+                value={filterPermission}
                 onChange={(e) => setFilterPermission(e.target.value)}
                 className="users-search-input"
                 style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
@@ -1069,9 +1081,9 @@ export default function UsersList() {
 
             <div className="filter-group">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>المسمى الوظيفي</label>
-              <input 
-                type="text" 
-                placeholder="بحث بالمسمى..." 
+              <input
+                type="text"
+                placeholder="بحث بالمسمى..."
                 value={filterJobTitle === 'all' ? '' : filterJobTitle}
                 onChange={(e) => setFilterJobTitle(e.target.value || 'all')}
                 className="users-search-input"
@@ -1152,7 +1164,12 @@ export default function UsersList() {
                           )}
                         </td>
                         <td>
-                          {u.salary ? (
+                          {u.salary_type === 'hourly' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontWeight: '700', color: 'var(--text)' }}>{Number(u.hourly_rate).toLocaleString()} د.ل / ساعة</span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>مقابل الوقت</span>
+                            </div>
+                          ) : u.salary ? (
                             <span style={{ fontWeight: '700', color: 'var(--text)' }}>{Number(u.salary).toLocaleString()} د.ل</span>
                           ) : (
                             <span style={{ color: 'var(--muted)' }}>-</span>
@@ -1186,20 +1203,20 @@ export default function UsersList() {
                         </td>
                         <td>
                           <div className="action-buttons">
-                             <button
-                               type="button"
-                               className="action-btn"
-                               onClick={() => navigate(`/users/${u.id}`)}
-                               aria-label="عرض التفاصيل"
-                               title="عرض التفاصيل"
-                               style={{ color: '#0ea5e9' }}
-                             >
-                               <i className="fa-solid fa-eye"></i>
-                             </button>
-                             <button
-                               type="button"
-                               className="action-btn"
-                               onClick={() => printEmployeeA4(u)}
+                            <button
+                              type="button"
+                              className="action-btn"
+                              onClick={() => navigate(`/users/${u.id}`)}
+                              aria-label="عرض التفاصيل"
+                              title="عرض التفاصيل"
+                              style={{ color: '#0ea5e9' }}
+                            >
+                              <i className="fa-solid fa-eye"></i>
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn"
+                              onClick={() => printEmployeeA4(u)}
                               aria-label="طباعة A4"
                               title="طباعة بيانات الموظف A4"
                             >
@@ -1214,16 +1231,16 @@ export default function UsersList() {
                             >
                               <i className="fa-solid fa-id-card"></i>
                             </button>
-                            <button 
-                              className="action-btn edit" 
+                            <button
+                              className="action-btn edit"
                               onClick={() => setShowForm({ mode: 'edit', user: u })}
                               aria-label="تعديل"
                               title="تعديل"
                             >
                               <i className="fa-solid fa-pencil"></i>
                             </button>
-                            <button 
-                              className="action-btn delete" 
+                            <button
+                              className="action-btn delete"
                               onClick={() => handleDeleteClick(u)}
                               aria-label="حذف"
                               title="حذف"
@@ -1356,16 +1373,16 @@ export default function UsersList() {
                         >
                           <i className="fa-solid fa-id-card"></i>
                         </button>
-                        <button 
-                          className="action-btn edit" 
+                        <button
+                          className="action-btn edit"
                           onClick={() => setShowForm({ mode: 'edit', user: u })}
                           aria-label="تعديل"
                           title="تعديل"
                         >
                           <i className="fa-solid fa-pencil"></i>
                         </button>
-                        <button 
-                          className="action-btn delete" 
+                        <button
+                          className="action-btn delete"
                           onClick={() => handleDeleteClick(u)}
                           aria-label="حذف"
                           title="حذف"
@@ -1393,11 +1410,11 @@ export default function UsersList() {
                     <i className="fa-solid fa-chevron-right"></i>
                     <span className="pagination-btn-text">السابق</span>
                   </button>
-                  
+
                   {Array.from({ length: displayTotalPages }, (_, i) => i + 1)
                     .filter(p => p === 1 || p === displayTotalPages || (p >= currentPage - 1 && p <= currentPage + 1))
                     .reduce((acc: (number | string)[], p, i, arr) => {
-                      if (i > 0 && p !== (arr[i-1] as number) + 1) acc.push('...');
+                      if (i > 0 && p !== (arr[i - 1] as number) + 1) acc.push('...');
                       acc.push(p);
                       return acc;
                     }, [])
@@ -1438,128 +1455,147 @@ export default function UsersList() {
           <div className="modal-content user-form-modal">
             <div className="modal-header">
               <h3>{showForm.mode === 'add' ? 'إضافة موظف جديد' : 'تعديل بيانات موظف'}</h3>
-              <button 
-                className="modal-close" 
+              <button
+                className="modal-close"
                 onClick={() => setShowForm(null)}
                 aria-label="إغلاق"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="user-form-premium">
               {/* Section 1: Login & Access */}
-              <div className="form-section">
-                <h4 className="section-title-sm"><i className="fa-solid fa-key"></i> بيانات الدخول ودرجة الوصول</h4>
+              <div className="form-section-card fade-in">
+                <h4 className="section-title-premium"><i className="fa-solid fa-key"></i> بيانات الدخول ودرجة الوصول</h4>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label htmlFor="username">اسم المستخدم <span className="required">*</span></label>
-                    <input
-                      type="text" id="username"
-                      value={formData.username}
-                      onChange={(e) => setFormData({...formData, username: e.target.value})}
-                      className={formErrors.username ? 'error' : ''}
-                      placeholder="أدخل اسم المستخدم"
-                    />
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-user"></i>
+                      <input
+                        type="text" id="username"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        className={formErrors.username ? 'error' : ''}
+                        placeholder="أدخل اسم المستخدم"
+                      />
+                    </div>
                     {formErrors.username && <span className="error-message">{formErrors.username}</span>}
                   </div>
                   <div className="form-group flex-1">
                     <label htmlFor="password">
                       كلمة المرور {showForm.mode === 'add' && <span className="required">*</span>}
                     </label>
-                    <input
-                      type="password" id="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className={formErrors.password ? 'error' : ''}
-                      placeholder={showForm.mode === 'edit' ? "اتركه فارغاً للحفاظ على القديم" : "أدخل كلمة المرور"}
-                    />
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-lock"></i>
+                      <input
+                        type="password" id="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className={formErrors.password ? 'error' : ''}
+                        placeholder={showForm.mode === 'edit' ? "اتركه فارغاً للحفاظ على القديم" : "أدخل كلمة المرور"}
+                      />
+                    </div>
                     {formErrors.password && <span className="error-message">{formErrors.password}</span>}
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group flex-1">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox" checked={formData.is_admin}
-                        onChange={(e) => setFormData({...formData, is_admin: e.target.checked, authorized_documents: e.target.checked ? [] : formData.authorized_documents})}
-                      />
-                      <span>مدير نظام (Admin)</span>
-                    </label>
-                  </div>
-                  <div className="form-group flex-1">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox" checked={formData.is_active}
-                        onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
-                      />
-                      <span>الموظف نشط (يمكنه تسجيل الدخول)</span>
-                    </label>
                   </div>
                   <div className="form-group flex-1">
                     <label htmlFor="email">البريد الإلكتروني</label>
-                    <input
-                      type="email" id="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      placeholder="example@mail.com"
-                    />
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-envelope"></i>
+                      <input
+                        type="email" id="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="example@mail.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row" style={{ marginTop: '15px' }}>
+                  <div className="form-group flex-1">
+                    <label className="checkbox-label-premium">
+                      <div className="chk-content">
+                        <i className="fa-solid fa-user-shield"></i>
+                        <div>
+                          <span className="chk-title">مدير نظام (Admin)</span>
+                          <span className="chk-desc">صلاحيات كاملة للتحكم في النظام</span>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox" checked={formData.is_admin}
+                        onChange={(e) => setFormData({ ...formData, is_admin: e.target.checked, authorized_documents: e.target.checked ? [] : formData.authorized_documents })}
+                      />
+                    </label>
+                  </div>
+                  <div className="form-group flex-1">
+                    <label className="checkbox-label-premium">
+                      <div className="chk-content">
+                        <i className="fa-solid fa-circle-check"></i>
+                        <div>
+                          <span className="chk-title">الموظف نشط</span>
+                          <span className="chk-desc">تمكين الموظف من تسجيل الدخول</span>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox" checked={formData.is_active}
+                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
 
               {/* Section 2: Personal Data */}
-              <div className="form-section">
-                <h4 className="section-title-sm"><i className="fa-solid fa-user-tag"></i> البيانات الشخصية</h4>
+              <div className="form-section-card fade-in">
+                <h4 className="section-title-premium"><i className="fa-solid fa-user-tag"></i> البيانات الشخصية للموظف</h4>
                 <div className="form-row">
                   <div className="form-group flex-2">
                     <label>الاسم بالكامل (رباعي) <span className="required">*</span></label>
-                    <input 
-                      type="text" 
-                      value={formData.full_name_quad} 
-                      onChange={(e) => setFormData({...formData, full_name_quad: e.target.value, name: e.target.value})} 
-                      placeholder="الاسم الرباعي كما في الهوية" 
+                    <input
+                      type="text"
+                      value={formData.full_name_quad}
+                      onChange={(e) => setFormData({ ...formData, full_name_quad: e.target.value, name: e.target.value })}
+                      placeholder="الاسم الرباعي كما في الهوية"
                       className={formErrors.name ? 'error' : ''}
                     />
                     {formErrors.name && <span className="error-message">{formErrors.name}</span>}
                   </div>
                   <div className="form-group flex-1">
                     <label>الجنس</label>
-                    <select value={formData.gender} onChange={(e)=>setFormData({...formData, gender: e.target.value})}>
+                    <select value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
                       <option value="">اختر</option>
                       <option value="ذكر">ذكر</option>
                       <option value="أنثى">أنثى</option>
                     </select>
                   </div>
+                  <div className="form-group flex-1">
+                    <label>تاريخ الميلاد</label>
+                    <input type="date" value={formData.birth_date} onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })} />
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>الرقم القومي / الوطني</label>
-                    <input type="text" value={formData.national_id_number} onChange={(e)=>setFormData({...formData, national_id_number: e.target.value})} placeholder="الرقم الوطني المكون من 12 رقم" />
+                    <input type="text" value={formData.national_id_number} onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value })} placeholder="12 رقم" />
                   </div>
                   <div className="form-group flex-1">
                     <label>مكان الميلاد</label>
-                    <input type="text" value={formData.birth_place} onChange={(e)=>setFormData({...formData, birth_place: e.target.value})} placeholder="المحافظة / المدينة" />
+                    <input type="text" value={formData.birth_place} onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })} placeholder="المحافظة / المدينة" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>الجنسية</label>
+                    <input type="text" value={formData.nationality} onChange={(e) => setFormData({ ...formData, nationality: e.target.value })} placeholder="مثال: ليبي" />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>اسم الأم</label>
-                    <input type="text" value={formData.mother_name} onChange={(e)=>setFormData({...formData, mother_name: e.target.value})} placeholder="اسم الأم الكامل" />
+                    <input type="text" value={formData.mother_name} onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })} placeholder="اسم الأم الكامل" />
                   </div>
-                  <div className="form-group flex-1">
-                    <label>تاريخ الميلاد</label>
-                    <input type="date" value={formData.birth_date} onChange={(e)=>setFormData({...formData, birth_date: e.target.value})} />
-                  </div>
-                  <div className="form-group flex-1">
-                    <label>الجنسية</label>
-                    <input type="text" value={formData.nationality} onChange={(e)=>setFormData({...formData, nationality: e.target.value})} placeholder="مثال: يمني" />
-                  </div>
-                </div>
-                <div className="form-row">
                   <div className="form-group flex-1">
                     <label>الحالة الاجتماعية</label>
-                    <select value={formData.social_status} onChange={(e)=>setFormData({...formData, social_status: e.target.value})}>
+                    <select value={formData.social_status} onChange={(e) => setFormData({ ...formData, social_status: e.target.value })}>
                       <option value="">اختر</option>
                       <option value="أعزب">أعزب</option>
                       <option value="متزوج">متزوج</option>
@@ -1569,64 +1605,62 @@ export default function UsersList() {
                   </div>
                   <div className="form-group flex-1">
                     <label>المؤهل العلمي</label>
-                    <input type="text" value={formData.qualification} onChange={(e)=>setFormData({...formData, qualification: e.target.value})} placeholder="مثال: بكالوريوس" />
+                    <input type="text" value={formData.qualification} onChange={(e) => setFormData({ ...formData, qualification: e.target.value })} placeholder="المؤهل" />
                   </div>
                   <div className="form-group flex-1">
                     <label>فصيلة الدم</label>
-                    <input type="text" value={formData.blood_type} onChange={(e)=>setFormData({...formData, blood_type: e.target.value})} placeholder="A+, O- ..." />
+                    <input type="text" value={formData.blood_type} onChange={(e) => setFormData({ ...formData, blood_type: e.target.value })} placeholder="A+, O- ..." />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>رقم الهاتف الشخصي</label>
-                    <input type="text" value={formData.personal_phone} onChange={(e)=>setFormData({...formData, personal_phone: e.target.value})} placeholder="000 000 000" />
+                    <input type="text" value={formData.personal_phone} onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })} placeholder="000 000 000" />
                   </div>
                   <div className="form-group flex-1">
-                    <label>هاتف ولي الأمر (للطوارئ)</label>
-                    <input type="text" value={formData.guardian_phone} onChange={(e)=>setFormData({...formData, guardian_phone: e.target.value})} placeholder="000 000 000" />
+                    <label>هاتف الطوارئ</label>
+                    <input type="text" value={formData.guardian_phone} onChange={(e) => setFormData({ ...formData, guardian_phone: e.target.value })} placeholder="000 000 000" />
                   </div>
-                </div>
-                <div className="form-group">
-                  <label>عنوان السكن بالتفصيل</label>
-                  <textarea value={formData.address} onChange={(e)=>setFormData({...formData, address: e.target.value})} rows={2} placeholder="المحافظة - المدينة - الشارع - رقم المنزل"></textarea>
+                  <div className="form-group flex-2">
+                    <label>عنوان السكن بالتفصيل</label>
+                    <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="المحافظة - المدينة - الشارع" />
+                  </div>
                 </div>
               </div>
 
               {/* Section 3: Job Data */}
-              <div className="form-section">
-                <h4 className="section-title-sm"><i className="fa-solid fa-briefcase"></i> البيانات الوظيفية والمصرفية</h4>
+              <div className="form-section-card fade-in">
+                <h4 className="section-title-premium"><i className="fa-solid fa-briefcase"></i> البيانات الوظيفية والمصرفية</h4>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>الرقم الوظيفي</label>
-                    <input type="text" value={formData.job_number} onChange={(e)=>setFormData({...formData, job_number: e.target.value})} placeholder="الرقم التعريفي للموظف" />
+                    <input type="text" value={formData.job_number} onChange={(e) => setFormData({ ...formData, job_number: e.target.value })} placeholder="الرقم الوظيفي" />
                   </div>
                   <div className="form-group flex-1">
-                    <label>الرقم المالي (إن وجد)</label>
-                    <input type="text" value={formData.financial_number} onChange={(e)=>setFormData({...formData, financial_number: e.target.value})} placeholder="رقم الملف المالي" />
+                    <label>الرقم المالي</label>
+                    <input type="text" value={formData.financial_number} onChange={(e) => setFormData({ ...formData, financial_number: e.target.value })} placeholder="الملف المالي" />
                   </div>
                   <div className="form-group flex-1">
                     <label>المسمى الوظيفي</label>
-                    <input type="text" value={formData.job_title} onChange={(e)=>setFormData({...formData, job_title: e.target.value})} placeholder="مثال: محاسب، مندوب..." />
+                    <input type="text" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} placeholder="المسمى" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>تاريخ المباشرة</label>
+                    <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>اسم المصرف</label>
-                    <input type="text" value={formData.bank_name} onChange={(e)=>setFormData({...formData, bank_name: e.target.value})} placeholder="اسم البنك لتحويل الراتب" />
+                    <input type="text" value={formData.bank_name} onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })} placeholder="اسم البنك" />
                   </div>
                   <div className="form-group flex-1">
                     <label>رقم الحساب (IBAN)</label>
-                    <input type="text" value={formData.account_number} onChange={(e)=>setFormData({...formData, account_number: e.target.value})} placeholder="رقم الحساب البنكي" />
+                    <input type="text" value={formData.account_number} onChange={(e) => setFormData({ ...formData, account_number: e.target.value })} placeholder="IBAN" />
                   </div>
-                  <div className="form-group flex-1">
-                    <label>تاريخ المباشرة</label>
-                    <input type="date" value={formData.start_date} onChange={(e)=>setFormData({...formData, start_date: e.target.value})} />
-                  </div>
-                </div>
-                <div className="form-row">
                   <div className="form-group flex-1">
                     <label>نوع العقد</label>
-                    <select value={formData.contract_type} onChange={(e)=>setFormData({...formData, contract_type: e.target.value})}>
+                    <select value={formData.contract_type} onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })}>
                       <option value="">اختر النوع</option>
                       <option value="دوام كامل">دوام كامل</option>
                       <option value="دوام جزئي">دوام جزئي</option>
@@ -1634,131 +1668,142 @@ export default function UsersList() {
                       <option value="تدريب">تدريب</option>
                     </select>
                   </div>
-                  <div className="form-group flex-2">
-                    <label>شروط أو ملاحظات العقد</label>
-                    <textarea value={formData.contract_conditions} onChange={(e)=>setFormData({...formData, contract_conditions: e.target.value})} rows={1} placeholder="أي شروط إضافية أو ملاحظات خاصة بالعقد..."></textarea>
-                  </div>
+                </div>
+                <div className="form-group">
+                  <label>ملاحظات العقد</label>
+                  <textarea value={formData.contract_conditions} onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })} rows={1} placeholder="شروط أو ملاحظات خاصة..."></textarea>
                 </div>
               </div>
 
               {/* Section 4: Financial Data */}
-              <div className="form-section">
-                <h4 className="section-title-sm"><i className="fa-solid fa-money-bill-wave"></i> الرواتب والبدلات المالية</h4>
+              <div className="form-section-card fade-in">
+                <h4 className="section-title-premium"><i className="fa-solid fa-money-bill-wave"></i> الرواتب والبدلات المالية</h4>
                 <div className="form-row">
                   <div className="form-group flex-1">
-                    <label>المرتب الأساسي</label>
-                    <input type="number" value={formData.salary} onChange={(e)=>setFormData({...formData, salary: e.target.value})} placeholder="0.00" />
+                    <label>نوع المرتب</label>
+                    <select value={formData.salary_type} onChange={(e) => setFormData({ ...formData, salary_type: e.target.value })}>
+                      <option value="monthly">مرتب شهري</option>
+                      <option value="hourly">مقابل الوقت (بالساعة)</option>
+                    </select>
                   </div>
+                  {formData.salary_type === 'monthly' ? (
+                    <div className="form-group flex-1">
+                      <label>المرتب الأساسي</label>
+                      <input type="number" value={formData.salary} onChange={(e) => setFormData({ ...formData, salary: e.target.value })} placeholder="0.00" />
+                    </div>
+                  ) : (
+                    <div className="form-group flex-1">
+                      <label>قيمة الساعة</label>
+                      <input type="number" value={formData.hourly_rate} onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })} placeholder="0.00" />
+                    </div>
+                  )}
                   <div className="form-group flex-1">
                     <label>بدل سكن</label>
-                    <input type="number" value={formData.housing_allowance} onChange={(e)=>setFormData({...formData, housing_allowance: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.housing_allowance} onChange={(e) => setFormData({ ...formData, housing_allowance: e.target.value })} placeholder="0.00" />
                   </div>
                   <div className="form-group flex-1">
                     <label>بدل مواصلات</label>
-                    <input type="number" value={formData.transportation_allowance} onChange={(e)=>setFormData({...formData, transportation_allowance: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.transportation_allowance} onChange={(e) => setFormData({ ...formData, transportation_allowance: e.target.value })} placeholder="0.00" />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>بدل إتصالات</label>
-                    <input type="number" value={formData.communication_allowance} onChange={(e)=>setFormData({...formData, communication_allowance: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.communication_allowance} onChange={(e) => setFormData({ ...formData, communication_allowance: e.target.value })} placeholder="0.00" />
                   </div>
                   <div className="form-group flex-1">
                     <label>مكافآت ثابتة</label>
-                    <input type="number" value={formData.fixed_bonuses} onChange={(e)=>setFormData({...formData, fixed_bonuses: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.fixed_bonuses} onChange={(e) => setFormData({ ...formData, fixed_bonuses: e.target.value })} placeholder="0.00" />
                   </div>
                   <div className="form-group flex-1">
                     <label>غرامات ثابتة</label>
-                    <input type="number" value={formData.fixed_fines} onChange={(e)=>setFormData({...formData, fixed_fines: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.fixed_fines} onChange={(e) => setFormData({ ...formData, fixed_fines: e.target.value })} placeholder="0.00" />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>خصم غياب (ساعة)</label>
-                    <input type="number" value={formData.hourly_leave_deduction} onChange={(e)=>setFormData({...formData, hourly_leave_deduction: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.hourly_leave_deduction} onChange={(e) => setFormData({ ...formData, hourly_leave_deduction: e.target.value })} placeholder="0.00" />
                   </div>
                   <div className="form-group flex-1">
                     <label>خصم غياب (يوم)</label>
-                    <input type="number" value={formData.daily_leave_deduction} onChange={(e)=>setFormData({...formData, daily_leave_deduction: e.target.value})} placeholder="0.00" />
+                    <input type="number" value={formData.daily_leave_deduction} onChange={(e) => setFormData({ ...formData, daily_leave_deduction: e.target.value })} placeholder="0.00" />
                   </div>
                   <div className="form-group flex-1">
                     <label>حصة الضرائب %</label>
-                    <input type="number" step="0.001" value={formData.tax_percentage} onChange={(e)=>setFormData({...formData, tax_percentage: e.target.value})} placeholder="10" />
+                    <input type="number" step="0.001" value={formData.tax_percentage} onChange={(e) => setFormData({ ...formData, tax_percentage: e.target.value })} placeholder="10" />
                   </div>
-                </div>
-                <div className="form-row">
                   <div className="form-group flex-1">
                     <label>حصة الضمان الاجتماعي %</label>
-                    <input type="number" step="0.001" value={formData.social_security_percentage} onChange={(e)=>setFormData({...formData, social_security_percentage: e.target.value})} placeholder="19.475" />
+                    <input type="number" step="0.001" value={formData.social_security_percentage} onChange={(e) => setFormData({ ...formData, social_security_percentage: e.target.value })} placeholder="19.475" />
                   </div>
-                  <div className="form-group flex-2"></div> {/* Spacer for formatting */}
                 </div>
               </div>
 
               {/* Section 5: Attachments */}
-              <div className="form-section">
-                <h4 className="section-title-sm"><i className="fa-solid fa-paperclip"></i> المستندات والأوراق الثبوتية</h4>
-                <div className="attachments-grid">
+              <div className="form-section-card fade-in">
+                <h4 className="section-title-premium"><i className="fa-solid fa-paperclip"></i> المستندات والأوراق الثبوتية</h4>
+                <div className="permissions-grid-sm">
                   {[
-                    { key: 'profile_photo', label: 'صورة شخصية' },
-                    { key: 'national_id_photo', label: 'رقم القومي (صورة)' },
-                    { key: 'identity_proof', label: 'إثبات هوية' },
-                    { key: 'employment_contract', label: 'عقد عمل' },
-                    { key: 'certified_stamp', label: 'ختم معتمد' },
-                    { key: 'approved_signature', label: 'توقيع معتمد' },
-                    { key: 'educational_certificate', label: 'شهادة تعليمية' },
-                    { key: 'health_certificate', label: 'شهادة صحية' },
-                    { key: 'contract_conditions_photo', label: 'شروط العقد (صورة)' },
+                    { key: 'profile_photo', label: 'صورة شخصية', icon: 'fa-user-circle' },
+                    { key: 'national_id_photo', label: 'رقم القومي (صورة)', icon: 'fa-id-card' },
+                    { key: 'identity_proof', label: 'إثبات هوية', icon: 'fa-passport' },
+                    { key: 'employment_contract', label: 'عقد عمل', icon: 'fa-file-contract' },
+                    { key: 'certified_stamp', label: 'ختم معتمد', icon: 'fa-stamp' },
+                    { key: 'approved_signature', label: 'توقيع معتمد', icon: 'fa-signature' },
+                    { key: 'educational_certificate', label: 'شهادة تعليمية', icon: 'fa-graduation-cap' },
+                    { key: 'health_certificate', label: 'شهادة صحية', icon: 'fa-file-medical' },
+                    { key: 'contract_conditions_photo', label: 'شروط العقد (صورة)', icon: 'fa-file-lines' },
                   ].map((doc) => (
-                    <div key={doc.key} className="attachment-item">
-                      <label>{doc.label}</label>
-                      <input type="file" onChange={(e) => setPendingFiles({...pendingFiles, [doc.key]: e.target.files?.[0] || null})} />
-                    </div>
+                    <label key={doc.key} className={`perm-chk ${pendingFiles[doc.key] ? 'active' : ''}`} style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: '100px', justifyContent: 'center' }}>
+                      <i className={`fa-solid ${doc.icon}`} style={{ fontSize: '1.5rem', marginBottom: '8px', color: pendingFiles[doc.key] ? '#2563eb' : '#94a3b8' }}></i>
+                      <span style={{ fontSize: '0.75rem' }}>{doc.label}</span>
+                      <input type="file" style={{ display: 'none' }} onChange={(e) => setPendingFiles({ ...pendingFiles, [doc.key]: e.target.files?.[0] || null })} />
+                      {pendingFiles[doc.key] && <div style={{ position: 'absolute', top: '5px', left: '5px', color: '#10b981' }}><i className="fa-solid fa-circle-check"></i></div>}
+                    </label>
                   ))}
                 </div>
               </div>
 
               {!formData.is_admin && (
-                <>
-                  <div className="form-section">
-                    <h4 className="section-title-sm"><i className="fa-solid fa-shield"></i> الصلاحيات الممنوحة</h4>
-                    <div className="permissions-tabs">
-                      <div className="form-group">
-                        <label className="permissions-label">أنواع التأمين</label>
-                        <div className="permissions-grid-sm">
-                          {INSURANCE_TYPES.map((type) => (
-                            <label key={type} className="perm-chk">
-                              <input type="checkbox" checked={formData.authorized_documents.includes(type)} onChange={(e) => {
-                                const list = e.target.checked ? [...formData.authorized_documents, type] : formData.authorized_documents.filter(d => d !== type);
-                                setFormData({...formData, authorized_documents: list});
-                              }} />
-                              <span>{type}</span>
-                            </label>
-                          ))}
-                        </div>
+                <div className="form-section-card fade-in">
+                  <h4 className="section-title-premium"><i className="fa-solid fa-shield"></i> الصلاحيات الممنوحة للمستخدم</h4>
+                  <div className="permissions-tabs">
+                    <div className="form-group">
+                      <label className="permissions-label">أنواع التأمين المسموح بها</label>
+                      <div className="permissions-grid-sm">
+                        {INSURANCE_TYPES.map((type) => (
+                          <label key={type} className={`perm-chk ${formData.authorized_documents.includes(type) ? 'active' : ''}`}>
+                            <input type="checkbox" checked={formData.authorized_documents.includes(type)} onChange={(e) => {
+                              const list = e.target.checked ? [...formData.authorized_documents, type] : formData.authorized_documents.filter(d => d !== type);
+                              setFormData({ ...formData, authorized_documents: list });
+                            }} />
+                            <span>{type}</span>
+                          </label>
+                        ))}
                       </div>
-                      <div className="form-group mt-4">
-                        <label className="permissions-label">الأقسام الإدارية والمالية</label>
-                        <div className="permissions-grid-sm">
-                          {[...REPORT_PERMISSIONS, ...ADMIN_SECTION_PERMISSIONS, ...SETTINGS_PERMISSIONS].map((p) => (
-                            <label key={p} className="perm-chk">
-                              <input type="checkbox" checked={formData.authorized_documents.includes(p)} onChange={(e) => {
-                                const list = e.target.checked ? [...formData.authorized_documents, p] : formData.authorized_documents.filter(d => d !== p);
-                                setFormData({...formData, authorized_documents: list});
-                              }} />
-                              <span>{p}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      {formErrors.authorized_documents && (
-                        <div className="error-message" style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
-                          <i className="fa-solid fa-triangle-exclamation"></i> {formErrors.authorized_documents}
-                        </div>
-                      )}
                     </div>
+                    <div className="form-group mt-4">
+                      <label className="permissions-label">الأقسام الإدارية والمالية</label>
+                      <div className="permissions-grid-sm">
+                        {[...REPORT_PERMISSIONS, ...ADMIN_SECTION_PERMISSIONS, ...SETTINGS_PERMISSIONS].map((p) => (
+                          <label key={p} className={`perm-chk ${formData.authorized_documents.includes(p) ? 'active' : ''}`}>
+                            <input type="checkbox" checked={formData.authorized_documents.includes(p)} onChange={(e) => {
+                              const list = e.target.checked ? [...formData.authorized_documents, p] : formData.authorized_documents.filter(d => d !== p);
+                              setFormData({ ...formData, authorized_documents: list });
+                            }} />
+                            <span>{p}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    {formErrors.authorized_documents && (
+                      <div className="error-message" style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
+                        <i className="fa-solid fa-triangle-exclamation"></i> {formErrors.authorized_documents}
+                      </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
 
               <div className="form-actions-premium">
@@ -1788,15 +1833,15 @@ export default function UsersList() {
               <span className="delete-warning">لا يمكن التراجع عن هذا الإجراء.</span>
             </p>
             <div className="delete-confirm-actions">
-              <button 
-                className="btn-cancel" 
+              <button
+                className="btn-cancel"
                 onClick={() => setDeleteConfirmation(null)}
                 disabled={deleting}
               >
                 إلغاء
               </button>
-              <button 
-                className="btn-delete-confirm" 
+              <button
+                className="btn-delete-confirm"
                 onClick={confirmDelete}
                 disabled={deleting}
               >

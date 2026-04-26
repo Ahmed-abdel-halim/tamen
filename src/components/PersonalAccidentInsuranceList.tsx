@@ -161,7 +161,7 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / وثائق تأمين الحوادث الشخصية' : 'وثائق تأمين الحوادث الشخصية / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / وثائق تأمين الحوادث الشخصية' : 'وثائق تأمين الحوادث الشخصية / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

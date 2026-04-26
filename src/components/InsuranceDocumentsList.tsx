@@ -184,7 +184,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / وثائق تأمين السيارات' : 'وثائق تأمين السيارات / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / وثائق تأمين السيارات' : 'وثائق تأمين السيارات / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

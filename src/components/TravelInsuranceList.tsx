@@ -169,7 +169,7 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / وثائق تأمين المسافرين' : 'وثائق تأمين المسافرين / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / وثائق تأمين المسافرين' : 'وثائق تأمين المسافرين / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

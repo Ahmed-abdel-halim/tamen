@@ -168,7 +168,7 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>{isArchive ? 'الأرشيف / وثائق تأمين الوافدين للمقيمين' : 'وثائق تأمين الوافدين للمقيمين / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / وثائق تأمين الوافدين للمقيمين' : 'وثائق تأمين الوافدين للمقيمين / قائمة الوثائق'}</span>
       </div>
 
       <div className="users-card">

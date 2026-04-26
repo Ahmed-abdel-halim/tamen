@@ -55,6 +55,12 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
     }
     return false;
   };
+  
+  const resolveImageUrl = (path: string) => {
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return `${window.location.origin}/${cleanPath}`;
+  };
 
   return (
     <aside className="sidebar">
@@ -62,7 +68,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
             <div className="logo-icon" style={{ height: '50px', display: 'flex', alignItems: 'center' }}>
-              <img src="/img/logo3.png" alt="المدار الليبي للتأميـن" style={{ height: '100%', width: 'auto' }} />
+              <img src={resolveImageUrl('/img/logo3.png')} alt="المدار الليبي للتأميـن" style={{ height: '100%', width: 'auto' }} />
             </div>
             <div className="logo-text" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <span className="logo-title" style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', lineHeight: '1.2' }}>
