@@ -107,15 +107,25 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   // Helper to resolve image URLs correctly
   const resolveImageUrl = (path: string | null | undefined) => {
     if (!path) return '';
+    
+    // If the path contains localhost and we're not in dev, we should replace it with the actual backend url
+    if (path.includes('localhost') && !import.meta.env.DEV) {
+      path = path.replace(/http:\/\/[^\/]+/, '');
+    }
+    
     if (path.startsWith('http')) return path;
     
     // Ensure the path doesn't have double slashes when concatenated
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     
     // If it's a storage path, it must come from the backend
-    if (cleanPath.startsWith('storage') || cleanPath.startsWith('union_receipts')) {
-      const actualPath = cleanPath.startsWith('storage') ? cleanPath : `storage/${cleanPath}`;
-      return `${BACKEND_URL}/${actualPath}`;
+    if (cleanPath.startsWith('storage') || cleanPath.startsWith('union_receipts') || cleanPath.startsWith('public')) {
+      const actualPath = cleanPath.startsWith('storage') ? cleanPath : 
+                        cleanPath.startsWith('public') ? cleanPath.replace('public/', 'storage/') :
+                        `storage/${cleanPath}`;
+      
+      const baseUrl = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
+      return `${baseUrl}/${actualPath}`;
     }
     
     // Static assets in the frontend public folder
