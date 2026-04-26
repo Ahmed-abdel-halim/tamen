@@ -160,7 +160,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
-      const isIndemnity = e.is_indemnity === true || e.is_indemnity === 1 || e.is_indemnity === '1';
+      const isIndemnity = e.is_indemnity === true || (e.is_indemnity as any) === 1 || (e.is_indemnity as any) === '1';
       if (activeTab === 'indemnities' && !isIndemnity) return false;
       if (activeTab === 'expenses' && isIndemnity) return false;
 
