@@ -34,6 +34,7 @@ type TravelInsuranceDocument = {
   issue_fees: number;
   supervision_fees: number;
   total: number;
+  whatsapp_number?: string;
   passengers?: TravelInsurancePassenger[];
 };
 
@@ -238,6 +239,12 @@ export default function ViewTravelInsurance() {
                     <label>رقم الهاتف</label>
                     <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
                       {mainPassenger.phone || '-'}
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>رقم الواتساب</label>
+                    <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)', color: '#25d366', fontWeight: '500' }}>
+                      {document.whatsapp_number || '-'}
                     </div>
                   </div>
                   <div className="form-group">

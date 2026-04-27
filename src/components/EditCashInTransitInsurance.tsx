@@ -64,6 +64,19 @@ const EditCashInTransitInsurance: React.FC = () => {
                             <label>اسم المؤمن له بالكامل *</label>
                             <input type="text" value={formData.insured_name} onChange={(e) => setFormData({...formData, insured_name: e.target.value})} required />
                         </div>
+                        <div className="form-group">
+                            <label>رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                            <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                                يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                            </p>
+                            <input 
+                                type="text" 
+                                value={formData.whatsapp_number || ''} 
+                                onChange={(e) => setFormData({...formData, whatsapp_number: e.target.value})} 
+                                required 
+                                placeholder="مثال: 0910000000"
+                            />
+                        </div>
                         <div className="form-row">
                           <div className="form-group">
                               <label>مسار النقل من *</label>
@@ -78,6 +91,16 @@ const EditCashInTransitInsurance: React.FC = () => {
 
                     <div className="form-section">
                         <h3>الحدود والرسوم</h3>
+                        <div className="form-group">
+                            <label>رقم الواتساب الخاص بالمؤمن له *</label>
+                            <input 
+                                type="text" 
+                                value={formData.whatsapp_number || ''} 
+                                onChange={(e) => setFormData({...formData, whatsapp_number: e.target.value})} 
+                                required 
+                                placeholder="مثال: 0910000000"
+                            />
+                        </div>
                         <div className="form-row">
                           <div className="form-group">
                               <label>حد النقلة الواحدة (د.ل) *</label>

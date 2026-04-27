@@ -127,6 +127,7 @@ export default function CreateInternationalInsurance() {
     insured_name: '',
     insured_address: '',
     phone: '',
+    whatsapp_number: '',
     chassis_number: '',
     plate_number: '',
     motor_number: '', // رقم المحرك (مطلوب للنظام الخارجي)
@@ -813,6 +814,9 @@ export default function CreateInternationalInsurance() {
     if (!formData.insured_name.trim()) {
       errors.insured_name = 'اسم المؤمن مطلوب';
     }
+    if (!formData.whatsapp_number.trim()) {
+      errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    }
     if (!formData.motor_number.trim()) {
       errors.motor_number = 'رقم المحرك مطلوب';
     }
@@ -886,6 +890,7 @@ export default function CreateInternationalInsurance() {
         'اسم المؤمن': documentData.insured_name,
         'عنوان المؤمن': documentData.insured_address,
         'الهاتف': documentData.phone,
+        'واتساب': documentData.whatsapp_number,
         'رقم الهيكل': documentData.chassis_number,
         'رقم اللوحة': documentData.plate_number,
         'رقم المحرك': documentData.motor_number,
@@ -1025,6 +1030,9 @@ export default function CreateInternationalInsurance() {
       // insurance_phone: phone number of customer
       const insurancePhone = documentData.phone || '';
       formData.append('insurance_phone', insurancePhone);
+
+      // whatsapp_number
+      formData.append('whatsapp_number', documentData.whatsapp_number || '');
       
       // motor_number: motor number (مطلوب من النظام الخارجي)
       const motorNumber = documentData.motor_number || '';
@@ -1371,6 +1379,22 @@ export default function CreateInternationalInsurance() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                  <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                    يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                  </p>
+                  <input
+                    type="text"
+                    id="whatsapp_number"
+                    value={formData.whatsapp_number}
+                    onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                    className={formErrors.whatsapp_number ? 'error' : ''}
+                    placeholder="مثال: 0910000000"
+                  />
+                  {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
                 </div>
 
                 <div className="form-group">

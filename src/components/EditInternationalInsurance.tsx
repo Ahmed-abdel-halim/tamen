@@ -52,6 +52,7 @@ export default function EditInternationalInsurance() {
     insured_name: '',
     insured_address: '',
     phone: '',
+    whatsapp_number: '',
     chassis_number: '',
     plate_number: '',
     vehicle_type_id: '',
@@ -196,6 +197,7 @@ export default function EditInternationalInsurance() {
         insured_name: data.insured_name || '',
         insured_address: data.insured_address || '',
         phone: data.phone || '',
+        whatsapp_number: data.whatsapp_number || '',
         chassis_number: data.chassis_number || '',
         plate_number: data.plate_number || '',
         vehicle_type_id: data.vehicle_type_id ? data.vehicle_type_id.toString() : '',
@@ -230,6 +232,9 @@ export default function EditInternationalInsurance() {
     
     if (!formData.insured_name.trim()) {
       errors.insured_name = 'اسم المؤمن مطلوب';
+    }
+    if (!formData.whatsapp_number) {
+      errors.whatsapp_number = 'رقم الواتساب مطلوب';
     }
     if (!formData.start_date) {
       errors.start_date = 'من يوم مطلوب';
@@ -373,6 +378,22 @@ export default function EditInternationalInsurance() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                  <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                    يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                  </p>
+                  <input
+                    type="text"
+                    id="whatsapp_number"
+                    value={formData.whatsapp_number}
+                    onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                    className={formErrors.whatsapp_number ? 'error' : ''}
+                    placeholder="مثال: 0910000000"
+                  />
+                  {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
                 </div>
 
                 <div className="form-group">

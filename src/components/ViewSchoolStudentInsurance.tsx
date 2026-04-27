@@ -75,6 +75,10 @@ const ViewSchoolStudentInsurance: React.FC = () => {
                         <label>تاريخ الميلاد:</label>
                         <span>{document.birth_date || '-'}</span>
                     </div>
+                    <div className="detail-item">
+                        <label>رقم الواتساب:</label>
+                        <span style={{ color: '#25d366', fontWeight: 'bold' }}>{document.whatsapp_number || '-'}</span>
+                    </div>
                 </div>
 
                 <div className="detail-section">

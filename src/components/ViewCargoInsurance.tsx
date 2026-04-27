@@ -52,6 +52,10 @@ const ViewCargoInsurance: React.FC = () => {
                         <span>{document.insured_name}</span>
                     </div>
                     <div className="detail-item">
+                        <label>رقم الواتساب:</label>
+                        <span style={{ color: '#25d366', fontWeight: 'bold' }}>{document.whatsapp_number || '-'}</span>
+                    </div>
+                    <div className="detail-item">
                         <label>وصف البضاعة:</label>
                         <span>{document.cargo_description}</span>
                     </div>

@@ -226,6 +226,7 @@ export default function EditProfessionalLiabilityInsurance() {
     birth_date: '',
     age: 0,
     phone: '',
+    whatsapp_number: '',
     workplace: '',
     gender: '',
     nationality: '',
@@ -327,6 +328,7 @@ export default function EditProfessionalLiabilityInsurance() {
         birth_date: data.birth_date ? data.birth_date.split('T')[0] : '',
         age: data.age || 0,
         phone: data.phone || '',
+        whatsapp_number: (data as any).whatsapp_number || '',
         workplace: data.workplace || '',
         gender: data.gender || '',
         nationality: data.nationality || '',
@@ -489,6 +491,9 @@ export default function EditProfessionalLiabilityInsurance() {
     if (!formData.insured_name) {
       errors.insured_name = 'اسم المؤمن له مطلوب';
     }
+    if (!formData.whatsapp_number) {
+      errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -521,6 +526,7 @@ export default function EditProfessionalLiabilityInsurance() {
           birth_date: formData.birth_date || null,
           age: formData.age || null,
           phone: formData.phone || null,
+          whatsapp_number: formData.whatsapp_number || null,
           workplace: formData.workplace || null,
           gender: formData.gender || null,
           nationality: formData.nationality || null,
@@ -692,6 +698,22 @@ export default function EditProfessionalLiabilityInsurance() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                      يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                    </p>
+                    <input
+                      type="text"
+                      id="whatsapp_number"
+                      value={formData.whatsapp_number}
+                      onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                      className={formErrors.whatsapp_number ? 'error' : ''}
+                      placeholder="مثال: 0910000000"
+                    />
+                    {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="workplace">مكان العمل</label>

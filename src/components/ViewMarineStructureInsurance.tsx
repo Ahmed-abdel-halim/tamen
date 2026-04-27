@@ -242,6 +242,7 @@ type MarineStructureInsuranceDocument = {
   load_capacity?: number;
   insured_name?: string;
   phone?: string;
+  whatsapp_number?: string;
   license_number?: string;
   premium: number;
   tax: number;
@@ -599,6 +600,14 @@ export default function ViewMarineStructureInsurance() {
                   <label>رقم الهاتف</label>
                   <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
                     {document.phone}
+                  </div>
+                </div>
+              )}
+              {document.whatsapp_number && (
+                <div className="form-group">
+                  <label>رقم الواتساب</label>
+                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)', color: '#25d366', fontWeight: '500' }}>
+                    {document.whatsapp_number}
                   </div>
                 </div>
               )}

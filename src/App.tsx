@@ -247,16 +247,21 @@ const menuSections: SidebarSection[] = [
     title: 'القائمة الرئيسية',
     items: [
       { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
-      { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-      { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
-      { label: ' تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
-      { label: ' تأمين الوافدين للمقيمين', icon: 'fa-solid fa-user-check', to: '/resident-insurance-documents' },
-      { label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', to: '/marine-structure-insurance-documents' },
-      { label: 'تأمين المسؤولية المهنية (الطبية)', icon: 'fa-solid fa-stethoscope', to: '/professional-liability-insurance-documents' },
-      { label: 'تأمين الحوادث الشخصية', icon: 'fa-solid fa-user-injured', to: '/personal-accident-insurance-documents' },
-      { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
-      { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
-      { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
+      {
+        label: 'إدارة الوثائق', icon: 'fa-solid fa-folder-open', children: [
+          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
+          { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+          { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
+          { label: ' تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
+          { label: ' تأمين الوافدين للمقيمين', icon: 'fa-solid fa-user-check', to: '/resident-insurance-documents' },
+          { label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', to: '/marine-structure-insurance-documents' },
+          { label: 'تأمين المسؤولية المهنية (الطبية)', icon: 'fa-solid fa-stethoscope', to: '/professional-liability-insurance-documents' },
+          { label: 'تأمين الحوادث الشخصية', icon: 'fa-solid fa-user-injured', to: '/personal-accident-insurance-documents' },
+          { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
+          { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
+          { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
+        ]
+      }
     ],
   },
   {
@@ -266,7 +271,6 @@ const menuSections: SidebarSection[] = [
         label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
           { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
-          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
         ]
       },
       { 
@@ -384,6 +388,7 @@ const createMenuSections = (
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
   const sidebarOrder: string[] = [
+    '/document-requests',
     '/insurance-documents',
     '/international-insurance-documents',
     '/travel-insurance-documents',
@@ -417,7 +422,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
   ];
-  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/document-requests', '/archive'];
+  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/archive'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -499,13 +504,22 @@ const createMenuSections = (
     .map(route => settingsItemsMap.get(route)!);
 
   // إنشاء القائمة المصفاة
+  const mainMenuItems: SidebarItem[] = [
+    { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
+  ];
+
+  if (insuranceItems.length > 0) {
+    mainMenuItems.push({
+      label: 'إدارة الوثائق',
+      icon: 'fa-solid fa-folder-open',
+      children: insuranceItems,
+    });
+  }
+
   const sections: SidebarSection[] = [
     {
       title: 'القائمة الرئيسية',
-      items: [
-        { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
-        ...insuranceItems,
-      ],
+      items: mainMenuItems,
     },
   ];
 
@@ -526,10 +540,11 @@ const createMenuSections = (
   // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
   if (adminItems.length > 0) {
     const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
-    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests' || i.to === '/document-requests');
+    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
     const otherAdmin = adminItems.filter(i => 
       !hrGroup.some(g => g.to === i.to) && 
-      !agentsGroup.some(g => g.to === i.to)
+      !agentsGroup.some(g => g.to === i.to) &&
+      i.to !== '/document-requests'
     );
     
     const finalAdmin = [...otherAdmin];
@@ -543,8 +558,7 @@ const createMenuSections = (
           icon: 'fa-solid fa-building',
           children: agentsGroup.map(item => ({
             ...item,
-            label: item.to === '/branches-agents' ? 'قائمة الفروع والوكلاء' : 
-                   item.to === '/agent-requests' ? 'طلبات الوكلاء' : 'طلبات الوثائق'
+            label: item.to === '/branches-agents' ? 'قائمة الفروع والوكلاء' : 'طلبات الوكلاء'
           }))
         });
       }

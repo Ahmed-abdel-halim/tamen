@@ -323,6 +323,7 @@ export default function CreateMarineStructureInsurance() {
     load_capacity: '',
     insured_name: '',
     phone: '',
+    whatsapp_number: '',
     license_number: '',
     premium: '',
     tax: '1.000',
@@ -542,6 +543,9 @@ export default function CreateMarineStructureInsurance() {
     }
     if (!formData.structure_type) {
       errors.structure_type = 'نوع الهيكل البحري مطلوب';
+    }
+    if (!formData.whatsapp_number) {
+      errors.whatsapp_number = 'رقم الواتساب مطلوب';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -1627,7 +1631,7 @@ export default function CreateMarineStructureInsurance() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
                     <label htmlFor="phone">رقم الهاتف</label>
                     <input
@@ -1636,6 +1640,22 @@ export default function CreateMarineStructureInsurance() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                      يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                    </p>
+                    <input
+                      type="text"
+                      id="whatsapp_number"
+                      value={formData.whatsapp_number}
+                      onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                      className={formErrors.whatsapp_number ? 'error' : ''}
+                      placeholder="مثال: 0910000000"
+                    />
+                    {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
                   </div>
 
                   <div className="form-group">

@@ -15,6 +15,7 @@ type ProfessionalLiabilityInsuranceDocument = {
   birth_date?: string;
   age?: number;
   phone?: string;
+  whatsapp_number?: string;
   workplace?: string;
   gender?: string;
   nationality?: string;
@@ -175,6 +176,12 @@ export default function ViewProfessionalLiabilityInsurance() {
                     {document.phone}
                   </div>
                 )}
+                {document.whatsapp_number && (
+                  <div className="engineer-info-detail" style={{ color: '#25d366' }}>
+                    <i className="fa-brands fa-whatsapp"></i>
+                    {document.whatsapp_number}
+                  </div>
+                )}
                 <div className="engineer-info-detail">
                   <i className="fa-solid fa-hashtag"></i>
                   رقم الوثيقة: {document.insurance_number}
@@ -285,6 +292,10 @@ export default function ViewProfessionalLiabilityInsurance() {
                     <tr>
                       <td style={{ fontWeight: 'bold' }}>رقم الهاتف</td>
                       <td>{document.phone || '-'}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 'bold' }}>رقم الواتساب</td>
+                      <td>{document.whatsapp_number || '-'}</td>
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 'bold' }}>مكان العمل</td>

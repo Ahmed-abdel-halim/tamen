@@ -13,6 +13,7 @@ export default function CreateSchoolStudentInsurance() {
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
     premium_amount: '50.000',
+    whatsapp_number: '',
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -129,6 +130,19 @@ export default function CreateSchoolStudentInsurance() {
                     style={{ background: '#f3f4f6' }}
                   />
                 </div>
+              </div>
+              <div className="form-group">
+                <label>رقم الواتساب الخاص بولي الأمر / المؤمن له <span className="required">*</span></label>
+                <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                  يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                </p>
+                <input
+                  type="text"
+                  required
+                  value={formData.whatsapp_number}
+                  onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                  placeholder="مثال: 0910000000"
+                />
               </div>
               <div className="form-group">
                 <label>مبلغ القسط الإجمالي (د.ل) <span className="required">*</span></label>

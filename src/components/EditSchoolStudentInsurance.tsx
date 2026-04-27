@@ -68,6 +68,19 @@ const EditSchoolStudentInsurance: React.FC = () => {
                             <label>اسم المدرسة *</label>
                             <input type="text" value={formData.school_name} onChange={(e) => setFormData({...formData, school_name: e.target.value})} required />
                         </div>
+                        <div className="form-group">
+                            <label>رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                            <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                                يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                            </p>
+                            <input 
+                                type="text" 
+                                value={formData.whatsapp_number || ''} 
+                                onChange={(e) => setFormData({...formData, whatsapp_number: e.target.value})} 
+                                required 
+                                placeholder="مثال: 0910000000"
+                            />
+                        </div>
                         <div className="form-row">
                           <div className="form-group">
                               <label>السنة الدراسية</label>

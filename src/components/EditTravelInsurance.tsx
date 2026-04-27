@@ -242,6 +242,7 @@ export default function EditTravelInsurance() {
     main_passenger_name_ar: '',
     main_passenger_name_en: '',
     main_passenger_phone: '',
+    main_passenger_whatsapp_number: '',
     main_passenger_passport_number: '',
     main_passenger_address: '',
     main_passenger_birth_date: '',
@@ -767,6 +768,7 @@ export default function EditTravelInsurance() {
         main_passenger_age: 0,
         main_passenger_gender: '',
         main_passenger_nationality: '',
+        main_passenger_whatsapp_number: '',
       });
 
       // ملء بيانات المسافر الرئيسي
@@ -777,6 +779,7 @@ export default function EditTravelInsurance() {
           main_passenger_name_ar: mainPassenger.name_ar || '',
           main_passenger_name_en: mainPassenger.name_en || '',
           main_passenger_phone: mainPassenger.phone || '',
+          main_passenger_whatsapp_number: mainPassenger.whatsapp_number || '',
           main_passenger_passport_number: mainPassenger.passport_number || '',
           main_passenger_address: mainPassenger.address || '',
           main_passenger_birth_date: mainPassenger.birth_date ? mainPassenger.birth_date.split('T')[0] : '',
@@ -911,8 +914,11 @@ export default function EditTravelInsurance() {
       errors.main_passenger_name_ar = 'اسم المسافر (AR) مطلوب';
     }
     
-    if (!formData.main_passenger_name_en) {
-      errors.main_passenger_name_en = 'اسم المسافر (EN) مطلوب';
+    if (!formData.main_passenger_name_en.trim()) {
+      errors.main_passenger_name_en = 'الاسم بالإنجليزية مطلوب';
+    }
+    if (!formData.main_passenger_whatsapp_number) {
+      errors.main_passenger_whatsapp_number = 'رقم الواتساب مطلوب';
     }
     
     if (!formData.main_passenger_gender) {
@@ -1367,6 +1373,21 @@ export default function EditTravelInsurance() {
                       value={formData.main_passenger_phone}
                       onChange={(e) => setFormData({ ...formData, main_passenger_phone: e.target.value })}
                     />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="main_passenger_whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                      يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                    </p>
+                    <input
+                      type="text"
+                      id="main_passenger_whatsapp_number"
+                      value={formData.main_passenger_whatsapp_number}
+                      onChange={(e) => setFormData({ ...formData, main_passenger_whatsapp_number: e.target.value })}
+                      className={formErrors.main_passenger_whatsapp_number ? 'error' : ''}
+                      placeholder="مثال: 0910000000"
+                    />
+                    {formErrors.main_passenger_whatsapp_number && <span className="error-message">{formErrors.main_passenger_whatsapp_number}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="main_passenger_passport_number">رقم الجواز</label>

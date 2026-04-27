@@ -15,6 +15,7 @@ type InternationalInsuranceDocument = {
   insured_name: string;
   insured_address?: string;
   phone?: string;
+  whatsapp_number?: string;
   chassis_number?: string;
   plate_number?: string;
   vehicle_type_id?: number;
@@ -240,6 +241,12 @@ export default function ViewInternationalInsurance() {
                 <label>رقم الهاتف</label>
                 <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
                   {document.phone || '-'}
+                </div>
+              </div>
+              <div className="form-group">
+                <label>رقم الواتساب</label>
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)', color: '#25d366', fontWeight: '500' }}>
+                  {document.whatsapp_number || '-'}
                 </div>
               </div>
             </div>

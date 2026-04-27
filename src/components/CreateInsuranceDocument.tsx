@@ -106,6 +106,7 @@ export default function CreateInsuranceDocument() {
     load_capacity: '',
     insured_name: '',
     phone: '',
+    whatsapp_number: '',
     driving_license_number: '',
     premium: '',
   });
@@ -1641,6 +1642,9 @@ export default function CreateInsuranceDocument() {
     if (!formData.premium || parseFloat(formData.premium) <= 0) {
       errors.premium = 'القسط مطلوب (يتم حسابه تلقائياً بناءً على قوة المحرك)';
     }
+    if (!formData.whatsapp_number) {
+      errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -1712,6 +1716,7 @@ export default function CreateInsuranceDocument() {
           load_capacity: loadCapacityValue,
           insured_name: formData.insured_name || null,
           phone: formData.phone || null,
+          whatsapp_number: formData.whatsapp_number,
           driving_license_number: formData.driving_license_number || null,
           premium: premiumValue,
           third_party_purpose: formData.third_party_purpose || null,
@@ -3021,6 +3026,22 @@ export default function CreateInsuranceDocument() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                  يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                </p>
+                <input
+                  type="text"
+                  id="whatsapp_number"
+                  value={formData.whatsapp_number}
+                  onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                  className={formErrors.whatsapp_number ? 'error' : ''}
+                  placeholder="مثال: 0910000000"
+                />
+                {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
               </div>
 
               {/* القيمة المالية */}

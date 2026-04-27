@@ -223,6 +223,7 @@ export default function CreateResidentInsurance() {
     main_passenger_name_ar: '',
     main_passenger_name_en: '',
     main_passenger_phone: '',
+    main_passenger_whatsapp_number: '',
     main_passenger_passport_number: '',
     main_passenger_address: '',
     main_passenger_birth_date: '',
@@ -470,6 +471,10 @@ export default function CreateResidentInsurance() {
     if (!formData.main_passenger_nationality) {
       errors.main_passenger_nationality = 'الجنسية مطلوبة';
     }
+
+    if (!formData.main_passenger_whatsapp_number) {
+      errors.main_passenger_whatsapp_number = 'رقم الواتساب مطلوب';
+    }
     
     familyMembers.forEach((member, index) => {
       if (!member.relationship) {
@@ -531,6 +536,7 @@ export default function CreateResidentInsurance() {
               name_ar: formData.main_passenger_name_ar,
               name_en: formData.main_passenger_name_en,
               phone: formData.main_passenger_phone || null,
+              whatsapp_number: formData.main_passenger_whatsapp_number,
               passport_number: formData.main_passenger_passport_number || null,
               address: formData.main_passenger_address || null,
               birth_date: formData.main_passenger_birth_date || null,
@@ -810,7 +816,7 @@ export default function CreateResidentInsurance() {
                   {formErrors.main_passenger_name_en && <span className="error-message">{formErrors.main_passenger_name_en}</span>}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
                     <label htmlFor="main_passenger_phone">رقم الهاتف</label>
                     <input
@@ -819,6 +825,21 @@ export default function CreateResidentInsurance() {
                       value={formData.main_passenger_phone}
                       onChange={(e) => setFormData({ ...formData, main_passenger_phone: e.target.value })}
                     />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="main_passenger_whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
+                      يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
+                    </p>
+                    <input
+                      type="text"
+                      id="main_passenger_whatsapp_number"
+                      value={formData.main_passenger_whatsapp_number}
+                      onChange={(e) => setFormData({ ...formData, main_passenger_whatsapp_number: e.target.value })}
+                      className={formErrors.main_passenger_whatsapp_number ? 'error' : ''}
+                      placeholder="مثال: 0910000000"
+                    />
+                    {formErrors.main_passenger_whatsapp_number && <span className="error-message">{formErrors.main_passenger_whatsapp_number}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="main_passenger_passport_number">رقم الجواز</label>
