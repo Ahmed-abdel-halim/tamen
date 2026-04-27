@@ -156,7 +156,7 @@ const ExternalEntitiesManagement: React.FC = () => {
                     </h2>
                     <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>إدارة بيانات الوزارات والشركات والمؤسسات المتعامل معها</p>
                 </div>
-                <button className="btn-primary" onClick={() => { resetForm(); setShowModal(true); }} style={{ borderRadius: '10px', padding: '12px 25px', fontSize: '15px', fontWeight: 'bold', background: '#0ea5e9', border: 'none' }}>
+                <button className="btn-primary" onClick={() => { resetForm(); setShowModal(true); }} style={{ borderRadius: '10px', padding: '12px 25px', fontSize: '15px', fontWeight: 'bold', background: 'var(--accent-cyan)', border: 'none', boxShadow: '0 4px 12px var(--accent-shadow)' }}>
                     <i className="fa-solid fa-plus"></i> إضافة جهة جديدة
                 </button>
             </div>
@@ -216,7 +216,7 @@ const ExternalEntitiesManagement: React.FC = () => {
                             style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', width: '100%' }}
                         />
                     </div>
-                    <button onClick={resetFilters} className="btn-cancel" style={{ padding: '10px', height: '42px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: '#0ea5e9', color: '#fff', border: 'none' }}>
+                    <button onClick={resetFilters} className="btn-cancel" style={{ padding: '10px', height: '42px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: 'var(--accent-cyan)', color: '#fff', border: 'none', fontWeight: 'bold' }}>
                         <i className="fa-solid fa-rotate-left"></i> تفريغ
                     </button>
                 </div>
@@ -299,8 +299,8 @@ const ExternalEntitiesManagement: React.FC = () => {
                                 </div>
                             </div>
                             <div className="form-actions" style={{ marginTop: '10px' }}>
-                                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>إلغاء</button>
-                                <button type="submit" className="btn-submit">{isEditing ? 'تحديث' : 'حفظ'}</button>
+                                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)} style={{ borderRadius: '10px' }}>إلغاء</button>
+                                <button type="submit" className="btn-submit" style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', padding: '10px 25px', borderRadius: '10px', fontWeight: 'bold', boxShadow: '0 4px 12px var(--accent-shadow)' }}>{isEditing ? 'تحديث' : 'حفظ'}</button>
                             </div>
                         </form>
                     </div>
