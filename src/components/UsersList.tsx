@@ -972,125 +972,83 @@ export default function UsersList() {
 
   return (
     <section className="users-management font-cairo">
-      <div className="users-breadcrumb">
-        <span>إدارة الموظفين / قائمة الموظفين</span>
+      <div className="users-breadcrumb" style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '30px',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '16px', marginBottom: '30px', color: '#fff'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <i className="fa-solid fa-users-gear" style={{ color: '#38bdf8' }}></i>
+                إدارة الموظفين والمستخدمين
+            </h2>
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>التحكم في بيانات الموظفين، الصلاحيات، والرواتب</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm({ mode: 'add' })} style={{ borderRadius: '10px', padding: '12px 25px', fontSize: '15px', fontWeight: 'bold', background: 'var(--accent-cyan)', border: 'none', boxShadow: '0 4px 12px var(--accent-shadow)' }}>
+            <i className="fa-solid fa-user-plus"></i> إضافة موظف جديد
+        </button>
       </div>
 
       <div className="users-card">
-        <div className="users-filters-box" style={{
-          background: '#ffffff',
-          padding: '25px',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          marginBottom: '30px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+        <div className="users-card-header">
+            <div className="header-right">
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#2563eb' }}>
+                    قائمة الموظفين والمستخدمين بالنظام
+                </h3>
+            </div>
+        </div>
+
+        <div className="filters-row" style={{ 
+            padding: '15px 20px', 
+            background: 'transparent', 
+            border: '1px solid var(--border)', 
+            borderRadius: '12px',
+            margin: '0 0 20px 0',
+            display: 'grid', 
+            gridTemplateColumns: '1.5fr 1fr 1fr 1fr 0.5fr', 
+            gap: '15px', 
+            alignItems: 'end' 
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 800 }}>الفلاتر والبحث</h3>
-              <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>استخدم الخيارات أدناه لتصفية قائمة الموظفين أو البحث عن موظف محدد</p>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px' }}>بحث بالاسم أو الرقم</label>
+                <div className="search-wrapper" style={{ width: '100%' }}>
+                    <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input 
+                        type="text" 
+                        placeholder="بحث بالاسم أو الرقم الوطني..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
             </div>
-            <button
-              className="primary add-user-btn"
-              onClick={() => setShowForm({ mode: 'add' })}
-              style={{ height: '42px', padding: '0 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700 }}
-            >
-              <i className="fa-solid fa-plus"></i>
-              إضافة موظف جديد
-            </button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
-            <div className="filter-group">
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>بحث بالاسم</label>
-              <div className="users-search-bar" style={{ marginBottom: 0, width: '100%' }}>
-                <input
-                  type="text"
-                  placeholder="بحث باسم المستخدم..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="users-search-input"
-                  style={{ width: '100%', height: '42px', borderRadius: '10px' }}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px' }}>حالة الحساب</label>
+                <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', width: '100%' }}>
+                    <option value="all">كل الحالات</option>
+                    <option value="1">حسابات نشطة</option>
+                    <option value="0">حسابات متوقفة</option>
+                </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px' }}>درجة الوصول</label>
+                <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', width: '100%' }}>
+                    <option value="all">جميع الدرجات</option>
+                    <option value="admin">مدراء النظام</option>
+                    <option value="user">موظفين</option>
+                </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px' }}>المسمى الوظيفي</label>
+                <input 
+                    type="text" 
+                    placeholder="بحث بالمسمى..." 
+                    value={filterJobTitle === 'all' ? '' : filterJobTitle}
+                    onChange={(e) => setFilterJobTitle(e.target.value || 'all')}
+                    style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', width: '100%' }}
                 />
-                <button className="users-search-btn" type="button" style={{ height: '42px' }}>
-                  <i className="fa-solid fa-magnifying-glass"></i>
-                </button>
-              </div>
             </div>
-
-            <div className="filter-group">
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>حالة الحساب</label>
-              <select
-                value={filterActive}
-                onChange={(e) => setFilterActive(e.target.value)}
-                className="users-search-input"
-                style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
-              >
-                <option value="all">كل الحالات</option>
-                <option value="1">حسابات نشطة</option>
-                <option value="0">حسابات متوقفة</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>درجة الوصول</label>
-              <select
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value)}
-                className="users-search-input"
-                style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
-              >
-                <option value="all">جميع الدرجات</option>
-                <option value="admin">مدراء النظام</option>
-                <option value="user">موظفين</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>الصلاحية الممنوحة</label>
-              <select
-                value={filterPermission}
-                onChange={(e) => setFilterPermission(e.target.value)}
-                className="users-search-input"
-                style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
-              >
-                <option value="all">حسب نوع التأمين</option>
-                {[
-                  'تأمين سيارات إجباري',
-                  'تأمين سيارات دولي',
-                  'تأمين المسافرين',
-                  'تأمين الوافدين للمقيمين',
-                  'تأمين الهياكل البحرية',
-                  'تأمين المسؤولية المهنية (الطبية)',
-                  'تأمين الحوادث الشخصية',
-                  'تأمين حماية طلاب المدارس',
-                  'تأمين نقل النقدية',
-                  'تأمين شحن البضائع',
-                  'إدارة الإيرادات',
-                  'إدارة المصروفات التشغيلية',
-                  'التعويضات',
-                  'رصيد الاتحاد (البطاقة البرتقالية)',
-                  'إدارة الفروع والوكلاء',
-                  'إدارة الموظفين',
-                  'الأرشيف',
-                  'تقرير مصلحة الضرائب',
-                  'تقرير الضمان الاجتماعي',
-                ].map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>المسمى الوظيفي</label>
-              <input
-                type="text"
-                placeholder="بحث بالمسمى..."
-                value={filterJobTitle === 'all' ? '' : filterJobTitle}
-                onChange={(e) => setFilterJobTitle(e.target.value || 'all')}
-                className="users-search-input"
-                style={{ width: '100%', padding: '0 15px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600 }}
-              />
-            </div>
-          </div>
+            <button onClick={() => { setSearchQuery(''); setFilterActive('1'); setFilterRole('all'); setFilterJobTitle('all'); setFilterPermission('all'); }} className="btn-cancel" style={{ padding: '10px', height: '42px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: 'var(--accent-cyan)', color: '#fff', border: 'none', fontWeight: 'bold' }}>
+                <i className="fa-solid fa-rotate-left"></i> تفريغ
+            </button>
         </div>
 
         {loading ? (
@@ -1808,7 +1766,7 @@ export default function UsersList() {
 
               <div className="form-actions-premium">
                 <button type="button" className="btn-cancel" onClick={() => setShowForm(null)} disabled={submitting}>إلغاء</button>
-                <button type="submit" className="btn-submit-premium" disabled={submitting}>
+                <button type="submit" className="btn-submit-premium" style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', padding: '12px 30px', borderRadius: '12px', fontWeight: 'bold', boxShadow: '0 4px 12px var(--accent-shadow)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} disabled={submitting}>
                   {submitting ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-save"></i>}
                   {submitting ? ' جاري الحفظ...' : (showForm.mode === 'add' ? ' إنشاء الحساب' : ' حفظ التعديلات')}
                 </button>

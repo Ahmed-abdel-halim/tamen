@@ -99,6 +99,8 @@ import AllAgentRequests from './components/AllAgentRequests';
 import EmployeeSalaries from './components/EmployeeSalaries';
 import { ToastContainer } from './components/Toast';
 import { TaxSSReport } from './components/TaxSSReport';
+import ExternalEntitiesManagement from './components/ExternalEntitiesManagement';
+import MailManagement from './components/MailManagement';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const user = localStorage.getItem('user');
@@ -277,6 +279,13 @@ const menuSections: SidebarSection[] = [
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+        ]
+      },
+      { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
+      { 
+        label: 'نظام البريد', icon: 'fa-solid fa-envelope-open-text', children: [
+          { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
+          { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
         ]
       },
       { label: 'ارشيف الوثائق المنتهيه', icon: 'fa-solid fa-box-archive', to: '/archive' },
@@ -952,7 +961,9 @@ export default function App() {
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
                   <Route path="/test-lifo-login" element={<TestLifoLogin />} />
                   {/* الأرشيف */}
-                  <Route path="/archive" element={<ArchiveDashboard />} />
+                  <Route path="/archive" element={<ProtectedRoute><ArchiveDashboard /></ProtectedRoute>} />
+                  <Route path="/external-entities" element={<ProtectedRoute><ExternalEntitiesManagement /></ProtectedRoute>} />
+                  <Route path="/mail/:type" element={<ProtectedRoute><MailManagement /></ProtectedRoute>} />
                   <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />
                 </Routes>
               </main>
