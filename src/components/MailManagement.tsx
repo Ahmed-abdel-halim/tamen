@@ -48,6 +48,8 @@ const MailManagement: React.FC = () => {
     const [entities, setEntities] = useState<ExternalEntity[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedFile, setSelectedFile] = useState<string | null>(null);
+    const [previewRotation, setPreviewRotation] = useState(0);
     const [showModal, setShowModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentDocId, setCurrentDocId] = useState<number | null>(null);
@@ -454,17 +456,66 @@ const MailManagement: React.FC = () => {
                                         <td style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>{doc.registered_at ? new Date(doc.registered_at).toLocaleDateString('ar-LY') : '-'}</td>
                                         <td style={{ fontSize: '0.85rem', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }} title={doc.description}>{doc.description || '-'}</td>
                                         <td>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', maxWidth: '120px' }}>
                                                 {doc.attachment_urls && doc.attachment_urls.length > 0 ? (
-                                                    doc.attachment_urls.map((url, idx) => (
-                                                        <a key={idx} href={url} target="_blank" rel="noreferrer" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'none', fontSize: '0.8rem' }}>
-                                                            <i className="fa-solid fa-file-pdf"></i> عرض {doc.attachment_urls.length > 1 ? (idx + 1) : ''}
-                                                        </a>
-                                                    ))
+                                                    <>
+                                                        {doc.attachment_urls.slice(0, 3).map((url, idx) => (
+                                                            <button 
+                                                                key={idx} 
+                                                                onClick={() => { setSelectedFile(url); setPreviewRotation(0); }} 
+                                                                className="attachment-badge"
+                                                                style={{ 
+                                                                    background: 'rgba(16, 185, 129, 0.1)', 
+                                                                    color: '#10b981', 
+                                                                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                                                                    borderRadius: '6px',
+                                                                    padding: '2px 6px',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 700,
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '3px'
+                                                                }}
+                                                                title={`عرض المرفق ${idx + 1}`}
+                                                            >
+                                                                <i className="fa-solid fa-paperclip"></i> {idx + 1}
+                                                            </button>
+                                                        ))}
+                                                        {doc.attachment_urls.length > 3 && (
+                                                            <div 
+                                                                style={{ 
+                                                                    background: 'var(--bg)', 
+                                                                    color: 'var(--muted)', 
+                                                                    borderRadius: '6px',
+                                                                    padding: '2px 6px',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 700,
+                                                                    border: '1px solid var(--border)'
+                                                                }}
+                                                                title={`${doc.attachment_urls.length - 3} مرفقات إضافية`}
+                                                            >
+                                                                +{doc.attachment_urls.length - 3}
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 ) : (doc.attachment_url ? (
-                                                    <a href={doc.attachment_url} target="_blank" rel="noreferrer" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'none', fontSize: '0.8rem' }}>
-                                                        <i className="fa-solid fa-file-pdf"></i> عرض
-                                                    </a>
+                                                    <button 
+                                                        onClick={() => { setSelectedFile(doc.attachment_url!); setPreviewRotation(0); }} 
+                                                        className="attachment-badge"
+                                                        style={{ 
+                                                            background: 'rgba(16, 185, 129, 0.1)', 
+                                                            color: '#10b981', 
+                                                            border: '1px solid rgba(16, 185, 129, 0.2)',
+                                                            borderRadius: '6px',
+                                                            padding: '2px 6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 700,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <i className="fa-solid fa-paperclip"></i> عرض
+                                                    </button>
                                                 ) : '-')}
                                             </div>
                                         </td>
@@ -725,6 +776,83 @@ const MailManagement: React.FC = () => {
                                 <button type="submit" className="btn-submit" style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', padding: '10px 25px', borderRadius: '10px', fontWeight: 'bold', boxShadow: '0 4px 12px var(--accent-shadow)' }}>{isEditing ? 'تحديث' : 'تسجيل'}</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* نافذة معاينة الملفات - File Preview Modal */}
+            {selectedFile && (
+                <div className="modal-overlay" style={{ 
+                    position: 'fixed', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0, 
+                    background: 'rgba(0,0,0,0.85)', 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    zIndex: 2100, 
+                    padding: '20px',
+                    backdropFilter: 'blur(10px)'
+                }} onClick={() => setSelectedFile(null)}>
+                    <div style={{ 
+                        position: 'relative', 
+                        maxWidth: '95vw', 
+                        maxHeight: '95vh', 
+                        width: (selectedFile.toLowerCase().endsWith('.pdf') || selectedFile.includes('blob:')) ? '85vw' : 'auto', 
+                        height: (selectedFile.toLowerCase().endsWith('.pdf') || selectedFile.includes('blob:')) ? '90vh' : 'auto', 
+                        background: 'var(--card-bg)', 
+                        borderRadius: '24px', 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        overflow: 'hidden',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        border: '1px solid var(--border)'
+                    }} onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header with actions */}
+                        <div style={{ 
+                            position: 'absolute', 
+                            top: '15px', 
+                            right: '20px', 
+                            display: 'flex', 
+                            gap: '12px', 
+                            zIndex: 10,
+                            background: 'rgba(0,0,0,0.2)',
+                            padding: '8px',
+                            borderRadius: '15px',
+                            backdropFilter: 'blur(5px)'
+                        }}>
+                            <button onClick={() => setPreviewRotation(prev => prev + 90)} style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', borderRadius: '12px', width: '40px', height: '40px', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px var(--accent-shadow)' }} title="تدوير">
+                                <i className="fa-solid fa-rotate-right"></i>
+                            </button>
+                            <a href={selectedFile} download style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '12px', width: '40px', height: '40px', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)' }} title="تحميل">
+                                <i className="fa-solid fa-download"></i>
+                            </a>
+                            <button onClick={() => setSelectedFile(null)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', width: '40px', height: '40px', cursor: 'pointer', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }} title="إغلاق">
+                                &times;
+                            </button>
+                        </div>
+
+                        {selectedFile.toLowerCase().endsWith('.pdf') ? (
+                            <div dir="ltr" style={{ width: '100%', height: '100%', transform: `rotate(${previewRotation}deg)`, transition: 'transform 0.3s ease' }}>
+                                <iframe src={selectedFile} style={{ width: '100%', height: '100%', border: 'none' }} title="PDF Preview" />
+                            </div>
+                        ) : (
+                            <img 
+                                src={selectedFile} 
+                                alt="Preview" 
+                                style={{ 
+                                    maxWidth: '100%', 
+                                    maxHeight: '90vh', 
+                                    objectFit: 'contain',
+                                    transform: `rotate(${previewRotation}deg)`, 
+                                    transition: 'transform 0.3s ease' 
+                                }} 
+                            />
+                        )}
                     </div>
                 </div>
             )}
