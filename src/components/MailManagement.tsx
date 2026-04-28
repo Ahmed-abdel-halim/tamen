@@ -445,14 +445,14 @@ const MailManagement: React.FC = () => {
                             ) : filteredDocs.length > 0 ? (
                                 filteredDocs.map(doc => (
                                     <tr key={doc.id}>
-                                        <td style={{ fontWeight: 800, color: '#2563eb' }}>{doc.referential_number}</td>
+                                        <td style={{ fontWeight: 800, color: 'var(--accent-cyan)' }}>{doc.referential_number}</td>
                                         <td>{new Date(doc.date).toLocaleDateString('ar-LY')}</td>
-                                        <td>{doc.entity?.name || (activeTab === 'incoming' ? doc.sender_name_manual : doc.recipient_name_manual) || '-'}</td>
-                                        <td style={{ fontWeight: 600, color: '#4b5563' }}>{doc.messenger_name || '-'}</td>
-                                        <td>{doc.subject}</td>
-                                        <td>{doc.employee?.name || '-'}</td>
-                                        <td style={{ fontSize: '0.85rem' }}>{doc.registered_at ? new Date(doc.registered_at).toLocaleDateString('ar-LY') : '-'}</td>
-                                        <td style={{ fontSize: '0.85rem', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={doc.description}>{doc.description || '-'}</td>
+                                        <td style={{ color: 'var(--text)' }}>{doc.entity?.name || (activeTab === 'incoming' ? doc.sender_name_manual : doc.recipient_name_manual) || '-'}</td>
+                                        <td style={{ fontWeight: 600, color: 'var(--text)' }}>{doc.messenger_name || '-'}</td>
+                                        <td style={{ color: 'var(--text)' }}>{doc.subject}</td>
+                                        <td style={{ color: 'var(--text)' }}>{doc.employee?.name || '-'}</td>
+                                        <td style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>{doc.registered_at ? new Date(doc.registered_at).toLocaleDateString('ar-LY') : '-'}</td>
+                                        <td style={{ fontSize: '0.85rem', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }} title={doc.description}>{doc.description || '-'}</td>
                                         <td>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                 {doc.attachment_urls && doc.attachment_urls.length > 0 ? (
@@ -501,7 +501,16 @@ const MailManagement: React.FC = () => {
             {/* المودال - Modal */}
             {showModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '850px', width: '90%', borderRadius: '20px', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div className="modal-content custom-scrollbar" style={{ 
+                        maxWidth: '850px', 
+                        width: '90%', 
+                        borderRadius: '20px', 
+                        maxHeight: '90vh', 
+                        overflowY: 'auto',
+                        background: 'var(--card-bg)',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}>
                         <div className="modal-header" style={{ padding: '10px 15px', position: 'sticky', top: 0, background: 'var(--card-bg)', zIndex: 10 }}>
                             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
                                 <i className={activeTab === 'incoming' ? 'fa-solid fa-file-import' : 'fa-solid fa-file-export'} style={{ marginLeft: '10px', color: 'var(--primary)' }}></i>
@@ -519,7 +528,7 @@ const MailManagement: React.FC = () => {
                                         value={formData.referential_number}
                                         onChange={handleInputChange}
                                         placeholder="مثال: MLI-IN-2026-0001"
-                                        style={{ border: '1px solid #3b82f6', fontWeight: 'bold', color: '#2563eb' }}
+                                        style={{ border: '1px solid var(--accent-cyan)', fontWeight: 'bold', color: 'var(--accent-cyan)', background: 'var(--input-bg)' }}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -532,6 +541,10 @@ const MailManagement: React.FC = () => {
                                         <option value="">-- اختر جهة --</option>
                                         {entities.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                                     </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>تاريخ التسجيل</label>
+                                    <input type="date" name="registered_at" value={formData.registered_at} onChange={handleInputChange} />
                                 </div>
                                 {!formData.entity_id && (
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -563,7 +576,7 @@ const MailManagement: React.FC = () => {
                                                 value={activeTab === 'incoming' ? formData.sender_name_manual : formData.recipient_name_manual}
                                                 onChange={handleInputChange}
                                                 placeholder="اكتب الاسم هنا..."
-                                                style={{ flex: '1.5' }}
+                                                style={{ flex: '1' }}
                                             />
                                         </div>
                                     </div>
@@ -579,18 +592,25 @@ const MailManagement: React.FC = () => {
                                         {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                     </select>
                                 </div>
-                                <div className="form-group" style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <label style={{ margin: 0, fontWeight: 700, color: '#475569' }}>بيانات المندوب / الشخص المستلم</label>
-                                        <button type="button" onClick={recallLastMessenger} style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--accent-cyan)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px var(--accent-shadow)' }}>
-                                            <i className="fa-solid fa-clock-rotate-left"></i> استدعاء آخر مندوب للجهة
+                                <div className="form-group" style={{ 
+                                    gridColumn: 'span 2', 
+                                    background: 'rgba(var(--primary-rgb), 0.03)', 
+                                    padding: '20px', 
+                                    borderRadius: '16px', 
+                                    border: '1px solid var(--border)',
+                                    marginTop: '10px'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                        <label style={{ margin: 0, fontWeight: 800, color: 'var(--primary)', fontSize: '0.95rem' }}>بيانات المندوب / الشخص المستلم</label>
+                                        <button type="button" onClick={recallLastMessenger} style={{ padding: '8px 16px', fontSize: '12px', background: 'var(--accent-cyan)', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 10px var(--accent-shadow)', transition: 'all 0.3s ease' }}>
+                                            <i className="fa-solid fa-clock-rotate-left" style={{ marginLeft: '5px' }}></i> استدعاء آخر مندوب للجهة
                                         </button>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div className="inner-group">
-                                            <label style={{ fontSize: '12px', color: '#64748b' }}>اختيار من الموظفين</label>
+                                            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px', display: 'block' }}>اختيار من الموظفين</label>
                                             <select
-                                                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
                                                 value={users.some(u => u.name === formData.messenger_name) ? formData.messenger_name : "custom"}
                                                 onChange={(e) => {
                                                     const val = e.target.value;
@@ -610,32 +630,28 @@ const MailManagement: React.FC = () => {
                                             </select>
                                         </div>
                                         <div className="inner-group">
-                                            <label style={{ fontSize: '12px', color: '#64748b' }}>الاسم (يدوي)</label>
+                                            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px', display: 'block' }}>الاسم (يدوي)</label>
                                             <input
                                                 type="text"
                                                 name="messenger_name"
                                                 value={formData.messenger_name}
                                                 onChange={handleInputChange}
                                                 placeholder="اسم المندوب..."
-                                                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
                                             />
                                         </div>
                                         <div className="inner-group" style={{ gridColumn: 'span 2' }}>
-                                            <label style={{ fontSize: '12px', color: '#64748b' }}>رقم هاتف المندوب</label>
+                                            <label style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px', display: 'block' }}>رقم هاتف المندوب</label>
                                             <input
                                                 type="text"
                                                 name="messenger_phone"
                                                 value={formData.messenger_phone}
                                                 onChange={handleInputChange}
                                                 placeholder="رقم الهاتف (اختياري)..."
-                                                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
                                             />
                                         </div>
                                     </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>تاريخ التسجيل</label>
-                                    <input type="date" name="registered_at" value={formData.registered_at} onChange={handleInputChange} />
                                 </div>
                                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                     <label>ملاحظات إضافية</label>
@@ -648,9 +664,9 @@ const MailManagement: React.FC = () => {
                                         <label>المرفقات الحالية</label>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
                                             {existingAttachments.map((path, idx) => (
-                                                <div key={idx} style={{ position: 'relative', background: '#f1f5f9', padding: '8px 30px 8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div key={idx} style={{ position: 'relative', background: 'rgba(var(--primary-rgb), 0.05)', padding: '8px 30px 8px 12px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
-                                                    <span style={{ fontSize: '12px' }}>مرفق {idx + 1}</span>
+                                                    <span style={{ fontSize: '12px', color: 'var(--text)' }}>مرفق {idx + 1}</span>
                                                     <button type="button" onClick={() => removeExistingAttachment(path)} style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}>
                                                         <i className="fa-solid fa-circle-xmark"></i>
                                                     </button>
@@ -667,9 +683,9 @@ const MailManagement: React.FC = () => {
                                     {attachments.length > 0 && (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                             {attachments.map((file, idx) => (
-                                                <div key={idx} style={{ position: 'relative', background: '#ecfdf5', padding: '8px 30px 8px 12px', borderRadius: '8px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div key={idx} style={{ position: 'relative', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 30px 8px 12px', borderRadius: '10px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <i className="fa-solid fa-file-pdf" style={{ color: '#10b981' }}></i>
-                                                    <span style={{ fontSize: '12px' }}>{file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}</span>
+                                                    <span style={{ fontSize: '12px', color: 'var(--text)' }}>{file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}</span>
                                                     <button type="button" onClick={() => removeAttachment(idx)} style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}>
                                                         <i className="fa-solid fa-circle-xmark"></i>
                                                     </button>
@@ -680,15 +696,25 @@ const MailManagement: React.FC = () => {
                                 </div>
 
                                 {activeTab === 'outgoing' && formData.entity_id && (
-                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px', background: '#eff6ff', padding: '8px', borderRadius: '8px', gridColumn: 'span 2' }}>
+                                    <div className="form-group" style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '12px', 
+                                        marginTop: '15px', 
+                                        background: 'rgba(59, 130, 246, 0.1)', 
+                                        padding: '15px', 
+                                        borderRadius: '12px', 
+                                        gridColumn: 'span 2',
+                                        border: '1px solid rgba(59, 130, 246, 0.2)'
+                                    }}>
                                         <input
                                             type="checkbox"
                                             id="send_email"
                                             checked={formData.send_email}
                                             onChange={(e) => setFormData(prev => ({ ...prev, send_email: e.target.checked }))}
-                                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                            style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: 'var(--accent-cyan)' }}
                                         />
-                                        <label htmlFor="send_email" style={{ marginBottom: 0, cursor: 'pointer', fontWeight: 700, color: '#1e40af', fontSize: '0.9rem' }}>
+                                        <label htmlFor="send_email" style={{ marginBottom: 0, cursor: 'pointer', fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem' }}>
                                             إرسال نسخة إلكترونية عبر البريد للجهة المختارة ({entities.find(e => e.id.toString() === formData.entity_id)?.email || 'لا يوجد بريد مسجل'})
                                         </label>
                                     </div>
