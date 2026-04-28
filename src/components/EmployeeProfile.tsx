@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
-import { API_BASE_URL, BACKEND_URL } from "../config/api";
+import { API_BASE_URL, BACKEND_URL, STORAGE_URL } from "../config/api";
 
 type User = {
   id: number;
@@ -78,9 +78,16 @@ function resolvePublicUrl(path: string | null | undefined): string {
   if (path.startsWith('http')) return path;
   if (path.startsWith('/img/')) return `${window.location.origin}${path}`;
   if (path.startsWith('img/')) return `${window.location.origin}/${path}`;
-  if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
-  if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
-  return `${BACKEND_URL}/storage/${path}`;
+  
+  if (path.startsWith('/storage/')) {
+    const p = path.replace('/storage/', '');
+    return `${STORAGE_URL}/${p}`;
+  }
+  if (path.startsWith('storage/')) {
+    const p = path.replace('storage/', '');
+    return `${STORAGE_URL}/${p}`;
+  }
+  return `${STORAGE_URL}/${path}`;
 }
 
 const DOCUMENT_TYPES = [
