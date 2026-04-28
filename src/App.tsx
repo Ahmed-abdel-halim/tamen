@@ -312,10 +312,10 @@ const menuSections: SidebarSection[] = [
         label: 'التقارير المالية', icon: 'fa-solid fa-file-contract', children: [
           { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
           { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
-          { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
-          { label: 'كشف إغلاق الحساب الشهري', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
-          { label: 'تقرير مصلحة الضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
-          { label: 'تقرير الضمان الاجتماعي', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
+          { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
+          { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+          { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
+          { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
           ...(SHOW_BANK_RECONCILIATION
             ? [{ label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const }]
             : []),
@@ -367,8 +367,8 @@ const createMenuSections = (
     'تأمين نقل النقدية': { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
     'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
     'كشف حساب الوكيل': { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
-    'إغلاق حساب شهري': { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
-    'كشف إغلاق الحساب الشهري': { label: 'كشف إغلاق الحساب الشهري', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+    'إغلاق حساب شهري': { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
+    'كشف إغلاق الحساب الشهري': { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
     'إيصالات القبض': { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
     'التسويات والعمولات': { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
     'التحصيلات البنكية': { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' },
@@ -391,8 +391,8 @@ const createMenuSections = (
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
     'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
-    'تقرير مصلحة الضرائب': { label: 'تقرير مصلحة الضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
-    'تقرير الضمان الاجتماعي': { label: 'تقرير الضمان الاجتماعي', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
+    'تقرير مصلحة الضرائب': { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
+    'تقرير الضمان الاجتماعي': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
   };
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي

@@ -35,6 +35,8 @@ interface MailDocument {
     employee_id: number;
     employee?: User;
     attachment_url: string;
+    attachment_urls: string[];
+    attachments?: string[];
     pages_count: number;
     created_at: string;
 }
@@ -73,7 +75,8 @@ const MailManagement: React.FC = () => {
         send_email: false
     });
 
-    const [attachment, setAttachment] = useState<File | null>(null);
+    const [attachments, setAttachments] = useState<File[]>([]);
+    const [existingAttachments, setExistingAttachments] = useState<string[]>([]);
 
     useEffect(() => {
         if (type && (type === 'incoming' || type === 'outgoing')) {
@@ -99,7 +102,7 @@ const MailManagement: React.FC = () => {
 
             const [entitiesRes, usersRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/external-entities`, { headers }),
-                fetch(`${API_BASE_URL}/users`, { headers })
+                fetch(`${API_BASE_URL}/users?active=1&per_page=1000`, { headers })
             ]);
 
             if (entitiesRes.ok) {
@@ -176,9 +179,18 @@ const MailManagement: React.FC = () => {
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setAttachment(e.target.files[0]);
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            setAttachments(prev => [...prev, ...newFiles]);
         }
+    };
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const removeExistingAttachment = (path: string) => {
+        setExistingAttachments(prev => prev.filter(p => p !== path));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -189,8 +201,15 @@ const MailManagement: React.FC = () => {
                 data.append(key, String(value));
             }
         });
-        if (attachment) data.append('attachment', attachment);
-        if (isEditing) data.append('_method', 'PUT');
+
+        attachments.forEach((file) => {
+            data.append('attachments[]', file);
+        });
+
+        if (isEditing) {
+            data.append('_method', 'PUT');
+            data.append('existing_attachments', JSON.stringify(existingAttachments));
+        }
 
         const url = isEditing ? `${API_BASE_URL}/mail-documents/${currentDocId}` : `${API_BASE_URL}/mail-documents`;
 
@@ -235,7 +254,8 @@ const MailManagement: React.FC = () => {
             pages_count: '1',
             send_email: false
         });
-        setAttachment(null);
+        setAttachments([]);
+        setExistingAttachments([]);
         setIsEditing(false);
         setCurrentDocId(null);
     };
@@ -257,6 +277,7 @@ const MailManagement: React.FC = () => {
             pages_count: doc.pages_count.toString(),
             send_email: false
         });
+        setExistingAttachments(doc.attachments || []);
         setIsEditing(true);
         setCurrentDocId(doc.id);
         setShowModal(true);
@@ -298,7 +319,7 @@ const MailManagement: React.FC = () => {
     const stats = useMemo(() => {
         return {
             total: documents.length,
-            withAttachment: documents.filter(d => d.attachment_url).length,
+            withAttachment: documents.filter(d => d.attachment_url || (d.attachment_urls && d.attachment_urls.length > 0)).length,
             today: documents.filter(d => d.date.split('T')[0] === new Date().toISOString().split('T')[0]).length
         };
     }, [documents]);
@@ -411,13 +432,13 @@ const MailManagement: React.FC = () => {
                                 <th>المسؤول</th>
                                 <th>تاريخ التسجيل</th>
                                 <th>ملاحظات</th>
-                                <th>المرفق</th>
+                                <th>المرفقات</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px' }}>جاري التحميل...</td></tr>
+                                <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px' }}>جاري التحميل...</td></tr>
                             ) : filteredDocs.length > 0 ? (
                                 filteredDocs.map(doc => (
                                     <tr key={doc.id}>
@@ -430,18 +451,27 @@ const MailManagement: React.FC = () => {
                                         <td style={{ fontSize: '0.85rem' }}>{doc.registered_at ? new Date(doc.registered_at).toLocaleDateString('ar-LY') : '-'}</td>
                                         <td style={{ fontSize: '0.85rem', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={doc.description}>{doc.description || '-'}</td>
                                         <td>
-                                            {doc.attachment_url ? (
-                                                <a href={doc.attachment_url} target="_blank" rel="noreferrer" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>
-                                                    <i className="fa-solid fa-file-pdf"></i> عرض
-                                                </a>
-                                            ) : '-'}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                {doc.attachment_urls && doc.attachment_urls.length > 0 ? (
+                                                    doc.attachment_urls.map((url, idx) => (
+                                                        <a key={idx} href={url} target="_blank" rel="noreferrer" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'none', fontSize: '0.8rem' }}>
+                                                            <i className="fa-solid fa-file-pdf"></i> عرض {doc.attachment_urls.length > 1 ? (idx + 1) : ''}
+                                                        </a>
+                                                    ))
+                                                ) : (doc.attachment_url ? (
+                                                    <a href={doc.attachment_url} target="_blank" rel="noreferrer" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'none', fontSize: '0.8rem' }}>
+                                                        <i className="fa-solid fa-file-pdf"></i> عرض
+                                                    </a>
+                                                ) : '-')}
+                                            </div>
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                                {doc.attachment_url && (
+                                                {(doc.attachment_url || (doc.attachment_urls && doc.attachment_urls.length > 0)) && (
                                                     <button
                                                         onClick={() => {
-                                                            const text = `*مراسلة من شركة المدار الليبي للتأمين*%0A*الموضوع:* ${doc.subject}%0A*الرقم الإشاري:* ${doc.referential_number}%0A*رابط الملف:* ${window.location.origin}${doc.attachment_url}`;
+                                                            const mainUrl = doc.attachment_urls?.[0] || doc.attachment_url;
+                                                            const text = `*مراسلة من شركة المدار الليبي للتأمين*%0A*الموضوع:* ${doc.subject}%0A*الرقم الإشاري:* ${doc.referential_number}%0A*رابط الملف:* ${window.location.origin}${mainUrl}`;
                                                             const phone = doc.messenger_phone || '';
                                                             window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
                                                         }}
@@ -458,7 +488,7 @@ const MailManagement: React.FC = () => {
                                     </tr>
                                 ))
                             ) : (
-                                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px' }}>لا توجد سجلات</td></tr>
+                                <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px' }}>لا توجد سجلات</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -468,8 +498,8 @@ const MailManagement: React.FC = () => {
             {/* المودال - Modal */}
             {showModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '850px', width: '90%', borderRadius: '20px', maxHeight: 'none', overflow: 'visible' }}>
-                        <div className="modal-header" style={{ padding: '10px 15px' }}>
+                    <div className="modal-content" style={{ maxWidth: '850px', width: '90%', borderRadius: '20px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="modal-header" style={{ padding: '10px 15px', position: 'sticky', top: 0, background: 'var(--card-bg)', zIndex: 10 }}>
                             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
                                 <i className={activeTab === 'incoming' ? 'fa-solid fa-file-import' : 'fa-solid fa-file-export'} style={{ marginLeft: '10px', color: 'var(--primary)' }}></i>
                                 {isEditing ? 'تعديل البيانات' : `تسجيل بريد ${activeTab === 'incoming' ? 'وارد' : 'صادر'} جديد`}
@@ -597,9 +627,42 @@ const MailManagement: React.FC = () => {
                                     <label>ملاحظات إضافية</label>
                                     <textarea name="description" value={formData.description} onChange={handleInputChange} rows={2} style={{ width: '100%', borderRadius: '10px', border: '1px solid var(--border)', padding: '10px' }}></textarea>
                                 </div>
+
+                                {/* المرفقات الحالية (عند التعديل) */}
+                                {isEditing && existingAttachments.length > 0 && (
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label>المرفقات الحالية</label>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+                                            {existingAttachments.map((path, idx) => (
+                                                <div key={idx} style={{ position: 'relative', background: '#f1f5f9', padding: '8px 30px 8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                                                    <span style={{ fontSize: '12px' }}>مرفق {idx + 1}</span>
+                                                    <button type="button" onClick={() => removeExistingAttachment(path)} style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}>
+                                                        <i className="fa-solid fa-circle-xmark"></i>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                    <label>رفع الوثيقة (PDF / صورة)</label>
-                                    <input type="file" onChange={handleFileChange} accept=".pdf,image/*" />
+                                    <label>إضافة وثائق جديدة (PDF / صور)</label>
+                                    <input type="file" onChange={handleFileChange} accept=".pdf,image/*" multiple style={{ marginBottom: '10px' }} />
+                                    
+                                    {attachments.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                            {attachments.map((file, idx) => (
+                                                <div key={idx} style={{ position: 'relative', background: '#ecfdf5', padding: '8px 30px 8px 12px', borderRadius: '8px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <i className="fa-solid fa-file-pdf" style={{ color: '#10b981' }}></i>
+                                                    <span style={{ fontSize: '12px' }}>{file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}</span>
+                                                    <button type="button" onClick={() => removeAttachment(idx)} style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}>
+                                                        <i className="fa-solid fa-circle-xmark"></i>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {activeTab === 'outgoing' && formData.entity_id && (
@@ -617,7 +680,7 @@ const MailManagement: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="form-actions" style={{ marginTop: '10px' }}>
+                            <div className="form-actions" style={{ marginTop: '20px', position: 'sticky', bottom: 0, background: 'var(--card-bg)', padding: '10px 0', borderTop: '1px solid var(--border)' }}>
                                 <button type="button" className="btn-cancel" onClick={() => setShowModal(false)} style={{ borderRadius: '10px' }}>إلغاء</button>
                                 <button type="submit" className="btn-submit" style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', padding: '10px 25px', borderRadius: '10px', fontWeight: 'bold', boxShadow: '0 4px 12px var(--accent-shadow)' }}>{isEditing ? 'تحديث' : 'تسجيل'}</button>
                             </div>

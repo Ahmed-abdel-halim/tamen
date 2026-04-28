@@ -124,7 +124,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                           borderRadius: '8px',
                           padding: '4px 0',
                           marginLeft: '8px',
-                          marginRight: '8px',
+                          marginRight: '4px',
                           border: '1px solid var(--border)'
                         }}>
                           {item.children.map((child) => (
@@ -135,7 +135,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                     type="button"
                                     onClick={() => toggleDropdown(child.label)}
                                     style={{ 
-                                      paddingRight: '32px',
+                                      paddingRight: '16px',
                                       paddingTop: '6px',
                                       paddingBottom: '6px',
                                       borderRadius: '4px',
@@ -162,7 +162,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                       borderRadius: '6px',
                                       padding: '4px 0',
                                       marginLeft: '12px',
-                                      marginRight: '4px',
+                                      marginRight: '2px',
                                       border: '1px solid var(--border)'
                                     }}>
                                       {child.children.map((grandchild) => (
@@ -174,7 +174,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                                 ((location.pathname === grandchild.to || location.pathname + location.search === grandchild.to) ? " active" : "")
                                               }
                                               style={{ 
-                                                paddingRight: '40px',
+                                                paddingRight: '24px',
                                                 paddingTop: '6px',
                                                 paddingBottom: '6px',
                                                 borderRadius: '4px',
@@ -190,7 +190,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                             <button 
                                               type="button" 
                                               style={{ 
-                                                paddingRight: '40px',
+                                                paddingRight: '24px',
                                                 paddingTop: '6px',
                                                 paddingBottom: '6px',
                                                 borderRadius: '4px',
@@ -216,7 +216,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                     ((location.pathname === child.to || location.pathname + location.search === child.to) ? " active" : "")
                                   }
                                   style={{ 
-                                    paddingRight: '32px',
+                                    paddingRight: '16px',
                                     paddingTop: '6px',
                                     paddingBottom: '6px',
                                     borderRadius: '4px',
@@ -232,7 +232,7 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                 <button 
                                   type="button" 
                                   style={{ 
-                                    paddingRight: '32px',
+                                    paddingRight: '16px',
                                     paddingTop: '6px',
                                     paddingBottom: '6px',
                                     borderRadius: '4px',

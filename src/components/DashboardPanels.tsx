@@ -234,7 +234,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       statistics: statistics.cargo_insurance_documents?.toString() || '0' 
     },
     { label: 'كشف حساب للوكيل', icon: 'fa-solid fa-file-invoice', route: '/reports/branch-agent-account', color: 'blue' },
-    { label: 'إغلاق حساب شهري', icon: 'fa-solid fa-calendar-days', route: '/reports/monthly-account-closure', color: 'blue' },
+    { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-days', route: '/reports/monthly-account-closure', color: 'blue' },
   ];
 
   // تصفية الخدمات بناءً على الصلاحيات

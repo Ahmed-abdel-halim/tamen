@@ -166,7 +166,7 @@ export default function InventoryManagement() {
       const agentsData = await agentsRes.json();
       setAgents(Array.isArray(agentsData) ? agentsData : []);
 
-      const employeesRes = await fetch(`${API_BASE_URL}/users`, { headers });
+      const employeesRes = await fetch(`${API_BASE_URL}/users?active=1&per_page=1000`, { headers });
       const employeesData = await employeesRes.json();
       const employeesList = Array.isArray(employeesData)
         ? employeesData
