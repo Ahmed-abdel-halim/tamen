@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showToast } from "./Toast";
-import { API_BASE_URL, BACKEND_URL } from "../config/api";
+import { API_BASE_URL, BACKEND_URL, STORAGE_URL } from "../config/api";
 
 
 
@@ -675,7 +675,7 @@ export default function EditBranchAgent() {
                 {existingPersonalPhoto && !personalPhoto && (
                   <div style={{ marginBottom: '10px' }}>
                     <img 
-                      src={`${BACKEND_URL}/storage/${existingPersonalPhoto}`} 
+                      src={`${STORAGE_URL}/${existingPersonalPhoto}`} 
                       alt="صورة شخصية حالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -702,7 +702,7 @@ export default function EditBranchAgent() {
                 {existingIdentityPhoto && !identityPhoto && (
                   <div style={{ marginBottom: '10px' }}>
                     <img 
-                      src={`${BACKEND_URL}/storage/${existingIdentityPhoto}`} 
+                      src={`${STORAGE_URL}/${existingIdentityPhoto}`} 
                       alt="صورة إثبات الهوية حالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -732,7 +732,7 @@ export default function EditBranchAgent() {
                 {existingNationalIdPhoto && !nationalIdPhoto && (
                   <div style={{ marginBottom: '10px' }}>
                     <img 
-                      src={`${BACKEND_URL}/storage/${existingNationalIdPhoto}`} 
+                      src={`${STORAGE_URL}/${existingNationalIdPhoto}`} 
                       alt="صورة الرقم الوطني الحالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -761,7 +761,7 @@ export default function EditBranchAgent() {
                   <div style={{ marginBottom: '10px' }}>
                     {existingContractPhoto.endsWith('.pdf') ? (
                       <a 
-                        href={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
+                        href={`${STORAGE_URL}/${existingContractPhoto}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         style={{ display: 'inline-block', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
@@ -771,7 +771,7 @@ export default function EditBranchAgent() {
                       </a>
                     ) : (
                       <img 
-                        src={`${BACKEND_URL}/storage/${existingContractPhoto}`} 
+                        src={`${STORAGE_URL}/${existingContractPhoto}`} 
                         alt="صورة العقد الحالية"
                         style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                       />

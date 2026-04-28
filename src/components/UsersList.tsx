@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
-import { API_BASE_URL, BACKEND_URL } from "../config/api";
+import { API_BASE_URL, BACKEND_URL, STORAGE_URL } from "../config/api";
 
 type User = {
   id: number;
@@ -94,18 +94,16 @@ function resolvePublicUrl(path: string | null | undefined): string {
   // Clean path
   let cleanPath = path.startsWith('/') ? path.slice(1) : path;
 
-  // Special case for /img/ which might be in frontend or backend
-  // In development, they are often in frontend/public
-  // In production, we expect them to be in backend/public/img
   if (cleanPath.startsWith('img/')) {
     return `${window.location.origin}/${cleanPath}`;
   }
 
   if (cleanPath.startsWith('storage/')) {
-    return `${BACKEND_URL}/${cleanPath}`;
+    const p = cleanPath.replace('storage/', '');
+    return `${STORAGE_URL}/${p}`;
   }
 
-  return `${BACKEND_URL}/storage/${cleanPath}`;
+  return `${STORAGE_URL}/${cleanPath}`;
 }
 
 const INSURANCE_TYPES = [
