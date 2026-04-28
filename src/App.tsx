@@ -287,12 +287,12 @@ const menuSections: SidebarSection[] = [
       },
       { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
       { 
-        label: 'نظام البريد', icon: 'fa-solid fa-envelope-open-text', children: [
+        label: 'البريد الصادر والوارد', icon: 'fa-solid fa-envelope-open-text', children: [
           { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
           { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
         ]
       },
-      { label: 'ارشيف الوثائق المنتهيه', icon: 'fa-solid fa-box-archive', to: '/archive' },
+      { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
   },
   {
@@ -391,7 +391,7 @@ const createMenuSections = (
     'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
     'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' }, // للتوافق القديم
-    'الأرشيف': { label: 'ارشيف الوثائق المنتهيه', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'الأرشيف': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
     'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },

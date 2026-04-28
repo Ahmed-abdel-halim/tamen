@@ -58,6 +58,9 @@ const MailManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEntity, setFilterEntity] = useState('');
     const [filterMonth, setFilterMonth] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [submitting, setSubmitting] = useState(false);
     const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
     const [formData, setFormData] = useState({
@@ -198,6 +201,7 @@ const MailManagement: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSubmitting(true);
         const data = new FormData();
         Object.entries(formData).forEach(([key, value]) => {
             if (value !== null && value !== undefined) {
@@ -237,6 +241,8 @@ const MailManagement: React.FC = () => {
             }
         } catch (error) {
             showToast('خطأ في الاتصال بالخادم', 'error');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -289,18 +295,34 @@ const MailManagement: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm('هل أنت متأكد؟')) return;
+        setDeletingId(id);
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deletingId) return;
+        
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/mail-documents/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/mail-documents/${deletingId}`, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 }
             });
-            if (response.ok) { showToast('تم الحذف', 'success'); fetchDocuments(); }
-        } catch (error) { showToast('خطأ في الاتصال', 'error'); }
+            if (response.ok) {
+                showToast('تم الحذف بنجاح', 'success');
+                fetchDocuments();
+            } else {
+                showToast('حدث خطأ أثناء الحذف', 'error');
+            }
+        } catch (error) {
+            showToast('خطأ في الاتصال بالخادم', 'error');
+        } finally {
+            setShowDeleteModal(false);
+            setDeletingId(null);
+        }
     };
 
     const filteredDocs = documents.filter(doc => {
@@ -550,8 +572,8 @@ const MailManagement: React.FC = () => {
 
             {/* المودال - Modal */}
             {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content custom-scrollbar" style={{ 
+                <div className="modal-overlay" onClick={() => !submitting && setShowModal(false)}>
+                    <div className="modal-content custom-scrollbar" onClick={e => e.stopPropagation()} style={{ 
                         maxWidth: '850px', 
                         width: '90%', 
                         borderRadius: '20px', 
@@ -770,11 +792,122 @@ const MailManagement: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="form-actions" style={{ marginTop: '20px', position: 'sticky', bottom: 0, background: 'var(--card-bg)', padding: '10px 0', borderTop: '1px solid var(--border)' }}>
-                                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)} style={{ borderRadius: '10px' }}>إلغاء</button>
-                                <button type="submit" className="btn-submit" style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', padding: '10px 25px', borderRadius: '10px', fontWeight: 'bold', boxShadow: '0 4px 12px var(--accent-shadow)' }}>{isEditing ? 'تحديث' : 'تسجيل'}</button>
+                            <div className="form-actions" style={{ 
+                                marginTop: '20px', 
+                                position: 'sticky', 
+                                bottom: 0, 
+                                background: 'var(--card-bg)', 
+                                padding: '10px 0', 
+                                borderTop: '1px solid var(--border)',
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '10px'
+                            }}>
+                                <button 
+                                    type="button" 
+                                    className="btn-cancel" 
+                                    onClick={() => setShowModal(false)} 
+                                    disabled={submitting}
+                                    style={{ borderRadius: '10px' }}
+                                >
+                                    إلغاء
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="btn-submit" 
+                                    disabled={submitting}
+                                    style={{ 
+                                        background: 'var(--accent-cyan)', 
+                                        color: '#fff', 
+                                        border: 'none', 
+                                        padding: '10px 25px', 
+                                        borderRadius: '10px', 
+                                        fontWeight: 'bold', 
+                                        boxShadow: '0 4px 12px var(--accent-shadow)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        minWidth: '120px',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <i className="fa-solid fa-circle-notch fa-spin"></i>
+                                            جاري الرفع...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fa-solid fa-check"></i>
+                                            {isEditing ? 'تحديث' : 'تسجيل'}
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* مودال تأكيد الحذف - Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="modal-overlay" onClick={() => setShowDeleteModal(false)} style={{ zIndex: 2200 }}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ 
+                        maxWidth: '400px', 
+                        textAlign: 'center', 
+                        padding: '30px',
+                        borderRadius: '24px',
+                        background: 'var(--card-bg)',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        <div style={{ 
+                            width: '70px', 
+                            height: '70px', 
+                            background: 'rgba(239, 68, 68, 0.1)', 
+                            color: '#ef4444', 
+                            borderRadius: '50%', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontSize: '32px', 
+                            margin: '0 auto 20px' 
+                        }}>
+                            <i className="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 style={{ margin: '0 0 10px', fontSize: '1.5rem', color: 'var(--text)' }}>تأكيد الحذف</h3>
+                        <p style={{ color: 'var(--muted)', marginBottom: '25px', lineHeight: '1.6' }}>هل أنت متأكد من رغبتك في حذف هذا المستند؟ لا يمكن التراجع عن هذه العملية.</p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button 
+                                onClick={confirmDelete}
+                                style={{ 
+                                    background: '#ef4444', 
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    padding: '12px 25px', 
+                                    borderRadius: '12px', 
+                                    fontWeight: 700, 
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
+                                نعم، احذف
+                            </button>
+                            <button 
+                                onClick={() => { setShowDeleteModal(false); setDeletingId(null); }}
+                                style={{ 
+                                    background: 'var(--border)', 
+                                    color: 'var(--text)', 
+                                    border: 'none', 
+                                    padding: '12px 25px', 
+                                    borderRadius: '12px', 
+                                    fontWeight: 700, 
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                إلغاء
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
