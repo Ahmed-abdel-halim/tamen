@@ -72,7 +72,8 @@ const MailManagement: React.FC = () => {
         messenger_phone: '',
         employee_id: '',
         pages_count: '1',
-        send_email: false
+        send_email: false,
+        referential_number: ''
     });
 
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -252,7 +253,8 @@ const MailManagement: React.FC = () => {
             messenger_phone: '',
             employee_id: '',
             pages_count: '1',
-            send_email: false
+            send_email: false,
+            referential_number: ''
         });
         setAttachments([]);
         setExistingAttachments([]);
@@ -275,7 +277,8 @@ const MailManagement: React.FC = () => {
             messenger_phone: doc.messenger_phone || '',
             employee_id: doc.employee_id?.toString() || '',
             pages_count: doc.pages_count.toString(),
-            send_email: false
+            send_email: false,
+            referential_number: doc.referential_number || ''
         });
         setExistingAttachments(doc.attachments || []);
         setIsEditing(true);
@@ -508,6 +511,17 @@ const MailManagement: React.FC = () => {
                         </div>
                         <form onSubmit={handleSubmit} className="user-form" style={{ padding: '15px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div className="form-group">
+                                    <label>الرقم الإشاري <span style={{ fontSize: '10px', color: '#94a3b8' }}>(اختياري - يترك فارغاً للتوليد التلقائي)</span></label>
+                                    <input
+                                        type="text"
+                                        name="referential_number"
+                                        value={formData.referential_number}
+                                        onChange={handleInputChange}
+                                        placeholder="مثال: MLI-IN-2026-0001"
+                                        style={{ border: '1px solid #3b82f6', fontWeight: 'bold', color: '#2563eb' }}
+                                    />
+                                </div>
                                 <div className="form-group">
                                     <label>تاريخ الرسالة <span className="required">*</span></label>
                                     <input type="date" name="date" value={formData.date} onChange={handleInputChange} required />
