@@ -48,7 +48,7 @@ export default function BranchesAgentsList() {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/branches-agents`, {
-        headers: { 
+        headers: {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
@@ -69,10 +69,10 @@ export default function BranchesAgentsList() {
       ba.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (ba.phone && ba.phone.includes(searchQuery)) ||
       (ba.agency_number && ba.agency_number.includes(searchQuery));
-    
+
     const matchesType = filterType === 'all' || ba.type === filterType;
     const matchesStatus = filterStatus === 'all' || ba.status === filterStatus;
-    
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
@@ -90,7 +90,7 @@ export default function BranchesAgentsList() {
     iframe.style.height = '0';
     iframe.src = `${API_BASE_URL}/branches-agents/${ba.id}/print?t=${new Date().getTime()}`;
     document.body.appendChild(iframe);
-    
+
     setTimeout(() => {
       if (document.body.contains(iframe)) {
         document.body.removeChild(iframe);
@@ -134,15 +134,15 @@ export default function BranchesAgentsList() {
       ['نوع المنشأة', escapeHtml(ba.type)],
     ];
 
-    const permissionsHtml = (ba.authorized_documents || []).length > 0 
+    const permissionsHtml = (ba.authorized_documents || []).length > 0
       ? (ba.authorized_documents || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')
       : '<li>لا توجد صلاحيات محددة</li>';
 
-    const fixedCustodyHtml = (ba.fixed_custodies || []).length > 0 
+    const fixedCustodyHtml = (ba.fixed_custodies || []).length > 0
       ? (ba.fixed_custodies || []).map(c => `<tr><td>${escapeHtml(c.description)}</td><td>${Number(c.quantity)}</td></tr>`).join('')
       : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة ثابتة</td></tr>';
 
-    const consumedCustodyHtml = (ba.consumed_custodies || []).length > 0 
+    const consumedCustodyHtml = (ba.consumed_custodies || []).length > 0
       ? (ba.consumed_custodies || []).map(c => `<tr><td>${escapeHtml(c.description)}</td><td>${Number(c.quantity)}</td></tr>`).join('')
       : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة مستهلكة</td></tr>';
 
@@ -404,12 +404,12 @@ export default function BranchesAgentsList() {
 
   const handleDeleteBranchAgent = async () => {
     if (!showDeleteModal) return;
-    
+
     setDeleting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/branches-agents/${showDeleteModal.id}`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }
@@ -466,7 +466,7 @@ export default function BranchesAgentsList() {
 
       const data = await res.json();
       showToast(data.message, 'success');
-      
+
       // Update local state
       setBranchesAgents(prev => prev.map(item => {
         if (item.id === ba.id && item.user) {
@@ -488,11 +488,11 @@ export default function BranchesAgentsList() {
         <span>إدارة الفروع والوكلاء / قائمة الفروع والوكلاء</span>
       </div>
 
-      <div className="users-filters-box" style={{ 
-        background: '#ffffff', 
-        padding: '25px', 
-        borderRadius: '16px', 
-        border: '1px solid #e2e8f0', 
+      <div className="users-filters-box" style={{
+        background: '#ffffff',
+        padding: '25px',
+        borderRadius: '16px',
+        border: '1px solid #e2e8f0',
         marginBottom: '30px',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
       }}>
@@ -501,8 +501,8 @@ export default function BranchesAgentsList() {
             <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 800 }}>الفلاتر والبحث</h3>
             <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>إدارة وتصفية قائمة الفروع والوكلاء المعتمدين في النظام</p>
           </div>
-          <button 
-            className="primary add-user-btn" 
+          <button
+            className="primary add-user-btn"
             onClick={() => navigate('/branches-agents/create')}
             style={{ height: '42px', padding: '0 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700 }}
           >
@@ -515,9 +515,9 @@ export default function BranchesAgentsList() {
           <div className="filter-group">
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>بحث سريع</label>
             <div className="users-search-bar" style={{ marginBottom: 0, width: '100%' }}>
-              <input 
-                type="text" 
-                placeholder="اسم الوكالة، الكود، الهاتف..." 
+              <input
+                type="text"
+                placeholder="اسم الوكالة، الكود، الهاتف..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="users-search-input"
@@ -531,8 +531,8 @@ export default function BranchesAgentsList() {
 
           <div className="filter-group">
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>نوع المنشأة</label>
-            <select 
-              value={filterType} 
+            <select
+              value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               className="users-search-input"
               style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
@@ -545,8 +545,8 @@ export default function BranchesAgentsList() {
 
           <div className="filter-group">
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>حالة النشاط</label>
-            <select 
-              value={filterStatus} 
+            <select
+              value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="users-search-input"
               style={{ width: '100%', padding: '0 12px', height: '42px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, color: '#475569' }}
@@ -562,7 +562,7 @@ export default function BranchesAgentsList() {
       <div className="users-card">
 
         {loading ? (
-          <p style={{textAlign: 'center', padding: '20px'}}>جار التحميل...</p>
+          <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
         ) : (
           <>
             <div className="users-table-wrapper">
@@ -593,9 +593,9 @@ export default function BranchesAgentsList() {
                         <td>
                           <div style={{ width: '45px', height: '45px', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                             {branchAgent.personal_photo ? (
-                              <img 
-                                src={resolvePublicUrl(branchAgent.personal_photo)} 
-                                alt="" 
+                              <img
+                                src={resolvePublicUrl(branchAgent.personal_photo)}
+                                alt=""
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/img/default-avatar.png';
@@ -637,44 +637,44 @@ export default function BranchesAgentsList() {
                               <i className="fa-solid fa-pencil"></i>
                             </button>
                             <button
-                               onClick={() => printAgentA4(branchAgent)}
-                               className="action-btn"
-                               aria-label="طباعة البيانات"
-                               title="طباعة بيانات الوكيل A4"
-                               style={{ background: '#6366f1', color: '#fff' }}
-                             >
-                               <i className="fa-solid fa-file-lines"></i>
-                             </button>
-                             <button
-                               onClick={() => printAgentIdCard(branchAgent)}
-                               className="action-btn"
-                               aria-label="بطاقة وكيل"
-                               title="طباعة بطاقة وكيل"
-                               style={{ background: '#f59e0b', color: '#fff' }}
-                             >
-                               <i className="fa-solid fa-id-card"></i>
-                             </button>
-                             <button
-                               onClick={() => handlePrint(branchAgent)}
-                               className="action-btn"
-                               aria-label="طباعة العقد"
-                               title="طباعة العقد"
-                               style={{ background: '#3b82f6', color: '#fff' }}
-                             >
-                               <i className="fa-solid fa-print"></i>
-                             </button>
-                             <button
-                               onClick={() => handleToggleBlock(branchAgent)}
-                               className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
-                               aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
-                               title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
-                               style={{ 
-                                 background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444', 
-                                 color: '#fff' 
-                               }}
-                             >
-                               <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
-                             </button>
+                              onClick={() => printAgentA4(branchAgent)}
+                              className="action-btn"
+                              aria-label="طباعة البيانات"
+                              title="طباعة بيانات الوكيل A4"
+                              style={{ background: '#6366f1', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-file-lines"></i>
+                            </button>
+                            <button
+                              onClick={() => printAgentIdCard(branchAgent)}
+                              className="action-btn"
+                              aria-label="بطاقة وكيل"
+                              title="طباعة بطاقة وكيل"
+                              style={{ background: '#f59e0b', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-id-card"></i>
+                            </button>
+                            <button
+                              onClick={() => handlePrint(branchAgent)}
+                              className="action-btn"
+                              aria-label="طباعة العقد"
+                              title="طباعة العقد"
+                              style={{ background: '#3b82f6', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-print"></i>
+                            </button>
+                            <button
+                              onClick={() => handleToggleBlock(branchAgent)}
+                              className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
+                              aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
+                              title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
+                              style={{
+                                background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444',
+                                color: '#fff'
+                              }}
+                            >
+                              <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -739,44 +739,44 @@ export default function BranchesAgentsList() {
                           <i className="fa-solid fa-pencil"></i>
                         </button>
                         <button
-                           onClick={() => printAgentA4(branchAgent)}
-                           className="action-btn"
-                           aria-label="طباعة البيانات"
-                           title="طباعة بيانات الوكيل A4"
-                           style={{ background: '#6366f1', color: '#fff' }}
-                         >
-                           <i className="fa-solid fa-file-lines"></i>
-                         </button>
-                         <button
-                           onClick={() => printAgentIdCard(branchAgent)}
-                           className="action-btn"
-                           aria-label="بطاقة وكيل"
-                           title="طباعة بطاقة وكيل"
-                           style={{ background: '#f59e0b', color: '#fff' }}
-                         >
-                           <i className="fa-solid fa-id-card"></i>
-                         </button>
-                         <button
-                           onClick={() => handlePrint(branchAgent)}
-                           className="action-btn"
-                           aria-label="طباعة العقد"
-                           title="طباعة العقد"
-                           style={{ background: '#3b82f6', color: '#fff' }}
-                         >
-                           <i className="fa-solid fa-print"></i>
-                         </button>
-                         <button
-                           onClick={() => handleToggleBlock(branchAgent)}
-                           className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
-                           aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
-                           title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
-                           style={{ 
-                             background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444', 
-                             color: '#fff' 
-                           }}
-                         >
-                           <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
-                         </button>
+                          onClick={() => printAgentA4(branchAgent)}
+                          className="action-btn"
+                          aria-label="طباعة البيانات"
+                          title="طباعة بيانات الوكيل A4"
+                          style={{ background: '#6366f1', color: '#fff' }}
+                        >
+                          <i className="fa-solid fa-file-lines"></i>
+                        </button>
+                        <button
+                          onClick={() => printAgentIdCard(branchAgent)}
+                          className="action-btn"
+                          aria-label="بطاقة وكيل"
+                          title="طباعة بطاقة وكيل"
+                          style={{ background: '#f59e0b', color: '#fff' }}
+                        >
+                          <i className="fa-solid fa-id-card"></i>
+                        </button>
+                        <button
+                          onClick={() => handlePrint(branchAgent)}
+                          className="action-btn"
+                          aria-label="طباعة العقد"
+                          title="طباعة العقد"
+                          style={{ background: '#3b82f6', color: '#fff' }}
+                        >
+                          <i className="fa-solid fa-print"></i>
+                        </button>
+                        <button
+                          onClick={() => handleToggleBlock(branchAgent)}
+                          className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
+                          aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
+                          title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
+                          style={{
+                            background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444',
+                            color: '#fff'
+                          }}
+                        >
+                          <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -863,15 +863,15 @@ export default function BranchesAgentsList() {
               <span className="delete-warning">لا يمكن التراجع عن هذا الإجراء.</span>
             </p>
             <div className="delete-confirm-actions">
-              <button 
-                className="btn-cancel" 
+              <button
+                className="btn-cancel"
                 onClick={() => setShowDeleteModal(null)}
                 disabled={deleting}
               >
                 إلغاء
               </button>
-              <button 
-                className="btn-delete-confirm" 
+              <button
+                className="btn-delete-confirm"
                 onClick={handleDeleteBranchAgent}
                 disabled={deleting}
               >

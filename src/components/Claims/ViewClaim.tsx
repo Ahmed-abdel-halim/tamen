@@ -284,13 +284,48 @@ export default function ViewClaim() {
                 </tr>
               </thead>
               <tbody>
-                ${claim.transfers.map((t: any) => `
-                  <tr>
-                    <td>${new Date(t.created_at).toLocaleDateString('ar-LY')}</td>
-                    <td>${t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</td>
-                    <td>${Object.entries(t.details || {}).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' | ')}</td>
-                  </tr>
-                `).join('')}
+                ${claim.transfers.map((t: any) => {
+                  const detailsText = Object.entries(t.details || {}).map(([k, v]) => {
+                    if (typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i))) {
+                      return `${k.replace(/_/g, ' ')}: [مرفق]`;
+                    }
+                    const label = k === 'case_number' ? 'رقم القضية' : 
+                                  k === 'transfer_date' ? 'تاريخ الإحالة' :
+                                  k === 'prosecution_name' ? 'النيابة' :
+                                  k === 'committee_manager' ? 'مدير اللجنة' :
+                                  k === 'deputy_manager' ? 'نائب المدير' :
+                                  k === 'total_value' ? 'إجمالي القيمة' :
+                                  k === 'manager_report' ? 'تقرير المدير' :
+                                  k === 'report_number' ? 'رقم البلاغ' :
+                                  k === 'report_date' ? 'تاريخ البلاغ' :
+                                  k === 'police_station' ? 'مركز الشرطة' :
+                                  k === 'book_number' ? 'رقم الكتاب' :
+                                  k === 'financial_value' ? 'القيمة المالية' :
+                                  k === 'recipient_name' ? 'اسم المستلم' :
+                                  k === 'session_date' ? 'تاريخ الجلسة' :
+                                  k === 'court_name' ? 'المحكمة' :
+                                  k === 'appeal_case_number' ? 'رقم الاستئناف' :
+                                  k === 'appeal_date' ? 'تاريخ الاستئناف' :
+                                  k === 'appeal_court' ? 'محكمة الاستئناف' :
+                                  k === 'notes' ? 'ملاحظات' :
+                                  k === 'report_image' ? 'صورة البلاغ' :
+                                  k === 'financial_value_image' ? 'إثبات القيمة' :
+                                  k === 'transfer_image' ? 'صورة الإحالة' :
+                                  k === 'court_file_image' ? 'ملف القضية' :
+                                  k === 'previous_judgment_image' ? 'الحكم السابق' :
+                                  k === 'image' ? 'الصورة المرفقة' :
+                                  k.replace(/_/g, ' ');
+                    return `${label}: ${v}`;
+                  }).join(' | ');
+                  
+                  return `
+                    <tr>
+                      <td>${new Date(t.created_at).toLocaleDateString('ar-LY')}</td>
+                      <td>${t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</td>
+                      <td>${detailsText}</td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -323,7 +358,12 @@ export default function ViewClaim() {
   const getStatusStyle = (status: string) => {
     switch(status) {
       case 'pending': return { bg: '#fef3c7', color: '#d97706', text: 'قيد الانتظار' };
-      case 'للتسديد - الشؤون المالية': return { bg: '#ecfdf5', color: '#059669', text: 'للتسديد' };
+      case 'تسويه وديه': return { bg: '#dcfce7', color: '#166534', text: 'تسويه وديه' };
+      case 'تحويل الى مركز الشرطة': return { bg: '#e0f2fe', color: '#075985', text: 'بمركز الشرطة' };
+      case 'تحويل الى النيابة': return { bg: '#f3e8ff', color: '#6b21a8', text: 'بالنيابة العامة' };
+      case 'تحويل الى المحكمة': return { bg: '#fee2e2', color: '#991b1b', text: 'بالمحكمة المختصة' };
+      case 'استئناف في حكم المحكمة': return { bg: '#ffedd5', color: '#9a3412', text: 'قيد الاستئناف' };
+      case 'للتسديد - الشؤون المالية': return { bg: '#ecfdf5', color: '#059669', text: 'جاهزة للتسديد' };
       default: return { bg: '#eff6ff', color: '#2563eb', text: status };
     }
   };
@@ -356,6 +396,33 @@ export default function ViewClaim() {
             <div className="field-group"><label>القيمة المالية</label><input type="number" onChange={e => handleDetailChange('financial_value', e.target.value)} /></div>
             <div className="field-group"><label>اسم المستلم</label><input type="text" onChange={e => handleDetailChange('recipient_name', e.target.value)} /></div>
             <div className="field-group full"><label>إثبات القيمة (صورة)</label><input type="file" onChange={e => handleDetailChange('financial_value_image', e.target.files?.[0])} /></div>
+          </>
+        );
+      case 'تحويل الى النيابة':
+        return (
+          <>
+            <div className="field-group"><label>رقم القضية / المحضر</label><input type="text" onChange={e => handleDetailChange('case_number', e.target.value)} /></div>
+            <div className="field-group"><label>تاريخ الإحالة</label><input type="date" onChange={e => handleDetailChange('transfer_date', e.target.value)} /></div>
+            <div className="field-group"><label>اسم النيابة</label><input type="text" onChange={e => handleDetailChange('prosecution_name', e.target.value)} /></div>
+            <div className="field-group full"><label>مرفق قرار الإحالة (صورة)</label><input type="file" onChange={e => handleDetailChange('transfer_image', e.target.files?.[0])} /></div>
+          </>
+        );
+      case 'تحويل الى المحكمة':
+        return (
+          <>
+            <div className="field-group"><label>رقم القضية</label><input type="text" onChange={e => handleDetailChange('case_number', e.target.value)} /></div>
+            <div className="field-group"><label>تاريخ الجلسة</label><input type="date" onChange={e => handleDetailChange('session_date', e.target.value)} /></div>
+            <div className="field-group"><label>اسم المحكمة</label><input type="text" onChange={e => handleDetailChange('court_name', e.target.value)} /></div>
+            <div className="field-group full"><label>مرفق ملف القضية (صورة)</label><input type="file" onChange={e => handleDetailChange('court_file_image', e.target.files?.[0])} /></div>
+          </>
+        );
+      case 'استئناف في حكم المحكمة':
+        return (
+          <>
+            <div className="field-group"><label>رقم قضية الاستئناف</label><input type="text" onChange={e => handleDetailChange('appeal_case_number', e.target.value)} /></div>
+            <div className="field-group"><label>تاريخ الاستئناف</label><input type="date" onChange={e => handleDetailChange('appeal_date', e.target.value)} /></div>
+            <div className="field-group"><label>محكمة الاستئناف</label><input type="text" onChange={e => handleDetailChange('appeal_court', e.target.value)} /></div>
+            <div className="field-group full"><label>صورة من حكم المحكمة السابق</label><input type="file" onChange={e => handleDetailChange('previous_judgment_image', e.target.files?.[0])} /></div>
           </>
         );
       case 'اخر':
@@ -572,22 +639,52 @@ export default function ViewClaim() {
                         <h4>{t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</h4>
                         <span className="time">{new Date(t.created_at).toLocaleString('ar-EG')}</span>
                       </div>
-                      <div className="item-details-box">
-                        <div className="details-inline">
-                          {t.details && Object.entries(t.details).slice(0, 4).map(([k, v]: [string, any]) => (
-                            <div key={k} className="tiny-detail">
-                              <span className="k">{k.replace(/_/g, ' ')}:</span>
-                              <span className="v">{typeof v === 'string' && v.length > 30 ? v.substring(0, 30) + '...' : (v || '-')}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {t.details && Object.values(t.details).some((v: any) => typeof v === 'string' && (v.includes('storage/') || v.match(/\.(jpg|jpeg|png|pdf)$/i))) && (
-                          <div className="attachment-link">
-                            <i className="fa-solid fa-paperclip"></i>
-                            مرفقات التحويل متوفرة
+                        <div className="item-details-box">
+                          <div className="details-inline">
+                            {t.details && Object.entries(t.details).map(([k, v]: [string, any]) => {
+                              const isFile = typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i));
+                              const label = k === 'case_number' ? 'رقم القضية' : 
+                                            k === 'transfer_date' ? 'تاريخ الإحالة' :
+                                            k === 'prosecution_name' ? 'النيابة' :
+                                            k === 'committee_manager' ? 'مدير اللجنة' :
+                                            k === 'deputy_manager' ? 'نائب المدير' :
+                                            k === 'total_value' ? 'إجمالي القيمة' :
+                                            k === 'manager_report' ? 'تقرير المدير' :
+                                            k === 'report_number' ? 'رقم البلاغ' :
+                                            k === 'report_date' ? 'تاريخ البلاغ' :
+                                            k === 'police_station' ? 'مركز الشرطة' :
+                                            k === 'book_number' ? 'رقم الكتاب' :
+                                            k === 'financial_value' ? 'القيمة المالية' :
+                                            k === 'recipient_name' ? 'اسم المستلم' :
+                                            k === 'session_date' ? 'تاريخ الجلسة' :
+                                            k === 'court_name' ? 'المحكمة' :
+                                            k === 'appeal_case_number' ? 'رقم الاستئناف' :
+                                            k === 'appeal_date' ? 'تاريخ الاستئناف' :
+                                            k === 'appeal_court' ? 'محكمة الاستئناف' :
+                                            k === 'notes' ? 'ملاحظات' :
+                                            k === 'report_image' ? 'صورة البلاغ' :
+                                            k === 'financial_value_image' ? 'إثبات القيمة' :
+                                            k === 'transfer_image' ? 'صورة الإحالة' :
+                                            k === 'court_file_image' ? 'ملف القضية' :
+                                            k === 'previous_judgment_image' ? 'الحكم السابق' :
+                                            k === 'image' ? 'الصورة المرفقة' :
+                                            k.replace(/_/g, ' ');
+                                            
+                              return (
+                                <div key={k} className="tiny-detail">
+                                  <span className="k">{label}:</span>
+                                  {isFile ? (
+                                    <a href={`${API_BASE_URL.replace('/api', '')}/storage/${v}`} target="_blank" rel="noreferrer" className="attachment-link-inline">
+                                      <i className="fa-solid fa-paperclip"></i> عرض المرفق
+                                    </a>
+                                  ) : (
+                                    <span className="v">{v || '-'}</span>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        )}
-                      </div>
+                        </div>
                     </div>
                   </div>
                 ))
@@ -656,7 +753,16 @@ export default function ViewClaim() {
         
         /* Header Styling */
         .claim-page-header {
-          margin-bottom: 24px;
+          margin-bottom: 28px;
+          background: var(--panel);
+          padding: 24px 30px;
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
+          backdrop-filter: blur(8px);
+          position: sticky;
+          top: 0;
+          z-index: 10;
         }
         .breadcrumb-nav {
           display: flex;
@@ -673,9 +779,7 @@ export default function ViewClaim() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 10px 0;
-          border-bottom: 2px solid var(--border);
-          margin-bottom: 20px;
+          padding: 10px 0 0 0;
         }
         .title-section { display: flex; align-items: center; gap: 20px; }
         .title-section h1 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--text); }
@@ -686,10 +790,12 @@ export default function ViewClaim() {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 6px 14px;
+          padding: 8px 18px;
           border-radius: 50px;
-          font-size: 0.85rem;
-          font-weight: 700;
+          font-size: 0.9rem;
+          font-weight: 800;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          border: 1px solid rgba(0,0,0,0.05);
         }
         .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; }
         
@@ -731,11 +837,16 @@ export default function ViewClaim() {
         
         .dashboard-card {
           background: var(--panel);
-          border-radius: 16px;
+          border-radius: 20px;
           padding: 24px;
           margin-bottom: 24px;
           border: 1px solid var(--border);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+          box-shadow: 0 10px 30px -5px rgba(0,0,0,0.04);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .dashboard-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 15px 35px -5px rgba(0,0,0,0.08);
         }
         .dashboard-card .card-header {
           display: flex;
@@ -808,7 +919,31 @@ export default function ViewClaim() {
         .tiny-detail { font-size: 0.85rem; }
         .tiny-detail .k { color: var(--text-muted); margin-left: 5px; }
         .tiny-detail .v { color: var(--text); font-weight: 600; }
-        .attachment-link { font-size: 0.8rem; color: var(--sidebar); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .attachment-link-inline { 
+          font-size: 0.8rem; 
+          color: var(--sidebar); 
+          font-weight: 700; 
+          display: inline-flex; 
+          align-items: center; 
+          gap: 6px; 
+          text-decoration: none;
+          background: rgba(1, 76, 177, 0.05);
+          padding: 2px 8px;
+          border-radius: 4px;
+          transition: all 0.2s;
+        }
+        .attachment-link-inline:hover {
+          background: rgba(1, 76, 177, 0.1);
+          color: #000;
+        }
+        [data-theme='dark'] .attachment-link-inline {
+          color: var(--accent-cyan);
+          background: rgba(6, 182, 212, 0.1);
+        }
+        [data-theme='dark'] .attachment-link-inline:hover {
+          background: rgba(6, 182, 212, 0.2);
+          color: #fff;
+        }
 
         /* Side Column Styling */
         .report-item {

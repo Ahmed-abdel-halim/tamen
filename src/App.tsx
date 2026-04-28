@@ -314,7 +314,7 @@ const menuSections: SidebarSection[] = [
         ] 
       },
       { 
-        label: 'التقارير المالية', icon: 'fa-solid fa-file-contract', children: [
+        label: 'المحاسب المالي', icon: 'fa-solid fa-file-contract', children: [
           { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
           { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
           { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
@@ -631,7 +631,7 @@ const createMenuSections = (
 
     if (reportsGroup.length > 0) {
       finalReports.push({
-        label: 'التقارير المالية',
+        label: 'المحاسب المالي',
         icon: 'fa-solid fa-file-contract',
         children: reportsGroup
       });
