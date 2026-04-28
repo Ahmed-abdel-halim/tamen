@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { useParams } from 'react-router-dom';
 import { showToast } from './Toast';
 import '../styles/CreateInsurance.css'; // استخدام تنسيقات النظام الأساسية
@@ -456,59 +456,57 @@ const MailManagement: React.FC = () => {
                                         <td style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>{doc.registered_at ? new Date(doc.registered_at).toLocaleDateString('ar-LY') : '-'}</td>
                                         <td style={{ fontSize: '0.85rem', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }} title={doc.description}>{doc.description || '-'}</td>
                                         <td>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', maxWidth: '120px' }}>
+                                            <div className="custom-scrollbar" style={{ 
+                                                display: 'flex', 
+                                                flexWrap: 'nowrap', 
+                                                gap: '5px', 
+                                                maxWidth: '180px', 
+                                                overflowX: 'auto', 
+                                                paddingBottom: '5px' 
+                                            }}>
                                                 {doc.attachment_urls && doc.attachment_urls.length > 0 ? (
-                                                    <>
-                                                        {doc.attachment_urls.slice(0, 3).map((url, idx) => (
+                                                    doc.attachment_urls.map((url, idx) => {
+                                                        const fullUrl = url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+                                                        return (
                                                             <button 
                                                                 key={idx} 
-                                                                onClick={() => { setSelectedFile(url); setPreviewRotation(0); }} 
+                                                                onClick={() => { setSelectedFile(fullUrl); setPreviewRotation(0); }} 
                                                                 className="attachment-badge"
                                                                 style={{ 
                                                                     background: 'rgba(16, 185, 129, 0.1)', 
                                                                     color: '#10b981', 
                                                                     border: '1px solid rgba(16, 185, 129, 0.2)',
                                                                     borderRadius: '6px',
-                                                                    padding: '2px 6px',
+                                                                    padding: '4px 8px',
                                                                     fontSize: '0.75rem',
                                                                     fontWeight: 700,
                                                                     cursor: 'pointer',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
-                                                                    gap: '3px'
+                                                                    gap: '3px',
+                                                                    flexShrink: 0,
+                                                                    whiteSpace: 'nowrap'
                                                                 }}
                                                                 title={`عرض المرفق ${idx + 1}`}
                                                             >
                                                                 <i className="fa-solid fa-paperclip"></i> {idx + 1}
                                                             </button>
-                                                        ))}
-                                                        {doc.attachment_urls.length > 3 && (
-                                                            <div 
-                                                                style={{ 
-                                                                    background: 'var(--bg)', 
-                                                                    color: 'var(--muted)', 
-                                                                    borderRadius: '6px',
-                                                                    padding: '2px 6px',
-                                                                    fontSize: '0.75rem',
-                                                                    fontWeight: 700,
-                                                                    border: '1px solid var(--border)'
-                                                                }}
-                                                                title={`${doc.attachment_urls.length - 3} مرفقات إضافية`}
-                                                            >
-                                                                +{doc.attachment_urls.length - 3}
-                                                            </div>
-                                                        )}
-                                                    </>
+                                                        );
+                                                    })
                                                 ) : (doc.attachment_url ? (
                                                     <button 
-                                                        onClick={() => { setSelectedFile(doc.attachment_url!); setPreviewRotation(0); }} 
+                                                        onClick={() => { 
+                                                            const fullUrl = doc.attachment_url!.startsWith('http') ? doc.attachment_url! : `${BACKEND_URL}${doc.attachment_url}`;
+                                                            setSelectedFile(fullUrl); 
+                                                            setPreviewRotation(0); 
+                                                        }} 
                                                         className="attachment-badge"
                                                         style={{ 
                                                             background: 'rgba(16, 185, 129, 0.1)', 
                                                             color: '#10b981', 
                                                             border: '1px solid rgba(16, 185, 129, 0.2)',
                                                             borderRadius: '6px',
-                                                            padding: '2px 6px',
+                                                            padding: '4px 8px',
                                                             fontSize: '0.75rem',
                                                             fontWeight: 700,
                                                             cursor: 'pointer'
@@ -525,7 +523,8 @@ const MailManagement: React.FC = () => {
                                                     <button
                                                         onClick={() => {
                                                             const mainUrl = doc.attachment_urls?.[0] || doc.attachment_url;
-                                                            const text = `*مراسلة من شركة المدار الليبي للتأمين*%0A*الموضوع:* ${doc.subject}%0A*الرقم الإشاري:* ${doc.referential_number}%0A*رابط الملف:* ${window.location.origin}${mainUrl}`;
+                                                            const fullFileUrl = mainUrl.startsWith('http') ? mainUrl : `${BACKEND_URL}${mainUrl}`;
+                                                            const text = `*مراسلة من شركة المدار الليبي للتأمين*%0A*الموضوع:* ${doc.subject}%0A*الرقم الإشاري:* ${doc.referential_number}%0A*رابط الملف:* ${fullFileUrl}`;
                                                             const phone = doc.messenger_phone || '';
                                                             window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
                                                         }}
