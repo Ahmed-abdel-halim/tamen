@@ -101,6 +101,8 @@ import { ToastContainer } from './components/Toast';
 import { TaxSSReport } from './components/TaxSSReport';
 import ExternalEntitiesManagement from './components/ExternalEntitiesManagement';
 import MailManagement from './components/MailManagement';
+import ClaimsList from './components/Claims/ClaimsList';
+import ViewClaim from './components/Claims/ViewClaim';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const user = localStorage.getItem('user');
@@ -159,6 +161,7 @@ function hasAccessToRoute(
     'رصيد الاتحاد (البطاقة البرتقالية)': ['/reports/union-balances'],
     'تقرير مصلحة الضرائب': ['/reports/tax'],
     'تقرير الضمان الاجتماعي': ['/reports/social-security'],
+    'المطالبات': ['/claims'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -263,7 +266,8 @@ const menuSections: SidebarSection[] = [
           { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
           { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
         ]
-      }
+      },
+      { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' }
     ],
   },
   {
@@ -393,6 +397,7 @@ const createMenuSections = (
     'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
     'تقرير مصلحة الضرائب': { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
     'تقرير الضمان الاجتماعي': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
+    'المطالبات': { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
   };
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
@@ -431,7 +436,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
   ];
-  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/archive'];
+  const adminOrder: string[] = ['/claims', '/branches-agents', '/users', '/employee-requests', '/agent-requests', '/archive'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -964,6 +969,8 @@ export default function App() {
                   <Route path="/archive" element={<ProtectedRoute><ArchiveDashboard /></ProtectedRoute>} />
                   <Route path="/external-entities" element={<ProtectedRoute><ExternalEntitiesManagement /></ProtectedRoute>} />
                   <Route path="/mail/:type" element={<ProtectedRoute><MailManagement /></ProtectedRoute>} />
+                  <Route path="/claims" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ClaimsList /></AuthorizedRoute></ProtectedRoute>} />
+                  <Route path="/claims/:id" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ViewClaim /></AuthorizedRoute></ProtectedRoute>} />
                   <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />
                 </Routes>
               </main>
