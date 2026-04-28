@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { showToast } from '../Toast';
-import { API_BASE_URL, STORAGE_URL } from '../../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../../config/api';
 
 export default function ViewClaim() {
   const { id } = useParams();
@@ -674,7 +674,7 @@ export default function ViewClaim() {
                                 <div key={k} className="tiny-detail">
                                   <span className="k">{label}:</span>
                                   {isFile ? (
-                                    <a href={`${STORAGE_URL}/${v}`} target="_blank" rel="noreferrer" className="attachment-link-inline">
+                                    <a href={`${BACKEND_URL}/storage/${v}`} target="_blank" rel="noreferrer" className="attachment-link-inline">
                                       <i className="fa-solid fa-paperclip"></i> عرض المرفق
                                     </a>
                                   ) : (
@@ -716,7 +716,7 @@ export default function ViewClaim() {
                       <span className="report-date">{r.report_date || 'تاريخ غير محدد'}</span>
                     </div>
                     {r.report_image && (
-                      <a href={`${STORAGE_URL}/${r.report_image}`} target="_blank" rel="noreferrer" className="view-link">
+                      <a href={`${BACKEND_URL}/storage/${r.report_image}`} target="_blank" rel="noreferrer" className="view-link">
                         <i className="fa-solid fa-eye"></i>
                       </a>
                     )}

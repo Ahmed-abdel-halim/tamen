@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { showToast } from "./Toast";
-import { API_BASE_URL, BACKEND_URL, STORAGE_URL } from "../config/api";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 import SearchableSelect from "./SearchableSelect";
 
 const documentTypeOptions = [
@@ -354,7 +354,7 @@ export default function BranchAgentDetails() {
         <div className="header-content">
           <div className="profile-avatar-large">
             {branchAgent.personal_photo ? (
-              <img src={`${STORAGE_URL}/${branchAgent.personal_photo}`} alt="Profile" />
+              <img src={`${BACKEND_URL}/storage/${branchAgent.personal_photo}`} alt="Profile" />
             ) : (
               <div className="avatar-placeholder">
                 <i className="fa-solid fa-building"></i>

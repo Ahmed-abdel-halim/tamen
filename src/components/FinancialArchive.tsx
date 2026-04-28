@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL, BACKEND_URL, STORAGE_URL } from '../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { showToast } from './Toast';
 
 interface DocumentRecord {
@@ -209,8 +209,8 @@ export default function FinancialArchive() {
                     <td>{doc.related_entity}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <a href={`${STORAGE_URL}/${(doc as any).file_path}`} target="_blank" rel="noreferrer" style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="معاينة"><i className="fa-solid fa-eye"></i></a>
-                        <a href={`${STORAGE_URL}/${(doc as any).file_path}`} download style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="تحميل"><i className="fa-solid fa-download"></i></a>
+                        <a href={`${BACKEND_URL}/storage/${(doc as any).file_path}`} target="_blank" rel="noreferrer" style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="معاينة"><i className="fa-solid fa-eye"></i></a>
+                        <a href={`${BACKEND_URL}/storage/${(doc as any).file_path}`} download style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="تحميل"><i className="fa-solid fa-download"></i></a>
                         <button 
                           onClick={() => handleDelete(doc.id)}
                           style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#ef4444' }} 

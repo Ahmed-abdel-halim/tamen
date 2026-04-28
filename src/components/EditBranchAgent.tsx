@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showToast } from "./Toast";
-import { API_BASE_URL, BACKEND_URL, STORAGE_URL } from "../config/api";
+import { API_BASE_URL, BACKEND_URL } from "../config/api";
 
 
 
@@ -141,19 +141,19 @@ export default function EditBranchAgent() {
   // حساب مدة العقد تلقائياً
   const calculateContractDuration = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return '';
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     if (end <= start) return '';
-    
+
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     const years = Math.floor(diffDays / 365);
     const months = Math.floor((diffDays % 365) / 30);
     const days = diffDays % 30;
-    
+
     let duration = '';
     if (years > 0) {
       duration += `${years} ${years === 1 ? 'سنة' : 'سنة'}`;
@@ -166,7 +166,7 @@ export default function EditBranchAgent() {
       if (duration) duration += ' و ';
       duration += `${days} ${days === 1 ? 'يوم' : 'يوم'}`;
     }
-    
+
     return duration || '';
   };
 
@@ -204,7 +204,7 @@ export default function EditBranchAgent() {
         throw new Error(errorMessage);
       }
       const data = await res.json();
-      
+
       setFormData({
         type: data.type,
         agency_name: data.agency_name || '',
@@ -229,7 +229,7 @@ export default function EditBranchAgent() {
         authorized_documents: data.authorized_documents || [],
         document_percentages: data.document_percentages || {},
       });
-      
+
       if (data.city && !LIBYAN_CITIES.some(c => c.ar === data.city)) {
         setIsCustomCity(true);
       } else {
@@ -357,11 +357,11 @@ export default function EditBranchAgent() {
       if (formData.notes) formDataToSend.append('notes', formData.notes);
       formDataToSend.append('contract_conditions', formData.contract_conditions || '');
       formDataToSend.append('status', formData.status);
-      
+
       // إرسال الوثائق المصرح بها والنسب (حتى لو كانت فارغة)
       const authorizedDocsJson = JSON.stringify(formData.authorized_documents || []);
       const percentagesJson = JSON.stringify(formData.document_percentages || {});
-      
+
       formDataToSend.append('authorized_documents', authorizedDocsJson);
       formDataToSend.append('document_percentages', percentagesJson);
       formDataToSend.append('_method', 'PUT');
@@ -386,21 +386,21 @@ export default function EditBranchAgent() {
       }
 
       const updatedData = await res.json();
-      
+
       // تحديث localStorage إذا كان المستخدم المحدث هو نفسه المستخدم الحالي
       try {
         const currentUserStr = localStorage.getItem('user');
         if (currentUserStr && updatedData && updatedData.user) {
           const currentUser = JSON.parse(currentUserStr);
           const updatedUserId = updatedData.user.id;
-          
+
           // التحقق من أن المستخدم المحدث هو نفسه المستخدم الحالي
           if (updatedUserId && updatedUserId === currentUser.id) {
             // جلب البيانات المحدثة من الخادم
             const refreshRes = await fetch(`${API_BASE_URL}/user/${updatedUserId}/refresh`, {
               headers: { 'Accept': 'application/json' },
             });
-            
+
             if (refreshRes.ok) {
               const refreshData = await refreshRes.json();
               if (refreshData && refreshData.user) {
@@ -674,8 +674,8 @@ export default function EditBranchAgent() {
                 <label>صورة شخصية</label>
                 {existingPersonalPhoto && !personalPhoto && (
                   <div style={{ marginBottom: '10px' }}>
-                    <img 
-                      src={`${STORAGE_URL}/${existingPersonalPhoto}`} 
+                    <img
+                      src={`${BACKEND_URL}/storage/${existingPersonalPhoto}`}
                       alt="صورة شخصية حالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -701,8 +701,8 @@ export default function EditBranchAgent() {
                 <label>صورة إثبات الهوية</label>
                 {existingIdentityPhoto && !identityPhoto && (
                   <div style={{ marginBottom: '10px' }}>
-                    <img 
-                      src={`${STORAGE_URL}/${existingIdentityPhoto}`} 
+                    <img
+                      src={`${BACKEND_URL}/storage/${existingIdentityPhoto}`}
                       alt="صورة إثبات الهوية حالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -731,8 +731,8 @@ export default function EditBranchAgent() {
                 <label>صورة الرقم الوطني</label>
                 {existingNationalIdPhoto && !nationalIdPhoto && (
                   <div style={{ marginBottom: '10px' }}>
-                    <img 
-                      src={`${STORAGE_URL}/${existingNationalIdPhoto}`} 
+                    <img
+                      src={`${BACKEND_URL}/storage/${existingNationalIdPhoto}`}
                       alt="صورة الرقم الوطني الحالية"
                       style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                     />
@@ -760,9 +760,9 @@ export default function EditBranchAgent() {
                 {existingContractPhoto && !contractPhoto && (
                   <div style={{ marginBottom: '10px' }}>
                     {existingContractPhoto.endsWith('.pdf') ? (
-                      <a 
-                        href={`${STORAGE_URL}/${existingContractPhoto}`} 
-                        target="_blank" 
+                      <a
+                        href={`${BACKEND_URL}/storage/${existingContractPhoto}`}
+                        target="_blank"
                         rel="noopener noreferrer"
                         style={{ display: 'inline-block', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
                       >
@@ -770,8 +770,8 @@ export default function EditBranchAgent() {
                         <div>عرض PDF الحالي</div>
                       </a>
                     ) : (
-                      <img 
-                        src={`${STORAGE_URL}/${existingContractPhoto}`} 
+                      <img
+                        src={`${BACKEND_URL}/storage/${existingContractPhoto}`}
                         alt="صورة العقد الحالية"
                         style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
                       />
@@ -877,11 +877,11 @@ export default function EditBranchAgent() {
               <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
                 الوثائق المصرح بها
               </h3>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
                 {INSURANCE_TYPES.map((insuranceType) => {
                   const isSelected = formData.authorized_documents.includes(insuranceType);
-                  
+
                   return (
                     <div key={insuranceType} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input
@@ -891,9 +891,9 @@ export default function EditBranchAgent() {
                         onChange={() => handleDocumentToggle(insuranceType)}
                         style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                       />
-                      <label 
+                      <label
                         htmlFor={`doc-edit-${insuranceType}`}
-                        style={{ 
+                        style={{
                           cursor: 'pointer',
                           color: '#111827',
                           fontSize: '14px'
@@ -912,7 +912,7 @@ export default function EditBranchAgent() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
                 {REPORT_PERMISSIONS.map((permission) => {
                   const isSelected = formData.authorized_documents.includes(permission);
-                  
+
                   return (
                     <div key={permission} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input
@@ -922,9 +922,9 @@ export default function EditBranchAgent() {
                         onChange={() => handleDocumentToggle(permission)}
                         style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                       />
-                      <label 
+                      <label
                         htmlFor={`perm-edit-${permission}`}
-                        style={{ 
+                        style={{
                           cursor: 'pointer',
                           color: '#111827',
                           fontSize: '14px'
