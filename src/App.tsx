@@ -101,6 +101,7 @@ import { ToastContainer } from './components/Toast';
 import { TaxSSReport } from './components/TaxSSReport';
 import ExternalEntitiesManagement from './components/ExternalEntitiesManagement';
 import MailManagement from './components/MailManagement';
+import ViewMailDocument from './components/ViewMailDocument';
 import ClaimsList from './components/Claims/ClaimsList';
 import ViewClaim from './components/Claims/ViewClaim';
 
@@ -969,6 +970,7 @@ export default function App() {
                   <Route path="/archive" element={<ProtectedRoute><ArchiveDashboard /></ProtectedRoute>} />
                   <Route path="/external-entities" element={<ProtectedRoute><ExternalEntitiesManagement /></ProtectedRoute>} />
                   <Route path="/mail/:type" element={<ProtectedRoute><MailManagement /></ProtectedRoute>} />
+                  <Route path="/mail/view/:id" element={<ProtectedRoute><ViewMailDocument /></ProtectedRoute>} />
                   <Route path="/claims" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ClaimsList /></AuthorizedRoute></ProtectedRoute>} />
                   <Route path="/claims/:id" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ViewClaim /></AuthorizedRoute></ProtectedRoute>} />
                   <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />

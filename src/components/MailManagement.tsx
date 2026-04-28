@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { showToast } from './Toast';
 import '../styles/CreateInsurance.css'; // استخدام تنسيقات النظام الأساسية
 
@@ -43,6 +43,7 @@ interface MailDocument {
 
 const MailManagement: React.FC = () => {
     const { type } = useParams<{ type: string }>();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'incoming' | 'outgoing'>((type as 'incoming' | 'outgoing') || 'incoming');
     const [documents, setDocuments] = useState<MailDocument[]>([]);
     const [entities, setEntities] = useState<ExternalEntity[]>([]);
@@ -556,6 +557,7 @@ const MailManagement: React.FC = () => {
                                                         <i className="fa-brands fa-whatsapp"></i>
                                                     </button>
                                                 )}
+                                                <button onClick={() => navigate(`/mail/view/${doc.id}`)} style={{ background: 'var(--accent-cyan)', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
                                                 <button onClick={() => handleEdit(doc)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
                                                 <button onClick={() => handleDelete(doc.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
                                             </div>
