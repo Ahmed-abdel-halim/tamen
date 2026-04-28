@@ -22,11 +22,19 @@ const getApiBaseUrl = (): string => {
   }
   
   // في production، استخدم الـ domain المحدد
-  return 'https://mli.mli.ly/api';
+  return 'https://api.mli.ly/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
-export const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/i, '');
+
+// Ensure BACKEND_URL is absolute or starts with /
+const getBackendUrl = () => {
+  let base = API_BASE_URL.replace(/\/api\/?$/i, '');
+  if (base.startsWith('/') || base.startsWith('http')) return base;
+  return `https://${base}`;
+};
+
+export const BACKEND_URL = getBackendUrl();
 
 export const apiUrl = (path: string): string => {
   // إزالة الـ slash الأول إذا كان موجوداً
