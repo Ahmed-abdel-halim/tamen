@@ -104,6 +104,8 @@ import MailManagement from './components/MailManagement';
 import ViewMailDocument from './components/ViewMailDocument';
 import ClaimsList from './components/Claims/ClaimsList';
 import ViewClaim from './components/Claims/ViewClaim';
+import AgencyCancellations from './components/AgencyCancellations';
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const user = localStorage.getItem('user');
@@ -150,19 +152,37 @@ function hasAccessToRoute(
     'تأمين حماية طلاب المدارس': ['/school-student-insurance'],
     'تأمين نقل النقدية': ['/cash-in-transit-insurance'],
     'تأمين شحن البضائع': ['/cargo-insurance'],
-    'كشف حساب الوكيل': ['/reports/branch-agent-account'],
-    'إغلاق حساب شهري': ['/reports/monthly-account-closure'],
-    'كشف إغلاق الحساب الشهري': ['/reports/monthly-account-closures-report'],
-    'المخازن والعهدة': ['/reports/inventory'],
-    'مرتبات الموظفين': ['/reports/employee-salaries'],
-    'إدارة الإيرادات': ['/reports/revenue'],
-    'إدارة المصروفات': ['/reports/expenses', '/reports/union-balances', '/reports/indemnities'],
-    'إدارة المصروفات التشغيلية': ['/reports/expenses'],
-    'التعويضات': ['/reports/indemnities'],
-    'رصيد الاتحاد (البطاقة البرتقالية)': ['/reports/union-balances'],
-    'تقرير مصلحة الضرائب': ['/reports/tax'],
-    'تقرير الضمان الاجتماعي': ['/reports/social-security'],
+    'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
+
+    'إدارة الموظفين': ['/users', '/employee-requests'],
+    'البريد الصادر والوارد': ['/mail/incoming', '/mail/outgoing'],
+    'دليل الجهات الخارجية': ['/external-entities'],
+    'أرشيف المستندات الإدارية': ['/archive'],
+    'طلبات الوثائق': ['/document-requests'],
     'المطالبات': ['/claims'],
+    'الشؤون الفنية': ['/claims', '/reports/indemnities'],
+    'المحاسب المالي': [
+      '/reports/financial-statistics',
+      '/reports/revenue',
+      '/reports/outstanding-debts',
+      '/reports/commissions',
+      '/reports/payment-vouchers',
+      '/reports/inventory',
+      '/reports/branch-agent-account',
+      '/reports/monthly-account-closure',
+      '/reports/monthly-account-closures-report',
+      '/reports/bank-reconciliation',
+      '/reports/expenses',
+      '/reports/indemnities',
+      '/reports/union-balances',
+      '/reports/employee-salaries',
+      '/reports/financial-archive'
+    ],
+    'اجور ومرتبات ضرائب': ['/reports/tax'],
+    'اجور ومرتبات ضمان': ['/reports/social-security'],
+    'قائمة المدن': ['/cities'],
+    'قائمة اللوحات': ['/plates'],
+    'أنواع السيارات': ['/vehicle-types'],
   };
 
   // جمع جميع الروابط المصرح بها
@@ -268,26 +288,27 @@ const menuSections: SidebarSection[] = [
           { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
         ]
       },
-      { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' }
     ],
   },
   {
     title: 'الشؤون الادارية',
     items: [
-      { 
+      {
         label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
           { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
+          { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
+
         ]
       },
-      { 
+      {
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
         ]
       },
       { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
-      { 
+      {
         label: 'البريد الصادر والوارد', icon: 'fa-solid fa-envelope-open-text', children: [
           { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
           { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
@@ -297,30 +318,36 @@ const menuSections: SidebarSection[] = [
     ],
   },
   {
+    title: 'الشؤون الفنية',
+    items: [
+      { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
+      { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
+    ],
+  },
+  {
     title: 'الشؤون المالية',
     items: [
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
-      { label: 'إدارة الإيرادات', icon: 'fa-solid fa-money-bill-trend-up', to: '/reports/revenue' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
-      { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
-      { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
       { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
-      { 
-        label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
-          { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
-          { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
-          { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
-        ] 
-      },
-      { 
+      { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
+      { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
+      {
         label: 'المحاسب المالي', icon: 'fa-solid fa-file-contract', children: [
+          { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
+          { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+          { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+          {
+            label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
+              { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+              { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+            ]
+          },
           { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
           { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
           { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
           { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
-          { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
-          { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
           ...(SHOW_BANK_RECONCILIATION
             ? [{ label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const }]
             : []),
@@ -354,8 +381,9 @@ const createMenuSections = (
     return menuSections;
   }
 
-  // خريطة أنواع التأمين إلى الروابط
-  const insuranceTypeMap: Record<string, { label: string; icon: string; to: string }> = {
+  // خريطة الصلاحيات إلى العناصر الجانبية
+  // يمكن أن تشير الصلاحية الواحدة إلى عنصر واحد أو مصفوفة عناصر
+  const insuranceTypeMap: Record<string, SidebarItem | SidebarItem[]> = {
     'تأمين سيارات إجباري': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارة جمرك': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
@@ -371,34 +399,48 @@ const createMenuSections = (
     'تأمين حماية طلاب المدارس': { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
     'تأمين نقل النقدية': { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
     'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
-    'كشف حساب الوكيل': { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
-    'إغلاق حساب شهري': { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
-    'كشف إغلاق الحساب الشهري': { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
-    'إيصالات القبض': { label: 'إيصالات القبض', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
-    'التسويات والعمولات': { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
-    'التحصيلات البنكية': { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' },
-    'الديون المستحقة': { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
-    'الأرشيف المالي': { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
-    'المخازن والعهدة': { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
-    'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
-    'إدارة الإيرادات': { label: 'إدارة الإيرادات', icon: 'fa-solid fa-money-bill-trend-up', to: '/reports/revenue' },
-    'إدارة المصروفات التشغيلية': { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
-    'التعويضات': { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
-    'رصيد الاتحاد (البطاقة البرتقالية)': { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
-    'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
-    'إدارة الفروع والوكلاء': { label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', to: '/branches-agents' },
-    'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
-    'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
-    'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
-    'إدارة الموظفين': { label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', to: '/users' }, // للتوافق القديم
-    'الأرشيف': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'إدارة الفروع والوكلاء': [
+      { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
+      { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
+
+    ],
+    'إدارة الموظفين': [
+      { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+      { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+    ],
+    'دليل الجهات الخارجية': { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
+    'البريد الصادر والوارد': [
+      { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
+      { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
+    ],
+    'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'المحاسب المالي': [
+      { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+      { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
+      { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
+      { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
+      { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
+      { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+      { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+      { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+      { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+      { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
+      { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
+      { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
+      { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+      { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
+    ],
+    'الشؤون الفنية': [
+      { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
+      { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
+    ],
+    'اجور ومرتبات ضرائب': { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
+    'اجور ومرتبات ضمان': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
     'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
-    'تقرير مصلحة الضرائب': { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
-    'تقرير الضمان الاجتماعي': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
-    'المطالبات': { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
   };
 
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
@@ -437,7 +479,9 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
   ];
-  const adminOrder: string[] = ['/claims', '/branches-agents', '/users', '/employee-requests', '/agent-requests', '/archive'];
+  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/agency-cancellations', '/archive'];
+
+  const technicalOrder: string[] = ['/claims', '/reports/indemnities'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
@@ -447,55 +491,68 @@ const createMenuSections = (
   const settingsItemsMap = new Map<string, SidebarItem>(); // للإعدادات
 
   if (authorizedDocs && authorizedDocs.length > 0) {
-    authorizedDocs.forEach((docType) => {
-      // التعامل الخاص مع إدارة المصروفات بفروعها
-      if (docType === 'إدارة المصروفات' || docType === 'إدارة المصروفات التشغيلية' || docType === 'التعويضات' || docType === 'رصيد الاتحاد (البطاقة البرتقالية)') {
-        if (docType === 'إدارة المصروفات' || docType === 'إدارة المصروفات التشغيلية') {
-          reportsItemsMap.set('/reports/expenses', { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' });
-        }
-        if (docType === 'إدارة المصروفات' || docType === 'التعويضات') {
-          reportsItemsMap.set('/reports/indemnities', { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' });
-        }
-        if (docType === 'إدارة المصروفات' || docType === 'رصيد الاتحاد (البطاقة البرتقالية)') {
-          reportsItemsMap.set('/reports/union-balances', { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' });
-        }
-        return;
-      }
-
-      const itemInfo = insuranceTypeMap[docType];
-      if (itemInfo) {
-        // تحديد إذا كان تقرير أو تأمين
-        if (itemInfo.to.startsWith('/reports/')) {
-          if (!reportsItemsMap.has(itemInfo.to)) {
-            reportsItemsMap.set(itemInfo.to, {
-              label: itemInfo.label,
-              icon: itemInfo.icon,
-              to: itemInfo.to,
-            });
-          }
-        } else if (adminOrder.includes(itemInfo.to)) {
-          if (!adminItemsMap.has(itemInfo.to)) {
-            adminItemsMap.set(itemInfo.to, {
-              label: itemInfo.label,
-              icon: itemInfo.icon,
-              to: itemInfo.to,
-            });
-          }
-        } else if (settingsOrder.includes(itemInfo.to)) {
-          if (!settingsItemsMap.has(itemInfo.to)) {
-            settingsItemsMap.set(itemInfo.to, {
-              label: itemInfo.label,
-              icon: itemInfo.icon,
-              to: itemInfo.to,
-            });
-          }
+    authorizedDocs.forEach(docType => {
+      const items = insuranceTypeMap[docType];
+      if (items) {
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            if (item.to) {
+              if (item.to.startsWith('/reports/')) {
+                if (!reportsItemsMap.has(item.to)) {
+                  reportsItemsMap.set(item.to, item);
+                }
+              } else if (adminOrder.includes(item.to)) {
+                if (!adminItemsMap.has(item.to)) {
+                  adminItemsMap.set(item.to, item);
+                }
+              } else if (settingsOrder.includes(item.to)) {
+                if (!settingsItemsMap.has(item.to)) {
+                  settingsItemsMap.set(item.to, item);
+                }
+              } else {
+                if (!insuranceItemsMap.has(item.to)) {
+                  insuranceItemsMap.set(item.to, item);
+                }
+              }
+            }
+          });
         } else {
-          if (!insuranceItemsMap.has(itemInfo.to)) {
-            insuranceItemsMap.set(itemInfo.to, {
-              label: itemInfo.label,
-              icon: itemInfo.icon,
-              to: itemInfo.to,
-            });
+          // التعامل مع كونه كائن واحد
+          const itemInfo = items as SidebarItem;
+          if (itemInfo.to) {
+            if (itemInfo.to.startsWith('/reports/')) {
+              if (!reportsItemsMap.has(itemInfo.to)) {
+                reportsItemsMap.set(itemInfo.to, {
+                  label: itemInfo.label,
+                  icon: itemInfo.icon,
+                  to: itemInfo.to,
+                });
+              }
+            } else if (adminOrder.includes(itemInfo.to)) {
+              if (!adminItemsMap.has(itemInfo.to)) {
+                adminItemsMap.set(itemInfo.to, {
+                  label: itemInfo.label,
+                  icon: itemInfo.icon,
+                  to: itemInfo.to,
+                });
+              }
+            } else if (settingsOrder.includes(itemInfo.to)) {
+              if (!settingsItemsMap.has(itemInfo.to)) {
+                settingsItemsMap.set(itemInfo.to, {
+                  label: itemInfo.label,
+                  icon: itemInfo.icon,
+                  to: itemInfo.to,
+                });
+              }
+            } else {
+              if (!insuranceItemsMap.has(itemInfo.to)) {
+                insuranceItemsMap.set(itemInfo.to, {
+                  label: itemInfo.label,
+                  icon: itemInfo.icon,
+                  to: itemInfo.to,
+                });
+              }
+            }
           }
         }
       }
@@ -538,6 +595,80 @@ const createMenuSections = (
     },
   ];
 
+  // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
+  if (adminItems.length > 0) {
+    const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
+    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
+    const mailGroup = adminItems.filter(i => i.to === '/mail/incoming' || i.to === '/mail/outgoing');
+    
+    const otherAdmin = adminItems.filter(i =>
+      !hrGroup.some(g => g.to === i.to) &&
+      !agentsGroup.some(g => g.to === i.to) &&
+      !mailGroup.some(g => g.to === i.to) &&
+      i.to !== '/document-requests' &&
+      i.to !== '/external-entities' &&
+      i.to !== '/archive'
+    );
+
+    const finalAdmin = [...otherAdmin];
+
+    if (agentsGroup.length > 0) {
+      if (agentsGroup.length === 1 && agentsGroup[0].to === '/branches-agents') {
+        finalAdmin.push(agentsGroup[0]);
+      } else {
+        finalAdmin.push({
+          label: 'إدارة الفروع والوكلاء',
+          icon: 'fa-solid fa-building',
+          children: agentsGroup
+        });
+      }
+    }
+
+    if (hrGroup.length > 0) {
+      if (hrGroup.length === 1 && hrGroup[0].to === '/users') {
+        finalAdmin.push(hrGroup[0]);
+      } else {
+        finalAdmin.push({
+          label: 'إدارة الموظفين',
+          icon: 'fa-solid fa-user-shield',
+          children: hrGroup
+        });
+      }
+    }
+
+    if (mailGroup.length > 0) {
+      finalAdmin.push({
+        label: 'البريد الصادر والوارد',
+        icon: 'fa-solid fa-envelope-open-text',
+        children: mailGroup
+      });
+    }
+
+    // إضافة دليل الجهات الخارجية والأرشيف إذا كانا موجودين
+    const extItem = adminItems.find(i => i.to === '/external-entities');
+    if (extItem) finalAdmin.push(extItem);
+    
+    const archiveItem = adminItems.find(i => i.to === '/archive');
+    if (archiveItem) finalAdmin.push(archiveItem);
+
+    sections.push({
+      title: 'الشؤون الادارية',
+      items: finalAdmin,
+    });
+  }
+
+  // إضافة قسم الشؤون الفنية إذا كان هناك عناصر مصرح بها
+  const technicalItems: SidebarItem[] = technicalOrder
+    .filter(route => adminItemsMap.has(route))
+    .map(route => adminItemsMap.get(route)!);
+
+  if (technicalItems.length > 0) {
+    sections.push({
+      title: 'الشؤون الفنية',
+      items: technicalItems,
+    });
+  }
+
   // إضافة "كشف حساب الوكيل" دائماً للوكلاء (غير admin)
   if (!isAdmin) {
     const accountReportItem: SidebarItem = {
@@ -552,88 +683,46 @@ const createMenuSections = (
     }
   }
 
-  // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
-  if (adminItems.length > 0) {
-    const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
-    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
-    const otherAdmin = adminItems.filter(i => 
-      !hrGroup.some(g => g.to === i.to) && 
-      !agentsGroup.some(g => g.to === i.to) &&
-      i.to !== '/document-requests'
-    );
-    
-    const finalAdmin = [...otherAdmin];
-
-    if (agentsGroup.length > 0) {
-      if (agentsGroup.length === 1 && agentsGroup[0].to === '/branches-agents') {
-        finalAdmin.push(agentsGroup[0]);
-      } else {
-        finalAdmin.push({
-          label: 'إدارة الفروع والوكلاء',
-          icon: 'fa-solid fa-building',
-          children: agentsGroup.map(item => ({
-            ...item,
-            label: item.to === '/branches-agents' ? 'قائمة الفروع والوكلاء' : 'طلبات الوكلاء'
-          }))
-        });
-      }
-    }
-
-    if (hrGroup.length > 0) {
-      // إذا كان هناك عنصر واحد فقط، لا حاجة للمجموعة
-      if (hrGroup.length === 1 && hrGroup[0].to === '/users') {
-        finalAdmin.push(hrGroup[0]);
-      } else {
-        finalAdmin.push({
-          label: 'إدارة الموظفين',
-          icon: 'fa-solid fa-user-shield',
-          children: hrGroup.map(item => ({
-            ...item,
-            label: item.to === '/users' ? 'قائمة الموظفين' : 'طلبات الموظفين'
-          }))
-        });
-      }
-    }
-
-    sections.push({
-      title: 'الشؤون الادارية',
-      items: finalAdmin,
-    });
-  }
-
   if (reportsItems.length > 0) {
-    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances' || i.to === '/reports/indemnities');
-    const reportsGroup = reportsItems.filter(i => 
-      i.to === '/reports/commissions' || 
-      i.to === '/reports/branch-agent-account' || 
-      i.to === '/reports/monthly-account-closure' || 
+    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances');
+    const accountantGroup = reportsItems.filter(i =>
+      i.to === '/reports/commissions' ||
+      i.to === '/reports/branch-agent-account' ||
+      i.to === '/reports/monthly-account-closure' ||
       i.to === '/reports/monthly-account-closures-report' ||
-      i.to === '/reports/tax' ||
-      i.to === '/reports/social-security' ||
-      i.to === '/reports/bank-reconciliation'
+      i.to === '/reports/bank-reconciliation' ||
+      i.to === '/reports/inventory' ||
+      i.to === '/reports/revenue' ||
+      i.to === '/reports/payment-vouchers' ||
+      i.to === '/reports/financial-statistics' ||
+      i.to === '/reports/outstanding-debts' ||
+      i.to === '/reports/employee-salaries' ||
+      i.to === '/reports/financial-archive'
     );
-    
-    // العناصر التي لا تنتمي لأي مجموعة
-    const otherReports = reportsItems.filter(i => 
-      !expensesGroup.some(eg => eg.to === i.to) && 
-      !reportsGroup.some(rg => rg.to === i.to)
-    );
-    
-    const finalReports = [...otherReports];
-    
-    if (expensesGroup.length > 0) {
-      finalReports.push({
-        label: 'إدارة المصروفات',
-        icon: 'fa-solid fa-vault',
-        children: expensesGroup
-      });
-    }
 
-    if (reportsGroup.length > 0) {
+    // العناصر التي لا تنتمي لأي مجموعة (ستظهر كعناصر أساسية في الشؤون المالية)
+    const otherReports = reportsItems.filter(i =>
+      !expensesGroup.some(eg => eg.to === i.to) &&
+      !accountantGroup.some(ag => ag.to === i.to)
+    );
+
+    const finalReports = [...otherReports];
+
+    if (accountantGroup.length > 0 || expensesGroup.length > 0) {
+      const accountantChildren = [...accountantGroup];
+
+      if (expensesGroup.length > 0) {
+        accountantChildren.push({
+          label: 'إدارة المصروفات',
+          icon: 'fa-solid fa-vault',
+          children: expensesGroup
+        });
+      }
+
       finalReports.push({
         label: 'المحاسب المالي',
         icon: 'fa-solid fa-file-contract',
-        children: reportsGroup
+        children: accountantChildren
       });
     }
 
@@ -682,6 +771,7 @@ const createMenuSections = (
           { label: 'بيانات الوكالة', icon: 'fa-solid fa-building-user', to: `/branches-agents/${branchAgentId}?tab=agency` },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests` },
+          { label: 'إلغاء الوكالة', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
           { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
         ],
       });
@@ -868,6 +958,8 @@ export default function App() {
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
                   <Route path="/agent-requests" element={<AuthorizedRoute requiredPath="/agent-requests"><AllAgentRequests /></AuthorizedRoute>} />
+                  <Route path="/agency-cancellations" element={<AuthorizedRoute requiredPath="/agency-cancellations"><AgencyCancellations /></AuthorizedRoute>} />
+
                   <Route path="/document-requests" element={<AuthorizedRoute requiredPath="/document-requests"><DocumentRequestsList /></AuthorizedRoute>} />
                   {/* إدارة الفروع والوكلاء */}
                   <Route path="/branches-agents" element={<BranchesAgentsList />} />
@@ -907,7 +999,7 @@ export default function App() {
                   <Route path="/marine-structure-insurance-documents/create" element={<AuthorizedRoute requiredPath="/marine-structure-insurance-documents"><CreateMarineStructureInsurance /></AuthorizedRoute>} />
                   <Route path="/marine-structure-insurance-documents/:id" element={<AuthorizedRoute requiredPath="/marine-structure-insurance-documents"><ViewMarineStructureInsurance /></AuthorizedRoute>} />
                   <Route path="/marine-structure-insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/marine-structure-insurance-documents"><EditMarineStructureInsurance /></AuthorizedRoute>} />
-                  
+
                   {/* تأمين نقل النقدية */}
                   <Route path="/cash-in-transit-insurance" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><CashInTransitInsuranceList /></AuthorizedRoute>} />
                   <Route path="/cash-in-transit-insurance/create" element={<AuthorizedRoute requiredPath="/cash-in-transit-insurance"><CreateCashInTransitInsurance /></AuthorizedRoute>} />
@@ -930,7 +1022,7 @@ export default function App() {
                   <Route path="/personal-accident-insurance-documents/create" element={<AuthorizedRoute requiredPath="/personal-accident-insurance-documents"><CreatePersonalAccidentInsurance /></AuthorizedRoute>} />
                   <Route path="/personal-accident-insurance-documents/:id" element={<AuthorizedRoute requiredPath="/personal-accident-insurance-documents"><ViewPersonalAccidentInsurance /></AuthorizedRoute>} />
                   <Route path="/personal-accident-insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/personal-accident-insurance-documents"><EditPersonalAccidentInsurance /></AuthorizedRoute>} />
-                  
+
                   {/* تأمين حماية طلاب المدارس */}
                   <Route path="/school-student-insurance" element={<AuthorizedRoute requiredPath="/school-student-insurance"><SchoolStudentInsuranceList /></AuthorizedRoute>} />
                   <Route path="/school-student-insurance/create" element={<AuthorizedRoute requiredPath="/school-student-insurance"><CreateSchoolStudentInsurance /></AuthorizedRoute>} />
@@ -957,7 +1049,7 @@ export default function App() {
                   <Route path="/reports/outstanding-debts" element={<OutstandingDebts />} />
                   <Route path="/reports/financial-archive" element={<FinancialArchive />} />
                   <Route path="/reports/inventory" element={<InventoryManagement />} />
-                   <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
+                  <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
                   <Route path="/reports/tax" element={<AuthorizedRoute requiredPath="/reports/tax"><TaxSSReport type="tax" /></AuthorizedRoute>} />
                   <Route path="/reports/social-security" element={<AuthorizedRoute requiredPath="/reports/social-security"><TaxSSReport type="social_security" /></AuthorizedRoute>} />
                   <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><ExpenseManagement activeTabOverride="expenses" /></AuthorizedRoute>} />

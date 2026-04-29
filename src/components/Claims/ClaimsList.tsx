@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { showToast } from '../Toast';
 import { API_BASE_URL } from '../../config/api';
 import CreateClaimModal from './CreateClaim';
+import ExcelJS from 'exceljs';
+// @ts-ignore
+import { saveAs } from 'file-saver';
+
 
 export default function ClaimsList() {
   const [claims, setClaims] = useState<any[]>([]);
@@ -75,6 +79,157 @@ export default function ClaimsList() {
     setDamageTypeFilter('');
   };
 
+  const exportToExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('المطالبات');
+
+      // RTL Direction
+      worksheet.views = [{ rightToLeft: true }];
+
+      // Add Company Logo
+      try {
+        const response = await fetch('/img/logo.png');
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const logoImage = workbook.addImage({
+          buffer: arrayBuffer,
+          extension: 'png',
+        });
+        
+        // Position logo at the top right (cell A1 area)
+        worksheet.addImage(logoImage, {
+          tl: { col: 0, row: 0 },
+          ext: { width: 80, height: 80 }
+        });
+      } catch (err) {
+        console.warn('Could not load logo for excel:', err);
+      }
+
+      // Add QR Code
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const qrData = `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nبواسطة: ${currentUser.name || 'النظام'}`;
+        const qrResponse = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`);
+        const qrBlob = await qrResponse.blob();
+        const qrArrayBuffer = await qrBlob.arrayBuffer();
+        const qrImage = workbook.addImage({
+          buffer: qrArrayBuffer,
+          extension: 'png',
+        });
+        
+        // Position QR code at the top left (Column G)
+        worksheet.addImage(qrImage, {
+          tl: { col: 6, row: 0 },
+          ext: { width: 80, height: 80 }
+        });
+      } catch (err) {
+        console.warn('Could not load QR code for excel:', err);
+      }
+
+      // Add Main Title
+      worksheet.mergeCells('B2:F2');
+      const titleCell = worksheet.getCell('B2');
+      titleCell.value = 'شركة المدار الليبي للتأمين - إدارة المطالبات';
+      titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: '1e293b' } };
+      titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Add Report Info
+      worksheet.mergeCells('B3:F3');
+      const infoCell = worksheet.getCell('B3');
+      infoCell.value = `تقرير المطالبات المسجلة - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`;
+      infoCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: '64748b' } };
+      infoCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Start table from row 6
+      const tableStartRow = 5;
+
+      // Define columns (just for widths)
+      worksheet.columns = [
+        { key: 'claim_number', width: 20 },
+        { key: 'claim_date', width: 20 },
+        { key: 'insurance_number', width: 25 },
+        { key: 'claimant_name', width: 35 },
+        { key: 'damage_type', width: 15 },
+        { key: 'status', width: 25 },
+        { key: 'created_at', width: 20 },
+      ];
+
+      // Set Header Row
+      const headerRow = worksheet.getRow(tableStartRow);
+      headerRow.values = ['رقم المطالبة', 'تاريخ المطالبة', 'رقم الوثيقة', 'مقدم المطالبة', 'نوع الأضرار', 'الحالة', 'تاريخ التسجيل'];
+      headerRow.height = 30;
+
+      // Format Header
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 12 };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: '1e293b' }
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+
+      // Add Data
+      filteredClaims.forEach((claim, index) => {
+        const row = worksheet.getRow(tableStartRow + 1 + index);
+        row.values = [
+          claim.claim_number,
+          new Date(claim.claim_date).toLocaleDateString('ar-LY'),
+          claim.document?.insurance_number || '—',
+          claim.claimant_name,
+          claim.damage_type,
+          getStatusLabel(claim.status),
+          new Date(claim.created_at).toLocaleDateString('ar-LY')
+        ];
+        row.height = 25;
+      });
+
+      // Format Data Rows
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > tableStartRow) {
+          row.eachCell((cell) => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+          });
+          // Zebra stripes (alternate colors)
+          if (rowNumber % 2 !== 0) {
+            row.eachCell((cell) => {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'f1f5f9' }
+              };
+            });
+          }
+        }
+      });
+
+      // Generate Buffer and Save
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `تقرير_المطالبات_${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (error) {
+      console.error('Excel Export Error:', error);
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
+  };
+
+
   const getStatusLabel = (status: string) => {
     const statuses: any = {
       pending: 'قيد الانتظار',
@@ -105,17 +260,28 @@ export default function ClaimsList() {
         <div className="claims-modern-header">
           <div className="header-main-row">
             <h5 className="claims-title">قائمة المطالبات المسجلة</h5>
-            <button
-              className="add-claim-btn"
-              onClick={() => {
-                setEditingClaim(null);
-                setShowAddModal(true);
-              }}
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>إضافة مطالبة جديدة</span>
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="export-excel-btn"
+                onClick={exportToExcel}
+                title="تصدير إكسل"
+              >
+                <i className="fa-solid fa-file-excel"></i>
+                <span>تصدير إكسل</span>
+              </button>
+              <button
+                className="add-claim-btn"
+                onClick={() => {
+                  setEditingClaim(null);
+                  setShowAddModal(true);
+                }}
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>إضافة مطالبة جديدة</span>
+              </button>
+            </div>
           </div>
+
 
           <div className="search-row-modern">
             <label>بحث نصي</label>
@@ -228,6 +394,27 @@ export default function ClaimsList() {
             filter: brightness(1.1);
             transform: translateY(-1px);
           }
+          
+          .export-excel-btn {
+            background: #166534 !important;
+            color: white !important;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(22, 101, 52, 0.2);
+          }
+          .export-excel-btn:hover {
+            background: #15803d !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(22, 101, 52, 0.3);
+          }
+
           
           .search-row-modern label, .filter-group label {
             display: block;
