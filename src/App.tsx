@@ -579,10 +579,10 @@ const createMenuSections = (
 
   // العناصر الإضافية التي تظهر في القائمة الرئيسية مباشرة
   const extraMainItems: SidebarItem[] = [];
-  if (insuranceItemsMap.has('/company-documents')) {
+  if (isAdmin && insuranceItemsMap.has('/company-documents')) {
     extraMainItems.push(insuranceItemsMap.get('/company-documents')!);
-    insuranceItemsMap.delete('/company-documents');
   }
+  insuranceItemsMap.delete('/company-documents');
 
 
   // ترتيب التقارير
@@ -975,7 +975,7 @@ export default function App() {
                   showSidebarToggle={showSidebarToggle}
                 />
                 <Routes>
-                  <Route path="/company-documents" element={<CompanyDocuments />} />
+                  <Route path="/company-documents" element={isAdmin ? <CompanyDocuments /> : <Navigate to="/dashboard" />} />
                   <Route path="/dashboard" element={<DashboardPanels />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
