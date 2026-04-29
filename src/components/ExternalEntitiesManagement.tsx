@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { showToast } from './Toast';
 import '../styles/CreateInsurance.css';
 
@@ -12,6 +12,7 @@ interface ExternalEntity {
     email: string;
     default_messenger_name: string;
     default_messenger_phone: string;
+    logo_url: string;
     created_at: string;
 }
 
@@ -33,7 +34,8 @@ const ExternalEntitiesManagement: React.FC = () => {
         phone: '',
         email: '',
         default_messenger_name: '',
-        default_messenger_phone: ''
+        default_messenger_phone: '',
+        logo: null as File | null
     });
 
     useEffect(() => {
@@ -55,8 +57,12 @@ const ExternalEntitiesManagement: React.FC = () => {
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, files } = e.target;
+        if (type === 'file' && files) {
+            setFormData(prev => ({ ...prev, [name]: files[0] }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -65,13 +71,19 @@ const ExternalEntitiesManagement: React.FC = () => {
             ? `${API_BASE_URL}/external-entities/${currentEntityId}`
             : `${API_BASE_URL}/external-entities`;
         
-        const method = isEditing ? 'PUT' : 'POST';
+        const data = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+            if (value !== null) data.append(key, value);
+        });
+
+        if (isEditing) {
+            data.append('_method', 'PUT');
+        }
 
         try {
             const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                method: 'POST',
+                body: data
             });
 
             if (response.ok) {
@@ -95,10 +107,14 @@ const ExternalEntitiesManagement: React.FC = () => {
             phone: '',
             email: '',
             default_messenger_name: '',
-            default_messenger_phone: ''
+            default_messenger_phone: '',
+            logo: null
         });
         setIsEditing(false);
         setCurrentEntityId(null);
+        // Reset file input if needed
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
     };
 
     const handleEdit = (entity: ExternalEntity) => {
@@ -109,7 +125,8 @@ const ExternalEntitiesManagement: React.FC = () => {
             phone: entity.phone || '',
             email: entity.email || '',
             default_messenger_name: entity.default_messenger_name || '',
-            default_messenger_phone: entity.default_messenger_phone || ''
+            default_messenger_phone: entity.default_messenger_phone || '',
+            logo: null
         });
         setIsEditing(true);
         setCurrentEntityId(entity.id);
@@ -225,6 +242,7 @@ const ExternalEntitiesManagement: React.FC = () => {
                     <table className="users-table">
                         <thead>
                             <tr>
+                                <th>الشعار</th>
                                 <th>اسم الجهة</th>
                                 <th>رقم الجهة</th>
                                 <th>الهاتف</th>
@@ -239,6 +257,19 @@ const ExternalEntitiesManagement: React.FC = () => {
                             ) : filteredEntities.length > 0 ? (
                                 filteredEntities.map(entity => (
                                     <tr key={entity.id}>
+                                        <td>
+                                            {entity.logo_url ? (
+                                                <img 
+                                                    src={`${BACKEND_URL}${entity.logo_url}`} 
+                                                    alt={entity.name} 
+                                                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} 
+                                                />
+                                            ) : (
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-cyan-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-cyan)' }}>
+                                                    <i className="fa-solid fa-building"></i>
+                                                </div>
+                                            )}
+                                        </td>
                                         <td style={{ fontWeight: 700 }}>{entity.name}</td>
                                         <td style={{ color: '#2563eb', fontWeight: 700 }}>{entity.entity_number || '-'}</td>
                                         <td>{entity.phone || '-'}</td>
@@ -296,6 +327,10 @@ const ExternalEntitiesManagement: React.FC = () => {
                                 <div className="form-group">
                                     <label>رقم هاتف المندوب</label>
                                     <input type="text" name="default_messenger_phone" value={formData.default_messenger_phone} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group">
+                                    <label>شعار الجهة / الشركة</label>
+                                    <input type="file" name="logo" onChange={handleInputChange} accept="image/*" />
                                 </div>
                             </div>
                             <div className="form-actions" style={{ marginTop: '10px' }}>
