@@ -18,7 +18,7 @@ const getApiBaseUrl = (): string => {
   
   // في development، استخدم proxy
   if (import.meta.env.DEV) {
-    return '/api';
+    return 'http://localhost:8000/api';
   }
   
   // في production، استخدم الـ domain المحدد
@@ -30,6 +30,7 @@ export const API_BASE_URL = getApiBaseUrl();
 // Ensure BACKEND_URL is absolute or starts with /
 const getBackendUrl = () => {
   let base = API_BASE_URL.replace(/\/api\/?$/i, '');
+  if (base === '') return ''; // في حالة الـ proxy المحلي
   if (base.startsWith('/') || base.startsWith('http')) return base;
   return `https://${base}`;
 };

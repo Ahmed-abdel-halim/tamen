@@ -489,7 +489,7 @@ const MailManagement: React.FC = () => {
                                             }}>
                                                 {doc.attachment_urls && doc.attachment_urls.length > 0 ? (
                                                     doc.attachment_urls.map((url, idx) => {
-                                                        const fullUrl = url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+                                                        const fullUrl = url.startsWith('http') ? url : (url.startsWith('/') ? `${BACKEND_URL}${url}` : `${BACKEND_URL}/storage/${url}`);
                                                         return (
                                                             <button 
                                                                 key={idx} 
@@ -519,7 +519,7 @@ const MailManagement: React.FC = () => {
                                                 ) : (doc.attachment_url ? (
                                                     <button 
                                                         onClick={() => { 
-                                                            const fullUrl = doc.attachment_url!.startsWith('http') ? doc.attachment_url! : `${BACKEND_URL}${doc.attachment_url}`;
+                                                            const fullUrl = doc.attachment_url!.startsWith('http') ? doc.attachment_url! : (doc.attachment_url!.startsWith('/') ? `${BACKEND_URL}${doc.attachment_url}` : `${BACKEND_URL}/storage/${doc.attachment_url}`);
                                                             setSelectedFile(fullUrl); 
                                                             setPreviewRotation(0); 
                                                         }} 
@@ -546,7 +546,7 @@ const MailManagement: React.FC = () => {
                                                     <button
                                                         onClick={() => {
                                                             const mainUrl = doc.attachment_urls?.[0] || doc.attachment_url;
-                                                            const fullFileUrl = mainUrl.startsWith('http') ? mainUrl : `${BACKEND_URL}${mainUrl}`;
+                                                            const fullFileUrl = mainUrl.startsWith('http') ? mainUrl : (mainUrl.startsWith('/') ? `${BACKEND_URL}${mainUrl}` : `${BACKEND_URL}/storage/${mainUrl}`);
                                                             const text = `*مراسلة من شركة المدار الليبي للتأمين*%0A*الموضوع:* ${doc.subject}%0A*الرقم الإشاري:* ${doc.referential_number}%0A*رابط الملف:* ${fullFileUrl}`;
                                                             const phone = doc.messenger_phone || '';
                                                             window.open(`https://wa.me/${phone}?text=${text}`, '_blank');

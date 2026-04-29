@@ -78,7 +78,7 @@ const ViewMailDocument: React.FC = () => {
 
     const handleWhatsApp = () => {
         const mainUrl = doc.attachment_urls?.[0] || doc.attachment_url;
-        const fullFileUrl = mainUrl ? (mainUrl.startsWith('http') ? mainUrl : `${BACKEND_URL}${mainUrl}`) : '';
+        const fullFileUrl = mainUrl ? (mainUrl.startsWith('http') ? mainUrl : (mainUrl.startsWith('/') ? `${BACKEND_URL}${mainUrl}` : `${BACKEND_URL}/storage/${mainUrl}`)) : '';
         const text = `*مراسلة من شركة المدار الليبي للتأمين*%0A*الموضوع:* ${doc.subject}%0A*الرقم الإشاري:* ${doc.referential_number}%0A*رابط الملف:* ${fullFileUrl}`;
         const phone = doc.messenger_phone || '';
         window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
@@ -280,7 +280,7 @@ const ViewMailDocument: React.FC = () => {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                             {allAttachments.length > 0 ? allAttachments.map((url, idx) => {
-                                const fullUrl = url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+                                const fullUrl = url.startsWith('http') ? url : (url.startsWith('/') ? `${BACKEND_URL}${url}` : `${BACKEND_URL}/storage/${url}`);
                                 const isImage = url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
                                 const isPdf = url.toLowerCase().endsWith('.pdf');
 

@@ -105,6 +105,8 @@ import ViewMailDocument from './components/ViewMailDocument';
 import ClaimsList from './components/Claims/ClaimsList';
 import ViewClaim from './components/Claims/ViewClaim';
 import AgencyCancellations from './components/AgencyCancellations';
+import CompanyDocuments from './components/CompanyDocuments';
+
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -159,6 +161,8 @@ function hasAccessToRoute(
     'دليل الجهات الخارجية': ['/external-entities'],
     'أرشيف المستندات الإدارية': ['/archive'],
     'طلبات الوثائق': ['/document-requests'],
+    'ملفات الشركة': ['/company-documents'],
+
     'المطالبات': ['/claims'],
     'الشؤون الفنية': ['/claims', '/reports/indemnities'],
     'المحاسب المالي': [
@@ -288,8 +292,10 @@ const menuSections: SidebarSection[] = [
           { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
         ]
       },
+      { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     ],
   },
+
   {
     title: 'الشؤون الادارية',
     items: [
@@ -316,6 +322,8 @@ const menuSections: SidebarSection[] = [
       },
       { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
+
+
   },
   {
     title: 'الشؤون الفنية',
@@ -416,7 +424,9 @@ const createMenuSections = (
       { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
     ],
     'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
+
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -481,6 +491,8 @@ const createMenuSections = (
   ];
   const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/agency-cancellations', '/archive'];
 
+
+
   const technicalOrder: string[] = ['/claims', '/reports/indemnities'];
   const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
 
@@ -517,7 +529,6 @@ const createMenuSections = (
             }
           });
         } else {
-          // التعامل مع كونه كائن واحد
           const itemInfo = items as SidebarItem;
           if (itemInfo.to) {
             if (itemInfo.to.startsWith('/reports/')) {
@@ -559,10 +570,20 @@ const createMenuSections = (
     });
   }
 
-  // ترتيب العناصر حسب ترتيب السايدبار الأصلي
+
+
+  // إنشاء قائمة التأمين المصرح بها
   const insuranceItems: SidebarItem[] = sidebarOrder
     .filter(route => insuranceItemsMap.has(route))
     .map(route => insuranceItemsMap.get(route)!);
+
+  // العناصر الإضافية التي تظهر في القائمة الرئيسية مباشرة
+  const extraMainItems: SidebarItem[] = [];
+  if (insuranceItemsMap.has('/company-documents')) {
+    extraMainItems.push(insuranceItemsMap.get('/company-documents')!);
+    insuranceItemsMap.delete('/company-documents');
+  }
+
 
   // ترتيب التقارير
   const reportsItems: SidebarItem[] = reportsOrder
@@ -578,7 +599,9 @@ const createMenuSections = (
   // إنشاء القائمة المصفاة
   const mainMenuItems: SidebarItem[] = [
     { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
+    ...extraMainItems
   ];
+
 
   if (insuranceItems.length > 0) {
     mainMenuItems.push({
@@ -952,7 +975,9 @@ export default function App() {
                   showSidebarToggle={showSidebarToggle}
                 />
                 <Routes>
+                  <Route path="/company-documents" element={<CompanyDocuments />} />
                   <Route path="/dashboard" element={<DashboardPanels />} />
+
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />
@@ -1063,6 +1088,7 @@ export default function App() {
                   <Route path="/external-entities" element={<ProtectedRoute><ExternalEntitiesManagement /></ProtectedRoute>} />
                   <Route path="/mail/:type" element={<ProtectedRoute><MailManagement /></ProtectedRoute>} />
                   <Route path="/mail/view/:id" element={<ProtectedRoute><ViewMailDocument /></ProtectedRoute>} />
+
                   <Route path="/claims" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ClaimsList /></AuthorizedRoute></ProtectedRoute>} />
                   <Route path="/claims/:id" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ViewClaim /></AuthorizedRoute></ProtectedRoute>} />
                   <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />
