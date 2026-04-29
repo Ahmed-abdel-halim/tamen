@@ -428,6 +428,32 @@ const CompanyDocuments: React.FC = () => {
                                 <label>رقم المستند <span className="required">*</span></label>
                                 <input type="text" name="document_number" value={formData.document_number} onChange={handleInputChange} required />
                             </div>
+
+                            <div className="form-group" style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '15px', borderRadius: '12px', border: '1px dashed #3b82f6' }}>
+                                <label style={{ color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <i className="fa-solid fa-paperclip"></i>
+                                    إضافة ملفات (صور / PDF)
+                                </label>
+                                <input 
+                                    type="file" 
+                                    onChange={handleFileChange} 
+                                    multiple 
+                                    accept="image/*,.pdf" 
+                                    style={{ marginTop: '10px' }}
+                                />
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+                                    {attachments.map((file, idx) => (
+                                        <div key={idx} style={{ position: 'relative', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 30px 8px 12px', borderRadius: '10px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <i className="fa-solid fa-file" style={{ color: '#10b981' }}></i>
+                                            <span style={{ fontSize: '12px' }}>{file.name.substring(0, 10)}...</span>
+                                            <button type="button" onClick={() => removeAttachment(idx)} style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                <i className="fa-solid fa-circle-xmark"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div className="form-group">
                                     <label>تاريخ الإصدار</label>
@@ -457,21 +483,6 @@ const CompanyDocuments: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="form-group">
-                                <label>إضافة ملفات جديدة (صور / PDF)</label>
-                                <input type="file" onChange={handleFileChange} multiple accept="image/*,.pdf" />
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
-                                    {attachments.map((file, idx) => (
-                                        <div key={idx} style={{ position: 'relative', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 30px 8px 12px', borderRadius: '10px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <i className="fa-solid fa-file" style={{ color: '#10b981' }}></i>
-                                            <span style={{ fontSize: '12px' }}>{file.name.substring(0, 10)}...</span>
-                                            <button type="button" onClick={() => removeAttachment(idx)} style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                                                <i className="fa-solid fa-circle-xmark"></i>
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
 
                             <div className="form-actions">
                                 <button type="button" onClick={() => setShowModal(false)} className="btn-cancel" disabled={submitting}>إلغاء</button>

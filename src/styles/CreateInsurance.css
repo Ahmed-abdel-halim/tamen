@@ -116,3 +116,56 @@
     background: #2563eb;
     transform: translateY(-2px);
 }
+
+/* Custom Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    border: 2px solid #f8fafc; /* Adds spacing around thumb */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Firefox Support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
+    scrollbar-gutter: stable;
+}
+
+.modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+    padding-right: 5px; /* Space for the thin scrollbar */
+}
+
+/* Dark Mode Support */
+[data-theme='dark'] ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-color: #0f172a;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+[data-theme='dark'] * {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 #0f172a;
+}
