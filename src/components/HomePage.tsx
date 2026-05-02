@@ -156,33 +156,20 @@ export default function HomePage() {
       <WebsiteTopBar />
       <WebsiteNavbar />
       
-      {/** ترجمة النصوص */}
-      {/** يتم استخدام المتغير t لعرض النص حسب اللغة الحالية */}
-      {/** t = translations[language] */}
-      {/** اللغة الافتراضية العربية */}
-      {/** التوجيه بين RTL/LTR يتم في effect أعلاه */}
-      {/** الأزرار والروابط تأخذ النص المترجم مباشرة */}
-      
       {/* Hero Slider */}
       <section className="hero-slider">
         <div className="slider-container">
-          {slides.map((slide, index) => {
-            const slideStyle = slide.isImage 
-              ? { 
-                  backgroundImage: `url(${slide.image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundColor: '#000'
-                }
-              : { background: slide.image };
-            
-            return (
+          {slides.map((slide, index) => (
             <div
               key={`slide-${index}`}
               className={`slide ${index === currentSlide ? 'active' : ''}`}
-              style={slideStyle}
             >
+              {slide.isImage && (
+                <div 
+                  className="slide-bg" 
+                  style={{ backgroundImage: `url(${slide.image})` }}
+                ></div>
+              )}
               <div className="slide-content">
                 <h1 className="slide-title">{slide.title}</h1>
                 <h2 className="slide-subtitle">{slide.subtitle}</h2>
@@ -197,8 +184,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            );
-          })}
+          ))}
           
           <button className="slider-nav prev" onClick={prevSlide}>
             <i className="fas fa-chevron-right"></i>
@@ -238,238 +224,31 @@ export default function HomePage() {
             <p className="section-subtitle">{translations[language].servicesSubtitle}</p>
           </div>
           <div className="services-grid">
-            <div 
-              className="service-card" 
-              data-service="car"
-              style={{
-                backgroundImage: `url(/img/11.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[0].title}</h3>
-                  <p>{translations[language].services[0].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
+            {[11, 22, 2, 4, 3, 5, 1, 22].map((imgNum, idx) => (
+              <div className="service-card" key={`service-${idx}`}>
+                <div 
+                  className="service-card-bg" 
+                  style={{ backgroundImage: `url(/img/${imgNum}.jpg)` }}
+                ></div>
+                <div className="service-card-overlay"></div>
+                <div className="service-card-inner">
+                  <div
+                    className="service-content"
+                    style={{
+                      direction: language === 'en' ? 'ltr' : 'rtl',
+                      textAlign: language === 'en' ? 'left' : 'right',
+                    }}
+                  >
+                    <h3>{translations[language].services[idx].title}</h3>
+                    <p>{translations[language].services[idx].desc}</p>
+                    <Link to="/insurances" className="service-link">
+                      <span>{translations[language].discoverMore}</span>
+                      <i className="fas fa-arrow-left"></i>
+                    </Link>
+                  </div>
                 </div>
-                <div className="service-card-decoration"></div>
               </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="travel"
-              style={{
-                backgroundImage: `url(/img/22.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[1].title}</h3>
-                  <p>{translations[language].services[1].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="visitors"
-              style={{
-                backgroundImage: `url(/img/2.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[2].title}</h3>
-                  <p>{translations[language].services[2].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="medical"
-              style={{
-                backgroundImage: `url(/img/4.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[3].title}</h3>
-                  <p>{translations[language].services[3].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="boat"
-              style={{
-                backgroundImage: `url(/img/3.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[4].title}</h3>
-                  <p>{translations[language].services[4].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="accident"
-              style={{
-                backgroundImage: `url(/img/5.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[5].title}</h3>
-                  <p>{translations[language].services[5].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="hajj"
-              style={{
-                backgroundImage: `url(/img/1.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[6].title}</h3>
-                  <p>{translations[language].services[6].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
-            <div 
-              className="service-card" 
-              data-service="residents"
-              style={{
-                backgroundImage: `url(/img/22.jpg)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
-              <div className="service-card-overlay"></div>
-              <div className="service-card-inner">
-                <div
-                  className="service-content"
-                  style={{
-                    direction: language === 'en' ? 'ltr' : 'rtl',
-                    textAlign: language === 'en' ? 'left' : 'right',
-                  }}
-                >
-                  <h3>{translations[language].services[7].title}</h3>
-                  <p>{translations[language].services[7].desc}</p>
-                  <Link to="/insurances" className="service-link">
-                    <span>{translations[language].discoverMore}</span>
-                    <i className="fas fa-arrow-left"></i>
-                  </Link>
-                </div>
-                <div className="service-card-decoration"></div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -478,4 +257,3 @@ export default function HomePage() {
     </div>
   );
 }
-
