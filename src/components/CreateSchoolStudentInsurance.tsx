@@ -17,6 +17,21 @@ export default function CreateSchoolStudentInsurance() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.student_name.trim()) errors.student_name = 'اسم الطالب مطلوب';
+    if (!formData.school_name.trim()) errors.school_name = 'اسم المدرسة مطلوب';
+    if (!formData.grade.trim()) errors.grade = 'السنة الدراسية مطلوبة';
+    if (!formData.birth_date) errors.birth_date = 'تاريخ الميلاد مطلوب';
+    if (!formData.start_date) errors.start_date = 'تاريخ البدء مطلوب';
+    if (!formData.whatsapp_number.trim()) errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    if (!formData.premium_amount) errors.premium_amount = 'مبلغ القسط مطلوب';
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
 
   useEffect(() => {
@@ -30,6 +45,8 @@ export default function CreateSchoolStudentInsurance() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     setSubmitting(true);
     try {
       const userStr = localStorage.getItem('user');
@@ -46,7 +63,17 @@ export default function CreateSchoolStudentInsurance() {
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error('فشل في حفظ الوثيقة');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (errorData.errors) {
+          const formattedErrors: Record<string, string> = {};
+          Object.keys(errorData.errors).forEach(key => {
+            formattedErrors[key] = Array.isArray(errorData.errors[key]) ? errorData.errors[key][0] : errorData.errors[key];
+          });
+          setFormErrors(formattedErrors);
+        }
+        throw new Error(errorData.message || 'فشل في حفظ الوثيقة');
+      }
       showToast('تم إصدار الوثيقة بنجاح', 'success');
       setTimeout(() => navigate('/school-student-insurance'), 1500);
     } catch (error: any) {
@@ -75,36 +102,42 @@ export default function CreateSchoolStudentInsurance() {
                 <label>اسم الطالب بالكامل <span className="required">*</span></label>
                 <input
                   type="text"
-                  required
                   value={formData.student_name}
                   onChange={(e) => setFormData({ ...formData, student_name: e.target.value })}
+                  className={formErrors.student_name ? 'error' : ''}
                 />
+                {formErrors.student_name && <span className="error-message">{formErrors.student_name}</span>}
               </div>
               <div className="form-group">
                 <label>اسم المدرسة <span className="required">*</span></label>
                 <input
                   type="text"
-                  required
                   value={formData.school_name}
                   onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
+                  className={formErrors.school_name ? 'error' : ''}
                 />
+                {formErrors.school_name && <span className="error-message">{formErrors.school_name}</span>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label>السنة الدراسية</label>
+                  <label>السنة الدراسية <span className="required">*</span></label>
                   <input
                     type="text"
                     value={formData.grade}
                     onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                    className={formErrors.grade ? 'error' : ''}
                   />
+                  {formErrors.grade && <span className="error-message">{formErrors.grade}</span>}
                 </div>
                 <div className="form-group">
-                  <label>تاريخ الميلاد</label>
+                  <label>تاريخ الميلاد <span className="required">*</span></label>
                   <input
                     type="date"
                     value={formData.birth_date}
                     onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                    className={formErrors.birth_date ? 'error' : ''}
                   />
+                  {formErrors.birth_date && <span className="error-message">{formErrors.birth_date}</span>}
                 </div>
               </div>
             </div>
@@ -116,10 +149,11 @@ export default function CreateSchoolStudentInsurance() {
                   <label>تاريخ البدء <span className="required">*</span></label>
                   <input
                     type="date"
-                    required
                     value={formData.start_date}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    className={formErrors.start_date ? 'error' : ''}
                   />
+                  {formErrors.start_date && <span className="error-message">{formErrors.start_date}</span>}
                 </div>
                 <div className="form-group">
                   <label>تاريخ الانتهاء</label>
@@ -138,21 +172,23 @@ export default function CreateSchoolStudentInsurance() {
                 </p>
                 <input
                   type="text"
-                  required
                   value={formData.whatsapp_number}
                   onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
                   placeholder="مثال: 0910000000"
+                  className={formErrors.whatsapp_number ? 'error' : ''}
                 />
+                {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
               </div>
               <div className="form-group">
                 <label>مبلغ القسط الإجمالي (د.ل) <span className="required">*</span></label>
                 <input
                   type="number"
                   step="0.001"
-                  required
                   value={formData.premium_amount}
                   onChange={(e) => setFormData({ ...formData, premium_amount: e.target.value })}
+                  className={formErrors.premium_amount ? 'error' : ''}
                 />
+                {formErrors.premium_amount && <span className="error-message">{formErrors.premium_amount}</span>}
               </div>
             </div>
           </div>

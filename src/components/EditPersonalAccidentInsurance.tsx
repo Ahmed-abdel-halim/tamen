@@ -431,12 +431,17 @@ export default function EditPersonalAccidentInsurance() {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
-    if (!formData.name) {
-      errors.name = 'الاسم مطلوب';
-    }
-    if (!formData.whatsapp_number) {
-      errors.whatsapp_number = 'رقم الواتساب مطلوب';
-    }
+    if (!formData.name.trim()) errors.name = 'الاسم مطلوب';
+    if (!formData.birth_date) errors.birth_date = 'تاريخ الميلاد مطلوب';
+    if (!formData.phone.trim()) errors.phone = 'رقم الهاتف مطلوب';
+    if (!formData.whatsapp_number.trim()) errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    if (!formData.id_proof.trim()) errors.id_proof = 'إثبات شخصي مطلوب';
+    if (!formData.address.trim()) errors.address = 'العنوان مطلوب';
+    if (!formData.workplace.trim()) errors.workplace = 'مكان العمل مطلوب';
+    if (!formData.gender) errors.gender = 'الجنس مطلوب';
+    if (!formData.nationality) errors.nationality = 'الجنسية مطلوبة';
+    if (!formData.profession) errors.profession = 'المهنة مطلوبة';
+    if (!formData.claim_authorized_name.trim()) errors.claim_authorized_name = 'اسم الموكل للمطالبات مطلوب';
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -587,13 +592,15 @@ export default function EditPersonalAccidentInsurance() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="birth_date">تاريخ الميلاد</label>
+                    <label htmlFor="birth_date">تاريخ الميلاد <span className="required">*</span></label>
                     <input
                       type="date"
                       id="birth_date"
                       value={formData.birth_date}
                       onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                      className={formErrors.birth_date ? 'error' : ''}
                     />
+                    {formErrors.birth_date && <span className="error-message">{formErrors.birth_date}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="age">العمر</label>
@@ -610,13 +617,15 @@ export default function EditPersonalAccidentInsurance() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="phone">رقم الهاتف</label>
+                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
                     <input
                       type="text"
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className={formErrors.phone ? 'error' : ''}
                     />
+                    {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                   </div>
 
                   <div className="form-group">
@@ -635,52 +644,60 @@ export default function EditPersonalAccidentInsurance() {
                     {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="id_proof">إثبات شخصي</label>
+                    <label htmlFor="id_proof">إثبات شخصي <span className="required">*</span></label>
                     <input
                       type="text"
                       id="id_proof"
                       value={formData.id_proof}
                       onChange={(e) => setFormData({ ...formData, id_proof: e.target.value })}
+                      className={formErrors.id_proof ? 'error' : ''}
                     />
+                    {formErrors.id_proof && <span className="error-message">{formErrors.id_proof}</span>}
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="address">العنوان</label>
+                  <label htmlFor="address">العنوان <span className="required">*</span></label>
                   <input
                     type="text"
                     id="address"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className={formErrors.address ? 'error' : ''}
                   />
+                  {formErrors.address && <span className="error-message">{formErrors.address}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="workplace">مكان العمل</label>
+                  <label htmlFor="workplace">مكان العمل <span className="required">*</span></label>
                   <input
                     type="text"
                     id="workplace"
                     value={formData.workplace}
                     onChange={(e) => setFormData({ ...formData, workplace: e.target.value })}
+                    className={formErrors.workplace ? 'error' : ''}
                   />
+                  {formErrors.workplace && <span className="error-message">{formErrors.workplace}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="gender">الجنس</label>
+                  <label htmlFor="gender">الجنس <span className="required">*</span></label>
                   <select
                     id="gender"
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className={formErrors.gender ? 'error' : ''}
                   >
                     <option value="">اختر الجنس...</option>
                     <option value="ذكر Male">ذكر Male</option>
                     <option value="انثى Female">انثى Female</option>
                   </select>
+                  {formErrors.gender && <span className="error-message">{formErrors.gender}</span>}
                 </div>
 
                 {/* الجنسية - Select2 */}
                 <div className="form-group" ref={nationalityDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="nationality">الجنسية</label>
+                  <label htmlFor="nationality">الجنسية <span className="required">*</span></label>
                   <div
                     onClick={() => {
                       setShowNationalityDropdown((v) => !v);
@@ -780,12 +797,12 @@ export default function EditPersonalAccidentInsurance() {
                       </div>
                     </div>
                   )}
-                  {formErrors.nationality && <span className="error-message">{formErrors.nationality}</span>}
+                  {formErrors.nationality && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.nationality}</span>}
                 </div>
 
                 {/* المهنة - Select2 */}
                 <div className="form-group" ref={professionDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="profession">المهنة</label>
+                  <label htmlFor="profession">المهنة <span className="required">*</span></label>
                   <div
                     onClick={() => {
                       setShowProfessionDropdown((v) => !v);
@@ -882,17 +899,19 @@ export default function EditPersonalAccidentInsurance() {
                       </div>
                     </div>
                   )}
-                  {formErrors.profession && <span className="error-message">{formErrors.profession}</span>}
+                  {formErrors.profession && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.profession}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="claim_authorized_name">اسم الموكل للمطالبات</label>
+                  <label htmlFor="claim_authorized_name">اسم الموكل للمطالبات <span className="required">*</span></label>
                   <input
                     type="text"
                     id="claim_authorized_name"
                     value={formData.claim_authorized_name}
                     onChange={(e) => setFormData({ ...formData, claim_authorized_name: e.target.value })}
+                    className={formErrors.claim_authorized_name ? 'error' : ''}
                   />
+                  {formErrors.claim_authorized_name && <span className="error-message">{formErrors.claim_authorized_name}</span>}
                 </div>
               </div>
 

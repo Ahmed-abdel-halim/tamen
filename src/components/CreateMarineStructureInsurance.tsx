@@ -535,18 +535,44 @@ export default function CreateMarineStructureInsurance() {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!formData.start_date) {
-      errors.start_date = 'بداية التأمين مطلوبة';
+    if (!formData.start_date) errors.start_date = 'بداية التأمين مطلوبة';
+    if (!formData.duration) errors.duration = 'مدة التأمين مطلوبة';
+    if (!formData.structure_type) errors.structure_type = 'نوع الهيكل البحري مطلوب';
+    if (!formData.vessel_name.trim()) errors.vessel_name = 'اسم المركب / الهيكل مطلوب';
+    if (!formData.registration_code.trim()) errors.registration_code = 'رمز ورقم التسجيل مطلوب';
+    if (!formData.registration_date) errors.registration_date = 'تاريخ التسجيل مطلوب';
+    if (!formData.port) errors.port = 'الميناء أو المرفأ مطلوب';
+    if (!formData.registration_authority_id) errors.registration_authority_id = 'الجهة المقيد بها مطلوبة';
+    if (!formData.plate_number.trim()) errors.plate_number = 'رقم اللوحة المعدنية مطلوب';
+    if (!formData.hull_number.trim()) errors.hull_number = 'رقم الهيكل مطلوب';
+    if (!formData.manufacturing_material) errors.manufacturing_material = 'نوع مواد التصنيع مطلوب';
+    if (!formData.length) errors.length = 'الطول مطلوب';
+    if (!formData.width) errors.width = 'العرض مطلوب';
+    if (!formData.depth) errors.depth = 'العمق مطلوب';
+    if (!formData.manufacturing_year) errors.manufacturing_year = 'تاريخ الصنع مطلوب';
+    if (!formData.manufacturing_country) errors.manufacturing_country = 'مكان الصنع مطلوب';
+    if (!formData.color) errors.color = 'اللون مطلوب';
+    if (!formData.fuel_tank_capacity) errors.fuel_tank_capacity = 'سعة خزان الوقود مطلوبة';
+    if (!formData.passenger_count) errors.passenger_count = 'عدد الركاب مطلوب';
+    if (!formData.load_capacity) errors.load_capacity = 'الحمولة بالطن مطلوبة';
+    if (!formData.insured_name.trim()) errors.insured_name = 'اسم المؤمن له مطلوب';
+    if (!formData.phone.trim()) errors.phone = 'رقم الهاتف مطلوب';
+    if (!formData.whatsapp_number.trim()) errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    if (!formData.license_number.trim()) errors.license_number = 'رقم الرخصة مطلوب';
+    
+    // validate main engine
+    const mainEngine = engines.find(e => e.engine_type === 'main');
+    if (mainEngine) {
+      if (!mainEngine.engine_model) errors.main_engine_model = 'نوع المحرك الرئيسي مطلوب';
+      if (!mainEngine.fuel_type) errors.main_fuel_type = 'نوع وقود المحرك الرئيسي مطلوب';
+      if (!mainEngine.engine_number) errors.main_engine_number = 'رقم المحرك الرئيسي مطلوب';
+      if (!mainEngine.manufacturing_country) errors.main_manufacturing_country = 'مكان صنع المحرك الرئيسي مطلوب';
+      if (!mainEngine.horsepower) errors.main_horsepower = 'قوة المحرك الرئيسي مطلوبة';
+      if (!mainEngine.installation_date) errors.main_installation_date = 'تاريخ تركيب المحرك الرئيسي مطلوب';
+      if (!mainEngine.cylinders_count) errors.main_cylinders_count = 'عدد إسطوانات المحرك الرئيسي مطلوب';
+      if (!mainEngine.installation_type) errors.main_installation_type = 'نوع تركيب المحرك الرئيسي مطلوب';
     }
-    if (!formData.duration) {
-      errors.duration = 'مدة التأمين مطلوبة';
-    }
-    if (!formData.structure_type) {
-      errors.structure_type = 'نوع الهيكل البحري مطلوب';
-    }
-    if (!formData.whatsapp_number) {
-      errors.whatsapp_number = 'رقم الواتساب مطلوب';
-    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -862,13 +888,14 @@ export default function CreateMarineStructureInsurance() {
                   </div>
 
                   <div className="form-group">
-                    <label>نوع المحرك</label>
+                    <label>نوع المحرك {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <select
                         key={`engine-model-${engine.id}-${engineModels.join(',')}`}
                         value={engine.engine_model}
                         onChange={(e) => updateEngine(engine.id, 'engine_model', e.target.value)}
                         style={{ flex: 1 }}
+                        className={engine.engine_type === 'main' && formErrors.main_engine_model ? 'error' : ''}
                       >
                         <option value="">اختر نوع المحرك...</option>
                         {engineModels.map((model, idx) => (
@@ -958,10 +985,11 @@ export default function CreateMarineStructureInsurance() {
                   </div>
 
                   <div className="form-group">
-                    <label>نوع الوقود</label>
+                    <label>نوع الوقود {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                     <select
                       value={engine.fuel_type}
                       onChange={(e) => updateEngine(engine.id, 'fuel_type', e.target.value)}
+                      className={engine.engine_type === 'main' && formErrors.main_fuel_type ? 'error' : ''}
                     >
                       <option value="">اختر نوع الوقود...</option>
                       {FUEL_TYPES.map((ft) => (
@@ -972,16 +1000,17 @@ export default function CreateMarineStructureInsurance() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div className="form-group">
-                      <label>رقم المحرك</label>
+                      <label>رقم المحرك {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                       <input
                         type="text"
                         value={engine.engine_number}
                         onChange={(e) => updateEngine(engine.id, 'engine_number', e.target.value)}
+                        className={engine.engine_type === 'main' && formErrors.main_engine_number ? 'error' : ''}
                       />
                     </div>
 
                     <div className="form-group" ref={(el) => { engineCountryDropdownRefs.current[engine.id] = el; }} style={{ position: 'relative' }}>
-                      <label>مكان الصنع</label>
+                      <label>مكان الصنع {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                       <div
                         onClick={() => setShowEngineCountryDropdown(prev => ({ ...prev, [engine.id]: !prev[engine.id] }))}
                         style={{
@@ -995,6 +1024,7 @@ export default function CreateMarineStructureInsurance() {
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           minHeight: 42,
+                          borderColor: engine.engine_type === 'main' && formErrors.main_manufacturing_country ? '#dc2626' : 'var(--border)'
                         }}
                       >
                         <span style={{ color: engine.manufacturing_country ? '#111827' : '#9ca3af' }}>
@@ -1046,40 +1076,44 @@ export default function CreateMarineStructureInsurance() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div className="form-group">
-                      <label>القوة بالحصان</label>
+                      <label>القوة بالحصان {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                       <input
                         type="number"
                         step="0.01"
                         value={engine.horsepower}
                         onChange={(e) => updateEngine(engine.id, 'horsepower', e.target.value)}
+                        className={engine.engine_type === 'main' && formErrors.main_horsepower ? 'error' : ''}
                       />
                     </div>
 
                     <div className="form-group">
-                      <label>تاريخ التركيب</label>
+                      <label>تاريخ التركيب {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                       <input
                         type="date"
                         value={engine.installation_date}
                         onChange={(e) => updateEngine(engine.id, 'installation_date', e.target.value)}
+                        className={engine.engine_type === 'main' && formErrors.main_installation_date ? 'error' : ''}
                       />
                     </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div className="form-group">
-                      <label>عدد الإسطوانات</label>
+                      <label>عدد الإسطوانات {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                       <input
                         type="number"
                         value={engine.cylinders_count}
                         onChange={(e) => updateEngine(engine.id, 'cylinders_count', e.target.value)}
+                        className={engine.engine_type === 'main' && formErrors.main_cylinders_count ? 'error' : ''}
                       />
                     </div>
 
                     <div className="form-group">
-                      <label>تركيب المحرك</label>
+                      <label>تركيب المحرك {engine.engine_type === 'main' && <span className="required">*</span>}</label>
                       <select
                         value={engine.installation_type}
                         onChange={(e) => updateEngine(engine.id, 'installation_type', e.target.value)}
+                        className={engine.engine_type === 'main' && formErrors.main_installation_type ? 'error' : ''}
                       >
                         <option value="">اختر نوع التركيب...</option>
                         <option value="داخلي">داخلي</option>
@@ -1097,45 +1131,52 @@ export default function CreateMarineStructureInsurance() {
                 <h3 className="form-section-title">بيانات المركب أو الهيكل البحري</h3>
               
               <div className="form-group">
-                <label htmlFor="vessel_name">اسم المركب / الهيكل</label>
+                <label htmlFor="vessel_name">اسم المركب / الهيكل <span className="required">*</span></label>
                 <input
                   type="text"
                   id="vessel_name"
                   value={formData.vessel_name}
                   onChange={(e) => setFormData({ ...formData, vessel_name: e.target.value })}
+                  className={formErrors.vessel_name ? 'error' : ''}
                 />
+                {formErrors.vessel_name && <span className="error-message">{formErrors.vessel_name}</span>}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label htmlFor="registration_code">رمز ورقم التسجيل</label>
+                  <label htmlFor="registration_code">رمز ورقم التسجيل <span className="required">*</span></label>
                   <input
                     type="text"
                     id="registration_code"
                     value={formData.registration_code}
                     onChange={(e) => setFormData({ ...formData, registration_code: e.target.value })}
+                    className={formErrors.registration_code ? 'error' : ''}
                   />
+                  {formErrors.registration_code && <span className="error-message">{formErrors.registration_code}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="registration_date">تاريخ التسجيل</label>
+                  <label htmlFor="registration_date">تاريخ التسجيل <span className="required">*</span></label>
                   <input
                     type="date"
                     id="registration_date"
                     value={formData.registration_date}
                     onChange={(e) => setFormData({ ...formData, registration_date: e.target.value })}
+                    className={formErrors.registration_date ? 'error' : ''}
                   />
+                  {formErrors.registration_date && <span className="error-message">{formErrors.registration_date}</span>}
                 </div>
               </div>
 
               <div className="form-group">
-                <label htmlFor="port">الميناء أو المرفأ</label>
+                <label htmlFor="port">الميناء أو المرفأ <span className="required">*</span></label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <select
                     id="port"
                     value={formData.port}
                     onChange={(e) => setFormData({ ...formData, port: e.target.value })}
                     style={{ flex: 1 }}
+                    className={formErrors.port ? 'error' : ''}
                   >
                     <option value="">اختر الميناء...</option>
                     {allPorts.map((port) => (
@@ -1222,10 +1263,11 @@ export default function CreateMarineStructureInsurance() {
                     </button>
                   </div>
                 )}
+                {formErrors.port && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.port}</span>}
               </div>
 
               <div className="form-group" ref={plateDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="registration_authority_id">الجهة المقيد بها</label>
+                <label htmlFor="registration_authority_id">الجهة المقيد بها <span className="required">*</span></label>
                 <div
                   onClick={() => setShowPlateDropdown(!showPlateDropdown)}
                   style={{
@@ -1246,6 +1288,7 @@ export default function CreateMarineStructureInsurance() {
                   </span>
                   <i className={`fa-solid fa-chevron-${showPlateDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
                 </div>
+                {formErrors.registration_authority_id && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.registration_authority_id}</span>}
                 {showPlateDropdown && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, marginTop: '4px', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                     <div style={{ padding: '8px' }}>
@@ -1284,13 +1327,15 @@ export default function CreateMarineStructureInsurance() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label htmlFor="plate_number">رقم اللوحة المعدنية</label>
+                  <label htmlFor="plate_number">رقم اللوحة المعدنية <span className="required">*</span></label>
                   <input
                     type="text"
                     id="plate_number"
                     value={formData.plate_number}
                     onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
+                    className={formErrors.plate_number ? 'error' : ''}
                   />
+                  {formErrors.plate_number && <span className="error-message">{formErrors.plate_number}</span>}
                 </div>
 
                 <div className="form-group">
@@ -1305,17 +1350,19 @@ export default function CreateMarineStructureInsurance() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="hull_number">رقم الهيكل</label>
+                <label htmlFor="hull_number">رقم الهيكل <span className="required">*</span></label>
                 <input
                   type="text"
                   id="hull_number"
                   value={formData.hull_number}
                   onChange={(e) => setFormData({ ...formData, hull_number: e.target.value })}
+                  className={formErrors.hull_number ? 'error' : ''}
                 />
+                {formErrors.hull_number && <span className="error-message">{formErrors.hull_number}</span>}
               </div>
 
               <div className="form-group" ref={materialDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="manufacturing_material">نوع مواد التصنيع</label>
+                <label htmlFor="manufacturing_material">نوع مواد التصنيع <span className="required">*</span></label>
                 <div
                   onClick={() => setShowMaterialDropdown(!showMaterialDropdown)}
                   style={{
@@ -1336,6 +1383,7 @@ export default function CreateMarineStructureInsurance() {
                   </span>
                   <i className={`fa-solid fa-chevron-${showMaterialDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
                 </div>
+                {formErrors.manufacturing_material && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.manufacturing_material}</span>}
                 {showMaterialDropdown && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, marginTop: '4px', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                     <div style={{ padding: '8px' }}>
@@ -1373,42 +1421,48 @@ export default function CreateMarineStructureInsurance() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label htmlFor="length">الطول</label>
+                  <label htmlFor="length">الطول <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.01"
                     id="length"
                     value={formData.length}
                     onChange={(e) => setFormData({ ...formData, length: e.target.value })}
+                    className={formErrors.length ? 'error' : ''}
                   />
+                  {formErrors.length && <span className="error-message">{formErrors.length}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="width">العرض</label>
+                  <label htmlFor="width">العرض <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.01"
                     id="width"
                     value={formData.width}
                     onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                    className={formErrors.width ? 'error' : ''}
                   />
+                  {formErrors.width && <span className="error-message">{formErrors.width}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="depth">العمق</label>
+                  <label htmlFor="depth">العمق <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.01"
                     id="depth"
                     value={formData.depth}
                     onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+                    className={formErrors.depth ? 'error' : ''}
                   />
+                  {formErrors.depth && <span className="error-message">{formErrors.depth}</span>}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group" ref={yearDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="manufacturing_year">تاريخ الصنع</label>
+                  <label htmlFor="manufacturing_year">تاريخ الصنع <span className="required">*</span></label>
                   <div
                     onClick={() => setShowYearDropdown(!showYearDropdown)}
                     style={{
@@ -1429,6 +1483,7 @@ export default function CreateMarineStructureInsurance() {
                     </span>
                     <i className={`fa-solid fa-chevron-${showYearDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
                   </div>
+                  {formErrors.manufacturing_year && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.manufacturing_year}</span>}
                   {showYearDropdown && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, marginTop: '4px', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                       <div style={{ padding: '8px' }}>
@@ -1465,7 +1520,7 @@ export default function CreateMarineStructureInsurance() {
                 </div>
 
                 <div className="form-group" ref={countryDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="manufacturing_country">مكان الصنع</label>
+                  <label htmlFor="manufacturing_country">مكان الصنع <span className="required">*</span></label>
                   <div
                     onClick={() => setShowCountryDropdown(!showCountryDropdown)}
                     style={{
@@ -1486,6 +1541,7 @@ export default function CreateMarineStructureInsurance() {
                     </span>
                     <i className={`fa-solid fa-chevron-${showCountryDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
                   </div>
+                  {formErrors.manufacturing_country && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.manufacturing_country}</span>}
                   {showCountryDropdown && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, marginTop: '4px', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                       <div style={{ padding: '8px' }}>
@@ -1523,7 +1579,7 @@ export default function CreateMarineStructureInsurance() {
               </div>
 
               <div className="form-group" ref={colorDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="color">اللون</label>
+                <label htmlFor="color">اللون <span className="required">*</span></label>
                 <div
                   onClick={() => setShowColorDropdown(!showColorDropdown)}
                   style={{
@@ -1544,6 +1600,7 @@ export default function CreateMarineStructureInsurance() {
                   </span>
                   <i className={`fa-solid fa-chevron-${showColorDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
                 </div>
+                {formErrors.color && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.color}</span>}
                 {showColorDropdown && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, marginTop: '4px', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                     <div style={{ padding: '8px' }}>
@@ -1581,35 +1638,41 @@ export default function CreateMarineStructureInsurance() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label htmlFor="fuel_tank_capacity">سعة خزان الوقود</label>
+                  <label htmlFor="fuel_tank_capacity">سعة خزان الوقود <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.01"
                     id="fuel_tank_capacity"
                     value={formData.fuel_tank_capacity}
                     onChange={(e) => setFormData({ ...formData, fuel_tank_capacity: e.target.value })}
+                    className={formErrors.fuel_tank_capacity ? 'error' : ''}
                   />
+                  {formErrors.fuel_tank_capacity && <span className="error-message">{formErrors.fuel_tank_capacity}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="passenger_count">عدد الركاب</label>
+                  <label htmlFor="passenger_count">عدد الركاب <span className="required">*</span></label>
                   <input
                     type="number"
                     id="passenger_count"
                     value={formData.passenger_count}
                     onChange={(e) => setFormData({ ...formData, passenger_count: e.target.value })}
+                    className={formErrors.passenger_count ? 'error' : ''}
                   />
+                  {formErrors.passenger_count && <span className="error-message">{formErrors.passenger_count}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="load_capacity">الحمولة بالطن</label>
+                  <label htmlFor="load_capacity">الحمولة بالطن <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.01"
                     id="load_capacity"
                     value={formData.load_capacity}
                     onChange={(e) => setFormData({ ...formData, load_capacity: e.target.value })}
+                    className={formErrors.load_capacity ? 'error' : ''}
                   />
+                  {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
                 </div>
               </div>
               </div>
@@ -1622,24 +1685,28 @@ export default function CreateMarineStructureInsurance() {
                 <h3 className="form-section-title">بيانات المؤمن له</h3>
                 
                 <div className="form-group">
-                  <label htmlFor="insured_name">اسم المؤمن له</label>
+                  <label htmlFor="insured_name">اسم المؤمن له <span className="required">*</span></label>
                   <input
                     type="text"
                     id="insured_name"
                     value={formData.insured_name}
                     onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                    className={formErrors.insured_name ? 'error' : ''}
                   />
+                  {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="phone">رقم الهاتف</label>
+                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
                     <input
                       type="text"
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className={formErrors.phone ? 'error' : ''}
                     />
+                    {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                   </div>
 
                   <div className="form-group">
@@ -1659,13 +1726,15 @@ export default function CreateMarineStructureInsurance() {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="license_number">رقم الرخصة</label>
+                    <label htmlFor="license_number">رقم الرخصة <span className="required">*</span></label>
                     <input
                       type="text"
                       id="license_number"
                       value={formData.license_number}
                       onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                      className={formErrors.license_number ? 'error' : ''}
                     />
+                    {formErrors.license_number && <span className="error-message">{formErrors.license_number}</span>}
                   </div>
                 </div>
               </div>

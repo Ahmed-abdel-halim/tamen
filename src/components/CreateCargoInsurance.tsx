@@ -18,10 +18,28 @@ export default function CreateCargoInsurance() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.insured_name.trim()) errors.insured_name = 'اسم المؤمن له مطلوب';
+    if (!formData.cargo_description.trim()) errors.cargo_description = 'وصف البضاعة مطلوب';
+    if (!formData.transport_type) errors.transport_type = 'نوع النقل مطلوب';
+    if (!formData.voyage_from.trim()) errors.voyage_from = 'مكان الشحن مطلوب';
+    if (!formData.voyage_to.trim()) errors.voyage_to = 'مكان التفريغ مطلوب';
+    if (!formData.sum_insured) errors.sum_insured = 'مبلغ التأمين مطلوب';
+    if (!formData.whatsapp_number.trim()) errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    if (!formData.premium_amount) errors.premium_amount = 'مبلغ القسط مطلوب';
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setSubmitting(true);
     try {
       const userStr = localStorage.getItem('user');
@@ -38,7 +56,17 @@ export default function CreateCargoInsurance() {
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error('فشل في حفظ الوثيقة');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (errorData.errors) {
+          const formattedErrors: Record<string, string> = {};
+          Object.keys(errorData.errors).forEach(key => {
+            formattedErrors[key] = Array.isArray(errorData.errors[key]) ? errorData.errors[key][0] : errorData.errors[key];
+          });
+          setFormErrors(formattedErrors);
+        }
+        throw new Error(errorData.message || 'فشل في حفظ الوثيقة');
+      }
       showToast('تم إصدار الوثيقة بنجاح', 'success');
       setTimeout(() => navigate('/cargo-insurance'), 1500);
     } catch (error: any) {
@@ -67,31 +95,35 @@ export default function CreateCargoInsurance() {
                 <label>اسم المؤمن له <span className="required">*</span></label>
                 <input
                   type="text"
-                  required
                   value={formData.insured_name}
                   onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                  className={formErrors.insured_name ? 'error' : ''}
                 />
+                {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
               </div>
               <div className="form-group">
                 <label>وصف البضاعة <span className="required">*</span></label>
                 <textarea
-                  required
                   value={formData.cargo_description}
                   onChange={(e) => setFormData({ ...formData, cargo_description: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                  className={formErrors.cargo_description ? 'error' : ''}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: formErrors.cargo_description ? '1px solid #ef4444' : '1px solid var(--border)' }}
                   rows={3}
                 />
+                {formErrors.cargo_description && <span className="error-message">{formErrors.cargo_description}</span>}
               </div>
               <div className="form-group">
-                <label>نوع النقل</label>
+                <label>نوع النقل <span className="required">*</span></label>
                 <select
                   value={formData.transport_type}
                   onChange={(e) => setFormData({ ...formData, transport_type: e.target.value })}
+                  className={formErrors.transport_type ? 'error' : ''}
                 >
                   <option value="Sea">بحري (Sea)</option>
                   <option value="Air">جوي (Air)</option>
                   <option value="Land">بري (Land)</option>
                 </select>
+                {formErrors.transport_type && <span className="error-message">{formErrors.transport_type}</span>}
               </div>
             </div>
 
@@ -99,20 +131,24 @@ export default function CreateCargoInsurance() {
               <h3 className="form-section-title">بيانات الرحلة والتغطية</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label>من (مكان الشحن)</label>
+                  <label>من (مكان الشحن) <span className="required">*</span></label>
                   <input
                     type="text"
                     value={formData.voyage_from}
                     onChange={(e) => setFormData({ ...formData, voyage_from: e.target.value })}
+                    className={formErrors.voyage_from ? 'error' : ''}
                   />
+                  {formErrors.voyage_from && <span className="error-message">{formErrors.voyage_from}</span>}
                 </div>
                 <div className="form-group">
-                  <label>إلى (مكان التفريغ)</label>
+                  <label>إلى (مكان التفريغ) <span className="required">*</span></label>
                   <input
                     type="text"
                     value={formData.voyage_to}
                     onChange={(e) => setFormData({ ...formData, voyage_to: e.target.value })}
+                    className={formErrors.voyage_to ? 'error' : ''}
                   />
+                  {formErrors.voyage_to && <span className="error-message">{formErrors.voyage_to}</span>}
                 </div>
               </div>
               <div className="form-group">
@@ -120,10 +156,11 @@ export default function CreateCargoInsurance() {
                 <input
                   type="number"
                   step="0.001"
-                  required
                   value={formData.sum_insured}
                   onChange={(e) => setFormData({ ...formData, sum_insured: e.target.value })}
+                  className={formErrors.sum_insured ? 'error' : ''}
                 />
+                {formErrors.sum_insured && <span className="error-message">{formErrors.sum_insured}</span>}
               </div>
               <div className="form-group">
                 <label>رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
@@ -132,21 +169,23 @@ export default function CreateCargoInsurance() {
                 </p>
                 <input
                   type="text"
-                  required
                   placeholder="مثال: 0910000000"
                   value={formData.whatsapp_number}
                   onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                  className={formErrors.whatsapp_number ? 'error' : ''}
                 />
+                {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
               </div>
               <div className="form-group">
                 <label>مبلغ القسط الإجمالي (د.ل) <span className="required">*</span></label>
                 <input
                   type="number"
                   step="0.001"
-                  required
                   value={formData.premium_amount}
                   onChange={(e) => setFormData({ ...formData, premium_amount: e.target.value })}
+                  className={formErrors.premium_amount ? 'error' : ''}
                 />
+                {formErrors.premium_amount && <span className="error-message">{formErrors.premium_amount}</span>}
               </div>
             </div>
           </div>

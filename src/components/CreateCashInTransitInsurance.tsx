@@ -18,6 +18,22 @@ export default function CreateCashInTransitInsurance() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.insured_name.trim()) errors.insured_name = 'اسم المؤمن له مطلوب';
+    if (!formData.transit_from.trim()) errors.transit_from = 'خط النقل (من) مطلوب';
+    if (!formData.transit_to.trim()) errors.transit_to = 'خط النقل (إلى) مطلوب';
+    if (!formData.limit_per_transit) errors.limit_per_transit = 'حد النقلة الواحدة مطلوب';
+    if (!formData.annual_turnover) errors.annual_turnover = 'التداول السنوي مطلوب';
+    if (!formData.start_date) errors.start_date = 'تاريخ البدء مطلوب';
+    if (!formData.whatsapp_number.trim()) errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    if (!formData.premium_amount) errors.premium_amount = 'مبلغ القسط مطلوب';
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
 
   useEffect(() => {
@@ -31,6 +47,8 @@ export default function CreateCashInTransitInsurance() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     setSubmitting(true);
     try {
       const userStr = localStorage.getItem('user');
@@ -47,7 +65,17 @@ export default function CreateCashInTransitInsurance() {
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error('فشل في حفظ الوثيقة');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (errorData.errors) {
+          const formattedErrors: Record<string, string> = {};
+          Object.keys(errorData.errors).forEach(key => {
+            formattedErrors[key] = Array.isArray(errorData.errors[key]) ? errorData.errors[key][0] : errorData.errors[key];
+          });
+          setFormErrors(formattedErrors);
+        }
+        throw new Error(errorData.message || 'فشل في حفظ الوثيقة');
+      }
       showToast('تم إصدار الوثيقة بنجاح', 'success');
       setTimeout(() => navigate('/cash-in-transit-insurance'), 1500);
     } catch (error: any) {
@@ -76,27 +104,32 @@ export default function CreateCashInTransitInsurance() {
                 <label>الاسم بالكامل (أو اسم الشركة) <span className="required">*</span></label>
                 <input
                   type="text"
-                  required
                   value={formData.insured_name}
                   onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                  className={formErrors.insured_name ? 'error' : ''}
                 />
+                {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label>خط النقل من</label>
+                  <label>خط النقل من <span className="required">*</span></label>
                   <input
                     type="text"
                     value={formData.transit_from}
                     onChange={(e) => setFormData({ ...formData, transit_from: e.target.value })}
+                    className={formErrors.transit_from ? 'error' : ''}
                   />
+                  {formErrors.transit_from && <span className="error-message">{formErrors.transit_from}</span>}
                 </div>
                 <div className="form-group">
-                  <label>خط النقل إلى</label>
+                  <label>خط النقل إلى <span className="required">*</span></label>
                   <input
                     type="text"
                     value={formData.transit_to}
                     onChange={(e) => setFormData({ ...formData, transit_to: e.target.value })}
+                    className={formErrors.transit_to ? 'error' : ''}
                   />
+                  {formErrors.transit_to && <span className="error-message">{formErrors.transit_to}</span>}
                 </div>
               </div>
             </div>
@@ -109,19 +142,22 @@ export default function CreateCashInTransitInsurance() {
                   <input
                     type="number"
                     step="0.001"
-                    required
                     value={formData.limit_per_transit}
                     onChange={(e) => setFormData({ ...formData, limit_per_transit: e.target.value })}
+                    className={formErrors.limit_per_transit ? 'error' : ''}
                   />
+                  {formErrors.limit_per_transit && <span className="error-message">{formErrors.limit_per_transit}</span>}
                 </div>
                 <div className="form-group">
-                  <label>إجمالي التداول السنوي المتوقع (د.ل)</label>
+                  <label>إجمالي التداول السنوي المتوقع (د.ل) <span className="required">*</span></label>
                   <input
                     type="number"
                     step="0.001"
                     value={formData.annual_turnover}
                     onChange={(e) => setFormData({ ...formData, annual_turnover: e.target.value })}
+                    className={formErrors.annual_turnover ? 'error' : ''}
                   />
+                  {formErrors.annual_turnover && <span className="error-message">{formErrors.annual_turnover}</span>}
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -129,10 +165,11 @@ export default function CreateCashInTransitInsurance() {
                   <label>تاريخ البدء <span className="required">*</span></label>
                   <input
                     type="date"
-                    required
                     value={formData.start_date}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    className={formErrors.start_date ? 'error' : ''}
                   />
+                  {formErrors.start_date && <span className="error-message">{formErrors.start_date}</span>}
                 </div>
                 <div className="form-group">
                   <label>تاريخ الانتهاء</label>
@@ -151,21 +188,23 @@ export default function CreateCashInTransitInsurance() {
                 </p>
                 <input
                   type="text"
-                  required
                   placeholder="مثال: 0910000000"
                   value={formData.whatsapp_number}
                   onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                  className={formErrors.whatsapp_number ? 'error' : ''}
                 />
+                {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
               </div>
               <div className="form-group">
                 <label>مبلغ القسط الصافي (د.ل) <span className="required">*</span></label>
                 <input
                   type="number"
                   step="0.001"
-                  required
                   value={formData.premium_amount}
                   onChange={(e) => setFormData({ ...formData, premium_amount: e.target.value })}
+                  className={formErrors.premium_amount ? 'error' : ''}
                 />
+                {formErrors.premium_amount && <span className="error-message">{formErrors.premium_amount}</span>}
               </div>
             </div>
           </div>

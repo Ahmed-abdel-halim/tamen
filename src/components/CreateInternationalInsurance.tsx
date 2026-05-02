@@ -814,11 +814,32 @@ export default function CreateInternationalInsurance() {
     if (!formData.insured_name.trim()) {
       errors.insured_name = 'اسم المؤمن مطلوب';
     }
+    if (!formData.insured_address.trim()) {
+      errors.insured_address = 'العنوان مطلوب';
+    }
+    if (!formData.phone.trim()) {
+      errors.phone = 'الهاتف مطلوب';
+    }
     if (!formData.whatsapp_number.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
     }
+    if (!formData.chassis_number.trim()) {
+      errors.chassis_number = 'رقم الهيكل مطلوب';
+    }
+    if (!formData.plate_number.trim()) {
+      errors.plate_number = 'رقم اللوحة مطلوب';
+    }
     if (!formData.motor_number.trim()) {
       errors.motor_number = 'رقم المحرك مطلوب';
+    }
+    if (!formData.external_car_id && !formData.vehicle_type_id) {
+      errors.vehicle_type_id = 'نوع السيارة مطلوب';
+    }
+    if (!formData.year) {
+      errors.year = 'سنة الصنع مطلوبة';
+    }
+    if (!formData.visited_country) {
+      errors.visited_country = 'البلد المزار مطلوب';
     }
     if (!formData.vehicle_nationality) {
       errors.vehicle_nationality = 'جنسية المركبة مطلوبة';
@@ -1362,23 +1383,27 @@ export default function CreateInternationalInsurance() {
                   </div>
 
                 <div className="form-group">
-                  <label htmlFor="insured_address">العنوان</label>
+                  <label htmlFor="insured_address">العنوان <span className="required">*</span></label>
                   <input
                     type="text"
                     id="insured_address"
                     value={formData.insured_address}
                     onChange={(e) => setFormData({ ...formData, insured_address: e.target.value })}
+                    className={formErrors.insured_address ? 'error' : ''}
                   />
+                  {formErrors.insured_address && <span className="error-message">{formErrors.insured_address}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="phone">الهاتف</label>
+                  <label htmlFor="phone">الهاتف <span className="required">*</span></label>
                   <input
                     type="text"
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className={formErrors.phone ? 'error' : ''}
                   />
+                  {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                 </div>
 
                 <div className="form-group">
@@ -1398,32 +1423,37 @@ export default function CreateInternationalInsurance() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="chassis_number">رقم الهيكل</label>
+                  <label htmlFor="chassis_number">رقم الهيكل <span className="required">*</span></label>
                   <input
                     type="text"
                     id="chassis_number"
                     value={formData.chassis_number}
                     onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
+                    className={formErrors.chassis_number ? 'error' : ''}
                   />
+                  {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="plate_number">رقم اللوحة المعدنية</label>
+                  <label htmlFor="plate_number">رقم اللوحة المعدنية <span className="required">*</span></label>
                   <input
                     type="text"
                     id="plate_number"
                     value={formData.plate_number}
                     onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
+                    className={formErrors.plate_number ? 'error' : ''}
                   />
+                  {formErrors.plate_number && <span className="error-message">{formErrors.plate_number}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="motor_number">رقم المحرك <span style={{ color: 'red' }}>*</span></label>
+                  <label htmlFor="motor_number">رقم المحرك <span className="required">*</span></label>
                   <input
                     type="text"
                     id="motor_number"
                     value={formData.motor_number}
                     onChange={(e) => setFormData({ ...formData, motor_number: e.target.value })}
+                    className={formErrors.motor_number ? 'error' : ''}
                     required
                   />
                   {formErrors.motor_number && (
@@ -1432,7 +1462,7 @@ export default function CreateInternationalInsurance() {
                 </div>
 
                 <div className="form-group" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="vehicle_type_id">نوع السيارة (بدون فئة)</label>
+                  <label htmlFor="vehicle_type_id">نوع السيارة (بدون فئة) <span className="required">*</span></label>
                   <div
                     onClick={() => setShowVehicleTypeDropdown((v) => !v)}
                     style={{
@@ -1456,6 +1486,7 @@ export default function CreateInternationalInsurance() {
                       style={{ color: '#9ca3af' }}
                     ></i>
                   </div>
+                  {formErrors.vehicle_type_id && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.vehicle_type_id}</span>}
                   {showVehicleTypeDropdown && (
                     <div
                       style={{
@@ -1611,7 +1642,7 @@ export default function CreateInternationalInsurance() {
                 </div>
 
                 <div className="form-group" ref={yearDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="year">السنة (1960-2026)</label>
+                  <label htmlFor="year">السنة (1960-2026) <span className="required">*</span></label>
                   <div
                     onClick={() => setShowYearDropdown((v) => !v)}
                     style={{
@@ -1635,6 +1666,7 @@ export default function CreateInternationalInsurance() {
                       style={{ color: '#9ca3af' }}
                     ></i>
                   </div>
+                  {formErrors.year && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.year}</span>}
                   {showYearDropdown && (
                     <div
                       style={{
@@ -1800,7 +1832,7 @@ export default function CreateInternationalInsurance() {
                   </div>
 
                 <div className="form-group">
-                  <label htmlFor="visited_country">البلد المزار</label>
+                  <label htmlFor="visited_country">البلد المزار <span className="required">*</span></label>
                   <select
                     id="visited_country"
                     value={formData.visited_country}
@@ -1822,6 +1854,7 @@ export default function CreateInternationalInsurance() {
                       }
                     }}
                     disabled={loading}
+                    className={formErrors.visited_country ? 'error' : ''}
                   >
                     <option value="">
                       {loading ? 'جاري تحميل الدول...' : 'اختر البلد المزار'}
@@ -1890,6 +1923,7 @@ export default function CreateInternationalInsurance() {
                       </div>
                     </div>
                   )}
+                  {formErrors.visited_country && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.visited_country}</span>}
                 </div>
                 </div>
 

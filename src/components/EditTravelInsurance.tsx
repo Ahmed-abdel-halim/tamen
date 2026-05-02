@@ -910,15 +910,32 @@ export default function EditTravelInsurance() {
       }
     }
     
-    if (!formData.main_passenger_name_ar) {
+    if (!formData.main_passenger_name_ar.trim()) {
       errors.main_passenger_name_ar = 'اسم المسافر (AR) مطلوب';
     }
     
     if (!formData.main_passenger_name_en.trim()) {
-      errors.main_passenger_name_en = 'الاسم بالإنجليزية مطلوب';
+      errors.main_passenger_name_en = 'اسم المسافر (EN) مطلوب';
     }
-    if (!formData.main_passenger_whatsapp_number) {
+
+    if (!formData.main_passenger_phone.trim()) {
+      errors.main_passenger_phone = 'رقم الهاتف مطلوب';
+    }
+
+    if (!formData.main_passenger_whatsapp_number.trim()) {
       errors.main_passenger_whatsapp_number = 'رقم الواتساب مطلوب';
+    }
+
+    if (!formData.main_passenger_passport_number.trim()) {
+      errors.main_passenger_passport_number = 'رقم الجواز مطلوب';
+    }
+
+    if (!formData.main_passenger_address.trim()) {
+      errors.main_passenger_address = 'العنوان مطلوب';
+    }
+
+    if (!formData.main_passenger_birth_date) {
+      errors.main_passenger_birth_date = 'تاريخ الميلاد مطلوب';
     }
     
     if (!formData.main_passenger_gender) {
@@ -933,11 +950,17 @@ export default function EditTravelInsurance() {
       if (!member.relationship) {
         errors[`family_member_${index}_relationship`] = 'صلة القرابة مطلوبة';
       }
-      if (!member.name_ar) {
+      if (!member.name_ar.trim()) {
         errors[`family_member_${index}_name_ar`] = 'الاسم (AR) مطلوب';
       }
-      if (!member.name_en) {
+      if (!member.name_en.trim()) {
         errors[`family_member_${index}_name_en`] = 'الاسم (EN) مطلوب';
+      }
+      if (!member.passport_number.trim()) {
+        errors[`family_member_${index}_passport_number`] = 'رقم الجواز مطلوب';
+      }
+      if (!member.birth_date) {
+        errors[`family_member_${index}_birth_date`] = 'تاريخ الميلاد مطلوب';
       }
       if (!member.gender) {
         errors[`family_member_${index}_gender`] = 'الجنس مطلوب';
@@ -1015,7 +1038,29 @@ export default function EditTravelInsurance() {
 
       if (!res.ok) {
         if (data.errors) {
-          setFormErrors(data.errors);
+          const mappedErrors: Record<string, string> = {};
+          Object.keys(data.errors).forEach(key => {
+            const message = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key];
+            
+            if (key === 'passengers.0.name_ar') mappedErrors.main_passenger_name_ar = message;
+            else if (key === 'passengers.0.name_en') mappedErrors.main_passenger_name_en = message;
+            else if (key === 'passengers.0.phone') mappedErrors.main_passenger_phone = message;
+            else if (key === 'passengers.0.whatsapp_number') mappedErrors.main_passenger_whatsapp_number = message;
+            else if (key === 'passengers.0.passport_number') mappedErrors.main_passenger_passport_number = message;
+            else if (key === 'passengers.0.address') mappedErrors.main_passenger_address = message;
+            else if (key === 'passengers.0.birth_date') mappedErrors.main_passenger_birth_date = message;
+            else if (key === 'passengers.0.gender') mappedErrors.main_passenger_gender = message;
+            else if (key === 'passengers.0.nationality') mappedErrors.main_passenger_nationality = message;
+            else if (key.startsWith('passengers.')) {
+              const parts = key.split('.');
+              const index = parseInt(parts[1]) - 1;
+              const field = parts.slice(2).join('_');
+              mappedErrors[`family_member_${index}_${field}`] = message;
+            } else {
+              mappedErrors[key] = message;
+            }
+          });
+          setFormErrors(mappedErrors);
         }
         throw new Error(data.message || 'حدث خطأ أثناء تحديث الوثيقة');
       }
@@ -1366,13 +1411,15 @@ export default function EditTravelInsurance() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="main_passenger_phone">رقم الهاتف</label>
+                    <label htmlFor="main_passenger_phone">رقم الهاتف <span className="required">*</span></label>
                     <input
                       type="text"
                       id="main_passenger_phone"
                       value={formData.main_passenger_phone}
                       onChange={(e) => setFormData({ ...formData, main_passenger_phone: e.target.value })}
+                      className={formErrors.main_passenger_phone ? 'error' : ''}
                     />
+                    {formErrors.main_passenger_phone && <span className="error-message">{formErrors.main_passenger_phone}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="main_passenger_whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
@@ -1390,35 +1437,41 @@ export default function EditTravelInsurance() {
                     {formErrors.main_passenger_whatsapp_number && <span className="error-message">{formErrors.main_passenger_whatsapp_number}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="main_passenger_passport_number">رقم الجواز</label>
+                    <label htmlFor="main_passenger_passport_number">رقم الجواز <span className="required">*</span></label>
                     <input
                       type="text"
                       id="main_passenger_passport_number"
                       value={formData.main_passenger_passport_number}
                       onChange={(e) => setFormData({ ...formData, main_passenger_passport_number: e.target.value })}
+                      className={formErrors.main_passenger_passport_number ? 'error' : ''}
                     />
+                    {formErrors.main_passenger_passport_number && <span className="error-message">{formErrors.main_passenger_passport_number}</span>}
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="main_passenger_address">العنوان</label>
+                  <label htmlFor="main_passenger_address">العنوان <span className="required">*</span></label>
                   <textarea
                     id="main_passenger_address"
                     value={formData.main_passenger_address}
                     onChange={(e) => setFormData({ ...formData, main_passenger_address: e.target.value })}
+                    className={formErrors.main_passenger_address ? 'error' : ''}
                     rows={3}
                   />
+                  {formErrors.main_passenger_address && <span className="error-message">{formErrors.main_passenger_address}</span>}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="main_passenger_birth_date">تاريخ الميلاد</label>
+                    <label htmlFor="main_passenger_birth_date">تاريخ الميلاد <span className="required">*</span></label>
                     <input
                       type="date"
                       id="main_passenger_birth_date"
                       value={formData.main_passenger_birth_date}
                       onChange={(e) => setFormData({ ...formData, main_passenger_birth_date: e.target.value })}
+                      className={formErrors.main_passenger_birth_date ? 'error' : ''}
                     />
+                    {formErrors.main_passenger_birth_date && <span className="error-message">{formErrors.main_passenger_birth_date}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="main_passenger_age">العمر</label>
@@ -1646,22 +1699,30 @@ export default function EditTravelInsurance() {
                         </div>
 
                         <div className="form-group">
-                          <label>رقم الجواز</label>
+                          <label>رقم الجواز <span className="required">*</span></label>
                           <input
                             type="text"
                             value={member.passport_number}
                             onChange={(e) => handleFamilyMemberChange(member.id, 'passport_number', e.target.value)}
+                            className={formErrors[`family_member_${index}_passport_number`] ? 'error' : ''}
                           />
+                          {formErrors[`family_member_${index}_passport_number`] && (
+                            <span className="error-message">{formErrors[`family_member_${index}_passport_number`]}</span>
+                          )}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                           <div className="form-group">
-                            <label>تاريخ الميلاد</label>
+                            <label>تاريخ الميلاد <span className="required">*</span></label>
                             <input
                               type="date"
                               value={member.birth_date}
                               onChange={(e) => handleFamilyMemberChange(member.id, 'birth_date', e.target.value)}
+                              className={formErrors[`family_member_${index}_birth_date`] ? 'error' : ''}
                             />
+                            {formErrors[`family_member_${index}_birth_date`] && (
+                              <span className="error-message">{formErrors[`family_member_${index}_birth_date`]}</span>
+                            )}
                           </div>
                           <div className="form-group">
                             <label>العمر</label>

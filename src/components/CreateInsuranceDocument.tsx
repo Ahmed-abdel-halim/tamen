@@ -1583,52 +1583,22 @@ export default function CreateInsuranceDocument() {
   };
   
   const availableEnginePowers = getAvailableEnginePowers();
-
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!formData.insurance_type) {
-      errors.insurance_type = 'نوع التأمين مطلوب';
+
+    if (!isCustomsInsurance && !isForeignCarInsurance && !formData.plate_id) {
+      errors.plate_id = 'الجهة المقيد بها مطلوبة';
     }
-    
-    // التحقق من أن الحمولة مطلوبة للمقطورة
-    const isTransportPurpose = formData.license_purpose && formData.license_purpose.includes('نقل');
-    if (isTransportPurpose && formData.engine_power === 'مقطورة') {
-      if (!formData.load_capacity || formData.load_capacity.trim() === '') {
-        errors.load_capacity = 'الحمولة بالطن مطلوبة للمقطورة';
-      } else {
-        const loadCap = parseFloat(formData.load_capacity);
-        if (isNaN(loadCap) || loadCap < 0) {
-          errors.load_capacity = 'الحمولة يجب أن تكون رقم صحيح أكبر من أو يساوي 0';
-        }
-      }
+    if (isCustomsInsurance && !formData.port) {
+      errors.port = 'الميناء مطلوب';
     }
-    if (formData.insurance_type === 'تأمين إجباري سيارات') {
-      if (!formData.plate_id) {
-        errors.plate_id = 'الجهة المقيد بها مطلوبة';
-      }
-      // في تأمين إجباري سيارات، بداية التأمين = تاريخ الإصدار (يتم إنشاؤه تلقائياً)
+    if (!isMandatoryInsurance && !isCustomsInsurance && !formData.start_date) {
+      errors.start_date = 'بداية التأمين مطلوبة';
     }
-    if (formData.insurance_type === 'تأمين سيارة جمرك') {
-      if (!formData.port) {
-        errors.port = 'الميناء مطلوب';
-      }
-      // في تأمين جمرك، بداية التأمين = تاريخ الإصدار (يتم تعيينه تلقائياً)
+    if (isThirdPartyInsurance && !isForeignCarInsurance && !formData.third_party_purpose) {
+      errors.third_party_purpose = 'الغرض من الطرف الثالث مطلوب';
     }
-    if (formData.insurance_type === 'تأمين طرف ثالث سيارات') {
-      if (!formData.plate_id) {
-        errors.plate_id = 'الجهة المقيد بها مطلوبة';
-      }
-      if (!formData.start_date) {
-        errors.start_date = 'بداية التأمين مطلوبة';
-      }
-      if (!formData.third_party_purpose) {
-        errors.third_party_purpose = 'غرض من الطرف الثالث مطلوب';
-      }
-    }
-    if (formData.insurance_type === 'تأمين سيارات أجنبية') {
-      if (!formData.start_date) {
-        errors.start_date = 'بداية التأمين مطلوبة';
-      }
+    if (isForeignCarInsurance) {
       if (!formData.foreign_car_country) {
         errors.foreign_car_country = 'دولة السيارة مطلوبة';
       }
@@ -1639,10 +1609,50 @@ export default function CreateInsuranceDocument() {
     if (!isThirdPartyInsurance && !isForeignCarInsurance && !formData.engine_power) {
       errors.engine_power = 'قوة المحرك مطلوبة';
     }
-    if (!formData.premium || parseFloat(formData.premium) <= 0) {
-      errors.premium = 'القسط مطلوب (يتم حسابه تلقائياً بناءً على قوة المحرك)';
+
+    if (!formData.chassis_number || !formData.chassis_number.trim()) {
+      errors.chassis_number = 'رقم الهيكل مطلوب';
     }
-    if (!formData.whatsapp_number) {
+    if (!formData.plate_number_manual || !formData.plate_number_manual.trim()) {
+      errors.plate_number_manual = 'رقم اللوحة المعدنية مطلوب';
+    }
+    if (!formData.vehicle_type_id) {
+      errors.vehicle_type_id = 'نوع السيارة مطلوب';
+    }
+    if (!formData.color || !formData.color.trim()) {
+      errors.color = 'اللون مطلوب';
+    }
+    if (!formData.year || !formData.year.trim()) {
+      errors.year = 'سنة الصنع مطلوبة';
+    }
+    if (!isForeignCarInsurance && !formData.license_purpose) {
+      errors.license_purpose = 'الغرض من الترخيص مطلوب';
+    }
+    if (formData.engine_power) {
+      if (!(isTransportPurpose && formData.engine_power === 'مقطورة')) {
+        if (!formData.authorized_passengers || !formData.authorized_passengers.trim()) {
+          errors.authorized_passengers = 'عدد الركاب مطلوب';
+        }
+      }
+      if (!formData.load_capacity || formData.load_capacity.trim() === '') {
+        errors.load_capacity = 'الحمولة بالطن مطلوبة';
+      }
+    }
+    if (isForeignCarInsurance && formData.foreign_car_purpose) {
+      if (!formData.authorized_passengers || !formData.authorized_passengers.trim()) {
+        errors.authorized_passengers = 'عدد الركاب مطلوب';
+      }
+      if (!formData.load_capacity || formData.load_capacity.trim() === '') {
+        errors.load_capacity = 'الحمولة بالطن مطلوبة';
+      }
+    }
+    if (!formData.insured_name || !formData.insured_name.trim()) {
+      errors.insured_name = 'اسم المؤمن له مطلوب';
+    }
+    if (!formData.phone || !formData.phone.trim()) {
+      errors.phone = 'رقم الهاتف مطلوب';
+    }
+    if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
     }
     setFormErrors(errors);
@@ -2011,7 +2021,7 @@ export default function CreateInsuranceDocument() {
               {/* بداية التأمين - لتأمين جمرك (معطلة، تعرض تاريخ الإصدار) */}
               {isCustomsInsurance && (
                 <div className="form-group">
-                  <label>بداية التأمين</label>
+                  <label>بداية التأمين <span className="required">*</span></label>
                   <input
                     type="text"
                     value={formData.start_date ? new Date(formData.start_date).toLocaleDateString('ar-LY') : new Date().toLocaleDateString('ar-LY')}
@@ -2022,7 +2032,7 @@ export default function CreateInsuranceDocument() {
               )}
 
               <div className="form-group">
-                <label htmlFor="end_date">نهاية التأمين</label>
+                <label htmlFor="end_date">نهاية التأمين <span className="required">*</span></label>
                 <input
                   type="text"
                   id="end_date"
@@ -2035,7 +2045,7 @@ export default function CreateInsuranceDocument() {
               {/* مدة التأمين - لا تظهر في تأمين إجباري سيارات (مثبتة على سنة واحدة) */}
               {!isMandatoryInsurance && (
                 <div className="form-group">
-                  <label htmlFor="duration">مدة التأمين</label>
+                  <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
                   <select
                     id="duration"
                     value={formData.duration}
@@ -2091,24 +2101,28 @@ export default function CreateInsuranceDocument() {
             <h3 className="form-section-title">بيانات المركبة</h3>
             
             <div className="form-group">
-              <label htmlFor="chassis_number">رقم الهيكل</label>
+              <label htmlFor="chassis_number">رقم الهيكل <span className="required">*</span></label>
               <input
                 type="text"
                 id="chassis_number"
                 value={formData.chassis_number}
                 onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
+                className={formErrors.chassis_number ? 'error' : ''}
               />
+              {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
-                <label htmlFor="plate_number_manual">رقم اللوحة المعدنية</label>
+                <label htmlFor="plate_number_manual">رقم اللوحة المعدنية <span className="required">*</span></label>
                 <input
                   type="text"
                   id="plate_number_manual"
                   value={formData.plate_number_manual}
                   onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })}
+                  className={formErrors.plate_number_manual ? 'error' : ''}
                 />
+                {formErrors.plate_number_manual && <span className="error-message">{formErrors.plate_number_manual}</span>}
               </div>
               {!isForeignCarInsurance && (
                 <div className="form-group">
@@ -2129,7 +2143,7 @@ export default function CreateInsuranceDocument() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="vehicle_type_id">نوع السيارة</label>
+                <label htmlFor="vehicle_type_id">نوع السيارة <span className="required">*</span></label>
                 <div
                   onClick={() => {
                     setShowVehicleTypeDropdown((v) => !v);
@@ -2137,7 +2151,7 @@ export default function CreateInsuranceDocument() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '1px solid var(--border)',
+                    border: formErrors.vehicle_type_id ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
                     background: '#fff',
                     cursor: 'pointer',
@@ -2155,6 +2169,7 @@ export default function CreateInsuranceDocument() {
                     style={{ color: '#9ca3af' }}
                   ></i>
                 </div>
+                {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
                 {showVehicleTypeDropdown && (
                   <div
                     style={{
@@ -2413,7 +2428,7 @@ export default function CreateInsuranceDocument() {
 
               {selectedBrand && (
                 <div className="form-group" ref={categoryDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="category">فئة السيارة</label>
+                  <label htmlFor="category">فئة السيارة <span className="required">*</span></label>
                   <div
                     onClick={() => {
                       setShowCategoryDropdown((v) => !v);
@@ -2421,7 +2436,7 @@ export default function CreateInsuranceDocument() {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      border: '1px solid var(--border)',
+                      border: formErrors.vehicle_type_id ? '1px solid #ef4444' : '1px solid var(--border)',
                       borderRadius: 8,
                       background: '#fff',
                       cursor: 'pointer',
@@ -2439,6 +2454,7 @@ export default function CreateInsuranceDocument() {
                       style={{ color: '#9ca3af' }}
                     ></i>
                   </div>
+                  {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
                   {showCategoryDropdown && (
                     <div
                       style={{
@@ -2522,7 +2538,7 @@ export default function CreateInsuranceDocument() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group" ref={colorDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="color">اللون</label>
+                <label htmlFor="color">اللون <span className="required">*</span></label>
                 <div
                   onClick={() => {
                     setShowColorDropdown((v) => !v);
@@ -2530,7 +2546,7 @@ export default function CreateInsuranceDocument() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '1px solid var(--border)',
+                    border: formErrors.color ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
                     background: '#fff',
                     cursor: 'pointer',
@@ -2548,6 +2564,7 @@ export default function CreateInsuranceDocument() {
                     style={{ color: '#9ca3af' }}
                   ></i>
                 </div>
+                {formErrors.color && <span className="error-message">{formErrors.color}</span>}
                 {showColorDropdown && (
                   <div
                     style={{
@@ -2733,7 +2750,7 @@ export default function CreateInsuranceDocument() {
               </div>
 
               <div className="form-group" ref={yearDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="year">السنة</label>
+                <label htmlFor="year">السنة <span className="required">*</span></label>
                 <div
                   onClick={() => {
                     setShowYearDropdown((v) => !v);
@@ -2741,7 +2758,7 @@ export default function CreateInsuranceDocument() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '1px solid var(--border)',
+                    border: formErrors.year ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
                     background: '#fff',
                     cursor: 'pointer',
@@ -2759,6 +2776,7 @@ export default function CreateInsuranceDocument() {
                     style={{ color: '#9ca3af' }}
                   ></i>
                 </div>
+                {formErrors.year && <span className="error-message">{formErrors.year}</span>}
                 {showYearDropdown && (
                   <div
                     style={{
@@ -2820,11 +2838,12 @@ export default function CreateInsuranceDocument() {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="license_purpose">الغرض من الترخيص</label>
+                    <label htmlFor="license_purpose">الغرض من الترخيص <span className="required">*</span></label>
                     <select
                       id="license_purpose"
                       value={formData.license_purpose}
                       onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}
+                      className={formErrors.license_purpose ? 'error' : ''}
                     >
                       <option value="">اختر الغرض...</option>
                       {LICENSE_PURPOSES.map((lp) => (
@@ -2833,6 +2852,7 @@ export default function CreateInsuranceDocument() {
                         </option>
                       ))}
                     </select>
+                    {formErrors.license_purpose && <span className="error-message">{formErrors.license_purpose}</span>}
                   </div>
 
                   <div className="form-group">
@@ -2859,7 +2879,7 @@ export default function CreateInsuranceDocument() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     {!(isTransportPurpose && formData.engine_power === 'مقطورة') && (
                       <div className="form-group">
-                        <label htmlFor="authorized_passengers">الركاب المصرح بهم</label>
+                        <label htmlFor="authorized_passengers">الركاب المصرح بهم <span className="required">*</span></label>
                         <input
                           type="number"
                           id="authorized_passengers"
@@ -2867,11 +2887,13 @@ export default function CreateInsuranceDocument() {
                           max="100"
                           value={formData.authorized_passengers}
                           onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })}
+                          className={formErrors.authorized_passengers ? 'error' : ''}
                         />
+                        {formErrors.authorized_passengers && <span className="error-message">{formErrors.authorized_passengers}</span>}
                       </div>
                     )}
                     <div className="form-group">
-                      <label htmlFor="load_capacity">الحمولة بالطن</label>
+                      <label htmlFor="load_capacity">الحمولة بالطن <span className="required">*</span></label>
                       <input
                         type="number"
                         id="load_capacity"
@@ -2891,7 +2913,9 @@ export default function CreateInsuranceDocument() {
                             }
                           }
                         }}
+                        className={formErrors.load_capacity ? 'error' : ''}
                       />
+                      {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
                     </div>
                   </div>
                 )}
@@ -2955,7 +2979,7 @@ export default function CreateInsuranceDocument() {
                 {formData.foreign_car_purpose && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div className="form-group">
-                      <label htmlFor="authorized_passengers_foreign">الركاب المصرح بهم</label>
+                      <label htmlFor="authorized_passengers_foreign">الركاب المصرح بهم <span className="required">*</span></label>
                       <input
                         type="number"
                         id="authorized_passengers_foreign"
@@ -2964,13 +2988,15 @@ export default function CreateInsuranceDocument() {
                         value={formData.authorized_passengers}
                         onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })}
                         placeholder="من 1 إلى 100 راكب"
+                        className={formErrors.authorized_passengers ? 'error' : ''}
                       />
+                      {formErrors.authorized_passengers && <span className="error-message">{formErrors.authorized_passengers}</span>}
                       <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
                         يرجى إدخال من الرقم 1 راكب إلى 100 راكب بالتسلسل (مثال: 1-2-3-4-5)
                       </small>
                     </div>
                     <div className="form-group">
-                      <label htmlFor="load_capacity_foreign">الحمولة بالطن</label>
+                      <label htmlFor="load_capacity_foreign">الحمولة بالطن <span className="required">*</span></label>
                       <input
                         type="number"
                         id="load_capacity_foreign"
@@ -2991,7 +3017,9 @@ export default function CreateInsuranceDocument() {
                           }
                         }}
                         placeholder="من 1 إلى 1000 طن"
+                        className={formErrors.load_capacity ? 'error' : ''}
                       />
+                      {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
                       <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
                         {formData.foreign_car_purpose === 'سيارات نقل وشحن' 
                           ? 'يرجى إدخال الحمولة بالطن من الرقم 1 طن إلى 1000 طن بالتسلسل (مثال: 1-2-3-4-5)'
@@ -3009,23 +3037,27 @@ export default function CreateInsuranceDocument() {
               <h3 className="form-section-title">بيانات المؤمن له</h3>
               
               <div className="form-group">
-                <label htmlFor="insured_name">اسم المؤمن</label>
+                <label htmlFor="insured_name">اسم المؤمن <span className="required">*</span></label>
                 <input
                   type="text"
                   id="insured_name"
                   value={formData.insured_name}
                   onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                  className={formErrors.insured_name ? 'error' : ''}
                 />
+                {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
               </div>
 
               <div className="form-group">
-                <label htmlFor="phone">رقم الهاتف</label>
+                <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
                 <input
                   type="text"
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className={formErrors.phone ? 'error' : ''}
                 />
+                {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
               </div>
 
               <div className="form-group">

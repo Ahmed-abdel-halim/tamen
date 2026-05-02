@@ -488,12 +488,19 @@ export default function EditProfessionalLiabilityInsurance() {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
-    if (!formData.insured_name) {
-      errors.insured_name = 'اسم المؤمن له مطلوب';
+    if (formData.contract_relation === 'جهة العمل' && !formData.contractor_name.trim()) {
+      errors.contractor_name = 'اسم المتعاقد مطلوب';
     }
-    if (!formData.whatsapp_number) {
-      errors.whatsapp_number = 'رقم الواتساب مطلوب';
-    }
+    
+    if (!formData.insured_name.trim()) errors.insured_name = 'اسم المؤمن له مطلوب';
+    if (!formData.birth_date) errors.birth_date = 'تاريخ الميلاد مطلوب';
+    if (!formData.phone.trim()) errors.phone = 'رقم الهاتف مطلوب';
+    if (!formData.whatsapp_number.trim()) errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    if (!formData.workplace.trim()) errors.workplace = 'مكان العمل مطلوب';
+    if (!formData.gender) errors.gender = 'الجنس مطلوب';
+    if (!formData.nationality) errors.nationality = 'الجنسية مطلوبة';
+    if (!formData.profession) errors.profession = 'المهنة مطلوبة';
+    if (!formData.marital_status) errors.marital_status = 'الحالة الإجتماعية مطلوبة';
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -644,13 +651,15 @@ export default function EditProfessionalLiabilityInsurance() {
 
                 {formData.contract_relation === 'جهة العمل' && (
                   <div className="form-group">
-                    <label htmlFor="contractor_name">اسم المتعاقد</label>
+                    <label htmlFor="contractor_name">اسم المتعاقد <span className="required">*</span></label>
                     <input
                       type="text"
                       id="contractor_name"
                       value={formData.contractor_name}
                       onChange={(e) => setFormData({ ...formData, contractor_name: e.target.value })}
+                      className={formErrors.contractor_name ? 'error' : ''}
                     />
+                    {formErrors.contractor_name && <span className="error-message">{formErrors.contractor_name}</span>}
                   </div>
                 )}
 
@@ -668,13 +677,15 @@ export default function EditProfessionalLiabilityInsurance() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="birth_date">تاريخ الميلاد</label>
+                    <label htmlFor="birth_date">تاريخ الميلاد <span className="required">*</span></label>
                     <input
                       type="date"
                       id="birth_date"
                       value={formData.birth_date}
                       onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                      className={formErrors.birth_date ? 'error' : ''}
                     />
+                    {formErrors.birth_date && <span className="error-message">{formErrors.birth_date}</span>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="age">العمر</label>
@@ -691,13 +702,15 @@ export default function EditProfessionalLiabilityInsurance() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="phone">رقم الهاتف</label>
+                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
                     <input
                       type="text"
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className={formErrors.phone ? 'error' : ''}
                     />
+                    {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                   </div>
 
                   <div className="form-group">
@@ -716,47 +729,53 @@ export default function EditProfessionalLiabilityInsurance() {
                     {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="workplace">مكان العمل</label>
+                    <label htmlFor="workplace">مكان العمل <span className="required">*</span></label>
                     <input
                       type="text"
                       id="workplace"
                       value={formData.workplace}
                       onChange={(e) => setFormData({ ...formData, workplace: e.target.value })}
+                      className={formErrors.workplace ? 'error' : ''}
                     />
+                    {formErrors.workplace && <span className="error-message">{formErrors.workplace}</span>}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label htmlFor="gender">الجنس</label>
+                    <label htmlFor="gender">الجنس <span className="required">*</span></label>
                     <select
                       id="gender"
                       value={formData.gender}
                       onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      className={formErrors.gender ? 'error' : ''}
                     >
                       <option value="">اختر الجنس...</option>
                       <option value="ذكر Male">ذكر Male</option>
                       <option value="انثى Female">انثى Female</option>
                     </select>
+                    {formErrors.gender && <span className="error-message">{formErrors.gender}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="marital_status">الحالة الإجتماعية</label>
+                    <label htmlFor="marital_status">الحالة الإجتماعية <span className="required">*</span></label>
                     <select
                       id="marital_status"
                       value={formData.marital_status}
                       onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
+                      className={formErrors.marital_status ? 'error' : ''}
                     >
                       <option value="">اختر الحالة الإجتماعية...</option>
                       <option value="أعزب/عزباء">أعزب/عزباء</option>
                       <option value="متزوج/متزوجة">متزوج/متزوجة</option>
                       <option value="مطلق/مطلقة">مطلق/مطلقة</option>
                     </select>
+                    {formErrors.marital_status && <span className="error-message">{formErrors.marital_status}</span>}
                   </div>
                 </div>
 
                 {/* الجنسية - Select2 */}
                 <div className="form-group" ref={nationalityDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="nationality">الجنسية</label>
+                  <label htmlFor="nationality">الجنسية <span className="required">*</span></label>
                   <div
                     onClick={() => {
                       setShowNationalityDropdown((v) => !v);
