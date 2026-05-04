@@ -106,6 +106,10 @@ import ClaimsList from './components/Claims/ClaimsList';
 import ViewClaim from './components/Claims/ViewClaim';
 import AgencyCancellations from './components/AgencyCancellations';
 import CompanyDocuments from './components/CompanyDocuments';
+import RentalVouchersList from './components/RentalVouchersList';
+import RentalVoucherDetails from './components/RentalVoucherDetails';
+import CreateRentalVoucher from './components/CreateRentalVoucher';
+import EditRentalVoucher from './components/EditRentalVoucher';
 
 
 
@@ -350,6 +354,7 @@ const menuSections: SidebarSection[] = [
             label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
               { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
               { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+              { label: 'ورقة الإيجارات', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
             ]
           },
           { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
@@ -436,6 +441,7 @@ const createMenuSections = (
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
       { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+      { label: 'ورقة الإيجارات', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
       { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
       { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
       { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
@@ -488,6 +494,7 @@ const createMenuSections = (
     '/reports/expenses',
     '/reports/indemnities',
     '/reports/union-balances',
+    '/reports/rental-vouchers',
   ];
   const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/agency-cancellations', '/archive'];
 
@@ -707,7 +714,7 @@ const createMenuSections = (
   }
 
   if (reportsItems.length > 0) {
-    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances');
+    const expensesGroup = reportsItems.filter(i => i.to === '/reports/expenses' || i.to === '/reports/union-balances' || i.to === '/reports/rental-vouchers');
     const accountantGroup = reportsItems.filter(i =>
       i.to === '/reports/commissions' ||
       i.to === '/reports/branch-agent-account' ||
@@ -1080,6 +1087,11 @@ export default function App() {
                   <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><ExpenseManagement activeTabOverride="expenses" /></AuthorizedRoute>} />
                   <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><ExpenseManagement activeTabOverride="indemnities" /></AuthorizedRoute>} />
                   <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
+                  {/* ورقة الإيجارات */}
+                  <Route path="/reports/rental-vouchers" element={<RentalVouchersList />} />
+                  <Route path="/reports/rental-vouchers/create" element={<CreateRentalVoucher />} />
+                  <Route path="/reports/rental-vouchers/:id" element={<RentalVoucherDetails />} />
+                  <Route path="/reports/rental-vouchers/:id/edit" element={<EditRentalVoucher />} />
                   {/* اختبار API */}
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
                   <Route path="/test-lifo-login" element={<TestLifoLogin />} />
