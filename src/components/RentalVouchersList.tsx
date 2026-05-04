@@ -130,8 +130,8 @@ export default function RentalVouchersList() {
   }, [vouchers, search, filterMinAmount, filterMaxAmount, filterFromDate, filterToDate, filterMinRecords, sortBy, sortDir]);
 
   // ═══ Stats ═══
-  const totalAmount = filtered.reduce((s, v) => s + (v.records_sum_total_amount || 0), 0);
-  const totalRecords = filtered.reduce((s, v) => s + (v.records_count || 0), 0);
+  const totalAmount = filtered.reduce((s, v) => s + (Number(v.records_sum_total_amount) || 0), 0);
+  const totalRecords = filtered.reduce((s, v) => s + (Number(v.records_count) || 0), 0);
   const activeFilters = [search, filterMinAmount, filterMaxAmount, filterFromDate, filterToDate, filterMinRecords].filter(Boolean).length;
 
   // ═══ Excel Export (Flat Table) ═══
@@ -506,7 +506,7 @@ export default function RentalVouchersList() {
                     </span>
                   </td>
                   <td style={{ color: '#22c55e', fontWeight: 'bold' }}>
-                    {(v.records_sum_total_amount || 0).toLocaleString()} د.ل
+                    {(Number(v.records_sum_total_amount) || 0).toLocaleString()} د.ل
                   </td>
                   <td style={{ color: 'var(--muted)', fontSize: '13px' }}>
                     {new Date(v.created_at).toLocaleDateString('ar-LY')}

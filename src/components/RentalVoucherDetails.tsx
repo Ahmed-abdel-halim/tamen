@@ -62,7 +62,7 @@ export default function RentalVoucherDetails() {
 
   if (!voucher) return null;
 
-  const totalAmount = voucher.records.reduce((s, r) => s + r.total_amount, 0);
+  const totalAmount = voucher.records.reduce((s, r) => s + (Number(r.total_amount) || 0), 0);
 
   return (
     <section className="users-management">
