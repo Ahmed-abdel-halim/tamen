@@ -584,7 +584,7 @@ export default function ClaimsList() {
                 {filteredClaims.map((claim) => (
                   <tr key={claim.id}>
                     <td><span className="fw-bold">{claim.claim_number}</span></td>
-                    <td>{new Date(claim.claim_date).toLocaleDateString('ar-EG')}</td>
+                    <td>{claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
                     <td>{claim.document?.insurance_number || 'غير متوفر'}</td>
                     <td>{claim.claimant_name}</td>
                     <td>{claim.damage_type}</td>

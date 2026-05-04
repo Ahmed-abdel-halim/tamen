@@ -44,7 +44,7 @@ const SearchableSelect = ({
       <label className="premium-label">{label}</label>
       <div 
         className="premium-field d-flex align-items-center justify-content-between" 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
         style={{ cursor: 'pointer', height: '46px', background: 'var(--panel)', border: '1.5px solid var(--border)', borderRadius: '12px' }}
       >
         <span style={{ color: value ? 'var(--text)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600 }}>
@@ -54,7 +54,7 @@ const SearchableSelect = ({
       </div>
 
       {isOpen && (
-        <div style={{
+        <div onClick={(e) => e.stopPropagation()} style={{
           position: 'absolute',
           top: '100%',
           left: 0,
@@ -103,7 +103,8 @@ const SearchableSelect = ({
                   key={opt.value} 
                   className="p-2 px-3 mb-1 dropdown-item rounded-3" 
                   style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500, transition: 'all 0.2s' }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onChange(opt.value);
                     setIsOpen(false);
                     setSearchTerm('');
@@ -123,6 +124,18 @@ const SearchableSelect = ({
       )}
     </div>
   );
+};
+
+const safeFormatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return 'غير متوفر';
+  try {
+    // Convert MySQL datetime (space separator) to ISO format (T separator)
+    const d = new Date(String(dateStr).replace(' ', 'T'));
+    if (isNaN(d.getTime())) return String(dateStr);
+    return d.toLocaleDateString('ar-EG');
+  } catch {
+    return String(dateStr);
+  }
 };
 
 export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
@@ -189,12 +202,23 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
         user_id: user.id || '' 
       }).toString();
       const response = await fetch(`${API_BASE_URL}/claims/search-documents?${queryParams}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
       });
+      
+      if (!response.ok) {
+        setAvailableDocuments([]);
+        return;
+      }
+
       const data = await response.json();
-      setAvailableDocuments(data);
+      setAvailableDocuments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching documents:', error);
+      setAvailableDocuments([]);
+      showToast('حدث خطأ أثناء تحميل قائمة الوثائق', 'error');
     } finally {
       setLoadingDocs(false);
     }
@@ -212,7 +236,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
 
     setDocumentData(null);
     try {
-      const queryParams = new URLSearchParams({ document_type: documentType, insurance_number: insuranceNumber }).toString();
+      const queryParams = new URLSearchParams({ document_type: documentType, insurance_number: searchNumber }).toString();
       const response = await fetch(`${API_BASE_URL}/claims/document-info?${queryParams}`, {
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -220,8 +244,10 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
         }
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw { response: { data: errorData } };
+        let errMsg = 'الوثيقة غير موجودة';
+        try { const e = await response.json(); errMsg = e?.message || errMsg; } catch {}
+        showToast(errMsg, 'error');
+        return;
       }
       const data = await response.json();
       setDocumentData(data);
@@ -232,7 +258,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
         setClaimData({...claimData, claimant_name: data.insured_name, kinship: 'المؤمن له'});
       }
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'الوثيقة غير موجودة', 'error');
+      showToast(error?.message || 'حدث خطأ أثناء البحث عن الوثيقة', 'error');
     }
   };
 
@@ -266,8 +292,19 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
 
     try {
       const formData = new FormData();
+      let finalClaimNumber = claimData.claim_number;
+      
+      // Generate auto claim number if needed
+      if (claimData.claim_number_auto && !finalClaimNumber) {
+        finalClaimNumber = 'CLM-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+      }
+
       Object.keys(claimData).forEach(key => {
-        formData.append(key, (claimData as any)[key]);
+        if (key === 'claim_number') {
+          formData.append(key, finalClaimNumber);
+        } else {
+          formData.append(key, (claimData as any)[key]);
+        }
       });
       formData.append('document_type', documentType);
       if (documentData) {
@@ -278,7 +315,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
       // Branch Agent ID from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (user.id && !claim) {
-        formData.append('branch_agent_id', user.id);
+        formData.append('branch_agent_id', user.branch_agent_id || user.id);
       }
 
       // Append reports
@@ -529,7 +566,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
               />
               <SearchableSelect 
                 label="رقم الوثيقة"
-                options={availableDocuments.map(doc => ({ value: doc.insurance_number, label: `${doc.insurance_number} - ${doc.insured_name}` }))}
+                options={Array.isArray(availableDocuments) ? availableDocuments.map(doc => ({ value: doc.insurance_number, label: `${doc.insurance_number} - ${doc.insured_name}` })) : []}
                 value={insuranceNumber}
                 loading={loadingDocs}
                 onChange={(val) => {
@@ -554,16 +591,16 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 <div className="col-md-3">
                   <div className="info-pill">
                     <div className="label">تاريخ الإصدار</div>
-                    <div className="value">{documentData.issue_date ? new Date(documentData.issue_date).toLocaleDateString('ar-EG') : 'غير متوفر'}</div>
+                    <div className="value">{safeFormatDate(documentData.issue_date)}</div>
                   </div>
                 </div>
                 <div className="col-md-3">
                   <div className="info-pill">
                     <div className="label">تاريخ الانتهاء</div>
-                    <div className="value">{documentData.end_date ? new Date(documentData.end_date).toLocaleDateString('ar-EG') : 'غير متوفر'}</div>
+                    <div className="value">{safeFormatDate(documentData.end_date)}</div>
                   </div>
                 </div>
-                {documentData.vehicleType && (
+                {documentData.vehicleType?.name && (
                   <div className="col-md-3">
                     <div className="info-pill">
                       <div className="label">نوع السيارة</div>
