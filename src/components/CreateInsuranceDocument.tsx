@@ -82,7 +82,6 @@ export default function CreateInsuranceDocument() {
   const [plates, setPlates] = useState<Plate[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [_authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const prevEnginePowerRef = useRef<string>('');
   const [formData, setFormData] = useState({
     insurance_type: 'تأمين إجباري سيارات' as 'تأمين إجباري سيارات' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية' | 'تأمين سيارة جمرك',
@@ -106,6 +105,7 @@ export default function CreateInsuranceDocument() {
     load_capacity: '',
     insured_name: '',
     phone: '',
+    whatsapp_number: '',
     email: '',
     driving_license_number: '',
     nid_passport: '',
@@ -129,7 +129,6 @@ export default function CreateInsuranceDocument() {
   const [eidcVehicleDetails, setEidcVehicleDetails] = useState<any[]>([]);
   const [_loadingEidcData, setLoadingEidcData] = useState(false);
   const [eidcPremiumData, setEidcPremiumData] = useState<any>(null);
-  const [agents, setAgents] = useState<any[]>([]);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -173,7 +172,6 @@ export default function CreateInsuranceDocument() {
     fetchVehicleTypes();
     fetchColors();
     loadUserPermissions();
-    fetchAgents();
   }, []);
 
   const loadUserPermissions = () => {
@@ -181,31 +179,18 @@ export default function CreateInsuranceDocument() {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
         setAuthorizedDocuments(null);
-        setIsAdmin(false);
         return;
       }
       
       const user = JSON.parse(userStr);
-      setIsAdmin(user.is_admin || false);
       setAuthorizedDocuments(user.authorized_documents || null);
     } catch (error) {
       console.error('Error loading user permissions:', error);
       setAuthorizedDocuments(null);
-      setIsAdmin(false);
     }
   };
 
-  const fetchAgents = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/branches-agents`);
-      if (res.ok) {
-        const data = await res.json();
-        setAgents(data);
-      }
-    } catch (error) {
-      console.error('Error fetching agents:', error);
-    }
-  };
+
 
   // ─── EIDC Integration Logic ────────────────────────────────────────────────
 
@@ -1984,6 +1969,7 @@ export default function CreateInsuranceDocument() {
           load_capacity: loadCapacityValue,
           insured_name: formData.insured_name || null,
           phone: formData.phone || null,
+          whatsapp_number: formData.whatsapp_number || null,
           driving_license_number: formData.driving_license_number || null,
           premium: premiumValue,
           third_party_purpose: formData.third_party_purpose || null,
@@ -2001,7 +1987,6 @@ export default function CreateInsuranceDocument() {
           engine_cc: formData.engine_cc || null,
           vehicle_weight: formData.vehicle_weight || null,
           notes: formData.notes || null,
-          branch_agent_id: formData.branch_agent_id || null,
         };
       
       console.log('Sending request data:', requestBody);
@@ -2113,27 +2098,7 @@ export default function CreateInsuranceDocument() {
                 <h3 className="form-section-title">بيانات المؤمن له / المشترك - بيانات الوثيقة</h3>
                 
                 {/* اختيار الوكيل (للمدراء فقط) */}
-                {isAdmin && (
-                  <div className="form-group" style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <label htmlFor="branch_agent_id" style={{ fontWeight: 'bold', color: '#1e293b' }}>إصدار الوثيقة باسم وكيل محدد</label>
-                    <select 
-                      id="branch_agent_id" 
-                      value={formData.branch_agent_id} 
-                      onChange={(e) => setFormData({ ...formData, branch_agent_id: e.target.value })}
-                      style={{ border: '1px solid #cbd5e1', marginTop: '5px' }}
-                    >
-                      <option value="">-- إصدار باسمي (الموظف الحالي) --</option>
-                      {agents.map(agent => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.agent_name} ({agent.agency_name})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="form-help-text" style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '5px' }}>
-                      <i className="fa-solid fa-circle-info"></i> عند اختيار وكيل، سيتم استخدام بيانات منظومة الهيئة الخاصة به لإصدار الوثيقة.
-                    </p>
-                  </div>
-                )}
+
                 
                   <div className="form-group">
                     <label>تاريخ الإصدار</label>
@@ -2209,16 +2174,16 @@ export default function CreateInsuranceDocument() {
                   </div>
                 </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
-                    <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                      <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="whatsapp_number">رقم الواتساب</label>
+                      <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} placeholder="رقم الواتساب للتواصل" />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="email">البريد الإلكتروني <span className="required">*</span></label>
-                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@domain.com" />
-                  </div>
-                </div>
 
                 <div className="form-group">
                   <label htmlFor="address">العنوان التفصيلي <span className="required">*</span></label>
@@ -2548,24 +2513,7 @@ export default function CreateInsuranceDocument() {
                   <h3 className="form-section-title">بيانات الوثيقة والمؤمن له</h3>
 
                   {/* اختيار الوكيل (للمدراء فقط) */}
-                  {isAdmin && (
-                    <div className="form-group" style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <label htmlFor="branch_agent_id_single" style={{ fontWeight: 'bold', color: '#1e293b' }}>إصدار الوثيقة باسم وكيل محدد</label>
-                      <select 
-                        id="branch_agent_id_single" 
-                        value={formData.branch_agent_id} 
-                        onChange={(e) => setFormData({ ...formData, branch_agent_id: e.target.value })}
-                        style={{ border: '1px solid #cbd5e1', marginTop: '5px' }}
-                      >
-                        <option value="">-- إصدار باسمي (الموظف الحالي) --</option>
-                        {agents.map(agent => (
-                          <option key={agent.id} value={agent.id}>
-                            {agent.agent_name} ({agent.agency_name})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+
                   <div className="form-group">
                     <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
                     <input type="text" id="insured_name" value={formData.insured_name} onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })} />
@@ -2577,19 +2525,19 @@ export default function CreateInsuranceDocument() {
                       <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                     </div>
                     <div className="form-group">
+                      <label htmlFor="whatsapp_number">رقم الواتساب</label>
+                      <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} placeholder="رقم الواتساب للتواصل" />
+                    </div>
+                  </div>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
                       <label htmlFor="nationality">الجنسية</label>
                       <input type="text" id="nationality" value={formData.nationality} onChange={(e) => setFormData({ ...formData, nationality: e.target.value })} />
                     </div>
-                  </div>
-
-                  <div className="form-grid">
                     <div className="form-group">
                       <label htmlFor="email">البريد الإلكتروني</label>
                       <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@domain.com" />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="address">العنوان</label>
-                      <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="طرابلس - حي الأندلس" />
                     </div>
                   </div>
 
