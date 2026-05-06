@@ -56,6 +56,11 @@ type InsuranceDocument = {
   foreign_car_purpose?: string;
   print_type?: string;
   whatsapp_number?: string;
+  eidc_policy_id?: string;
+  eidc_transaction_code?: string;
+  eidc_sync_status?: string;
+  eidc_pdf_url?: string;
+  eidc_error?: string;
 };
 
 type OwnershipTransfer = {
@@ -299,6 +304,16 @@ export default function ViewInsuranceDocument() {
                   <i className="fa-solid fa-print"></i>
                   <span className="back-button-text">طباعة الوثيقة</span>
                 </button>
+                {document.eidc_pdf_url && (
+                  <button
+                    className="back-button print-button"
+                    onClick={() => window.open(document.eidc_pdf_url, '_blank')}
+                    style={{ background: '#0284c7', borderColor: '#0284c7' }}
+                  >
+                    <i className="fa-solid fa-file-pdf"></i>
+                    <span className="back-button-text">وثيقة الهيئة (PDF)</span>
+                  </button>
+                )}
                 {isAdmin && (
                   <button
                     onClick={() => navigate(`/insurance-documents/${id}/edit`)}
@@ -422,6 +437,43 @@ export default function ViewInsuranceDocument() {
                         <td style={{ fontWeight: 'bold' }}>مدة التأمين</td>
                         <td>{document.duration || '-'}</td>
                       </tr>
+                      {document.insurance_type === 'تأمين إجباري سيارات' && (
+                        <>
+                          <tr>
+                            <td style={{ fontWeight: 'bold' }}>حالة الربط مع الهيئة</td>
+                            <td>
+                              <span 
+                                title={document.eidc_sync_status === 'failed' ? document.eidc_error : ''}
+                                style={{ 
+                                  color: document.eidc_policy_id ? '#10b981' : (document.eidc_sync_status === 'failed' ? '#ef4444' : '#f59e0b'),
+                                  fontWeight: 'bold',
+                                  cursor: document.eidc_sync_status === 'failed' ? 'help' : 'default'
+                                }}>
+                                {document.eidc_policy_id ? 'تم الربط بنجاح' : (document.eidc_sync_status === 'failed' ? 'فشل الربط' : 'قيد الانتظار')}
+                                {document.eidc_policy_id && document.eidc_sync_status === 'failed' && (
+                                  <span style={{ fontSize: '12px', color: '#ef4444', marginRight: '5px' }}> (فشل آخر تحديث)</span>
+                                )}
+                              </span>
+                            </td>
+                          </tr>
+                          {document.eidc_transaction_code && (
+                            <tr>
+                              <td style={{ fontWeight: 'bold' }}>كود المعاملة (الهيئة)</td>
+                              <td>{document.eidc_transaction_code}</td>
+                            </tr>
+                          )}
+                          {document.eidc_policy_id && (
+                            <tr>
+                              <td style={{ fontWeight: 'bold' }}>رقم الوثيقة (الهيئة)</td>
+                              <td>
+                                <a href={document.eidc_pdf_url} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: 'bold' }}>
+                                  {document.eidc_policy_id} <i className="fa-solid fa-external-link" style={{ fontSize: '10px' }}></i>
+                                </a>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>

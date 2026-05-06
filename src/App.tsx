@@ -145,7 +145,6 @@ function hasAccessToRoute(
   const insuranceTypeMap: Record<string, string[]> = {
     'تأمين سيارات إجباري': ['/insurance-documents'],
     'تأمين سيارات': ['/insurance-documents'],
-    'تأمين سيارة جمرك': ['/insurance-documents'],
     'تأمين سيارات أجنبية': ['/insurance-documents'],
     'تأمين طرف ثالث سيارات': ['/insurance-documents'],
     'تأمين سيارات دولي': ['/international-insurance-documents'],
@@ -399,7 +398,6 @@ const createMenuSections = (
   const insuranceTypeMap: Record<string, SidebarItem | SidebarItem[]> = {
     'تأمين سيارات إجباري': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين سيارة جمرك': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات أجنبية': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين طرف ثالث سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },

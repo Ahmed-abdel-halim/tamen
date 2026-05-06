@@ -70,6 +70,9 @@ type User = {
   tax_percentage?: number;
   salary_type?: string;
   hourly_rate?: number;
+  eidc_username?: string | null;
+  eidc_password?: string | null;
+  eidc_api_key?: string | null;
 };
 
 function escapeHtml(s: string): string {
@@ -206,6 +209,9 @@ export default function UsersList() {
     tax_percentage: 10.000 as string | number,
     salary_type: 'monthly',
     hourly_rate: '' as string | number,
+    eidc_username: '',
+    eidc_password: '',
+    eidc_api_key: '',
   });
 
   const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
@@ -697,6 +703,9 @@ export default function UsersList() {
         tax_percentage: showForm.user.tax_percentage ?? 10.000,
         salary_type: showForm.user.salary_type || 'monthly',
         hourly_rate: showForm.user.hourly_rate || '',
+        eidc_username: showForm.user.eidc_username || '',
+        eidc_password: showForm.user.eidc_password || '',
+        eidc_api_key: showForm.user.eidc_api_key || '',
       });
     } else {
       setFormData({
@@ -745,6 +754,9 @@ export default function UsersList() {
         tax_percentage: 10.000,
         salary_type: 'monthly',
         hourly_rate: '',
+        eidc_username: '',
+        eidc_password: '',
+        eidc_api_key: '',
       });
     }
     setFormErrors({});
@@ -949,6 +961,9 @@ export default function UsersList() {
         tax_percentage: '',
         salary_type: 'شهري',
         hourly_rate: '',
+        eidc_username: '',
+        eidc_password: '',
+        eidc_api_key: '',
       });
       if (uploadError) {
         showToast(`تم حفظ البيانات. ${uploadError}`, 'error');
@@ -1458,6 +1473,40 @@ export default function UsersList() {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="example@mail.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* EIDC Credentials Section */}
+                <div className="form-row" style={{ marginTop: '15px', padding: '15px', background: '#f0f9ff', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+                  <div className="form-group flex-1" style={{ marginBottom: 0 }}>
+                    <label style={{ color: '#0369a1', fontWeight: '800' }}>
+                      <i className="fa-solid fa-id-card-clip"></i> اسم مستخدم الهيئة (EIDC)
+                    </label>
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-user-shield" style={{ color: '#0369a1' }}></i>
+                      <input
+                        type="text"
+                        value={formData.eidc_username}
+                        onChange={(e) => setFormData({ ...formData, eidc_username: e.target.value })}
+                        placeholder="اختياري للوكلاء"
+                        style={{ border: '1px solid #7dd3fc' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group flex-1" style={{ marginBottom: 0 }}>
+                    <label style={{ color: '#0369a1', fontWeight: '800' }}>
+                      <i className="fa-solid fa-key"></i> كلمة مرور الهيئة (EIDC)
+                    </label>
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-lock" style={{ color: '#0369a1' }}></i>
+                      <input
+                        type="password"
+                        value={formData.eidc_password}
+                        onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
+                        placeholder="اختياري للوكلاء"
+                        style={{ border: '1px solid #7dd3fc' }}
                       />
                     </div>
                   </div>

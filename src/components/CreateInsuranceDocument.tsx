@@ -81,16 +81,16 @@ export default function CreateInsuranceDocument() {
   const navigate = useNavigate();
   const [plates, setPlates] = useState<Plate[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
+  const [_authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const prevEnginePowerRef = useRef<string>('');
   const [formData, setFormData] = useState({
-    insurance_type: 'تأمين إجباري سيارات' as 'تأمين إجباري سيارات' | 'تأمين سيارة جمرك' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية',
+    insurance_type: 'تأمين إجباري سيارات' as 'تأمين إجباري سيارات' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية' | 'تأمين سيارة جمرك',
     plate_id: '',
     port: '',
     start_date: '',
     end_date: '',
-    duration: 'سنة (365 يوم)' as 'سنة' | 'سنتين' | 'شهر (30 يوم)' | 'شهرين (60 يوم)' | 'ثلاثة أشهر (90 يوم)' | 'سنة (365 يوم)' | 'سنتين (730 يوم)',
+    duration: 'سنة (365 يوم)' as 'سنة' | 'سنتين' | 'شهر (30 يوم)' | 'شهرين (60 يوم)' | 'ثلاثة أشهر (90 يوم)' | 'سنة (365 يوم)' | 'سنتين (730 يوم)' | 'تأمين من شهرين إلى 3 أشهر' | 'تأمين من شهر إلى شهرين' | 'تأمين من 15 يوم إلى شهر' | 'تأمين من 1 يوم إلى 15 يوم',
     third_party_purpose: '',
     foreign_car_country: '',
     foreign_car_purpose: '',
@@ -106,44 +106,65 @@ export default function CreateInsuranceDocument() {
     load_capacity: '',
     insured_name: '',
     phone: '',
-    whatsapp_number: '',
+    email: '',
     driving_license_number: '',
+    nid_passport: '',
     premium: '',
+    // EIDC vehicle classification fields
+    eidc_vehicle_type_id: '',
+    eidc_vehicle_spec_id: '',
+    eidc_vehicle_detail_id: '',
+    nationality: 'ليبي',
+    engine_number: '',
+    engine_cc: '',
+    vehicle_weight: '',
+    notes: '',
+    address: '',
+    branch_agent_id: '',
   });
+
+  // EIDC data states
+  const [eidcVehicleTypes, setEidcVehicleTypes] = useState<any[]>([]);
+  const [eidcVehicleSpecs, setEidcVehicleSpecs] = useState<any[]>([]);
+  const [eidcVehicleDetails, setEidcVehicleDetails] = useState<any[]>([]);
+  const [_loadingEidcData, setLoadingEidcData] = useState(false);
+  const [eidcPremiumData, setEidcPremiumData] = useState<any>(null);
+  const [agents, setAgents] = useState<any[]>([]);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Select2 states
-  const [plateSearch, setPlateSearch] = useState("");
-  const [showPlateDropdown, setShowPlateDropdown] = useState(false);
+  // const [plateSearch, setPlateSearch] = useState("");
+  const [_showPlateDropdown, setShowPlateDropdown] = useState(false);
   const plateDropdownRef = useRef<HTMLDivElement>(null);
 
   const [vehicleTypeSearch, setVehicleTypeSearch] = useState("");
   const [showVehicleTypeDropdown, setShowVehicleTypeDropdown] = useState(false);
   const vehicleTypeDropdownRef = useRef<HTMLDivElement>(null);
-  const [newVehicleTypeBrand, setNewVehicleTypeBrand] = useState("");
-  const [newVehicleTypeCategory, setNewVehicleTypeCategory] = useState("");
-  const [useCustomVehicleTypeBrand, setUseCustomVehicleTypeBrand] = useState(false);
-  const [showAddVehicleType, setShowAddVehicleType] = useState(false);
+  // const [newVehicleTypeBrand, setNewVehicleTypeBrand] = useState("");
+  // const [newVehicleTypeCategory, setNewVehicleTypeCategory] = useState("");
+  // const [useCustomVehicleTypeBrand, setUseCustomVehicleTypeBrand] = useState(false);
+  // const [showAddVehicleType, setShowAddVehicleType] = useState(false);
   const [showDeleteVehicleTypeModal, setShowDeleteVehicleTypeModal] = useState<{ id: number; brand: string; category: string } | null>(null);
   const [deletingVehicleType, setDeletingVehicleType] = useState(false);
 
-  const [categorySearch, setCategorySearch] = useState("");
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  // const [categorySearch, setCategorySearch] = useState("");
+  const [_showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
   const [colors, setColors] = useState<Color[]>([]);
-  const [colorSearch, setColorSearch] = useState("");
-  const [showColorDropdown, setShowColorDropdown] = useState(false);
-  const [newColorName, setNewColorName] = useState("");
-  const [showAddColor, setShowAddColor] = useState(false);
+  // const [colorSearch, setColorSearch] = useState("");
+  const [_showColorDropdown, setShowColorDropdown] = useState(false);
+  // const [newColorName, setNewColorName] = useState("");
+  // const [showAddColor, setShowAddColor] = useState(false);
   const [showDeleteColorModal, setShowDeleteColorModal] = useState<{ id: number; name: string } | null>(null);
   const [deletingColor, setDeletingColor] = useState(false);
   const colorDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [yearSearch, setYearSearch] = useState("");
-  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  // const [yearSearch, setYearSearch] = useState("");
+  const [_showYearDropdown, setShowYearDropdown] = useState(false);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
 
 
@@ -152,6 +173,7 @@ export default function CreateInsuranceDocument() {
     fetchVehicleTypes();
     fetchColors();
     loadUserPermissions();
+    fetchAgents();
   }, []);
 
   const loadUserPermissions = () => {
@@ -170,6 +192,225 @@ export default function CreateInsuranceDocument() {
       console.error('Error loading user permissions:', error);
       setAuthorizedDocuments(null);
       setIsAdmin(false);
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/branches-agents`);
+      if (res.ok) {
+        const data = await res.json();
+        setAgents(data);
+      }
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+    }
+  };
+
+  // ─── EIDC Integration Logic ────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (isMandatoryInsurance) {
+      fetchEidcVehicleTypes();
+    }
+  }, [formData.insurance_type]);
+
+  useEffect(() => {
+    if (isMandatoryInsurance && formData.eidc_vehicle_type_id) {
+      fetchEidcVehicleSpecs(formData.eidc_vehicle_type_id);
+    } else {
+      setEidcVehicleSpecs([]);
+      setEidcVehicleDetails([]);
+    }
+  }, [formData.eidc_vehicle_type_id]);
+
+  useEffect(() => {
+    if (isMandatoryInsurance && formData.eidc_vehicle_spec_id) {
+      fetchEidcVehicleDetails(formData.eidc_vehicle_type_id); // The API uses typeId for details too according to some Swagger specs, or specId depending on implementation
+    } else {
+      setEidcVehicleDetails([]);
+    }
+  }, [formData.eidc_vehicle_spec_id]);
+
+  const fetchEidcVehicleTypes = async () => {
+    setLoadingEidcData(true);
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+      
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/vehicle-types`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error || 'فشل جلب بيانات الهيئة', 'error');
+          setEidcVehicleTypes([]);
+        } else {
+          setEidcVehicleTypes(Array.isArray(data) ? data : []);
+        }
+      } else {
+        const data = await res.json();
+        showToast(data.message || data.error || 'خطأ في الاتصال بنظام الهيئة', 'error');
+        setEidcVehicleTypes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching EIDC vehicle types:', error);
+      showToast('خطأ في جلب تصنيفات المركبات', 'error');
+    } finally {
+      setLoadingEidcData(false);
+    }
+  };
+
+  const fetchEidcVehicleSpecs = async (typeId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/vehicle-specs?typeId=${typeId}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error, 'error');
+          setEidcVehicleSpecs([]);
+        } else {
+          setEidcVehicleSpecs(Array.isArray(data) ? data : []);
+        }
+      } else {
+        setEidcVehicleSpecs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching EIDC vehicle specs:', error);
+    }
+  };
+
+  const fetchEidcVehicleDetails = async (typeId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/vehicle-details?typeId=${typeId}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error, 'error');
+          setEidcVehicleDetails([]);
+        } else {
+          setEidcVehicleDetails(Array.isArray(data) ? data : []);
+        }
+      } else {
+        setEidcVehicleDetails([]);
+      }
+    } catch (error) {
+      console.error('Error fetching EIDC vehicle details:', error);
+    }
+  };
+
+  // تأمين طلب احتساب القسط تلقائياً عند اختيار تصنيف المركبة في المرحلة الثالثة
+  useEffect(() => {
+    const shouldInquire = isMandatoryInsurance && 
+                         currentStep === 3 && 
+                         formData.eidc_vehicle_type_id && 
+                         formData.eidc_vehicle_spec_id;
+
+    if (shouldInquire) {
+      handleEidcInquiry();
+    }
+  }, [currentStep, formData.eidc_vehicle_type_id, formData.eidc_vehicle_spec_id, formData.duration]);
+
+  const handleEidcInquiry = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/inquiry`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          typeVechicleId: formData.eidc_vehicle_type_id,
+          typeVechicle2Id: formData.eidc_vehicle_spec_id,
+          typeVechicle3Id: formData.eidc_vehicle_detail_id,
+          dayOfCarType: EidcApiServiceMapping.mapDurationToDays(formData.duration),
+          purposeLicense: EidcApiServiceMapping.mapPurposeLicense(formData.license_purpose),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error || 'فشل الاستعلام عن السعر من الهيئة', 'error');
+          setEidcPremiumData(null);
+        } else {
+          setEidcPremiumData(data);
+          // تحديث القسط الإجمالي في formData أيضاً للحفظ
+          if (data.totalPremium) {
+            setFormData(prev => ({ ...prev, premium: data.totalPremium.toString() }));
+          }
+        }
+      } else {
+        const data = await res.json();
+        showToast(data.message || data.error || 'خطأ في الاتصال بالهيئة للاستعلام', 'error');
+        setEidcPremiumData(null);
+      }
+    } catch (error) {
+      console.error('EIDC Inquiry Error:', error);
+    }
+  };
+
+  // مساعدات التحويل (Mapping Helpers) - لمحاكاة منطق الـ Backend في الـ Frontend للتسعير الفوري
+  const EidcApiServiceMapping = {
+    mapDurationToDays: (duration: string) => {
+      if (duration.includes('سنة')) return 365;
+      if (duration.includes('ثلاثة أشهر') || duration.includes('3 أشهر')) return 90;
+      if (duration.includes('شهرين')) return 60;
+      if (duration.includes('شهر')) return 30;
+      if (duration.includes('15 يوم')) return 15;
+      return 365;
+    },
+    mapPurposeLicense: (purpose: string) => {
+      if (!purpose) return 'خاصة';
+      if (purpose.includes('خاصة')) return 'خاصة';
+      if (purpose.includes('عامة')) return 'عامة';
+      if (purpose.includes('نقل')) return 'نقل';
+      if (purpose.includes('زراعي')) return 'زراعي';
+      if (purpose.includes('صناعي')) return 'صناعي';
+      return 'خاصة';
     }
   };
 
@@ -204,8 +445,8 @@ export default function CreateInsuranceDocument() {
 
   // إعادة تعيين مدة التأمين عند تغيير نوع التأمين
   useEffect(() => {
-    // في تأمين إجباري سيارات، المدة مثبتة على سنة واحدة
-    if (isMandatoryInsurance) {
+    // في تأمين إجباري سيارات، لم تعد المدة مثبتة على سنة واحدة فقط بل تدعم خيارات الهيئة
+    if (isMandatoryInsurance && !['سنة (365 يوم)', 'تأمين من شهرين إلى 3 أشهر', 'تأمين من شهر إلى شهرين', 'تأمين من 15 يوم إلى شهر', 'تأمين من 1 يوم إلى 15 يوم'].includes(formData.duration)) {
       setFormData(prev => ({
         ...prev,
         duration: 'سنة (365 يوم)',
@@ -234,24 +475,30 @@ export default function CreateInsuranceDocument() {
   useEffect(() => {
     // في تأمين إجباري سيارات أو تأمين جمرك، استخدم تاريخ اليوم كبداية التأمين
     const startDateValue = (isMandatoryInsurance || isCustomsInsurance) ? new Date().toISOString().split('T')[0] : formData.start_date;
-    const durationValue = isMandatoryInsurance ? 'سنة (365 يوم)' : formData.duration;
+    const durationValue = formData.duration;
     
     if (startDateValue && durationValue) {
       const startDate = new Date(startDateValue);
       const endDate = new Date(startDate);
       
-      if (isCustomsInsurance || isForeignCarInsurance) {
-        // تأمين جمرك أو سيارات أجنبية - حساب بالأيام
+      if (isCustomsInsurance || isForeignCarInsurance || isMandatoryInsurance) {
+        // تأمين جمرك أو سيارات أجنبية أو إجباري - حساب بالأيام
         let days = 0;
         switch (durationValue) {
-          case 'شهر (30 يوم)':
-            days = 30;
+          case 'ثلاثة أشهر (90 يوم)':
+          case 'تأمين من شهرين إلى 3 أشهر':
+            days = 90;
             break;
           case 'شهرين (60 يوم)':
+          case 'تأمين من شهر إلى شهرين':
             days = 60;
             break;
-          case 'ثلاثة أشهر (90 يوم)':
-            days = 90;
+          case 'شهر (30 يوم)':
+          case 'تأمين من 15 يوم إلى شهر':
+            days = 30;
+            break;
+          case 'تأمين من 1 يوم إلى 15 يوم':
+            days = 15;
             break;
           case 'سنة (365 يوم)':
             days = 365;
@@ -1380,11 +1627,11 @@ export default function CreateInsuranceDocument() {
     }
   };
 
-  const filteredPlates = plates.filter(p =>
+  /* const filteredPlates = plates.filter(p =>
     p.plate_number.toLowerCase().includes(plateSearch.toLowerCase()) ||
     p.city.name_ar.toLowerCase().includes(plateSearch.toLowerCase()) ||
     p.city.name_en.toLowerCase().includes(plateSearch.toLowerCase())
-  );
+  ); */
 
   // الحصول على قائمة فريدة من العلامات التجارية
   const uniqueBrands = Array.from(new Set(vehicleTypes.map(vt => vt.brand)))
@@ -1393,7 +1640,7 @@ export default function CreateInsuranceDocument() {
 
   const selectedVehicleType = vehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
   const selectedBrand = selectedVehicleType ? selectedVehicleType.brand : '';
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [_selectedCategory, setSelectedCategory] = useState('');
   
   // عرض الفئات الخاصة بالعلامة التجارية المختارة
   const filteredCategories = selectedBrand
@@ -1404,16 +1651,16 @@ export default function CreateInsuranceDocument() {
     setSelectedCategory(selectedVehicleType?.category || '');
   }, [selectedVehicleType?.category]);
 
-  const filteredColors = colors.filter(color =>
+  /* const filteredColors = colors.filter(color =>
     color.name.toLowerCase().includes(colorSearch.toLowerCase())
-  );
+  ); */
 
-  const filteredYears = YEARS.filter(y =>
+  /* const filteredYears = YEARS.filter(y =>
     y.toString().includes(yearSearch)
-  );
+  ); */
 
   // إضافة نوع سيارة جديد
-  const handleAddVehicleType = async (e: React.MouseEvent | React.KeyboardEvent) => {
+  /* const handleAddVehicleType = async (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!newVehicleTypeBrand.trim() || !newVehicleTypeCategory.trim()) return;
@@ -1448,13 +1695,13 @@ export default function CreateInsuranceDocument() {
     } catch (error: any) {
       showToast('حدث خطأ أثناء إضافة نوع السيارة', 'error');
     }
-  };
+  }; */
 
-  const handleDeleteVehicleTypeClick = (e: React.MouseEvent, vehicleType: VehicleType) => {
+  /* const handleDeleteVehicleTypeClick = (e: React.MouseEvent, vehicleType: VehicleType) => {
     e.preventDefault();
     e.stopPropagation();
     setShowDeleteVehicleTypeModal({ id: vehicleType.id, brand: vehicleType.brand, category: vehicleType.category });
-  };
+  }; */
 
   const handleDeleteVehicleType = async () => {
     if (!showDeleteVehicleTypeModal) return;
@@ -1486,7 +1733,7 @@ export default function CreateInsuranceDocument() {
     }
   };
   // إضافة لون جديد
-  const handleAddColor = async (e: React.MouseEvent | React.KeyboardEvent) => {
+  /* const handleAddColor = async (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!newColorName.trim()) return;
@@ -1516,14 +1763,14 @@ export default function CreateInsuranceDocument() {
     } catch (error: any) {
       showToast('حدث خطأ أثناء إضافة اللون', 'error');
     }
-  };
+  }; */
 
   // حذف لون
-  const handleDeleteColorClick = (e: React.MouseEvent, colorId: number, colorName: string) => {
+  /* const handleDeleteColorClick = (e: React.MouseEvent, colorId: number, colorName: string) => {
     e.preventDefault();
     e.stopPropagation();
     setShowDeleteColorModal({ id: colorId, name: colorName });
-  };
+  }; */
 
   const handleDeleteColor = async () => {
     if (!showDeleteColorModal) return;
@@ -1555,7 +1802,7 @@ export default function CreateInsuranceDocument() {
   };
 
 
-  const selectedPlate = plates.find(p => p.id === parseInt(formData.plate_id));
+  // const selectedPlate = plates.find(p => p.id === parseInt(formData.plate_id));
 
   // تحديد قائمة قوة المحرك بناءً على الغرض من الترخيص
   const isPublicPurpose = formData.license_purpose && formData.license_purpose.includes('عامة');
@@ -1652,9 +1899,20 @@ export default function CreateInsuranceDocument() {
     if (!formData.phone || !formData.phone.trim()) {
       errors.phone = 'رقم الهاتف مطلوب';
     }
-    if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
-      errors.whatsapp_number = 'رقم الواتساب مطلوب';
+
+    // EIDC Specific Validations
+    if (isMandatoryInsurance) {
+      if (!formData.nid_passport || !formData.nid_passport.trim()) {
+        errors.nid_passport = 'رقم الهوية الوطنية أو جواز السفر مطلوب للهيئة';
+      }
+      if (!formData.eidc_vehicle_type_id) {
+        errors.eidc_vehicle_type_id = 'تصنيف المركبة (النوع) مطلوب للهيئة';
+      }
+      if (!formData.eidc_vehicle_spec_id) {
+        errors.eidc_vehicle_spec_id = 'تصنيف المركبة (المواصفة) مطلوب للهيئة';
+      }
     }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -1726,12 +1984,24 @@ export default function CreateInsuranceDocument() {
           load_capacity: loadCapacityValue,
           insured_name: formData.insured_name || null,
           phone: formData.phone || null,
-          whatsapp_number: formData.whatsapp_number,
           driving_license_number: formData.driving_license_number || null,
           premium: premiumValue,
           third_party_purpose: formData.third_party_purpose || null,
           foreign_car_country: formData.foreign_car_country || null,
           foreign_car_purpose: formData.foreign_car_purpose || null,
+          // EIDC Integration Fields
+          nid_passport: formData.nid_passport || null,
+          eidc_vehicle_type_id: formData.eidc_vehicle_type_id || null,
+          eidc_vehicle_spec_id: formData.eidc_vehicle_spec_id || null,
+          eidc_vehicle_detail_id: formData.eidc_vehicle_detail_id || null,
+          nationality: formData.nationality || null,
+          email: formData.email || null,
+          address: formData.address || null,
+          engine_number: formData.engine_number || null,
+          engine_cc: formData.engine_cc || null,
+          vehicle_weight: formData.vehicle_weight || null,
+          notes: formData.notes || null,
+          branch_agent_id: formData.branch_agent_id || null,
         };
       
       console.log('Sending request data:', requestBody);
@@ -1774,1359 +2044,736 @@ export default function CreateInsuranceDocument() {
   };
 
   // الموانئ المتاحة
-  const PORTS = [
+  /* const PORTS = [
     { value: 'ميناء مصراته', cityName: 'مصراته' },
     { value: 'ميناء طرابلس', cityName: 'طرابلس' },
     { value: 'ميناء الخمس', cityName: 'الخمس' },
     { value: 'ميناء بنغازي', cityName: 'بنغازي' },
-  ];
+  ]; */
 
   // البحث عن اللوحة حسب الميناء المختار
-  const selectedPort = PORTS.find(p => p.value === formData.port);
-  const portPlate = selectedPort 
+  // const selectedPort = PORTS.find(p => p.value === formData.port);
+  /* const portPlate = selectedPort 
     ? plates.find(p => p.city.name_ar === selectedPort.cityName)
-    : null;
+    : null; */
 
   return (
     <section className="users-management">
     
 
-      <div className="users-card">
-        <div className="form-page-container">
-          <form onSubmit={handleSubmit} className="user-form" style={{ maxWidth: '100%' }}>
-          {/* الهيدرات الثلاثة بجانب بعض */}
-          <div className="form-sections-container">
-            {/* بيانات التأمين - تظهر عند اختيار تأمين إجباري أو جمرك أو طرف ثالث أو سيارات أجنبية */}
-            {(isMandatoryInsurance || isCustomsInsurance || isThirdPartyInsurance || isForeignCarInsurance) && (
-              <div className="form-section">
-              <h3 className="form-section-title">بيانات التأمين</h3>
-              
-              <div className="form-group">
-                <label htmlFor="insurance_type">نوع التأمين <span className="required">*</span></label>
+        <div className="users-card">
+          <div className="form-page-container">
+            {/* اختيار نوع التأمين - يظهر دائماً في البداية لتحديد شكل النموذج */}
+            <div className="form-section" style={{ marginBottom: '20px', borderBottom: '2px solid #f1f5f9', paddingBottom: '20px' }}>
+              <div className="form-group" style={{ maxWidth: '400px' }}>
+                <label htmlFor="main_insurance_type" style={{ fontWeight: 'bold', fontSize: '16px' }}>نوع التأمين <span className="required">*</span></label>
                 <select
-                  id="insurance_type"
+                  id="main_insurance_type"
                   value={formData.insurance_type}
                   onChange={(e) => setFormData({ ...formData, insurance_type: e.target.value as any })}
-                  className={formErrors.insurance_type ? 'error' : ''}
+                  style={{ padding: '12px', fontSize: '15px', border: '2px solid #2563eb' }}
                 >
-                  {(() => {
-                    // جميع أنواع التأمين المتاحة
-                    const allInsuranceTypes = [
-                      { value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' },
-                      { value: 'تأمين سيارة جمرك', label: 'تأمين سيارة جمرك' },
-                      { value: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' },
-                      { value: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' },
-                    ];
-
-                    // إذا كان admin، أظهر كل شيء
-                    if (isAdmin) {
-                      return allInsuranceTypes.map(type => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
-                      ));
-                    }
-
-                    // إذا لم يكن admin، قم بتصفية الأنواع المصرح بها
-                    if (authorizedDocuments && authorizedDocuments.length > 0) {
-                      // خريطة أنواع التأمين في الواجهة إلى أنواع التأمين في الصلاحيات
-                      const insuranceTypeMap: Record<string, string[]> = {
-                        'تأمين إجباري سيارات': ['تأمين سيارات إجباري', 'تأمين سيارات'],
-                        'تأمين سيارة جمرك': ['تأمين سيارة جمرك'],
-                        'تأمين طرف ثالث سيارات': ['تأمين طرف ثالث سيارات'],
-                        'تأمين سيارات أجنبية': ['تأمين سيارات أجنبية'],
-                      };
-
-                      const allowedTypes = allInsuranceTypes.filter(type => {
-                        const permissionTypes = insuranceTypeMap[type.value] || [];
-                        return permissionTypes.some(permType => authorizedDocuments.includes(permType));
-                      });
-
-                      if (allowedTypes.length === 0) {
-                        return <option value="">لا توجد أنواع تأمين متاحة</option>;
-                      }
-
-                      // إذا كان النوع الحالي غير مسموح، قم بتغييره إلى أول نوع مسموح
-                      if (allowedTypes.length > 0 && !allowedTypes.find(t => t.value === formData.insurance_type)) {
-                        setTimeout(() => {
-                          setFormData(prev => ({ ...prev, insurance_type: allowedTypes[0].value as any }));
-                        }, 0);
-                      }
-
-                      return allowedTypes.map(type => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
-                      ));
-                    }
-
-                    // إذا لم يكن هناك صلاحيات، لا تظهر أي خيارات
-                    return <option value="">لا توجد صلاحيات لإضافة وثائق تأمين</option>;
-                  })()}
+                  <option value="تأمين إجباري سيارات">تأمين إجباري سيارات</option>
+                  <option value="تأمين طرف ثالث سيارات">تأمين طرف ثالث سيارات</option>
+                  <option value="تأمين سيارات أجنبية">تأمين سيارات أجنبية</option>
                 </select>
-                {formErrors.insurance_type && <span className="error-message">{formErrors.insurance_type}</span>}
               </div>
+            </div>
 
-              <div className="form-group">
-                <label>تاريخ الإصدار</label>
-                <input
-                  type="text"
-                  value={new Date().toLocaleString('ar-LY')}
-                  disabled
-                  style={{ background: '#f3f4f6', color: '#6b7280' }}
-                />
-              </div>
-
-              {/* الجهة المقيد بها - تظهر عند تأمين إجباري أو طرف ثالث فقط */}
-              {(isMandatoryInsurance || isThirdPartyInsurance) && !isForeignCarInsurance && (
-                <div className="form-group" ref={plateDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="plate_id">الجهة المقيد بها <span className="required">*</span></label>
-                <div
-                  onClick={() => {
-                    setShowPlateDropdown((v) => !v);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: formErrors.plate_id ? '1px solid #ef4444' : '1px solid var(--border)',
-                    borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    minHeight: 42,
-                  }}
-                >
-                  <span style={{ color: formData.plate_id ? '#111827' : '#9ca3af' }}>
-                    {selectedPlate
-                      ? `${selectedPlate.city.name_ar} - ${selectedPlate.plate_number}`
-                      : 'اختر الجهة المقيد بها...'}
-                  </span>
-                  <i
-                    className={`fa-solid fa-chevron-${showPlateDropdown ? 'up' : 'down'}`}
-                    style={{ color: '#9ca3af' }}
-                  ></i>
+            {isMandatoryInsurance ? (
+              /* --- نظام المراحل للتأمين الإجباري فقط --- */
+              <>
+                <div className="stepper-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', position: 'relative', padding: '0 20px' }}>
+                  <div style={{ position: 'absolute', top: '15px', left: '40px', right: '40px', height: '2px', background: '#e5e7eb', zIndex: 1 }}>
+                    <div style={{ width: `${((currentStep - 1) / 2) * 100}%`, height: '100%', background: '#2563eb', transition: 'width 0.3s ease' }}></div>
+                  </div>
+                  {[
+                    { id: 1, title: 'بيانات المؤمن له', icon: 'fa-user' },
+                    { id: 2, title: 'بيانات المركبة', icon: 'fa-car' },
+                    { id: 3, title: 'احتساب القسط', icon: 'fa-calculator' }
+                  ].map((s) => (
+                    <div key={s.id} style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ 
+                        width: '35px', height: '35px', borderRadius: '50%', 
+                        background: currentStep >= s.id ? '#2563eb' : '#fff', 
+                        border: `2px solid ${currentStep >= s.id ? '#2563eb' : '#e5e7eb'}`,
+                        color: currentStep >= s.id ? '#fff' : '#9ca3af',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px'
+                      }}><i className={`fa-solid ${s.icon}`}></i></div>
+                      <span style={{ fontSize: '12px', fontWeight: currentStep === s.id ? '600' : '400' }}>{s.title}</span>
+                    </div>
+                  ))}
                 </div>
-                {showPlateDropdown && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: '#fff',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      marginTop: '4px',
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    <div style={{ padding: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="ابحث عن لوحة..."
-                        value={plateSearch}
-                        onChange={(e) => setPlateSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          marginBottom: '8px',
-                        }}
-                      />
-                    </div>
-                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                      {filteredPlates.length === 0 ? (
-                        <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                          لا توجد نتائج
-                        </div>
-                      ) : (
-                        filteredPlates.map((plate) => (
-                          <div
-                            key={plate.id}
-                            onClick={() => {
-                              setFormData({ ...formData, plate_id: plate.id.toString() });
-                              setShowPlateDropdown(false);
-                              setPlateSearch('');
-                            }}
-                            style={{
-                              padding: '10px 12px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid #f3f4f6',
-                              backgroundColor: formData.plate_id === plate.id.toString() ? '#f3f4f6' : 'transparent',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (formData.plate_id !== plate.id.toString()) {
-                                e.currentTarget.style.backgroundColor = '#f9fafb';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (formData.plate_id !== plate.id.toString()) {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }
-                            }}
-                          >
-                            <div style={{ fontWeight: 500 }}>{plate.city.name_ar} - {plate.plate_number}</div>
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{plate.city.name_en}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+
+                <form onSubmit={handleSubmit} className="user-form">
+            
+            {/* Step 1: بيانات المؤمن له والوثيقة */}
+            {currentStep === 1 && (
+              <div className="form-section animate-fade-in">
+                <h3 className="form-section-title">بيانات المؤمن له / المشترك - بيانات الوثيقة</h3>
+                
+                {/* اختيار الوكيل (للمدراء فقط) */}
+                {isAdmin && (
+                  <div className="form-group" style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <label htmlFor="branch_agent_id" style={{ fontWeight: 'bold', color: '#1e293b' }}>إصدار الوثيقة باسم وكيل محدد</label>
+                    <select 
+                      id="branch_agent_id" 
+                      value={formData.branch_agent_id} 
+                      onChange={(e) => setFormData({ ...formData, branch_agent_id: e.target.value })}
+                      style={{ border: '1px solid #cbd5e1', marginTop: '5px' }}
+                    >
+                      <option value="">-- إصدار باسمي (الموظف الحالي) --</option>
+                      {agents.map(agent => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.agent_name} ({agent.agency_name})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="form-help-text" style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '5px' }}>
+                      <i className="fa-solid fa-circle-info"></i> عند اختيار وكيل، سيتم استخدام بيانات منظومة الهيئة الخاصة به لإصدار الوثيقة.
+                    </p>
                   </div>
                 )}
-                {formErrors.plate_id && <span className="error-message">{formErrors.plate_id}</span>}
-              </div>
-              )}
+                
+                  <div className="form-group">
+                    <label>تاريخ الإصدار</label>
+                    <input type="text" value={new Date().toLocaleDateString('ar-LY')} disabled style={{ background: '#f3f4f6' }} />
+                  </div>
 
-              {/* الميناء - يظهر فقط عند تأمين جمرك */}
-              {isCustomsInsurance && (
                 <div className="form-group">
-                  <label htmlFor="port">الميناء <span className="required">*</span></label>
-                  <select
-                    id="port"
-                    value={formData.port}
-                    onChange={(e) => {
-                      setFormData({ ...formData, port: e.target.value });
-                    }}
-                    className={formErrors.port ? 'error' : ''}
-                  >
-                    <option value="">اختر الميناء...</option>
-                    {PORTS.map((port) => (
-                      <option key={port.value} value={port.value}>
-                        {port.value}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.port && <span className="error-message">{formErrors.port}</span>}
-                </div>
-              )}
-
-              {/* بداية التأمين - لا تظهر في تأمين إجباري سيارات */}
-              {!isMandatoryInsurance && !isCustomsInsurance && (
-                <div className="form-group">
-                  <label htmlFor="start_date">بداية التأمين <span className="required">*</span></label>
-                  <input
-                    type="date"
-                    id="start_date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    className={formErrors.start_date ? 'error' : ''}
-                  />
-                  {formErrors.start_date && <span className="error-message">{formErrors.start_date}</span>}
-                </div>
-              )}
-              
-              {/* بداية التأمين - لتأمين جمرك (معطلة، تعرض تاريخ الإصدار) */}
-              {isCustomsInsurance && (
-                <div className="form-group">
-                  <label>بداية التأمين <span className="required">*</span></label>
+                  <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
                   <input
                     type="text"
-                    value={formData.start_date ? new Date(formData.start_date).toLocaleDateString('ar-LY') : new Date().toLocaleDateString('ar-LY')}
-                    disabled
-                    style={{ background: '#f3f4f6', color: '#6b7280' }}
+                    id="insured_name"
+                    value={formData.insured_name}
+                    onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                    placeholder="اسم المؤمن له كما في الإثبات"
                   />
+                  {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
                 </div>
-              )}
 
-              <div className="form-group">
-                <label htmlFor="end_date">نهاية التأمين <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="end_date"
-                  value={formData.end_date}
-                  readOnly
-                  style={{ background: '#f3f4f6', color: '#6b7280' }}
-                />
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="nationality">الجنسية <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="nationality"
+                      value={formData.nationality}
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="nid_passport">رقم الهوية الوطنية أو جواز السفر <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="nid_passport"
+                      value={formData.nid_passport}
+                      onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
+                    <select
+                      id="duration"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: e.target.value as any })}
+                    >
+                      {isMandatoryInsurance ? (
+                        <>
+                          <option value="سنة (365 يوم)">تأمين سنوي</option>
+                          <option value="تأمين من شهرين إلى 3 أشهر">تأمين من شهرين إلى 3 أشهر</option>
+                          <option value="تأمين من شهر إلى شهرين">تأمين من شهر إلى شهرين</option>
+                          <option value="تأمين من 15 يوم إلى شهر">تأمين من 15 يوم إلى شهر</option>
+                          <option value="تأمين من 1 يوم إلى 15 يوم">تأمين من 1 يوم إلى 15 يوم</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="شهر (30 يوم)">شهر (30 يوم)</option>
+                          <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>تاريخ البدء</label>
+                    <input 
+                      type={isMandatoryInsurance ? "text" : "date"}
+                      value={isMandatoryInsurance ? new Date().toLocaleDateString('ar-LY') : formData.start_date}
+                      disabled={isMandatoryInsurance}
+                      onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                      style={isMandatoryInsurance ? { background: '#f3f4f6' } : {}}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                    <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="email">البريد الإلكتروني <span className="required">*</span></label>
+                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@domain.com" />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="address">العنوان التفصيلي <span className="required">*</span></label>
+                  <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="مثلاً: طرابلس - حي الأندلس" />
+                </div>
               </div>
-
-              {/* مدة التأمين - لا تظهر في تأمين إجباري سيارات (مثبتة على سنة واحدة) */}
-              {!isMandatoryInsurance && (
-                <div className="form-group">
-                  <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
-                  <select
-                    id="duration"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value as any })}
-                  >
-                    {isCustomsInsurance ? (
-                      <>
-                        <option value="شهر (30 يوم)">شهر (30 يوم)</option>
-                        <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
-                        <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
-                      </>
-                    ) : isForeignCarInsurance ? (
-                      <>
-                        <option value="شهر (30 يوم)">شهر (30 يوم)</option>
-                        <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
-                        <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
-                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                        <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                        <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              )}
-
-              {/* غرض من الطرف الثالث - يظهر فقط عند تأمين طرف ثالث */}
-              {isThirdPartyInsurance && !isForeignCarInsurance && (
-                <div className="form-group">
-                  <label htmlFor="third_party_purpose">غرض من الطرف الثالث <span className="required">*</span></label>
-                  <select
-                    id="third_party_purpose"
-                    value={formData.third_party_purpose}
-                    onChange={(e) => setFormData({ ...formData, third_party_purpose: e.target.value })}
-                    className={formErrors.third_party_purpose ? 'error' : ''}
-                  >
-                    <option value="">اختر الغرض...</option>
-                    <option value="خاصة">خاصة</option>
-                    <option value="عامة">عامة</option>
-                    <option value="نقل">نقل</option>
-                  </select>
-                  {formErrors.third_party_purpose && <span className="error-message">{formErrors.third_party_purpose}</span>}
-                </div>
-              )}
-            </div>
             )}
 
-            {/* الهيدر الثاني: بيانات المركبة */}
-            <div className="form-section" style={{ flex: '2 1 auto', minWidth: '50%' }}>
-            <h3 className="form-section-title">بيانات المركبة</h3>
-            
-            <div className="form-group">
-              <label htmlFor="chassis_number">رقم الهيكل <span className="required">*</span></label>
-              <input
-                type="text"
-                id="chassis_number"
-                value={formData.chassis_number}
-                onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
-                className={formErrors.chassis_number ? 'error' : ''}
-              />
-              {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label htmlFor="plate_number_manual">رقم اللوحة المعدنية <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="plate_number_manual"
-                  value={formData.plate_number_manual}
-                  onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })}
-                  className={formErrors.plate_number_manual ? 'error' : ''}
-                />
-                {formErrors.plate_number_manual && <span className="error-message">{formErrors.plate_number_manual}</span>}
-              </div>
-              {!isForeignCarInsurance && (
-                <div className="form-group">
-                  <label>رقم اللوحة</label>
-                  <input
-                    type="text"
-                    value={
-                      isCustomsInsurance 
-                        ? (portPlate ? portPlate.plate_number : '')
-                        : (selectedPlate ? selectedPlate.plate_number : '')
-                    }
-                    disabled
-                    style={{ background: '#f3f4f6', color: '#6b7280' }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="vehicle_type_id">نوع السيارة <span className="required">*</span></label>
-                <div
-                  onClick={() => {
-                    setShowVehicleTypeDropdown((v) => !v);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: formErrors.vehicle_type_id ? '1px solid #ef4444' : '1px solid var(--border)',
-                    borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    minHeight: 42,
-                  }}
-                >
-                  <span style={{ color: selectedBrand ? '#111827' : '#9ca3af' }}>
-                    {selectedBrand || 'اختر نوع السيارة...'}
-                  </span>
-                  <i
-                    className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}
-                    style={{ color: '#9ca3af' }}
-                  ></i>
-                </div>
-                {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
-                {showVehicleTypeDropdown && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: '#fff',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      marginTop: '4px',
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    <div style={{ padding: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="ابحث عن نوع السيارة..."
-                        value={vehicleTypeSearch}
-                        onChange={(e) => setVehicleTypeSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          marginBottom: '8px',
-                        }}
-                      />
-                      {!showAddVehicleType && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowAddVehicleType(true);
-                            setVehicleTypeSearch('');
-                            const hasBrands = uniqueBrands.length > 0;
-                            setUseCustomVehicleTypeBrand(!hasBrands);
-                            if (hasBrands && !newVehicleTypeBrand) {
-                              setNewVehicleTypeBrand(selectedBrand || uniqueBrands[0] || '');
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            background: '#10b981',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            fontFamily: "'Cairo', 'Segoe UI', system-ui, sans-serif",
-                          }}
-                        >
-                          <i className="fa-solid fa-plus"></i>
-                          إضافة نوع سيارة
-                        </button>
-                      )}
-                      {showAddVehicleType && (
-                        <div style={{ display: 'grid', gap: '8px' }}>
-                          {useCustomVehicleTypeBrand ? (
-                            <input
-                              type="text"
-                              placeholder="اسم الماركة..."
-                              value={newVehicleTypeBrand}
-                              onChange={(e) => setNewVehicleTypeBrand(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              autoFocus
-                              style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid var(--border)',
-                                borderRadius: 6,
-                              }}
-                            />
-                          ) : (
-                            <select
-                              value={newVehicleTypeBrand}
-                              onChange={(e) => setNewVehicleTypeBrand(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid var(--border)',
-                                borderRadius: 6,
-                                background: '#fff',
-                              }}
-                            >
-                              <option value="">اختر الماركة...</option>
-                              {uniqueBrands.map((brand) => (
-                                <option key={brand} value={brand}>{brand}</option>
-                              ))}
-                            </select>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setUseCustomVehicleTypeBrand(!useCustomVehicleTypeBrand);
-                              if (!useCustomVehicleTypeBrand) {
-                                setNewVehicleTypeBrand('');
-                              } else {
-                                setNewVehicleTypeBrand(selectedBrand || uniqueBrands[0] || '');
-                              }
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '6px 10px',
-                              background: '#2563eb',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontFamily: "'Cairo', 'Segoe UI', system-ui, sans-serif",
-                            }}
-                          >
-                            {useCustomVehicleTypeBrand ? 'اختر ماركة موجودة' : 'إضافة ماركة جديدة'}
-                          </button>
-                          <input
-                            type="text"
-                            placeholder="اسم الفئة..."
-                            value={newVehicleTypeCategory}
-                            onChange={(e) => setNewVehicleTypeCategory(e.target.value)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleAddVehicleType(e as any);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: '1px solid var(--border)',
-                              borderRadius: 6,
-                            }}
-                          />
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleAddVehicleType(e);
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                background: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <i className="fa-solid fa-check"></i>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setShowAddVehicleType(false);
-                                setNewVehicleTypeCategory('');
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                background: '#ef4444',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <i className="fa-solid fa-times"></i>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setShowAddVehicleType(false);
-                            setNewVehicleTypeBrand('');
-                                setNewVehicleTypeCategory('');
-                                setShowVehicleTypeDropdown(false);
-                            setUseCustomVehicleTypeBrand(false);
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                background: '#6b7280',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                              }}
-                              title="إنهاء الإضافة"
-                            >
-                              <i className="fa-solid fa-circle-check"></i>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                      {uniqueBrands.length === 0 ? (
-                        <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                          لا توجد نتائج
-                        </div>
-                      ) : (
-                        uniqueBrands.map((brand) => {
-                          // الحصول على أول ID لهذه العلامة التجارية
-                          const firstVehicleType = vehicleTypes.find(vt => vt.brand === brand);
-                          return (
-                            <div
-                              key={brand}
-                              onClick={() => {
-                                if (firstVehicleType) {
-                                  setFormData({ ...formData, vehicle_type_id: firstVehicleType.id.toString() });
-                                  setSelectedCategory(firstVehicleType.category);
-                                } else {
-                                  setSelectedCategory('');
-                                }
-                                setShowVehicleTypeDropdown(false);
-                                setVehicleTypeSearch('');
-                              }}
-                              style={{
-                                padding: '10px 12px',
-                                cursor: 'pointer',
-                                borderBottom: '1px solid #f3f4f6',
-                                backgroundColor: selectedBrand === brand ? '#f3f4f6' : 'transparent',
-                              }}
-                            >
-                              {brand}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+            {/* Step 2: بيانات المركبة */}
+            {currentStep === 2 && (
+              <div className="form-section animate-fade-in">
+                <h3 className="form-section-title">بيانات المركبة</h3>
+                
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>الجهة المقيد بها <span className="required">*</span></label>
+                    <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
+                      <option value="">اختر الجهة...</option>
+                      {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
+                    </select>
                   </div>
-                )}
-              </div>
-
-              {selectedBrand && (
-                <div className="form-group" ref={categoryDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="category">فئة السيارة <span className="required">*</span></label>
-                  <div
-                    onClick={() => {
-                      setShowCategoryDropdown((v) => !v);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: formErrors.vehicle_type_id ? '1px solid #ef4444' : '1px solid var(--border)',
-                      borderRadius: 8,
-                      background: '#fff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      minHeight: 42,
-                    }}
-                  >
-                    <span style={{ color: selectedCategory ? '#111827' : '#9ca3af' }}>
-                      {selectedCategory || 'اختر الفئة...'}
-                    </span>
-                    <i
-                      className={`fa-solid fa-chevron-${showCategoryDropdown ? 'up' : 'down'}`}
-                      style={{ color: '#9ca3af' }}
-                    ></i>
+                  <div className="form-group">
+                    <label>رقم اللوحة <span className="required">*</span></label>
+                    <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
                   </div>
-                  {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
-                  {showCategoryDropdown && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        background: '#fff',
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        marginTop: '4px',
-                        maxHeight: '300px',
-                        overflowY: 'auto',
-                        zIndex: 1000,
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                      }}
-                    >
-                      <div style={{ padding: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="ابحث عن فئة..."
-                          value={categorySearch}
-                          onChange={(e) => setCategorySearch(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid var(--border)',
-                            borderRadius: 6,
-                            marginBottom: '8px',
-                          }}
-                        />
-                      </div>
-                      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                        {filteredCategories
-                          .filter(c => c.category.toLowerCase().includes(categorySearch.toLowerCase()))
-                          .map((vt) => (
-                            <div
-                              key={vt.id}
-                              onClick={() => {
-                                setSelectedCategory(vt.category);
-                                setFormData({ ...formData, vehicle_type_id: vt.id.toString() });
-                                setShowCategoryDropdown(false);
-                                setCategorySearch('');
-                              }}
-                              style={{
-                                padding: '10px 12px',
-                                cursor: 'pointer',
-                                borderBottom: '1px solid #f3f4f6',
-                                backgroundColor: selectedCategory === vt.category ? '#f3f4f6' : 'transparent',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <span>{vt.category}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteVehicleTypeClick(e, vt)}
-                                style={{
-                                  padding: '4px 8px',
-                                  background: '#ef4444',
-                                  color: '#fff',
-                                  border: 'none',
-                                  borderRadius: 4,
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                }}
-                                title="حذف الفئة"
-                              >
-                                <i className="fa-solid fa-trash"></i>
-                              </button>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group" ref={colorDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="color">اللون <span className="required">*</span></label>
-                <div
-                  onClick={() => {
-                    setShowColorDropdown((v) => !v);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: formErrors.color ? '1px solid #ef4444' : '1px solid var(--border)',
-                    borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    minHeight: 42,
-                  }}
-                >
-                  <span style={{ color: formData.color ? '#111827' : '#9ca3af' }}>
-                    {formData.color || 'اختر اللون...'}
-                  </span>
-                  <i
-                    className={`fa-solid fa-chevron-${showColorDropdown ? 'up' : 'down'}`}
-                    style={{ color: '#9ca3af' }}
-                  ></i>
-                </div>
-                {formErrors.color && <span className="error-message">{formErrors.color}</span>}
-                {showColorDropdown && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: '#fff',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      marginTop: '4px',
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    <div style={{ padding: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="ابحث عن لون..."
-                        value={colorSearch}
-                        onChange={(e) => setColorSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          marginBottom: '8px',
-                        }}
-                      />
-                      {!showAddColor && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowAddColor(true);
-                            setColorSearch('');
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            background: '#10b981',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            fontFamily: "'Cairo', 'Segoe UI', system-ui, sans-serif",
-                          }}
-                        >
-                          <i className="fa-solid fa-plus"></i>
-                          إضافة لون جديد
-                        </button>
-                      )}
-                      {showAddColor && (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <input
-                            type="text"
-                            placeholder="أدخل اسم اللون..."
-                            value={newColorName}
-                            onChange={(e) => setNewColorName(e.target.value)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleAddColor(e as any);
-                              }
-                            }}
+                {/* اختيار نوع السيارة (الماركة والموديل) */}
+                <div className="form-grid">
+                  <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
+                    <label>ماركة السيارة <span className="required">*</span></label>
+                    <div className="searchable-select" onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
+                      <div className="select-display">
+                        {selectedBrand || (vehicleTypeSearch ? 'جاري البحث...' : 'اختر الماركة...')}
+                      </div>
+                      <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}></i>
+                    </div>
+                    
+                    {showVehicleTypeDropdown && (
+                      <div className="select-dropdown animate-fade-in">
+                        <div className="select-search">
+                          <i className="fa-solid fa-search"></i>
+                          <input 
+                            type="text" 
+                            placeholder="بحث عن ماركة..." 
+                            value={vehicleTypeSearch}
+                            onChange={(e) => setVehicleTypeSearch(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                             autoFocus
-                            style={{
-                              flex: 1,
-                              padding: '8px 12px',
-                              border: '1px solid var(--border)',
-                              borderRadius: 6,
-                            }}
                           />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleAddColor(e);
-                            }}
-                            style={{
-                              padding: '8px 12px',
-                              background: '#10b981',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <i className="fa-solid fa-check"></i>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowAddColor(false);
-                              setNewColorName('');
-                            }}
-                            style={{
-                              padding: '8px 12px',
-                              background: '#ef4444',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <i className="fa-solid fa-times"></i>
-                          </button>
                         </div>
-                      )}
-                    </div>
-                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                      {filteredColors.length === 0 && !showAddColor ? (
-                        <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                          لا توجد نتائج
+                        <div className="select-options">
+                          {uniqueBrands.length > 0 ? (
+                            uniqueBrands.map(brand => (
+                              <div 
+                                key={brand} 
+                                className={`select-option ${selectedBrand === brand ? 'selected' : ''}`}
+                                onClick={() => {
+                                  const firstOfType = vehicleTypes.find(vt => vt.brand === brand);
+                                  if (firstOfType) {
+                                    setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() });
+                                    setSelectedCategory(firstOfType.category);
+                                  }
+                                  setShowVehicleTypeDropdown(false);
+                                  setVehicleTypeSearch('');
+                                }}
+                              >
+                                {brand}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="no-options">لا توجد نتائج</div>
+                          )}
                         </div>
-                      ) : (
-                        filteredColors.map((color) => (
-                          <div
-                            key={color.id}
-                            onClick={() => {
-                              setFormData({ ...formData, color: color.name });
-                              setShowColorDropdown(false);
-                              setColorSearch('');
-                            }}
-                            style={{
-                              padding: '10px 12px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid #f3f4f6',
-                              backgroundColor: formData.color === color.name ? '#f3f4f6' : 'transparent',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (formData.color !== color.name) {
-                                e.currentTarget.style.backgroundColor = '#f9fafb';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (formData.color !== color.name) {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }
-                            }}
-                          >
-                            <span>{color.name}</span>
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteColorClick(e, color.id, color.name)}
-                              style={{
-                                padding: '4px 8px',
-                                background: '#ef4444',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                              }}
-                              title="حذف اللون"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="form-group" ref={yearDropdownRef} style={{ position: 'relative' }}>
-                <label htmlFor="year">السنة <span className="required">*</span></label>
-                <div
-                  onClick={() => {
-                    setShowYearDropdown((v) => !v);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: formErrors.year ? '1px solid #ef4444' : '1px solid var(--border)',
-                    borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    minHeight: 42,
-                  }}
-                >
-                  <span style={{ color: formData.year ? '#111827' : '#9ca3af' }}>
-                    {formData.year || 'اختر السنة...'}
-                  </span>
-                  <i
-                    className={`fa-solid fa-chevron-${showYearDropdown ? 'up' : 'down'}`}
-                    style={{ color: '#9ca3af' }}
-                  ></i>
-                </div>
-                {formErrors.year && <span className="error-message">{formErrors.year}</span>}
-                {showYearDropdown && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: '#fff',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      marginTop: '4px',
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    <div style={{ padding: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="ابحث عن سنة..."
-                        value={yearSearch}
-                        onChange={(e) => setYearSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          marginBottom: '8px',
-                        }}
-                      />
-                    </div>
-                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                      {filteredYears.map((year) => (
-                        <div
-                          key={year}
-                          onClick={() => {
-                            setFormData({ ...formData, year: year.toString() });
-                            setShowYearDropdown(false);
-                            setYearSearch('');
-                          }}
-                          style={{
-                            padding: '10px 12px',
-                            cursor: 'pointer',
-                            borderBottom: '1px solid #f3f4f6',
-                          }}
-                        >
-                          {year}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {!isForeignCarInsurance && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label htmlFor="license_purpose">الغرض من الترخيص <span className="required">*</span></label>
-                    <select
-                      id="license_purpose"
-                      value={formData.license_purpose}
-                      onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}
-                      className={formErrors.license_purpose ? 'error' : ''}
-                    >
-                      <option value="">اختر الغرض...</option>
-                      {LICENSE_PURPOSES.map((lp) => (
-                        <option key={lp.ar} value={`${lp.ar}/${lp.en}`}>
-                          {lp.ar} / {lp.en}
-                        </option>
-                      ))}
-                    </select>
-                    {formErrors.license_purpose && <span className="error-message">{formErrors.license_purpose}</span>}
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="engine_power">قوة المحرك بالحصان {!isThirdPartyInsurance && <span className="required">*</span>}</label>
-                    <select
-                      id="engine_power"
-                      value={formData.engine_power}
-                      onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}
-                      className={formErrors.engine_power ? 'error' : ''}
-                    >
-                      <option value="">اختر قوة المحرك...</option>
-                      {availableEnginePowers.map((ep) => (
-                        <option key={ep} value={ep}>
-                          {ep}
-                        </option>
-                      ))}
-                    </select>
-                    {formErrors.engine_power && <span className="error-message">{formErrors.engine_power}</span>}
-                  </div>
-                </div>
-
-                {/* الركاب المصرح بهم والحمولة بالطن - تظهر فقط عند اختيار قوة المحرك */}
-                {formData.engine_power && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {!(isTransportPurpose && formData.engine_power === 'مقطورة') && (
-                      <div className="form-group">
-                        <label htmlFor="authorized_passengers">الركاب المصرح بهم <span className="required">*</span></label>
-                        <input
-                          type="number"
-                          id="authorized_passengers"
-                          min="1"
-                          max="100"
-                          value={formData.authorized_passengers}
-                          onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })}
-                          className={formErrors.authorized_passengers ? 'error' : ''}
-                        />
-                        {formErrors.authorized_passengers && <span className="error-message">{formErrors.authorized_passengers}</span>}
                       </div>
                     )}
-                    <div className="form-group">
-                      <label htmlFor="load_capacity">الحمولة بالطن <span className="required">*</span></label>
-                      <input
-                        type="number"
-                        id="load_capacity"
-                        min="0"
-                        max="1000"
-                        step="1"
-                        value={formData.load_capacity}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // قبول الأرقام الصحيحة فقط (من 0 إلى 1000)
-                          if (value === '') {
-                            setFormData({ ...formData, load_capacity: '' });
-                          } else {
-                            const numValue = parseInt(value);
-                            if (!isNaN(numValue) && numValue >= 0 && numValue <= 1000) {
-                              setFormData({ ...formData, load_capacity: numValue.toString() });
-                            }
-                          }
-                        }}
-                        className={formErrors.load_capacity ? 'error' : ''}
-                      />
-                      {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
-                    </div>
                   </div>
-                )}
-              </>
+
+                  <div className="form-group">
+                    <label>فئة السيارة <span className="required">*</span></label>
+                    <select 
+                      value={formData.vehicle_type_id} 
+                      onChange={(e) => {
+                        const vt = vehicleTypes.find(v => v.id.toString() === e.target.value);
+                        if (vt) {
+                          setFormData({ ...formData, vehicle_type_id: e.target.value });
+                          setSelectedCategory(vt.category);
+                        }
+                      }}
+                      disabled={!selectedBrand}
+                    >
+                      <option value="">-- اختر الفئة --</option>
+                      {filteredCategories.map(vt => (
+                        <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>رقم الهيكل <span className="required">*</span></label>
+                    <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>سنة الصنع <span className="required">*</span></label>
+                    <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
+                      <option value="">اختر السنة...</option>
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>اللون <span className="required">*</span></label>
+                    <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
+                      <option value="">اختر اللون...</option>
+                      {colors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>الغرض من الترخيص <span className="required">*</span></label>
+                    <select value={formData.license_purpose} onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}>
+                      <option value="">اختر الغرض...</option>
+                      {LICENSE_PURPOSES.map(lp => <option key={lp.ar} value={`${lp.ar}/${lp.en}`}>{lp.ar}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>رقم المحرك <span className="required">*</span></label>
+                    <input type="text" value={formData.engine_number} onChange={(e) => setFormData({ ...formData, engine_number: e.target.value })} placeholder="Engine Number" />
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>قوة المحرك <span className="required">*</span></label>
+                    <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
+                      <option value="">اختر القوة...</option>
+                      {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>سعة المحرك (CC) <span className="required">*</span></label>
+                    <input type="text" value={formData.engine_cc} onChange={(e) => setFormData({ ...formData, engine_cc: e.target.value })} placeholder="مثلاً: 2000" />
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>الركاب المصرح بهم <span className="required">*</span></label>
+                    <input type="number" value={formData.authorized_passengers} onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>الحمولة (بالطن)</label>
+                    <input type="number" value={formData.load_capacity} onChange={(e) => setFormData({ ...formData, load_capacity: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>وزن المركبة</label>
+                  <input type="text" value={formData.vehicle_weight} onChange={(e) => setFormData({ ...formData, vehicle_weight: e.target.value })} placeholder="Vehicle Weight" />
+                </div>
+              </div>
             )}
 
-            {/* بيانات تأمين السيارات الأجنبية - يظهر فقط عند تأمين سيارات أجنبية وتكون داخل بيانات المركبة */}
-            {isForeignCarInsurance && (
-              <>
-                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '2px solid var(--border)' }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>بيانات تأمين السيارات الأجنبية</h4>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="foreign_car_country">دولة السيارة <span className="required">*</span></label>
-                  <select
-                    id="foreign_car_country"
-                    value={formData.foreign_car_country}
-                    onChange={(e) => setFormData({ ...formData, foreign_car_country: e.target.value })}
-                    className={formErrors.foreign_car_country ? 'error' : ''}
-                  >
-                    <option value="">اختر دولة السيارة...</option>
-                    <option value="تونسية">تونسية</option>
-                    <option value="جزائرية">جزائرية</option>
-                    <option value="مصرية">مصرية</option>
-                    <option value="أردنية">أردنية</option>
-                    <option value="سورية">سورية</option>
-                    <option value="فلسطينية">فلسطينية</option>
-                    <option value="سودانية">سودانية</option>
-                    <option value="مغربية">مغربية</option>
-                    <option value="بحرينية">بحرينية</option>
-                    <option value="إماراتية">إماراتية</option>
-                    <option value="عراقية">عراقية</option>
-                    <option value="كويتية">كويتية</option>
-                    <option value="لبنانية">لبنانية</option>
-                    <option value="مورتانية">مورتانية</option>
-                    <option value="عُمانية">عُمانية</option>
-                    <option value="قطرية">قطرية</option>
-                    <option value="صومالية">صومالية</option>
-                    <option value="يمنية">يمنية</option>
-                  </select>
-                  {formErrors.foreign_car_country && <span className="error-message">{formErrors.foreign_car_country}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="foreign_car_purpose">الغرض من السيارة <span className="required">*</span></label>
-                  <select
-                    id="foreign_car_purpose"
-                    value={formData.foreign_car_purpose}
-                    onChange={(e) => setFormData({ ...formData, foreign_car_purpose: e.target.value })}
-                    className={formErrors.foreign_car_purpose ? 'error' : ''}
-                  >
-                    <option value="">اختر الغرض...</option>
-                    <option value="سيارات خاصة سياحية">سيارات خاصة سياحية</option>
-                    <option value="سيارات نقل ركاب">سيارات نقل ركاب</option>
-                    <option value="سيارات نقل وشحن">سيارات نقل وشحن</option>
-                  </select>
-                  {formErrors.foreign_car_purpose && <span className="error-message">{formErrors.foreign_car_purpose}</span>}
-                </div>
-
-                {/* الركاب المصرح بهم والحمولة بالطن - تظهر عند اختيار غرض السيارة */}
-                {formData.foreign_car_purpose && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div className="form-group">
-                      <label htmlFor="authorized_passengers_foreign">الركاب المصرح بهم <span className="required">*</span></label>
-                      <input
-                        type="number"
-                        id="authorized_passengers_foreign"
-                        min="1"
-                        max="100"
-                        value={formData.authorized_passengers}
-                        onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })}
-                        placeholder="من 1 إلى 100 راكب"
-                        className={formErrors.authorized_passengers ? 'error' : ''}
-                      />
-                      {formErrors.authorized_passengers && <span className="error-message">{formErrors.authorized_passengers}</span>}
-                      <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        يرجى إدخال من الرقم 1 راكب إلى 100 راكب بالتسلسل (مثال: 1-2-3-4-5)
-                      </small>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="load_capacity_foreign">الحمولة بالطن <span className="required">*</span></label>
-                      <input
-                        type="number"
-                        id="load_capacity_foreign"
-                        min="0"
-                        max="1000"
-                        step="1"
-                        value={formData.load_capacity}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // قبول الأرقام الصحيحة فقط (من 0 إلى 1000)
-                          if (value === '') {
-                            setFormData({ ...formData, load_capacity: '' });
-                          } else {
-                            const numValue = parseInt(value);
-                            if (!isNaN(numValue) && numValue >= 0 && numValue <= 1000) {
-                              setFormData({ ...formData, load_capacity: numValue.toString() });
-                            }
-                          }
-                        }}
-                        placeholder="من 1 إلى 1000 طن"
-                        className={formErrors.load_capacity ? 'error' : ''}
-                      />
-                      {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
-                      <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        {formData.foreign_car_purpose === 'سيارات نقل وشحن' 
-                          ? 'يرجى إدخال الحمولة بالطن من الرقم 1 طن إلى 1000 طن بالتسلسل (مثال: 1-2-3-4-5)'
-                          : 'يرجى إدخال الحمولة بالطن من الرقم 0 طن إلى 1000 طن'}
-                      </small>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            </div>
-
-            {/* الهيدر الثالث: بيانات المؤمن له */}
-            <div className="form-section">
-              <h3 className="form-section-title">بيانات المؤمن له</h3>
-              
-              <div className="form-group">
-                <label htmlFor="insured_name">اسم المؤمن <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="insured_name"
-                  value={formData.insured_name}
-                  onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
-                  className={formErrors.insured_name ? 'error' : ''}
-                />
-                {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className={formErrors.phone ? 'error' : ''}
-                />
-                {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
-                <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
-                  يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
-                </p>
-                <input
-                  type="text"
-                  id="whatsapp_number"
-                  value={formData.whatsapp_number}
-                  onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
-                  className={formErrors.whatsapp_number ? 'error' : ''}
-                  placeholder="مثال: 0910000000"
-                />
-                {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
-              </div>
-
-              {/* القيمة المالية */}
-              <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '2px solid var(--border)' }}>
-                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>القيمة المالية</h4>
+            {/* Step 3: بيانات احتساب القسط / الاشتراك */}
+            {currentStep === 3 && (
+              <div className="form-section animate-fade-in" style={{ border: '1px solid #10b981', borderRadius: '8px', padding: '20px' }}>
+                <h3 className="form-section-title" style={{ color: '#10b981', borderBottom: '1px solid #10b981', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط / الاشتراك
+                </h3>
                 
-                <div className="form-group">
-                  <label htmlFor="premium">القسط <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="premium"
-                    value={formData.premium}
-                    readOnly
-                    disabled
-                    style={{ background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed' }}
-                    className={formErrors.premium ? 'error' : ''}
-                  />
-                  {formErrors.premium && <span className="error-message">{formErrors.premium}</span>}
+                {/* الجزء العلوي: تصنيف المركبة */}
+                <div className="form-grid" style={{ marginBottom: '30px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                  <div className="form-group">
+                    <label>نوع المركبة <span className="required">*</span></label>
+                    <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_type_id: e.target.value })}>
+                      <option value="">-- اختر --</option>
+                      {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>النوع المحدد <span className="required">*</span></label>
+                    <select value={formData.eidc_vehicle_spec_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_spec_id: e.target.value })} disabled={!formData.eidc_vehicle_type_id}>
+                      <option value="">-- اختر --</option>
+                      {eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>التفاصيل</label>
+                    <select value={formData.eidc_vehicle_detail_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_detail_id: e.target.value })} disabled={!formData.eidc_vehicle_spec_id}>
+                      <option value="">-- لا يوجد / اختر --</option>
+                      {eidcVehicleDetails.map(d => <option key={d.id} value={d.id}>{d.specVehicle || d.name}</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label>الإجمالي</label>
-                  <input
-                    type="text"
-                    value={`${calculateTotal().toFixed(3)} دينار`}
-                    disabled
-                    style={{ background: '#f3f4f6', color: '#6b7280', fontWeight: 'bold' }}
-                  />
+                {/* الجزء السفلي: المبالغ المالية */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                  <div className="eidc-price-box">
+                    <label>مصاريف الإصدار</label>
+                    <div className="price-input-wrapper">
+                      <span className="currency">د.ل</span>
+                      <input type="text" value="4" readOnly />
+                    </div>
+                  </div>
+                  <div className="eidc-price-box">
+                    <label>صافي القسط</label>
+                    <div className="price-input-wrapper">
+                      <span className="currency">د.ل</span>
+                      <input type="text" value={eidcPremiumData?.netPremium ? Number(eidcPremiumData.netPremium).toFixed(3) : '0.000'} readOnly />
+                    </div>
+                  </div>
+                  <div className="eidc-price-box">
+                    <label>الضريبة</label>
+                    <div className="price-input-wrapper">
+                      <span className="currency">د.ل</span>
+                      <input type="text" value={eidcPremiumData?.tax ? Number(eidcPremiumData.tax).toFixed(3) : '0.000'} readOnly />
+                    </div>
+                  </div>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+                  <div className="eidc-price-box">
+                    <label>رسوم الإشراف</label>
+                    <div className="price-input-wrapper">
+                      <span className="currency">د.ل</span>
+                      <input type="text" value={eidcPremiumData?.supervisionFees ? Number(eidcPremiumData.supervisionFees).toFixed(3) : '0.000'} readOnly />
+                    </div>
+                  </div>
+                  <div className="eidc-price-box">
+                    <label>الدمغة</label>
+                    <div className="price-input-wrapper">
+                      <span className="currency">د.ل</span>
+                      <input type="text" value={eidcPremiumData?.stamp ? Number(eidcPremiumData.stamp).toFixed(3) : '0.250'} readOnly />
+                    </div>
+                  </div>
+                  <div className="eidc-price-box">
+                    <label>رسوم الإصدار (النهائي)</label>
+                    <div className="price-input-wrapper">
+                      <span className="currency">د.ل</span>
+                      <input type="text" value={eidcPremiumData?.issuingFees ? Number(eidcPremiumData.issuingFees).toFixed(3) : '0.000'} readOnly />
+                    </div>
+                  </div>
+                  <div className="eidc-price-box total">
+                    <label>الإجمالي</label>
+                    <div className="price-input-wrapper" style={{ border: '1px solid #bfdbfe' }}>
+                      <span className="currency" style={{ background: '#eff6ff', color: '#1d4ed8' }}>د.ل</span>
+                      <input type="text" value={eidcPremiumData?.totalPremium ? Number(eidcPremiumData.totalPremium).toFixed(3) : '0.000'} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
+                    </div>
+                  </div>
+                </div>
+
+                <style>{`
+                  .eidc-price-box {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px;
+                  }
+                  .eidc-price-box label {
+                    font-size: 12px;
+                    color: #64748b;
+                    text-align: left;
+                  }
+                  .price-input-wrapper {
+                    display: flex;
+                    align-items: center;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 4px;
+                    background: #fff;
+                    overflow: hidden;
+                  }
+                  .price-input-wrapper .currency {
+                    background: #f1f5f9;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    color: #64748b;
+                    border-right: 1px solid #e2e8f0;
+                  }
+                  .price-input-wrapper input {
+                    border: none;
+                    width: 100%;
+                    padding: 8px 12px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-align: center;
+                    outline: none;
+                  }
+                  .eidc-price-box.total .price-input-wrapper {
+                    background: #f8fafc;
+                  }
+                `}</style>
+              </div>
+            )}
+
+            <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ order: 2 }}>
+                {currentStep > 1 && (
+                  <button type="button" onClick={() => setCurrentStep(currentStep - 1)} className="btn-cancel" style={{ background: '#4b5563', color: '#fff', minWidth: '120px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    السابق <i className="fa-solid fa-arrow-left"></i>
+                  </button>
+                )}
+              </div>
+
+              <div style={{ order: 1 }}>
+                {currentStep < 3 ? (
+                  <button type="button" onClick={() => setCurrentStep(currentStep + 1)} className="btn-submit" style={{ minWidth: '150px' }}>
+                    التالي <i className="fa-solid fa-arrow-right"></i>
+                  </button>
+                ) : (
+                  <button type="submit" disabled={submitting} className="btn-submit" style={{ minWidth: '180px', background: '#10b981', border: 'none' }}>
+                    <i className="fa-solid fa-save"></i> {submitting ? 'جاري الحفظ...' : 'حفظ الوثيقة'}
+                  </button>
+                )}
               </div>
             </div>
-          </div>
+          </form>
+        </>
+      ) : (
+              /* --- الشكل القديم (صفحة واحدة) لبقية الأنواع --- */
+              <form onSubmit={handleSubmit} className="user-form">
+                <div className="form-section">
+                  <h3 className="form-section-title">بيانات الوثيقة والمؤمن له</h3>
 
-          <div className="form-actions" style={{ marginTop: '24px' }}>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-submit"
-            >
-              {submitting ? 'جاري الحفظ...' : 'حفظ'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/insurance-documents')}
-              disabled={submitting}
-              className="btn-cancel"
-            >
-              إلغاء
-            </button>
+                  {/* اختيار الوكيل (للمدراء فقط) */}
+                  {isAdmin && (
+                    <div className="form-group" style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <label htmlFor="branch_agent_id_single" style={{ fontWeight: 'bold', color: '#1e293b' }}>إصدار الوثيقة باسم وكيل محدد</label>
+                      <select 
+                        id="branch_agent_id_single" 
+                        value={formData.branch_agent_id} 
+                        onChange={(e) => setFormData({ ...formData, branch_agent_id: e.target.value })}
+                        style={{ border: '1px solid #cbd5e1', marginTop: '5px' }}
+                      >
+                        <option value="">-- إصدار باسمي (الموظف الحالي) --</option>
+                        {agents.map(agent => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.agent_name} ({agent.agency_name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="form-group">
+                    <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
+                    <input type="text" id="insured_name" value={formData.insured_name} onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })} />
+                  </div>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                      <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="nationality">الجنسية</label>
+                      <input type="text" id="nationality" value={formData.nationality} onChange={(e) => setFormData({ ...formData, nationality: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label htmlFor="email">البريد الإلكتروني</label>
+                      <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@domain.com" />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="address">العنوان</label>
+                      <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="طرابلس - حي الأندلس" />
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
+                      <select id="duration" value={formData.duration} onChange={(e) => setFormData({ ...formData, duration: e.target.value as any })}>
+                        <option value="شهر (30 يوم)">شهر (30 يوم)</option>
+                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="start_date">تاريخ البدء <span className="required">*</span></label>
+                      <input type="date" id="start_date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h3 className="form-section-title">بيانات المركبة</h3>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>الجهة المقيدة بها <span className="required">*</span></label>
+                      <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
+                        <option value="">اختر الجهة...</option>
+                        {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>رقم اللوحة <span className="required">*</span></label>
+                      <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
+                    </div>
+                  </div>
+
+                  {/* إضافة ماركة وفئة السيارة هنا أيضاً للمساواة مع نموذج المراحل */}
+                  <div className="form-grid">
+                    <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
+                      <label>ماركة السيارة <span className="required">*</span></label>
+                      <div className="searchable-select" onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
+                        <div className="select-display">
+                          {selectedBrand || (vehicleTypeSearch ? 'جاري البحث...' : 'اختر الماركة...')}
+                        </div>
+                        <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}></i>
+                      </div>
+                      
+                      {showVehicleTypeDropdown && (
+                        <div className="select-dropdown animate-fade-in">
+                          <div className="select-search">
+                            <i className="fa-solid fa-search"></i>
+                            <input 
+                              type="text" 
+                              placeholder="بحث عن ماركة..." 
+                              value={vehicleTypeSearch}
+                              onChange={(e) => setVehicleTypeSearch(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="select-options">
+                            {uniqueBrands.length > 0 ? (
+                              uniqueBrands.map(brand => (
+                                <div 
+                                  key={brand} 
+                                  className={`select-option ${selectedBrand === brand ? 'selected' : ''}`}
+                                  onClick={() => {
+                                    const firstOfType = vehicleTypes.find(vt => vt.brand === brand);
+                                    if (firstOfType) {
+                                      setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() });
+                                      setSelectedCategory(firstOfType.category);
+                                    }
+                                    setShowVehicleTypeDropdown(false);
+                                    setVehicleTypeSearch('');
+                                  }}
+                                >
+                                  {brand}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="no-options">لا توجد نتائج</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>فئة السيارة <span className="required">*</span></label>
+                      <select 
+                        value={formData.vehicle_type_id} 
+                        onChange={(e) => {
+                          const vt = vehicleTypes.find(v => v.id.toString() === e.target.value);
+                          if (vt) {
+                            setFormData({ ...formData, vehicle_type_id: e.target.value });
+                            setSelectedCategory(vt.category);
+                          }
+                        }}
+                        disabled={!selectedBrand}
+                      >
+                        <option value="">-- اختر الفئة --</option>
+                        {filteredCategories.map(vt => (
+                          <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>رقم الهيكل <span className="required">*</span></label>
+                      <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>سنة الصنع <span className="required">*</span></label>
+                      <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
+                        <option value="">اختر السنة...</option>
+                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>قوة المحرك</label>
+                      <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
+                        <option value="">اختر القوة...</option>
+                        {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>اللون</label>
+                      <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
+                        <option value="">اختر اللون...</option>
+                        {colors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>رقم المحرك</label>
+                      <input type="text" value={formData.engine_number} onChange={(e) => setFormData({ ...formData, engine_number: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>سعة المحرك (CC)</label>
+                      <input type="text" value={formData.engine_cc} onChange={(e) => setFormData({ ...formData, engine_cc: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>وزن المركبة</label>
+                      <input type="text" value={formData.vehicle_weight} onChange={(e) => setFormData({ ...formData, vehicle_weight: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>ملاحظات</label>
+                      <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd' }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h3 className="form-section-title">المبالغ المالية</h3>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>صافي القسط</label>
+                      <input type="text" value={formData.premium} readOnly disabled style={{ background: '#f3f4f6' }} />
+                    </div>
+                    <div className="form-group">
+                      <label>الإجمالي النهائي</label>
+                      <input type="text" value={`${calculateTotal().toFixed(3)} د.ل`} readOnly disabled style={{ background: '#f1f5f9', fontWeight: 'bold', color: '#2563eb' }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-actions" style={{ marginTop: '30px' }}>
+                  <button type="submit" disabled={submitting} className="btn-submit" style={{ minWidth: '150px' }}>
+                    {submitting ? 'جاري الحفظ...' : 'حفظ الوثيقة'}
+                  </button>
+                  <button type="button" onClick={() => navigate('/insurance-documents')} className="btn-cancel">إلغاء</button>
+                </div>
+              </form>
+            )}
           </div>
-        </form>
         </div>
-      </div>
 
       {showDeleteColorModal && (
         <div className="modal-overlay" onClick={() => !deletingColor && setShowDeleteColorModal(null)}>

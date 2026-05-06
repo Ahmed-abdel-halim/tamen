@@ -34,6 +34,9 @@ type InsuranceDocument = {
   ownership_transfer_count?: number;
   has_ownership_transfer?: boolean;
   agency_name?: string; // اسم الوكالة (يظهر للادمن فقط)
+  eidc_sync_status?: 'pending' | 'synced' | 'failed' | null;
+  eidc_policy_id?: string | null;
+  eidc_pdf_url?: string | null;
 };
 
 export default function InsuranceDocumentsList({ isArchive = false }: { isArchive?: boolean } = {}) {
@@ -45,6 +48,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const [showDeleteModal, setShowDeleteModal] = useState<InsuranceDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [syncing, setSyncing] = useState(false);
   const perPage = 10;
   const [isAdmin, setIsAdmin] = useState(false);
   const [agents, setAgents] = useState<{id: number, agency_name: string}[]>([]);
@@ -181,6 +185,45 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
     }
   };
 
+  const handleRetryEidcSync = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}/eidc-retry`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('تمت إعادة محاولة المزامنة بنجاح', 'success');
+        fetchDocuments();
+      } else {
+        showToast(data.message || 'فشلت إعادة محاولة المزامنة', 'error');
+      }
+    } catch (error) {
+      showToast('حدث خطأ أثناء الاتصال بالنظام', 'error');
+    }
+  };
+
+  const handleGlobalSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc-sync-all`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'تمت المزامنة الكلية بنجاح', 'success');
+        fetchDocuments();
+      } else {
+        showToast(data.message || 'فشلت المزامنة الكلية', 'error');
+      }
+    } catch (error) {
+      showToast('حدث خطأ أثناء الاتصال بالنظام', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -208,6 +251,17 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
             >
               <i className="fa-solid fa-plus"></i>
               إضافة وثيقة
+            </button>
+          )}
+          {!isArchive && (
+            <button
+              className="primary add-user-btn"
+              onClick={handleGlobalSync}
+              disabled={syncing}
+              style={{ background: '#0284c7', marginRight: '10px' }}
+            >
+              {syncing ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-sync"></i>}
+              {syncing ? ' جاري المزامنة...' : ' مزامنة مع الهيئة'}
             </button>
           )}
         </div>
@@ -411,6 +465,29 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                                 <i className="fa-solid fa-exchange-alt"></i>
                               </span>
                             )}
+                            {doc.insurance_type === 'تأمين إجباري سيارات' && doc.eidc_sync_status && (
+                              <span
+                                title={
+                                  doc.eidc_policy_id ? 'مسجلة في الهيئة' : 
+                                  doc.eidc_sync_status === 'failed' ? 'فشل التسجيل في الهيئة' : 'في انتظار المزامنة'
+                                }
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 
+                                    doc.eidc_policy_id ? '#10b981' : 
+                                    doc.eidc_sync_status === 'failed' ? '#ef4444' : '#f59e0b',
+                                  fontSize: '14px',
+                                  cursor: 'help'
+                                }}
+                              >
+                                <i className={`fa-solid ${
+                                  doc.eidc_policy_id ? 'fa-circle-check' : 
+                                  doc.eidc_sync_status === 'failed' ? 'fa-circle-xmark' : 'fa-clock'
+                                }`}></i>
+                              </span>
+                            )}
                           </div>
                         </td>
                         {isAdmin && (
@@ -437,11 +514,31 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               className="action-btn"
                               aria-label="طباعة الوثيقة"
                               title="طباعة الوثيقة"
-                              style={{ background: '#3b82f6', color: '#fff' }}
-                            >
-                              <i className="fa-solid fa-print"></i>
-                            </button>
-                            <button
+                                style={{ background: '#3b82f6', color: '#fff' }}
+                              >
+                                <i className="fa-solid fa-print"></i>
+                              </button>
+                              {doc.eidc_sync_status === 'failed' && (
+                                <button
+                                  onClick={() => handleRetryEidcSync(doc.id)}
+                                  className="action-btn"
+                                  title="إعادة محاولة المزامنة مع الهيئة"
+                                  style={{ background: '#f59e0b', color: '#fff' }}
+                                >
+                                  <i className="fa-solid fa-rotate"></i>
+                                </button>
+                              )}
+                              {doc.eidc_pdf_url && (
+                                <button
+                                  onClick={() => window.open(doc.eidc_pdf_url!, '_blank')}
+                                  className="action-btn"
+                                  title="طابعة الهيئة"
+                                  style={{ background: '#7c3aed', color: '#fff' }}
+                                >
+                                  <i className="fa-solid fa-file-pdf"></i>
+                                </button>
+                              )}
+                              <button
                               onClick={() => navigate(`/insurance-documents/${doc.id}`)}
                               className="action-btn view"
                               aria-label="عرض"

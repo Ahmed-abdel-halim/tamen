@@ -5,12 +5,14 @@ import { API_BASE_URL } from '../config/api';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ id: number; username: string; name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; name: string; email: string; eidc_username?: string; eidc_password?: string } | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     current_password: '',
     new_password: '',
     confirm_password: '',
+    eidc_username: '',
+    eidc_password: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +44,12 @@ export default function ProfilePage() {
       if (res.ok) {
         const data = await res.json();
         setUser(data);
-        setFormData({ ...formData, email: data.email || '' });
+        setFormData({ 
+          ...formData, 
+          email: data.email || '',
+          eidc_username: data.eidc_username || '',
+          eidc_password: data.eidc_password || '',
+        });
       }
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -129,6 +136,26 @@ export default function ProfilePage() {
         if (!passwordRes.ok) {
           const errorData = await passwordRes.json().catch(() => ({}));
           throw new Error(errorData.message || 'فشل تحديث كلمة المرور');
+        }
+      }
+
+      // تحديث بيانات الهيئة
+      if (formData.eidc_username !== (user.eidc_username || '') || formData.eidc_password !== (user.eidc_password || '')) {
+        const eidcRes = await fetch(`${API_BASE_URL}/users/${user.id}/eidc-credentials`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            eidc_username: formData.eidc_username,
+            eidc_password: formData.eidc_password,
+          }),
+        });
+
+        if (!eidcRes.ok) {
+          const errorData = await eidcRes.json().catch(() => ({}));
+          throw new Error(errorData.message || 'فشل تحديث بيانات الهيئة');
         }
       }
 
@@ -249,6 +276,35 @@ export default function ProfilePage() {
                 autoComplete="new-password"
               />
               {formErrors.confirm_password && <span className="error-message">{formErrors.confirm_password}</span>}
+            </div>
+          </div>
+
+          <div className="profile-section-divider">
+            <h3 className="profile-section-title">
+              بيانات الدخول لمنظومة الهيئة (EIDC)
+            </h3>
+            <p className="profile-section-description">
+              أدخل بيانات حسابك الخاص في الهيئة إذا كنت تمتلك حساباً، ليتم استخدامه عند إصدار الوثائق باسمك.
+            </p>
+
+            <div className="form-group">
+              <label>اسم المستخدم في الهيئة</label>
+              <input
+                type="text"
+                value={formData.eidc_username}
+                onChange={(e) => setFormData({ ...formData, eidc_username: e.target.value })}
+                placeholder="أدخل اسم المستخدم في منظومة الهيئة"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>كلمة المرور في الهيئة</label>
+              <input
+                type="password"
+                value={formData.eidc_password}
+                onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
+                placeholder="أدخل كلمة المرور في منظومة الهيئة"
+              />
             </div>
           </div>
 

@@ -119,6 +119,8 @@ export default function EditBranchAgent() {
     contract_conditions: '',
     authorized_documents: [] as string[],
     document_percentages: {} as Record<string, number>,
+    eidc_username: '',
+    eidc_password: '',
   });
 
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
@@ -228,6 +230,8 @@ export default function EditBranchAgent() {
         contract_conditions: data.contract_conditions || DEFAULT_CONTRACT_TERMS,
         authorized_documents: data.authorized_documents || [],
         document_percentages: data.document_percentages || {},
+        eidc_username: data.user?.eidc_username || '',
+        eidc_password: data.user?.eidc_password || '',
       });
 
       if (data.city && !LIBYAN_CITIES.some(c => c.ar === data.city)) {
@@ -364,6 +368,8 @@ export default function EditBranchAgent() {
 
       formDataToSend.append('authorized_documents', authorizedDocsJson);
       formDataToSend.append('document_percentages', percentagesJson);
+      if (formData.eidc_username) formDataToSend.append('eidc_username', formData.eidc_username);
+      if (formData.eidc_password) formDataToSend.append('eidc_password', formData.eidc_password);
       formDataToSend.append('_method', 'PUT');
 
       const res = await fetch(`${API_BASE_URL}/branches-agents/${id}`, {
@@ -838,6 +844,32 @@ export default function EditBranchAgent() {
                   </button>
                 </div>
                 {formErrors.password && <span className="error-message">{formErrors.password}</span>}
+              </div>
+            </div>
+
+            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                بيانات الدخول لمنظومة الهيئة (EIDC)
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>الايميل في الهيئة (EIDC Email)</label>
+                  <input
+                    type="text"
+                    value={formData.eidc_username}
+                    onChange={(e) => setFormData({ ...formData, eidc_username: e.target.value })}
+                    placeholder="الايميل المسجل في الهيئة"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>كلمة المرور في الهيئة</label>
+                  <input
+                    type="password"
+                    value={formData.eidc_password}
+                    onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
+                    placeholder="كلمة المرور في الهيئة"
+                  />
+                </div>
               </div>
             </div>
 

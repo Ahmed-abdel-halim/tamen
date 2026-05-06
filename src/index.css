@@ -13461,3 +13461,117 @@ tbody tr:last-child td {
 
   /* Add a clear print title */
 }
+
+/* ─── Searchable Select Component Styles ─── */
+.searchable-select {
+  position: relative;
+  width: 100%;
+  height: 45px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.searchable-select:hover {
+  border-color: var(--accent-cyan);
+}
+
+.select-display {
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  margin-top: 1px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.select-search {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--input-bg);
+}
+
+.select-search i {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.select-search input {
+  border: none !important;
+  background: transparent !important;
+  width: 100%;
+  padding: 5px !important;
+  font-size: 14px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+}
+
+.select-options {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.select-option {
+  padding: 10px 15px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.select-option:hover {
+  background: var(--hover-bg);
+}
+
+.select-option.selected {
+  background: var(--accent-cyan);
+  color: white;
+}
+
+.no-options {
+  padding: 15px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ─── Animations ─── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.relative {
+  position: relative !important;
+}

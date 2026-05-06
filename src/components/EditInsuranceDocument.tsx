@@ -53,6 +53,7 @@ type InsuranceDocument = {
   driving_license_number?: string;
   premium: number;
   print_type?: string;
+  eidc_policy_id?: string;
 };
 
 // قائمة السنوات من 1960 إلى 2026
@@ -117,7 +118,7 @@ export default function EditInsuranceDocument() {
   const prevEnginePowerRef = useRef<string>('');
   const isDataLoadedRef = useRef<boolean>(false);
   const [formData, setFormData] = useState({
-    insurance_type: 'تأمين إجباري سيارات' as 'تأمين إجباري سيارات' | 'تأمين سيارة جمرك' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية',
+    insurance_type: 'تأمين إجباري سيارات' as 'تأمين إجباري سيارات' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية' | 'تأمين سيارة جمرك',
     plate_id: '',
     port: '',
     start_date: '',
@@ -140,11 +141,14 @@ export default function EditInsuranceDocument() {
     phone: '',
     whatsapp_number: '',
     driving_license_number: '',
+    nid_passport: '',
+    nationality: 'ليبي',
     premium: '',
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [isSynced, setIsSynced] = useState(false);
   const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -254,6 +258,7 @@ export default function EditInsuranceDocument() {
         throw new Error('فشل في جلب الوثيقة');
       }
       const data: InsuranceDocument = await res.json();
+      setIsSynced(!!data.eidc_policy_id);
       
       // ملء النموذج بالبيانات
       // في تأمين إجباري سيارات، استخدم issue_date كـ start_date
@@ -289,6 +294,8 @@ export default function EditInsuranceDocument() {
         phone: data.phone || '',
         whatsapp_number: data.whatsapp_number || '',
         driving_license_number: data.driving_license_number || '',
+        nid_passport: (data as any).nid_passport || '',
+        nationality: (data as any).nationality || 'ليبي',
         premium: data.premium?.toString() || '',
       });
       
@@ -1424,6 +1431,9 @@ export default function EditInsuranceDocument() {
     if (!formData.phone || !formData.phone.trim()) {
       errors.phone = 'رقم الهاتف مطلوب';
     }
+    if (isMandatoryInsurance && (!formData.nid_passport || !formData.nid_passport.trim())) {
+      errors.nid_passport = 'رقم الهوية / جواز السفر مطلوب للتأمين الإجباري';
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -1522,6 +1532,27 @@ export default function EditInsuranceDocument() {
         ) : (
           <div className="form-page-container">
           <form onSubmit={handleSubmit} className="user-form" style={{ maxWidth: '100%' }}>
+          
+          {isSynced && isMandatoryInsurance && (
+            <div style={{ 
+              marginBottom: '24px', 
+              padding: '16px', 
+              borderRadius: '12px', 
+              background: '#fff9db', 
+              color: '#856404', 
+              border: '1px solid #ffeeba',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontSize: '14px',
+              fontWeight: '500',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '18px' }}></i>
+              <span>هذه الوثيقة مسجلة في منظومة الهيئة. يسمح فقط بتعديل بيانات المؤمن له. بيانات المركبة والمدة والقسط مجمّدة ولا يمكن تعديلها وفقاً لضوابط الهيئة.</span>
+            </div>
+          )}
+
           {/* الهيدرات الثلاثة بجانب بعض */}
           <div className="form-sections-container">
             {/* بيانات التأمين - تظهر عند اختيار تأمين إجباري أو جمرك أو طرف ثالث أو سيارات أجنبية */}
@@ -1534,14 +1565,15 @@ export default function EditInsuranceDocument() {
                 <select
                   id="insurance_type"
                   value={formData.insurance_type}
+                  disabled={isSynced && isMandatoryInsurance}
                   onChange={(e) => setFormData({ ...formData, insurance_type: e.target.value as any })}
                   className={formErrors.insurance_type ? 'error' : ''}
+                  style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                 >
                   {(() => {
                     // جميع أنواع التأمين المتاحة
                     const allInsuranceTypes = [
                       { value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' },
-                      { value: 'تأمين سيارة جمرك', label: 'تأمين سيارة جمرك' },
                       { value: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' },
                       { value: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' },
                     ];
@@ -1558,7 +1590,6 @@ export default function EditInsuranceDocument() {
                       // خريطة أنواع التأمين في الواجهة إلى أنواع التأمين في الصلاحيات
                       const insuranceTypeMap: Record<string, string[]> = {
                         'تأمين إجباري سيارات': ['تأمين سيارات إجباري', 'تأمين سيارات'],
-                        'تأمين سيارة جمرك': ['تأمين سيارة جمرك'],
                         'تأمين طرف ثالث سيارات': ['تأمين طرف ثالث سيارات'],
                         'تأمين سيارات أجنبية': ['تأمين سيارات أجنبية'],
                       };
@@ -1607,15 +1638,17 @@ export default function EditInsuranceDocument() {
                   <label htmlFor="plate_id">الجهة المقيد بها <span className="required">*</span></label>
                 <div
                   onClick={() => {
-                    setShowPlateDropdown((v) => !v);
+                    if (!(isSynced && isMandatoryInsurance)) {
+                      setShowPlateDropdown((v) => !v);
+                    }
                   }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     border: formErrors.plate_id ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
+                    background: isSynced && isMandatoryInsurance ? '#f3f4f6' : '#fff',
+                    cursor: isSynced && isMandatoryInsurance ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1715,10 +1748,12 @@ export default function EditInsuranceDocument() {
                   <select
                     id="port"
                     value={formData.port}
+                    disabled={isSynced && isMandatoryInsurance}
                     onChange={(e) => {
                       setFormData({ ...formData, port: e.target.value });
                     }}
                     className={formErrors.port ? 'error' : ''}
+                    style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   >
                     <option value="">اختر الميناء...</option>
                     {PORTS.map((port) => (
@@ -1739,8 +1774,10 @@ export default function EditInsuranceDocument() {
                     type="date"
                     id="start_date"
                     value={formData.start_date}
+                    disabled={isSynced && isMandatoryInsurance}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                     className={formErrors.start_date ? 'error' : ''}
+                    style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   />
                   {formErrors.start_date && <span className="error-message">{formErrors.start_date}</span>}
                 </div>
@@ -1764,7 +1801,9 @@ export default function EditInsuranceDocument() {
                   <select
                     id="duration"
                     value={formData.duration}
+                    disabled={isSynced && isMandatoryInsurance}
                     onChange={(e) => setFormData({ ...formData, duration: e.target.value as any })}
+                    style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   >
                     {isCustomsInsurance ? (
                       <>
@@ -1797,8 +1836,10 @@ export default function EditInsuranceDocument() {
                   <select
                     id="third_party_purpose"
                     value={formData.third_party_purpose}
+                    disabled={isSynced && isMandatoryInsurance}
                     onChange={(e) => setFormData({ ...formData, third_party_purpose: e.target.value })}
                     className={formErrors.third_party_purpose ? 'error' : ''}
+                    style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   >
                     <option value="">اختر الغرض...</option>
                     <option value="خاصة">خاصة</option>
@@ -1821,8 +1862,10 @@ export default function EditInsuranceDocument() {
                 type="text"
                 id="chassis_number"
                 value={formData.chassis_number}
+                disabled={isSynced && isMandatoryInsurance}
                 onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
                 className={formErrors.chassis_number ? 'error' : ''}
+                style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
               />
               {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
             </div>
@@ -1834,8 +1877,10 @@ export default function EditInsuranceDocument() {
                   type="text"
                   id="plate_number_manual"
                   value={formData.plate_number_manual}
+                  disabled={isSynced && isMandatoryInsurance}
                   onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })}
                   className={formErrors.plate_number_manual ? 'error' : ''}
+                  style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                 />
                 {formErrors.plate_number_manual && <span className="error-message">{formErrors.plate_number_manual}</span>}
               </div>
@@ -1861,15 +1906,17 @@ export default function EditInsuranceDocument() {
                 <label htmlFor="vehicle_type_id">نوع السيارة <span className="required">*</span></label>
                 <div
                   onClick={() => {
-                    setShowVehicleTypeDropdown((v) => !v);
+                    if (!(isSynced && isMandatoryInsurance)) {
+                      setShowVehicleTypeDropdown((v) => !v);
+                    }
                   }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     border: formErrors.vehicle_type_id ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
+                    background: isSynced && isMandatoryInsurance ? '#f3f4f6' : '#fff',
+                    cursor: isSynced && isMandatoryInsurance ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -2146,15 +2193,17 @@ export default function EditInsuranceDocument() {
                   <label htmlFor="category">فئة السيارة <span className="required">*</span></label>
                   <div
                     onClick={() => {
-                      setShowCategoryDropdown((v) => !v);
+                      if (!(isSynced && isMandatoryInsurance)) {
+                        setShowCategoryDropdown((v) => !v);
+                      }
                     }}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
                       border: formErrors.vehicle_type_id ? '1px solid #ef4444' : '1px solid var(--border)',
                       borderRadius: 8,
-                      background: '#fff',
-                      cursor: 'pointer',
+                      background: isSynced && isMandatoryInsurance ? '#f3f4f6' : '#fff',
+                      cursor: isSynced && isMandatoryInsurance ? 'not-allowed' : 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
@@ -2256,15 +2305,17 @@ export default function EditInsuranceDocument() {
                 <label htmlFor="color">اللون <span className="required">*</span></label>
                 <div
                   onClick={() => {
-                    setShowColorDropdown((v) => !v);
+                    if (!(isSynced && isMandatoryInsurance)) {
+                      setShowColorDropdown((v) => !v);
+                    }
                   }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     border: formErrors.color ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
+                    background: isSynced && isMandatoryInsurance ? '#f3f4f6' : '#fff',
+                    cursor: isSynced && isMandatoryInsurance ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -2468,15 +2519,17 @@ export default function EditInsuranceDocument() {
                 <label htmlFor="year">السنة <span className="required">*</span></label>
                 <div
                   onClick={() => {
-                    setShowYearDropdown((v) => !v);
+                    if (!(isSynced && isMandatoryInsurance)) {
+                      setShowYearDropdown((v) => !v);
+                    }
                   }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     border: formErrors.year ? '1px solid #ef4444' : '1px solid var(--border)',
                     borderRadius: 8,
-                    background: '#fff',
-                    cursor: 'pointer',
+                    background: isSynced && isMandatoryInsurance ? '#f3f4f6' : '#fff',
+                    cursor: isSynced && isMandatoryInsurance ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -2557,8 +2610,10 @@ export default function EditInsuranceDocument() {
                     <select
                       id="license_purpose"
                       value={formData.license_purpose}
+                      disabled={isSynced && isMandatoryInsurance}
                       onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}
                       className={formErrors.license_purpose ? 'error' : ''}
+                      style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                     >
                       <option value="">اختر الغرض...</option>
                       {LICENSE_PURPOSES.map((lp) => (
@@ -2575,8 +2630,10 @@ export default function EditInsuranceDocument() {
                     <select
                       id="engine_power"
                       value={formData.engine_power}
+                      disabled={isSynced && isMandatoryInsurance}
                       onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}
                       className={formErrors.engine_power ? 'error' : ''}
+                      style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                     >
                       <option value="">اختر قوة المحرك...</option>
                       {availableEnginePowers.map((ep) => (
@@ -2601,8 +2658,10 @@ export default function EditInsuranceDocument() {
                           min="1"
                           max="100"
                           value={formData.authorized_passengers}
+                          disabled={isSynced && isMandatoryInsurance}
                           onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })}
                           className={formErrors.authorized_passengers ? 'error' : ''}
+                          style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                         />
                         {formErrors.authorized_passengers && <span className="error-message">{formErrors.authorized_passengers}</span>}
                       </div>
@@ -2616,9 +2675,9 @@ export default function EditInsuranceDocument() {
                         max="1000"
                         step="1"
                         value={formData.load_capacity}
+                        disabled={isSynced && isMandatoryInsurance}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // قبول الأرقام الصحيحة فقط (من 0 إلى 1000)
                           if (value === '') {
                             setFormData({ ...formData, load_capacity: '' });
                           } else {
@@ -2629,6 +2688,7 @@ export default function EditInsuranceDocument() {
                           }
                         }}
                         className={formErrors.load_capacity ? 'error' : ''}
+                        style={isSynced && isMandatoryInsurance ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                       />
                       {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
                     </div>
@@ -2763,32 +2823,50 @@ export default function EditInsuranceDocument() {
                 {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
               </div>
 
+              {isMandatoryInsurance && (
+                <>
+                  <div className="form-group">
+                    <label htmlFor="nid_passport">رقم الهوية / جواز السفر <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="nid_passport"
+                      value={formData.nid_passport}
+                      onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })}
+                      placeholder="أدخل رقم الهوية الوطنية أو جواز السفر"
+                      className={formErrors.nid_passport ? 'error' : ''}
+                    />
+                    {formErrors.nid_passport && <span className="error-message">{formErrors.nid_passport}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="nationality">الجنسية</label>
+                    <select
+                      id="nationality"
+                      value={formData.nationality}
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                    >
+                      <option value="ليبي">ليبي</option>
+                      <option value="مصري">مصري</option>
+                      <option value="تونسي">تونسي</option>
+                      <option value="جزائري">جزائري</option>
+                      <option value="سوداني">سوداني</option>
+                      <option value="أخرى">أخرى</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
               <div className="form-group">
-                <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                <label htmlFor="phone">رقم الهاتف <span className="required">*</span> (يجب أن يكون مسجلاً في واتساب)</label>
                 <input
                   type="text"
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className={formErrors.phone ? 'error' : ''}
+                  placeholder="أدخل رقم الهاتف المسجل في واتساب"
                 />
                 {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
-                <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
-                  يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
-                </p>
-                <input
-                  type="text"
-                  id="whatsapp_number"
-                  value={formData.whatsapp_number}
-                  onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
-                  className={formErrors.whatsapp_number ? 'error' : ''}
-                  placeholder="مثال: 0910000000"
-                />
-                {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
               </div>
 
               {/* القيمة المالية */}
