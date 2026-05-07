@@ -139,7 +139,6 @@ export default function CreateInsuranceDocument() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
 
   // Select2 states
   // const [plateSearch, setPlateSearch] = useState("");
@@ -346,7 +345,6 @@ export default function CreateInsuranceDocument() {
   // تأمين طلب احتساب القسط تلقائياً عند اختيار تصنيف المركبة في المرحلة الثالثة
   useEffect(() => {
     const shouldInquire = isMandatoryInsurance && 
-                         currentStep === 3 && 
                          formData.eidc_vehicle_type_id && 
                          formData.eidc_vehicle_spec_id;
 
@@ -358,7 +356,6 @@ export default function CreateInsuranceDocument() {
       return () => clearTimeout(handler);
     }
   }, [
-    currentStep, 
     formData.eidc_vehicle_type_id, 
     formData.eidc_vehicle_spec_id, 
     formData.eidc_vehicle_detail_id, 
@@ -2163,24 +2160,8 @@ export default function CreateInsuranceDocument() {
     return premium + tax + stamp + issueFees + supervisionFees;
   };
 
-  // الموانئ المتاحة
-  /* const PORTS = [
-    { value: 'ميناء مصراته', cityName: 'مصراته' },
-    { value: 'ميناء طرابلس', cityName: 'طرابلس' },
-    { value: 'ميناء الخمس', cityName: 'الخمس' },
-    { value: 'ميناء بنغازي', cityName: 'بنغازي' },
-  ]; */
-
-  // البحث عن اللوحة حسب الميناء المختار
-  // const selectedPort = PORTS.find(p => p.value === formData.port);
-  /* const portPlate = selectedPort 
-    ? plates.find(p => p.city.name_ar === selectedPort.cityName)
-    : null; */
-
   return (
     <section className="users-management">
-    
-
         <div className="users-card">
           <div className="form-page-container">
             {/* اختيار نوع التأمين - يظهر دائماً في البداية لتحديد شكل النموذج */}
@@ -2201,479 +2182,405 @@ export default function CreateInsuranceDocument() {
             </div>
 
             {isMandatoryInsurance ? (
-              /* --- نظام المراحل للتأمين الإجباري فقط --- */
-              <>
-                <div className="stepper-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', position: 'relative', padding: '0 20px' }}>
-                  <div style={{ position: 'absolute', top: '15px', left: '40px', right: '40px', height: '2px', background: '#e5e7eb', zIndex: 1 }}>
-                    <div style={{ width: `${((currentStep - 1) / 2) * 100}%`, height: '100%', background: '#2563eb', transition: 'width 0.3s ease' }}></div>
-                  </div>
-                  {[
-                    { id: 1, title: 'بيانات المؤمن له', icon: 'fa-user' },
-                    { id: 2, title: 'بيانات المركبة', icon: 'fa-car' },
-                    { id: 3, title: 'احتساب القسط', icon: 'fa-calculator' }
-                  ].map((s) => (
-                    <div key={s.id} style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ 
-                        width: '35px', height: '35px', borderRadius: '50%', 
-                        background: currentStep >= s.id ? '#2563eb' : '#fff', 
-                        border: `2px solid ${currentStep >= s.id ? '#2563eb' : '#e5e7eb'}`,
-                        color: currentStep >= s.id ? '#fff' : '#9ca3af',
-                        display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px'
-                      }}><i className={`fa-solid ${s.icon}`}></i></div>
-                      <span style={{ fontSize: '12px', fontWeight: currentStep === s.id ? '600' : '400' }}>{s.title}</span>
-                    </div>
-                  ))}
-                </div>
-
                 <form onSubmit={handleSubmit} className="user-form">
-            
-            {/* Step 1: بيانات المؤمن له والوثيقة */}
-            {currentStep === 1 && (
-              <div className="form-section animate-fade-in">
-                <h3 className="form-section-title">بيانات المؤمن له / المشترك - بيانات الوثيقة</h3>
-                
-                {/* اختيار الوكيل (للمدراء فقط) */}
+                  <div className="form-section animate-fade-in">
+                    <h3 className="form-section-title">بيانات المؤمن له / المشترك - بيانات الوثيقة</h3>
+                    
+                    <div className="form-group">
+                      <label>تاريخ الإصدار</label>
+                      <input type="text" value={new Date().toLocaleDateString('ar-LY')} disabled style={{ background: '#f3f4f6' }} />
+                    </div>
 
-                
-                  <div className="form-group">
-                    <label>تاريخ الإصدار</label>
-                    <input type="text" value={new Date().toLocaleDateString('ar-LY')} disabled style={{ background: '#f3f4f6' }} />
-                  </div>
+                    <div className="form-group">
+                      <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        id="insured_name"
+                        value={formData.insured_name}
+                        onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                        placeholder="اسم المؤمن له كما في الإثبات"
+                      />
+                      {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
+                    </div>
 
-                <div className="form-group">
-                  <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="insured_name"
-                    value={formData.insured_name}
-                    onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
-                    placeholder="اسم المؤمن له كما في الإثبات"
-                  />
-                  {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
-                </div>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="nationality">الجنسية <span className="required">*</span></label>
+                        <input
+                          type="text"
+                          id="nationality"
+                          value={formData.nationality}
+                          onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="nid_passport">رقم الهوية الوطنية أو جواز السفر <span className="required">*</span></label>
+                        <input
+                          type="text"
+                          id="nid_passport"
+                          value={formData.nid_passport}
+                          onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })}
+                        />
+                      </div>
+                    </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label htmlFor="nationality">الجنسية <span className="required">*</span></label>
-                    <input
-                      type="text"
-                      id="nationality"
-                      value={formData.nationality}
-                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="nid_passport">رقم الهوية الوطنية أو جواز السفر <span className="required">*</span></label>
-                    <input
-                      type="text"
-                      id="nid_passport"
-                      value={formData.nid_passport}
-                      onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
-                    <select
-                      id="duration"
-                      value={formData.duration}
-                      onChange={(e) => setFormData({ ...formData, duration: e.target.value as any })}
-                    >
-                      {isMandatoryInsurance ? (
-                        <>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
+                        <select
+                          id="duration"
+                          value={formData.duration}
+                          onChange={(e) => setFormData({ ...formData, duration: e.target.value as any })}
+                        >
                           <option value="سنة (365 يوم)">تأمين سنوي</option>
                           <option value="تأمين من شهرين إلى 3 أشهر">تأمين من شهرين إلى 3 أشهر</option>
                           <option value="تأمين من شهر إلى شهرين">تأمين من شهر إلى شهرين</option>
                           <option value="تأمين من 15 يوم إلى شهر">تأمين من 15 يوم إلى شهر</option>
                           <option value="تأمين من 1 يوم إلى 15 يوم">تأمين من 1 يوم إلى 15 يوم</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="شهر (30 يوم)">شهر (30 يوم)</option>
-                          <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>تاريخ البدء</label>
-                    <input 
-                      type={isMandatoryInsurance ? "text" : "date"}
-                      value={isMandatoryInsurance ? (() => {
-                        const tomorrow = new Date();
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        return tomorrow.toLocaleDateString('ar-LY');
-                      })() : formData.start_date}
-                      disabled={isMandatoryInsurance}
-                      onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                      style={isMandatoryInsurance ? { background: '#f3f4f6' } : {}}
-                    />
-                  </div>
-                </div>
-
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
-                      <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="whatsapp_number">رقم الواتساب</label>
-                      <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} placeholder="رقم الواتساب للتواصل" />
-                    </div>
-                  </div>
-
-                <div className="form-group">
-                  <label htmlFor="address">العنوان التفصيلي <span className="required">*</span></label>
-                  <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="مثلاً: طرابلس - حي الأندلس" />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">البريد الإلكتروني</label>
-                  <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@mail.com" />
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: بيانات المركبة */}
-            {currentStep === 2 && (
-              <div className="form-section animate-fade-in">
-                <h3 className="form-section-title">بيانات المركبة</h3>
-                
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>الجهة المقيد بها <span className="required">*</span></label>
-                    <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
-                      <option value="">اختر الجهة...</option>
-                      {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>رقم اللوحة <span className="required">*</span></label>
-                    <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
-                  </div>
-                </div>
-
-                {/* اختيار نوع السيارة (الماركة والموديل) */}
-                <div className="form-grid">
-                  <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
-                    <label>ماركة السيارة <span className="required">*</span></label>
-                    <div className="searchable-select" onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
-                      <div className="select-display">
-                        {selectedBrand || (vehicleTypeSearch ? 'جاري البحث...' : 'اختر الماركة...')}
+                        </select>
                       </div>
-                      <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}></i>
+                      <div className="form-group">
+                        <label>تاريخ البدء</label>
+                        <input 
+                          type="text"
+                          value={(() => {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            return tomorrow.toLocaleDateString('ar-LY');
+                          })()}
+                          disabled
+                          style={{ background: '#f3f4f6' }}
+                        />
+                      </div>
                     </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                        <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="whatsapp_number">رقم الواتساب</label>
+                        <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} placeholder="رقم الواتساب للتواصل" />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="address">العنوان التفصيلي <span className="required">*</span></label>
+                      <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="مثلاً: طرابلس - حي الأندلس" />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="email">البريد الإلكتروني</label>
+                      <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@mail.com" />
+                    </div>
+                  </div>
+
+                  <div className="form-section animate-fade-in">
+                    <h3 className="form-section-title">بيانات المركبة</h3>
                     
-                    {showVehicleTypeDropdown && (
-                      <div className="select-dropdown animate-fade-in">
-                        <div className="select-search">
-                          <i className="fa-solid fa-search"></i>
-                          <input 
-                            type="text" 
-                            placeholder="بحث عن ماركة..." 
-                            value={vehicleTypeSearch}
-                            onChange={(e) => setVehicleTypeSearch(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            autoFocus
-                          />
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>الجهة المقيد بها <span className="required">*</span></label>
+                        <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
+                          <option value="">اختر الجهة...</option>
+                          {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>رقم اللوحة <span className="required">*</span></label>
+                        <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
+                        <label>ماركة السيارة <span className="required">*</span></label>
+                        <div className="searchable-select" onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
+                          <div className="select-display">
+                            {selectedBrand || (vehicleTypeSearch ? 'جاري البحث...' : 'اختر الماركة...')}
+                          </div>
+                          <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}></i>
                         </div>
-                        <div className="select-options">
-                          {uniqueBrands.length > 0 ? (
-                            uniqueBrands.map(brand => (
-                              <div 
-                                key={brand} 
-                                className={`select-option ${selectedBrand === brand ? 'selected' : ''}`}
-                                onClick={() => {
-                                  const firstOfType = vehicleTypes.find(vt => vt.brand === brand);
-                                  if (firstOfType) {
-                                    setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() });
-                                    setSelectedCategory(firstOfType.category);
-                                  }
-                                  setShowVehicleTypeDropdown(false);
-                                  setVehicleTypeSearch('');
-                                }}
-                              >
-                                {brand}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="no-options">لا توجد نتائج</div>
-                          )}
+                        
+                        {showVehicleTypeDropdown && (
+                          <div className="select-dropdown animate-fade-in">
+                            <div className="select-search">
+                              <i className="fa-solid fa-search"></i>
+                              <input 
+                                type="text" 
+                                placeholder="بحث عن ماركة..." 
+                                value={vehicleTypeSearch}
+                                onChange={(e) => setVehicleTypeSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                              />
+                            </div>
+                            <div className="select-options">
+                              {uniqueBrands.length > 0 ? (
+                                uniqueBrands.map(brand => (
+                                  <div 
+                                    key={brand} 
+                                    className={`select-option ${selectedBrand === brand ? 'selected' : ''}`}
+                                    onClick={() => {
+                                      const firstOfType = vehicleTypes.find(vt => vt.brand === brand);
+                                      if (firstOfType) {
+                                        setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() });
+                                        setSelectedCategory(firstOfType.category);
+                                      }
+                                      setShowVehicleTypeDropdown(false);
+                                      setVehicleTypeSearch('');
+                                    }}
+                                  >
+                                    {brand}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="no-options">لا توجد نتائج</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>فئة السيارة <span className="required">*</span></label>
+                        <select 
+                          value={formData.vehicle_type_id} 
+                          onChange={(e) => {
+                            const vt = vehicleTypes.find(v => v.id.toString() === e.target.value);
+                            if (vt) {
+                              setFormData({ ...formData, vehicle_type_id: e.target.value });
+                              setSelectedCategory(vt.category);
+                            }
+                          }}
+                          disabled={!selectedBrand}
+                        >
+                          <option value="">-- اختر الفئة --</option>
+                          {filteredCategories.map(vt => (
+                            <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>رقم الهيكل <span className="required">*</span></label>
+                        <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label>سنة الصنع <span className="required">*</span></label>
+                        <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
+                          <option value="">اختر السنة...</option>
+                          {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>اللون <span className="required">*</span></label>
+                        <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
+                          <option value="">اختر اللون...</option>
+                          {colors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>الغرض من الترخيص <span className="required">*</span></label>
+                        <select value={formData.license_purpose} onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}>
+                          <option value="">اختر الغرض...</option>
+                          {LICENSE_PURPOSES.map(lp => <option key={lp.ar} value={`${lp.ar}/${lp.en}`}>{lp.ar}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>رقم المحرك <span className="required">*</span></label>
+                        <input type="text" value={formData.engine_number} onChange={(e) => setFormData({ ...formData, engine_number: e.target.value })} placeholder="Engine Number" />
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>قوة المحرك <span className="required">*</span></label>
+                        <input 
+                          type="number" 
+                          value={formData.engine_power} 
+                          onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })} 
+                          placeholder="أدخل قوة المحرك (حصان)" 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>سعة المحرك (CC) <span className="required">*</span></label>
+                        <input type="text" value={formData.engine_cc} onChange={(e) => setFormData({ ...formData, engine_cc: e.target.value })} placeholder="مثلاً: 2000" />
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>الركاب المصرح بهم <span className="required">*</span></label>
+                        <input type="number" value={formData.authorized_passengers} onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label>الحمولة (بالطن)</label>
+                        <input type="number" value={formData.load_capacity} onChange={(e) => setFormData({ ...formData, load_capacity: e.target.value })} />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>وزن المركبة</label>
+                      <input type="text" value={formData.vehicle_weight} onChange={(e) => setFormData({ ...formData, vehicle_weight: e.target.value })} placeholder="Vehicle Weight" />
+                    </div>
+                  </div>
+
+                  <div className="form-section animate-fade-in" style={{ border: '1px solid #10b981', borderRadius: '8px', padding: '20px' }}>
+                    <h3 className="form-section-title" style={{ color: '#10b981', borderBottom: '1px solid #10b981', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط / الاشتراك
+                    </h3>
+                    
+                    <div className="form-grid" style={{ marginBottom: '30px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                      <div className="form-group">
+                        <label>نوع المركبة <span className="required">*</span></label>
+                        <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ 
+                          ...formData, 
+                          eidc_vehicle_type_id: e.target.value,
+                          eidc_vehicle_spec_id: '',
+                          eidc_vehicle_detail_id: ''
+                        })}>
+                          <option value="">-- اختر --</option>
+                          {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>النوع المحدد <span className="required">*</span></label>
+                        <select 
+                          value={formData.eidc_vehicle_spec_id} 
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            eidc_vehicle_spec_id: e.target.value,
+                            eidc_vehicle_detail_id: ''
+                          })} 
+                          disabled={!formData.eidc_vehicle_type_id || loadingSpecs}
+                          style={loadingSpecs ? { background: '#f1f5f9', color: '#94a3b8' } : {}}
+                        >
+                          <option value="">{loadingSpecs ? 'جاري التحميل...' : '-- اختر --'}</option>
+                          {!loadingSpecs && eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>التفاصيل</label>
+                        <select value={formData.eidc_vehicle_detail_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_detail_id: e.target.value })} disabled={!formData.eidc_vehicle_spec_id}>
+                          <option value="">-- لا يوجد / اختر --</option>
+                          {eidcVehicleDetails.map(d => <option key={d.id} value={d.id}>{d.specVehicle || d.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                      <div className="eidc-price-box">
+                        <label>مصاريف الإصدار</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
                         </div>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label>فئة السيارة <span className="required">*</span></label>
-                    <select 
-                      value={formData.vehicle_type_id} 
-                      onChange={(e) => {
-                        const vt = vehicleTypes.find(v => v.id.toString() === e.target.value);
-                        if (vt) {
-                          setFormData({ ...formData, vehicle_type_id: e.target.value });
-                          setSelectedCategory(vt.category);
-                        }
-                      }}
-                      disabled={!selectedBrand}
-                    >
-                      <option value="">-- اختر الفئة --</option>
-                      {filteredCategories.map(vt => (
-                        <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>رقم الهيكل <span className="required">*</span></label>
-                    <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>سنة الصنع <span className="required">*</span></label>
-                    <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
-                      <option value="">اختر السنة...</option>
-                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>اللون <span className="required">*</span></label>
-                    <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
-                      <option value="">اختر اللون...</option>
-                      {colors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>الغرض من الترخيص <span className="required">*</span></label>
-                    <select value={formData.license_purpose} onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}>
-                      <option value="">اختر الغرض...</option>
-                      {LICENSE_PURPOSES.map(lp => <option key={lp.ar} value={`${lp.ar}/${lp.en}`}>{lp.ar}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>رقم المحرك <span className="required">*</span></label>
-                    <input type="text" value={formData.engine_number} onChange={(e) => setFormData({ ...formData, engine_number: e.target.value })} placeholder="Engine Number" />
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>قوة المحرك <span className="required">*</span></label>
-                    {isMandatoryInsurance ? (
-                      <input 
-                        type="number" 
-                        value={formData.engine_power} 
-                        onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })} 
-                        placeholder="أدخل قوة المحرك (حصان)" 
-                      />
-                    ) : (
-                      <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
-                        <option value="">اختر القوة...</option>
-                        {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
-                      </select>
-                    )}
-                  </div>
-                  <div className="form-group">
-                    <label>سعة المحرك (CC) <span className="required">*</span></label>
-                    <input type="text" value={formData.engine_cc} onChange={(e) => setFormData({ ...formData, engine_cc: e.target.value })} placeholder="مثلاً: 2000" />
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>الركاب المصرح بهم <span className="required">*</span></label>
-                    <input type="number" value={formData.authorized_passengers} onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>الحمولة (بالطن)</label>
-                    <input type="number" value={formData.load_capacity} onChange={(e) => setFormData({ ...formData, load_capacity: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>وزن المركبة</label>
-                  <input type="text" value={formData.vehicle_weight} onChange={(e) => setFormData({ ...formData, vehicle_weight: e.target.value })} placeholder="Vehicle Weight" />
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: بيانات احتساب القسط / الاشتراك */}
-            {currentStep === 3 && (
-              <div className="form-section animate-fade-in" style={{ border: '1px solid #10b981', borderRadius: '8px', padding: '20px' }}>
-                <h3 className="form-section-title" style={{ color: '#10b981', borderBottom: '1px solid #10b981', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط / الاشتراك
-                </h3>
-                
-                {/* الجزء العلوي: تصنيف المركبة */}
-                <div className="form-grid" style={{ marginBottom: '30px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
-                  <div className="form-group">
-                    <label>نوع المركبة <span className="required">*</span></label>
-                    <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ 
-                      ...formData, 
-                      eidc_vehicle_type_id: e.target.value,
-                      eidc_vehicle_spec_id: '',
-                      eidc_vehicle_detail_id: ''
-                    })}>
-                      <option value="">-- اختر --</option>
-                      {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>النوع المحدد <span className="required">*</span></label>
-                    <select 
-                      value={formData.eidc_vehicle_spec_id} 
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        eidc_vehicle_spec_id: e.target.value,
-                        eidc_vehicle_detail_id: ''
-                      })} 
-                      disabled={!formData.eidc_vehicle_type_id || loadingSpecs}
-                      style={loadingSpecs ? { background: '#f1f5f9', color: '#94a3b8' } : {}}
-                    >
-                      <option value="">{loadingSpecs ? 'جاري التحميل...' : '-- اختر --'}</option>
-                      {!loadingSpecs && eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>التفاصيل</label>
-                    <select value={formData.eidc_vehicle_detail_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_detail_id: e.target.value })} disabled={!formData.eidc_vehicle_spec_id}>
-                      <option value="">-- لا يوجد / اختر --</option>
-                      {eidcVehicleDetails.map(d => <option key={d.id} value={d.id}>{d.specVehicle || d.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* الجزء السفلي: المبالغ المالية */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' }}>
-                  <div className="eidc-price-box">
-                    <label>مصاريف الإصدار</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
+                      <div className="eidc-price-box">
+                        <label>صافي القسط</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.netPremium || 0).toFixed(3) : '0.000')} readOnly />
+                        </div>
+                      </div>
+                      <div className="eidc-price-box">
+                        <label>الضريبة</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.tax || 0).toFixed(3) : '0.000')} readOnly />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="eidc-price-box">
-                    <label>صافي القسط</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.netPremium || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
-                  <div className="eidc-price-box">
-                    <label>الضريبة</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.tax || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
-                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
-                  <div className="eidc-price-box">
-                    <label>رسوم الإشراف</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.supervisionFees || 0).toFixed(3) : '0.000')} readOnly />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+                      <div className="eidc-price-box">
+                        <label>رسوم الإشراف</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.supervisionFees || 0).toFixed(3) : '0.000')} readOnly />
+                        </div>
+                      </div>
+                      <div className="eidc-price-box">
+                        <label>الدمغة</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.stamp || 0.250).toFixed(3) : '0.250')} readOnly />
+                        </div>
+                      </div>
+                      <div className="eidc-price-box">
+                        <label>رسوم الإصدار (النهائي)</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
+                        </div>
+                      </div>
+                      <div className="eidc-price-box total">
+                        <label>الإجمالي</label>
+                        <div className="price-input-wrapper" style={{ border: '1px solid #bfdbfe' }}>
+                          <span className="currency" style={{ background: '#eff6ff', color: '#1d4ed8' }}>د.ل</span>
+                          <input type="text" value={loadingInquiry ? 'جاري الاحتساب...' : (eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000')} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="eidc-price-box">
-                    <label>الدمغة</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.stamp || 0.250).toFixed(3) : '0.250')} readOnly />
-                    </div>
-                  </div>
-                  <div className="eidc-price-box">
-                    <label>رسوم الإصدار (النهائي)</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
-                  <div className="eidc-price-box total">
-                    <label>الإجمالي</label>
-                    <div className="price-input-wrapper" style={{ border: '1px solid #bfdbfe' }}>
-                      <span className="currency" style={{ background: '#eff6ff', color: '#1d4ed8' }}>د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري الاحتساب...' : (eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000')} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
-                    </div>
-                  </div>
-                </div>
 
-                <style>{`
-                  .eidc-price-box {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 5px;
-                  }
-                  .eidc-price-box label {
-                    font-size: 12px;
-                    color: #64748b;
-                    text-align: left;
-                  }
-                  .price-input-wrapper {
-                    display: flex;
-                    align-items: center;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 4px;
-                    background: #fff;
-                    overflow: hidden;
-                  }
-                  .price-input-wrapper .currency {
-                    background: #f1f5f9;
-                    padding: 8px 12px;
-                    font-size: 12px;
-                    color: #64748b;
-                    border-right: 1px solid #e2e8f0;
-                  }
-                  .price-input-wrapper input {
-                    border: none;
-                    width: 100%;
-                    padding: 8px 12px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    text-align: center;
-                    outline: none;
-                  }
-                  .eidc-price-box.total .price-input-wrapper {
-                    background: #f8fafc;
-                  }
-                `}</style>
-              </div>
-            )}
+                    <style>{`
+                      .eidc-price-box {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 5px;
+                      }
+                      .eidc-price-box label {
+                        font-size: 12px;
+                        color: #64748b;
+                        text-align: left;
+                      }
+                      .price-input-wrapper {
+                        display: flex;
+                        align-items: center;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 4px;
+                        background: #fff;
+                        overflow: hidden;
+                      }
+                      .price-input-wrapper .currency {
+                        background: #f1f5f9;
+                        padding: 8px 12px;
+                        font-size: 12px;
+                        color: #64748b;
+                        border-right: 1px solid #e2e8f0;
+                      }
+                      .price-input-wrapper input {
+                        border: none;
+                        width: 100%;
+                        padding: 8px 12px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        text-align: center;
+                        outline: none;
+                      }
+                      .eidc-price-box.total .price-input-wrapper {
+                        background: #f8fafc;
+                      }
+                    `}</style>
+                  </div>
 
-            <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ order: 2 }}>
-                {currentStep > 1 && (
-                  <button type="button" onClick={() => setCurrentStep(currentStep - 1)} className="btn-cancel" style={{ background: '#4b5563', color: '#fff', minWidth: '120px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    السابق <i className="fa-solid fa-arrow-left"></i>
-                  </button>
-                )}
-              </div>
-
-              <div style={{ order: 1 }}>
-                {currentStep < 3 ? (
-                  <button type="button" onClick={() => setCurrentStep(currentStep + 1)} className="btn-submit" style={{ minWidth: '150px' }}>
-                    التالي <i className="fa-solid fa-arrow-right"></i>
-                  </button>
-                ) : (
-                  <button type="submit" disabled={submitting} className="btn-submit" style={{ minWidth: '180px', background: '#10b981', border: 'none' }}>
-                    <i className="fa-solid fa-save"></i> {submitting ? 'جاري الحفظ...' : 'حفظ الوثيقة'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </form>
-        </>
-      ) : (
+                  <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
+                    <button type="submit" disabled={submitting} className="btn-submit" style={{ minWidth: '250px', background: '#10b981', border: 'none', height: '50px', fontSize: '18px' }}>
+                      <i className="fa-solid fa-save"></i> {submitting ? 'جاري الحفظ...' : 'إنشاء وحفظ الوثيقة'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
               /* --- الشكل القديم (صفحة واحدة) لبقية الأنواع --- */
               <form onSubmit={handleSubmit} className="user-form">
                 <div className="form-section">
@@ -2888,11 +2795,11 @@ export default function CreateInsuranceDocument() {
                   </div>
                 </div>
 
-                <div className="form-actions" style={{ marginTop: '30px' }}>
-                  <button type="submit" disabled={submitting} className="btn-submit" style={{ minWidth: '150px' }}>
-                    {submitting ? 'جاري الحفظ...' : 'حفظ الوثيقة'}
+                <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
+                  <button type="submit" disabled={submitting} className="btn-submit" style={{ minWidth: '250px', background: '#10b981', border: 'none', height: '50px', fontSize: '18px' }}>
+                    <i className="fa-solid fa-save"></i> {submitting ? 'جاري الحفظ...' : 'إنشاء وحفظ الوثيقة'}
                   </button>
-                  <button type="button" onClick={() => navigate('/insurance-documents')} className="btn-cancel">إلغاء</button>
+                  <button type="button" onClick={() => navigate('/insurance-documents')} className="btn-cancel" style={{ marginRight: '15px' }}>إلغاء</button>
                 </div>
               </form>
             )}
