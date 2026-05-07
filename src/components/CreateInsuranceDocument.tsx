@@ -133,6 +133,8 @@ export default function CreateInsuranceDocument() {
   const [eidcVehicleSpecs, setEidcVehicleSpecs] = useState<any[]>([]);
   const [eidcVehicleDetails, setEidcVehicleDetails] = useState<any[]>([]);
   const [_loadingEidcData, setLoadingEidcData] = useState(false);
+  const [loadingSpecs, setLoadingSpecs] = useState(false);
+  const [loadingInquiry, setLoadingInquiry] = useState(false);
   const [eidcPremiumData, setEidcPremiumData] = useState<any>(null);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -207,6 +209,10 @@ export default function CreateInsuranceDocument() {
 
   useEffect(() => {
     if (isMandatoryInsurance && formData.eidc_vehicle_type_id) {
+      // تصفير فوري قبل الجلب لإزالة البيانات القديمة
+      setEidcVehicleSpecs([]);
+      setEidcVehicleDetails([]);
+      setEidcPremiumData(null);
       fetchEidcVehicleSpecs(formData.eidc_vehicle_type_id);
     } else {
       setEidcVehicleSpecs([]);
@@ -265,6 +271,7 @@ export default function CreateInsuranceDocument() {
   };
 
   const fetchEidcVehicleSpecs = async (typeId: string) => {
+    setLoadingSpecs(true);
     try {
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
@@ -290,25 +297,14 @@ export default function CreateInsuranceDocument() {
         } else {
           const list = Array.isArray(data) ? data : [];
           setEidcVehicleSpecs(list);
-          
-          // تحديث السعر فوراً من أول بند متاح
-          if (list.length > 0) {
-            const item = list[0];
-            setEidcPremiumData({
-              netPremium: item.premiumYear ?? item.premium_year ?? 0,
-              tax: 0,
-              supervisionFees: 0,
-              stamp: 0.250,
-              issuingFees: 0,
-              totalPremium: item.premiumYear ? (Number(item.premiumYear) + 0.250) : 0
-            });
-          }
         }
       } else {
         setEidcVehicleSpecs([]);
       }
     } catch (error) {
       console.error('Error fetching EIDC vehicle specs:', error);
+    } finally {
+      setLoadingSpecs(false);
     }
   };
 
@@ -338,19 +334,6 @@ export default function CreateInsuranceDocument() {
         } else {
           const list = Array.isArray(data) ? data : [];
           setEidcVehicleDetails(list);
-
-          // تحديث السعر فوراً من أول بند متاح
-          if (list.length > 0) {
-            const item = list[0];
-            setEidcPremiumData({
-              netPremium: item.premiumYear ?? item.premium_year ?? 0,
-              tax: 0,
-              supervisionFees: 0,
-              stamp: 0.250,
-              issuingFees: 0,
-              totalPremium: item.premiumYear ? (Number(item.premiumYear) + 0.250) : 0
-            });
-          }
         }
       } else {
         setEidcVehicleDetails([]);
@@ -368,7 +351,11 @@ export default function CreateInsuranceDocument() {
                          formData.eidc_vehicle_spec_id;
 
     if (shouldInquire) {
-      handleEidcInquiry();
+      const handler = setTimeout(() => {
+        handleEidcInquiry();
+      }, 600); // Debounce for 600ms to avoid spamming the EIDC API
+
+      return () => clearTimeout(handler);
     }
   }, [
     currentStep, 
@@ -380,10 +367,16 @@ export default function CreateInsuranceDocument() {
     formData.engine_power,
     formData.load_capacity,
     formData.license_purpose,
+    formData.plate_number_manual,
+    formData.chassis_number,
     isMandatoryInsurance
   ]);
 
   const handleEidcInquiry = async () => {
+    setLoadingInquiry(true);
+    // Clear previous premium data to avoid confusion during fetch
+    setEidcPremiumData(null);
+    
     try {
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
@@ -391,6 +384,7 @@ export default function CreateInsuranceDocument() {
 
       if (!token) {
         console.error('No token found for EIDC inquiry');
+        setLoadingInquiry(false);
         return;
       }
 
@@ -412,6 +406,7 @@ export default function CreateInsuranceDocument() {
       const fromNoonOf = tomorrow.toISOString().split('T')[0];
       
       if (!formData.phone || !formData.nid_passport || !formData.insured_name) {
+        setLoadingInquiry(false);
         return;
       }
 
@@ -472,7 +467,7 @@ export default function CreateInsuranceDocument() {
           netPremium: data.netPremium ?? data.net_premium ?? data.NetPremium ?? data.premiumYear ?? data.premium_year ?? 0,
           tax: data.tax ?? data.tax_amount ?? data.Tax ?? (data.premiumYear ? 1.000 : 0), // افتراضي 1 دينار إذا وجد سعر
           supervisionFees: data.supervisionFees ?? data.supervision_fees ?? data.SupervisionFees ?? (data.premiumYear ? 0.500 : 0), // افتراضي 0.500
-          stamp: data.stamp ?? data.stamp_amount ?? data.Stamp ?? 0.500, // الدمغة المعتادة
+          stamp: data.stamp ?? data.stamp_amount ?? data.Stamp ?? 0.250, // الدمغة 0.250 كما في المنظومة
           issuingFees: data.issuingFees ?? data.issue_fees ?? data.IssuingFees ?? (data.premiumYear ? 2.000 : 0), // رسوم الإصدار المعتادة 2 دينار
           totalPremium: data.totalPremium ?? data.total ?? data.TotalPremium ?? 0
         };
@@ -504,6 +499,9 @@ export default function CreateInsuranceDocument() {
       }
     } catch (error) {
       console.error('EIDC Inquiry Error:', error);
+      showToast('حدث خطأ أثناء الاتصال بالمنظومة', 'error');
+    } finally {
+      setLoadingInquiry(false);
     }
   };
 
@@ -2520,16 +2518,30 @@ export default function CreateInsuranceDocument() {
                 <div className="form-grid" style={{ marginBottom: '30px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                   <div className="form-group">
                     <label>نوع المركبة <span className="required">*</span></label>
-                    <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_type_id: e.target.value })}>
+                    <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ 
+                      ...formData, 
+                      eidc_vehicle_type_id: e.target.value,
+                      eidc_vehicle_spec_id: '',
+                      eidc_vehicle_detail_id: ''
+                    })}>
                       <option value="">-- اختر --</option>
                       {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
                     <label>النوع المحدد <span className="required">*</span></label>
-                    <select value={formData.eidc_vehicle_spec_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_spec_id: e.target.value })} disabled={!formData.eidc_vehicle_type_id}>
-                      <option value="">-- اختر --</option>
-                      {eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
+                    <select 
+                      value={formData.eidc_vehicle_spec_id} 
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        eidc_vehicle_spec_id: e.target.value,
+                        eidc_vehicle_detail_id: ''
+                      })} 
+                      disabled={!formData.eidc_vehicle_type_id || loadingSpecs}
+                      style={loadingSpecs ? { background: '#f1f5f9', color: '#94a3b8' } : {}}
+                    >
+                      <option value="">{loadingSpecs ? 'جاري التحميل...' : '-- اختر --'}</option>
+                      {!loadingSpecs && eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
@@ -2547,21 +2559,21 @@ export default function CreateInsuranceDocument() {
                     <label>مصاريف الإصدار</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>صافي القسط</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.netPremium || 0).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.netPremium || 0).toFixed(3) : '0.000')} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>الضريبة</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.tax || 0).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.tax || 0).toFixed(3) : '0.000')} readOnly />
                     </div>
                   </div>
                 </div>
@@ -2571,28 +2583,28 @@ export default function CreateInsuranceDocument() {
                     <label>رسوم الإشراف</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.supervisionFees || 0).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.supervisionFees || 0).toFixed(3) : '0.000')} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>الدمغة</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.stamp || 0.250).toFixed(3) : '0.250'} readOnly />
+                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.stamp || 0.250).toFixed(3) : '0.250')} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>رسوم الإصدار (النهائي)</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={loadingInquiry ? '...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box total">
                     <label>الإجمالي</label>
                     <div className="price-input-wrapper" style={{ border: '1px solid #bfdbfe' }}>
                       <span className="currency" style={{ background: '#eff6ff', color: '#1d4ed8' }}>د.ل</span>
-                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000'} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
+                      <input type="text" value={loadingInquiry ? 'جاري الاحتساب...' : (eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000')} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
                     </div>
                   </div>
                 </div>
