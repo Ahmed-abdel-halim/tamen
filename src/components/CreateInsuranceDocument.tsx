@@ -418,29 +418,28 @@ export default function CreateInsuranceDocument() {
         TypeOfVehicle: vehicleMakeModel,
         TypeVechicleId: formData.eidc_vehicle_type_id,
         TypeVechicle2Id: formData.eidc_vehicle_spec_id,
-        TypeVechicle3Id: formData.eidc_vehicle_detail_id,
+        TypeVechicle3Id: formData.eidc_vehicle_detail_id || null,
         
         PhoneNo: formData.phone,
         NidPassport: formData.nid_passport,
         InsuredsName: formData.insured_name,
-        Nationality: formData.nationality,
-        Address: formData.address,
-        Email: formData.email,
+        Nationality: formData.nationality || 'ليبي',
+        Address: formData.address || 'ليبيا',
+        Email: formData.email || 'no-reply@insurance.ly',
         
-        PlateNo: formData.plate_number_manual,
-        ChassisNo: formData.chassis_number,
-        EngineNo: formData.engine_number,
-        Color: formData.color,
-        YearMade: formData.year || "",
-        RegAuthority: selectedPlate ? selectedPlate.city.name_ar : '',
+        PlateNo: formData.plate_number_manual || '',
+        ChassisNo: formData.chassis_number || '',
+        EngineNo: formData.engine_number || '',
+        Color: formData.color || '',
+        YearMade: parseInt(formData.year) || new Date().getFullYear(),
+        RegAuthority: selectedPlate ? selectedPlate.city.name_ar : 'طرابلس',
         
         DayOfCarType: EidcApiServiceMapping.mapDurationToDays(formData.duration),
         PurposeLicense: EidcApiServiceMapping.mapPurposeLicense(formData.license_purpose),
-        PassengersNo: Math.max(1, parseInt(formData.authorized_passengers) || 0),
-        EngineHp: parseInt(formData.engine_power) || 0,
+        PassengersNo: Math.min(100, Math.max(0, parseInt(formData.authorized_passengers) || 4)),
+        EngineHp: parseInt(formData.engine_power) || 4,
         Tonnage: parseFloat(formData.load_capacity) || 0,
-        LoadTon: formData.load_capacity,
-        IssuingFeesOptions: 0
+        IssuingFeesOptions: 2  // يجب أن تكون 2 (رسوم الإصدار الافتراضية)
       };
 
       console.log('Sending Comprehensive EIDC Inquiry Request:', requestBody);
@@ -455,20 +454,20 @@ export default function CreateInsuranceDocument() {
         const data = await res.json();
         console.log('EIDC Inquiry Response:', data);
         
-        // إظهار تنبيه بالبيانات المستلمة للمساعدة في التشخيص
-        if (data.netPremium || data.net_premium || data.totalPremium || data.total) {
-           showToast('تم جلب الأسعار بنجاح', 'success');
-        } else if (data.message || data.error) {
-           showToast(data.message || data.error, 'error');
+        // التحقق من نجاح الاستجابة (الهيئة قد ترجع 200 مع success=false)
+        if (data.success === false) {
+          showToast(data.message || 'فشل في احتساب القسط من الهيئة', 'error');
+          setEidcPremiumData(null);
+          return;
         }
 
-        // معالجة البيانات بشكل مرن (دعم كل التنسيقات الممكنة بما فيها التنسيق المكتشف في الصورة)
+        // معالجة البيانات بشكل مرن
         const mappedData = {
           netPremium: data.netPremium ?? data.net_premium ?? data.NetPremium ?? data.premiumYear ?? data.premium_year ?? 0,
-          tax: data.tax ?? data.tax_amount ?? data.Tax ?? (data.premiumYear ? 1.000 : 0), // افتراضي 1 دينار إذا وجد سعر
-          supervisionFees: data.supervisionFees ?? data.supervision_fees ?? data.SupervisionFees ?? (data.premiumYear ? 0.500 : 0), // افتراضي 0.500
-          stamp: data.stamp ?? data.stamp_amount ?? data.Stamp ?? 0.250, // الدمغة 0.250 كما في المنظومة
-          issuingFees: data.issuingFees ?? data.issue_fees ?? data.IssuingFees ?? (data.premiumYear ? 2.000 : 0), // رسوم الإصدار المعتادة 2 دينار
+          tax: data.tax ?? data.tax_amount ?? data.Tax ?? 0,
+          supervisionFees: data.supervisionFees ?? data.supervision_fees ?? data.SupervisionFees ?? 0,
+          stamp: data.stamp ?? data.stamp_amount ?? data.Stamp ?? 0.250,
+          issuingFees: data.issuingFees ?? data.issue_fees ?? data.IssuingFees ?? 0,
           totalPremium: data.totalPremium ?? data.total ?? data.TotalPremium ?? 0
         };
 
@@ -477,19 +476,19 @@ export default function CreateInsuranceDocument() {
           mappedData.totalPremium = Number(mappedData.netPremium) + Number(mappedData.tax) + Number(mappedData.supervisionFees) + Number(mappedData.stamp) + Number(mappedData.issuingFees);
         }
 
-        if (data.error) {
-          showToast(data.error, 'error');
-          setEidcPremiumData(null);
-        } else {
+        if (mappedData.netPremium > 0 || mappedData.totalPremium > 0) {
           setEidcPremiumData(mappedData);
           if (mappedData.totalPremium) {
             setFormData(prev => ({ 
               ...prev, 
               premium: mappedData.totalPremium.toString(),
-              // تحديث تاريخ الانتهاء بما حسبته الهيئة بالضبط
               end_date: data.toNoonOf ? data.toNoonOf.split('T')[0] : prev.end_date
             }));
           }
+        } else {
+          // الهيئة رجعت أسعار صفرية - هذا خطأ
+          showToast(data.message || 'لم تتمكن الهيئة من احتساب السعر لهذا النوع', 'error');
+          setEidcPremiumData(null);
         }
       } else {
         const data = await res.json();
