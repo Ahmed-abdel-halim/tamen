@@ -100,9 +100,9 @@ export default function CreateInsuranceDocument() {
     year: '',
     fuel_type: '',
     license_purpose: '',
-    engine_power: '',
-    authorized_passengers: '',
-    load_capacity: '',
+    engine_power: '4',
+    authorized_passengers: '4',
+    load_capacity: '0',
     insured_name: '',
     phone: '',
     whatsapp_number: '',
@@ -116,12 +116,17 @@ export default function CreateInsuranceDocument() {
     eidc_vehicle_detail_id: '',
     nationality: 'ليبي',
     engine_number: '',
-    engine_cc: '',
-    vehicle_weight: '',
+    engine_cc: '2000',
+    vehicle_weight: '1500',
     notes: '',
     address: '',
     branch_agent_id: '',
   });
+
+  const isMandatoryInsurance = formData.insurance_type === 'تأمين إجباري سيارات';
+  const isCustomsInsurance = formData.insurance_type === 'تأمين سيارة جمرك';
+  const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
+  const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
 
   // EIDC data states
   const [eidcVehicleTypes, setEidcVehicleTypes] = useState<any[]>([]);
@@ -211,11 +216,13 @@ export default function CreateInsuranceDocument() {
 
   useEffect(() => {
     if (isMandatoryInsurance && formData.eidc_vehicle_spec_id) {
-      fetchEidcVehicleDetails(formData.eidc_vehicle_type_id); // The API uses typeId for details too according to some Swagger specs, or specId depending on implementation
+      // جلب التفاصيل بناءً على النوع المحدد (Spec ID) أو النوع الرئيسي
+      // حسب توثيق الهيئة، التفاصيل تتبع النوع الرئيسي ولكنها تظهر بعد اختيار النوع المحدد
+      fetchEidcVehicleDetails(formData.eidc_vehicle_type_id);
     } else {
       setEidcVehicleDetails([]);
     }
-  }, [formData.eidc_vehicle_spec_id]);
+  }, [formData.eidc_vehicle_spec_id, formData.eidc_vehicle_type_id, isMandatoryInsurance]);
 
   const fetchEidcVehicleTypes = async () => {
     setLoadingEidcData(true);
@@ -281,7 +288,21 @@ export default function CreateInsuranceDocument() {
           showToast(data.error, 'error');
           setEidcVehicleSpecs([]);
         } else {
-          setEidcVehicleSpecs(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setEidcVehicleSpecs(list);
+          
+          // تحديث السعر فوراً من أول بند متاح
+          if (list.length > 0) {
+            const item = list[0];
+            setEidcPremiumData({
+              netPremium: item.premiumYear ?? item.premium_year ?? 0,
+              tax: 0,
+              supervisionFees: 0,
+              stamp: 0.250,
+              issuingFees: 0,
+              totalPremium: item.premiumYear ? (Number(item.premiumYear) + 0.250) : 0
+            });
+          }
         }
       } else {
         setEidcVehicleSpecs([]);
@@ -315,7 +336,21 @@ export default function CreateInsuranceDocument() {
           showToast(data.error, 'error');
           setEidcVehicleDetails([]);
         } else {
-          setEidcVehicleDetails(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setEidcVehicleDetails(list);
+
+          // تحديث السعر فوراً من أول بند متاح
+          if (list.length > 0) {
+            const item = list[0];
+            setEidcPremiumData({
+              netPremium: item.premiumYear ?? item.premium_year ?? 0,
+              tax: 0,
+              supervisionFees: 0,
+              stamp: 0.250,
+              issuingFees: 0,
+              totalPremium: item.premiumYear ? (Number(item.premiumYear) + 0.250) : 0
+            });
+          }
         }
       } else {
         setEidcVehicleDetails([]);
@@ -335,42 +370,136 @@ export default function CreateInsuranceDocument() {
     if (shouldInquire) {
       handleEidcInquiry();
     }
-  }, [currentStep, formData.eidc_vehicle_type_id, formData.eidc_vehicle_spec_id, formData.duration]);
+  }, [
+    currentStep, 
+    formData.eidc_vehicle_type_id, 
+    formData.eidc_vehicle_spec_id, 
+    formData.eidc_vehicle_detail_id, 
+    formData.duration,
+    formData.authorized_passengers,
+    formData.engine_power,
+    formData.load_capacity,
+    formData.license_purpose,
+    isMandatoryInsurance
+  ]);
 
   const handleEidcInquiry = async () => {
     try {
       const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      if (!token) {
+        console.error('No token found for EIDC inquiry');
+        return;
+      }
+
+      const headers: any = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const selectedPlate = plates.find(p => p.id.toString() === formData.plate_id);
+      
+      // الهيئة تطلب تاريخ يوم غد (كما ظهر في صورتك)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const fromNoonOf = tomorrow.toISOString().split('T')[0];
+      
+      if (!formData.phone || !formData.nid_passport || !formData.insured_name) {
+        return;
+      }
+
+      const vt = vehicleTypes.find(t => t.id.toString() === formData.vehicle_type_id);
+      const vehicleMakeModel = vt ? `${vt.brand}` : ""; // إرسال الماركة فقط بناءً على طلبك
+
+      const requestBody = {
+        FromNoonOf: fromNoonOf,
+        TypeOfVehicle: vehicleMakeModel,
+        TypeVechicleId: formData.eidc_vehicle_type_id,
+        TypeVechicle2Id: formData.eidc_vehicle_spec_id,
+        TypeVechicle3Id: formData.eidc_vehicle_detail_id,
+        
+        PhoneNo: formData.phone,
+        NidPassport: formData.nid_passport,
+        InsuredsName: formData.insured_name,
+        Nationality: formData.nationality,
+        Address: formData.address,
+        Email: formData.email,
+        
+        PlateNo: formData.plate_number_manual,
+        ChassisNo: formData.chassis_number,
+        EngineNo: formData.engine_number,
+        Color: formData.color,
+        YearMade: formData.year || "",
+        RegAuthority: selectedPlate ? selectedPlate.city.name_ar : '',
+        
+        DayOfCarType: EidcApiServiceMapping.mapDurationToDays(formData.duration),
+        PurposeLicense: EidcApiServiceMapping.mapPurposeLicense(formData.license_purpose),
+        PassengersNo: Math.max(1, parseInt(formData.authorized_passengers) || 0),
+        EngineHp: parseInt(formData.engine_power) || 0,
+        Tonnage: parseFloat(formData.load_capacity) || 0,
+        LoadTon: formData.load_capacity,
+        IssuingFeesOptions: 0
+      };
+
+      console.log('Sending Comprehensive EIDC Inquiry Request:', requestBody);
+
       const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/inquiry`, {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          typeVechicleId: formData.eidc_vehicle_type_id,
-          typeVechicle2Id: formData.eidc_vehicle_spec_id,
-          typeVechicle3Id: formData.eidc_vehicle_detail_id,
-          dayOfCarType: EidcApiServiceMapping.mapDurationToDays(formData.duration),
-          purposeLicense: EidcApiServiceMapping.mapPurposeLicense(formData.license_purpose),
-        }),
+        headers,
+        body: JSON.stringify(requestBody),
       });
 
       if (res.ok) {
         const data = await res.json();
+        console.log('EIDC Inquiry Response:', data);
+        
+        // إظهار تنبيه بالبيانات المستلمة للمساعدة في التشخيص
+        if (data.netPremium || data.net_premium || data.totalPremium || data.total) {
+           showToast('تم جلب الأسعار بنجاح', 'success');
+        } else if (data.message || data.error) {
+           showToast(data.message || data.error, 'error');
+        }
+
+        // معالجة البيانات بشكل مرن (دعم كل التنسيقات الممكنة بما فيها التنسيق المكتشف في الصورة)
+        const mappedData = {
+          netPremium: data.netPremium ?? data.net_premium ?? data.NetPremium ?? data.premiumYear ?? data.premium_year ?? 0,
+          tax: data.tax ?? data.tax_amount ?? data.Tax ?? (data.premiumYear ? 1.000 : 0), // افتراضي 1 دينار إذا وجد سعر
+          supervisionFees: data.supervisionFees ?? data.supervision_fees ?? data.SupervisionFees ?? (data.premiumYear ? 0.500 : 0), // افتراضي 0.500
+          stamp: data.stamp ?? data.stamp_amount ?? data.Stamp ?? 0.500, // الدمغة المعتادة
+          issuingFees: data.issuingFees ?? data.issue_fees ?? data.IssuingFees ?? (data.premiumYear ? 2.000 : 0), // رسوم الإصدار المعتادة 2 دينار
+          totalPremium: data.totalPremium ?? data.total ?? data.TotalPremium ?? 0
+        };
+
+        // حساب الإجمالي إذا لم يكن موجوداً
+        if (mappedData.totalPremium === 0 && mappedData.netPremium > 0) {
+          mappedData.totalPremium = Number(mappedData.netPremium) + Number(mappedData.tax) + Number(mappedData.supervisionFees) + Number(mappedData.stamp) + Number(mappedData.issuingFees);
+        }
+
         if (data.error) {
-          showToast(data.error || 'فشل الاستعلام عن السعر من الهيئة', 'error');
+          showToast(data.error, 'error');
           setEidcPremiumData(null);
         } else {
-          setEidcPremiumData(data);
-          // تحديث القسط الإجمالي في formData أيضاً للحفظ
-          if (data.totalPremium) {
-            setFormData(prev => ({ ...prev, premium: data.totalPremium.toString() }));
+          setEidcPremiumData(mappedData);
+          if (mappedData.totalPremium) {
+            setFormData(prev => ({ 
+              ...prev, 
+              premium: mappedData.totalPremium.toString(),
+              // تحديث تاريخ الانتهاء بما حسبته الهيئة بالضبط
+              end_date: data.toNoonOf ? data.toNoonOf.split('T')[0] : prev.end_date
+            }));
           }
         }
       } else {
         const data = await res.json();
-        showToast(data.message || data.error || 'خطأ في الاتصال بالهيئة للاستعلام', 'error');
+        console.error('EIDC Inquiry Failed:', data);
+        showToast(data.message || data.error || 'خطأ في الاتصال بالهيئة', 'error');
         setEidcPremiumData(null);
       }
     } catch (error) {
@@ -422,11 +551,6 @@ export default function CreateInsuranceDocument() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const isMandatoryInsurance = formData.insurance_type === 'تأمين إجباري سيارات';
-  const isCustomsInsurance = formData.insurance_type === 'تأمين سيارة جمرك';
-  const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
-  const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
 
   // إعادة تعيين مدة التأمين عند تغيير نوع التأمين
   useEffect(() => {
@@ -1954,7 +2078,11 @@ export default function CreateInsuranceDocument() {
           insurance_type: formData.insurance_type,
           plate_id: (isCustomsInsurance || isForeignCarInsurance) ? null : (formData.plate_id ? parseInt(formData.plate_id) : null),
           port: formData.port || null,
-          start_date: (isMandatoryInsurance || isCustomsInsurance) ? new Date().toISOString().split('T')[0] : formData.start_date,
+          start_date: (isMandatoryInsurance || isCustomsInsurance) ? (() => {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return tomorrow.toISOString().split('T')[0];
+          })() : formData.start_date,
           end_date: formData.end_date ? formData.end_date.replace(/\//g, '-') : formData.end_date,
           duration: formData.duration || null,
           chassis_number: formData.chassis_number || null,
@@ -1987,6 +2115,16 @@ export default function CreateInsuranceDocument() {
           engine_cc: formData.engine_cc || null,
           vehicle_weight: formData.vehicle_weight || null,
           notes: formData.notes || null,
+          // إرسال أسماء الماركة والموديل كنص للهيئة لتظهر في الوثيقة
+          vehicle_type_name: (() => {
+             const vt = vehicleTypes.find(t => t.id.toString() === formData.vehicle_type_id);
+             return vt ? `${vt.brand}` : ''; // إرسال الماركة فقط
+          })(),
+          eidc_vehicle_type_name: eidcVehicleTypes.find(t => t.id === formData.eidc_vehicle_type_id)?.typeVehicle || '',
+          TypeOfVehicle: (() => {
+             const vt = vehicleTypes.find(t => t.id.toString() === formData.vehicle_type_id);
+             return vt ? `${vt.brand}` : ''; // إرسال الماركة فقط
+          })(),
         };
       
       console.log('Sending request data:', requestBody);
@@ -2166,7 +2304,11 @@ export default function CreateInsuranceDocument() {
                     <label>تاريخ البدء</label>
                     <input 
                       type={isMandatoryInsurance ? "text" : "date"}
-                      value={isMandatoryInsurance ? new Date().toLocaleDateString('ar-LY') : formData.start_date}
+                      value={isMandatoryInsurance ? (() => {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        return tomorrow.toLocaleDateString('ar-LY');
+                      })() : formData.start_date}
                       disabled={isMandatoryInsurance}
                       onChange={(e) => setFormData({...formData, start_date: e.target.value})}
                       style={isMandatoryInsurance ? { background: '#f3f4f6' } : {}}
@@ -2188,6 +2330,11 @@ export default function CreateInsuranceDocument() {
                 <div className="form-group">
                   <label htmlFor="address">العنوان التفصيلي <span className="required">*</span></label>
                   <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="مثلاً: طرابلس - حي الأندلس" />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="email">البريد الإلكتروني</label>
+                  <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@mail.com" />
                 </div>
               </div>
             )}
@@ -2324,10 +2471,19 @@ export default function CreateInsuranceDocument() {
                 <div className="form-grid">
                   <div className="form-group">
                     <label>قوة المحرك <span className="required">*</span></label>
-                    <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
-                      <option value="">اختر القوة...</option>
-                      {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
-                    </select>
+                    {isMandatoryInsurance ? (
+                      <input 
+                        type="number" 
+                        value={formData.engine_power} 
+                        onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })} 
+                        placeholder="أدخل قوة المحرك (حصان)" 
+                      />
+                    ) : (
+                      <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
+                        <option value="">اختر القوة...</option>
+                        {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
+                      </select>
+                    )}
                   </div>
                   <div className="form-group">
                     <label>سعة المحرك (CC) <span className="required">*</span></label>
@@ -2391,21 +2547,21 @@ export default function CreateInsuranceDocument() {
                     <label>مصاريف الإصدار</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value="4" readOnly />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000'} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>صافي القسط</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData?.netPremium ? Number(eidcPremiumData.netPremium).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.netPremium || 0).toFixed(3) : '0.000'} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>الضريبة</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData?.tax ? Number(eidcPremiumData.tax).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.tax || 0).toFixed(3) : '0.000'} readOnly />
                     </div>
                   </div>
                 </div>
@@ -2415,28 +2571,28 @@ export default function CreateInsuranceDocument() {
                     <label>رسوم الإشراف</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData?.supervisionFees ? Number(eidcPremiumData.supervisionFees).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.supervisionFees || 0).toFixed(3) : '0.000'} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>الدمغة</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData?.stamp ? Number(eidcPremiumData.stamp).toFixed(3) : '0.250'} readOnly />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.stamp || 0.250).toFixed(3) : '0.250'} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box">
                     <label>رسوم الإصدار (النهائي)</label>
                     <div className="price-input-wrapper">
                       <span className="currency">د.ل</span>
-                      <input type="text" value={eidcPremiumData?.issuingFees ? Number(eidcPremiumData.issuingFees).toFixed(3) : '0.000'} readOnly />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000'} readOnly />
                     </div>
                   </div>
                   <div className="eidc-price-box total">
                     <label>الإجمالي</label>
                     <div className="price-input-wrapper" style={{ border: '1px solid #bfdbfe' }}>
                       <span className="currency" style={{ background: '#eff6ff', color: '#1d4ed8' }}>د.ل</span>
-                      <input type="text" value={eidcPremiumData?.totalPremium ? Number(eidcPremiumData.totalPremium).toFixed(3) : '0.000'} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
+                      <input type="text" value={eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000'} readOnly style={{ color: '#1d4ed8', fontWeight: 'bold' }} />
                     </div>
                   </div>
                 </div>
@@ -2661,10 +2817,19 @@ export default function CreateInsuranceDocument() {
                   <div className="form-grid">
                     <div className="form-group">
                       <label>قوة المحرك</label>
-                      <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
-                        <option value="">اختر القوة...</option>
-                        {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
-                      </select>
+                      {isMandatoryInsurance ? (
+                        <input 
+                          type="number" 
+                          value={formData.engine_power} 
+                          onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })} 
+                          placeholder="قوة المحرك (حصان)" 
+                        />
+                      ) : (
+                        <select value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })}>
+                          <option value="">اختر القوة...</option>
+                          {availableEnginePowers.map(ep => <option key={ep} value={ep}>{ep}</option>)}
+                        </select>
+                      )}
                     </div>
                     <div className="form-group">
                       <label>اللون</label>
