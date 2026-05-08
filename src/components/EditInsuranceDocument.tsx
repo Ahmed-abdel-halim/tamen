@@ -3,6 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateString = (date: Date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 type Plate = {
   id: number;
   plate_number: string;
@@ -351,7 +359,7 @@ export default function EditInsuranceDocument() {
     // في تأمين إجباري سيارات، استخدم تاريخ الإصدار (issue_date) كبداية التأمين والمدة مثبتة على سنة واحدة
     // إذا لم يكن start_date موجوداً، استخدم تاريخ اليوم
     const startDateValue = isMandatoryInsurance && !formData.start_date 
-      ? new Date().toISOString().split('T')[0] 
+      ? getLocalDateString() 
       : formData.start_date;
     const durationValue = isMandatoryInsurance ? 'سنة (365 يوم)' : formData.duration;
     
@@ -1463,7 +1471,7 @@ export default function EditInsuranceDocument() {
           ...formData,
           // في تأمين إجباري سيارات، start_date = issue_date (من البيانات الموجودة أو تاريخ اليوم)
           start_date: isMandatoryInsurance 
-            ? (formData.start_date || new Date().toISOString().split('T')[0])
+            ? (formData.start_date || getLocalDateString())
             : formData.start_date,
           // تحويل end_date من YYYY/MM/DD إلى YYYY-MM-DD للإرسال إلى الـ API
           end_date: formData.end_date ? formData.end_date.replace(/\//g, '-') : formData.end_date,

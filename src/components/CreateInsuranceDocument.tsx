@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateString = (date: Date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 type Plate = {
   id: number;
   plate_number: string;
@@ -400,7 +408,7 @@ export default function CreateInsuranceDocument() {
       // الهيئة تطلب تاريخ يوم غد (كما ظهر في صورتك)
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const fromNoonOf = tomorrow.toISOString().split('T')[0];
+      const fromNoonOf = getLocalDateString(tomorrow);
 
       if (!formData.phone || !formData.nid_passport || !formData.insured_name) {
         setLoadingInquiry(false);
@@ -561,7 +569,7 @@ export default function CreateInsuranceDocument() {
       // في تأمين جمرك: بداية التأمين = تاريخ الإصدار (تاريخ اليوم)
       setFormData(prev => ({
         ...prev,
-        start_date: new Date().toISOString().split('T')[0],
+        start_date: getLocalDateString(),
         duration: (prev.duration === 'سنة (365 يوم)' || prev.duration === 'سنتين (730 يوم)' || prev.duration === 'سنة' || prev.duration === 'سنتين')
           ? 'شهر (30 يوم)'
           : prev.duration,
@@ -579,7 +587,7 @@ export default function CreateInsuranceDocument() {
   // حساب نهاية التأمين عند تغيير المدة
   useEffect(() => {
     // في تأمين إجباري سيارات أو تأمين جمرك، استخدم تاريخ اليوم كبداية التأمين
-    const startDateValue = (isMandatoryInsurance || isCustomsInsurance) ? new Date().toISOString().split('T')[0] : formData.start_date;
+    const startDateValue = (isMandatoryInsurance || isCustomsInsurance) ? getLocalDateString() : formData.start_date;
     const durationValue = formData.duration;
 
     if (startDateValue && durationValue) {

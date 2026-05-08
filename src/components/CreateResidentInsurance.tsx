@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateString = (date: Date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // قائمة الجنسيات (جميع دول العالم ما عدا إسرائيل)
 const NATIONALITIES = [
   { ar: 'مصري', en: 'Egyptian' },
@@ -275,7 +283,7 @@ export default function CreateResidentInsurance() {
         endDate.setDate(endDate.getDate() + days);
         setFormData(prev => ({
           ...prev,
-          end_date: endDate.toISOString().split('T')[0]
+          end_date: getLocalDateString(endDate)
         }));
       }
     }
@@ -289,7 +297,7 @@ export default function CreateResidentInsurance() {
       birthDate.setFullYear(today.getFullYear() - formData.main_passenger_age);
       setFormData(prev => ({
         ...prev,
-        main_passenger_birth_date: birthDate.toISOString().split('T')[0]
+        main_passenger_birth_date: getLocalDateString(birthDate)
       }));
     }
   }, [formData.main_passenger_age]);
@@ -418,7 +426,7 @@ export default function CreateResidentInsurance() {
         const today = new Date();
         const birthDate = new Date(today);
         birthDate.setFullYear(today.getFullYear() - member.age);
-        handleFamilyMemberChange(member.id, 'birth_date', birthDate.toISOString().split('T')[0]);
+        handleFamilyMemberChange(member.id, 'birth_date', getLocalDateString(birthDate));
       }
     });
   }, [familyMembers.map(m => m.age).join(',')]);
