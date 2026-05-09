@@ -307,7 +307,7 @@ export default function ViewInsuranceDocument() {
                 {document.eidc_pdf_url && (
                   <button
                     className="back-button print-button"
-                    onClick={() => window.open(document.eidc_pdf_url, '_blank')}
+                    onClick={() => window.open(`${document.eidc_pdf_url}?t=${new Date().getTime()}`, '_blank')}
                     style={{ background: '#0284c7', borderColor: '#0284c7' }}
                   >
                     <i className="fa-solid fa-file-pdf"></i>
@@ -466,7 +466,7 @@ export default function ViewInsuranceDocument() {
                             <tr>
                               <td style={{ fontWeight: 'bold' }}>رقم الوثيقة (الهيئة)</td>
                               <td>
-                                <a href={document.eidc_pdf_url} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: 'bold' }}>
+                                <a href={`${document.eidc_pdf_url}?t=${new Date().getTime()}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: 'bold' }}>
                                   {document.eidc_policy_id} <i className="fa-solid fa-external-link" style={{ fontSize: '10px' }}></i>
                                 </a>
                               </td>
