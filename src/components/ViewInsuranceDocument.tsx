@@ -180,7 +180,7 @@ export default function ViewInsuranceDocument() {
             {[
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/insurance-documents') },
               { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
-              ...(document.eidc_pdf_url ? [{ label: 'وثيقة الهيئة (PDF)', icon: 'fa-file-pdf', bg: '#0284c7', border: '#0284c7', color: '#fff', onClick: () => window.open(`${document.eidc_pdf_url}?t=${Date.now()}`, '_blank') }] : []),
+              ...(document.eidc_pdf_url ? [{ label: 'وثيقة الهيئة (PDF)', icon: 'fa-file-pdf', bg: '#0284c7', border: '#0284c7', color: '#fff', onClick: () => window.open(`${API_BASE_URL}/insurance-documents/${id}/eidc-print`, '_blank') }] : []),
               ...(isAdmin ? [{ label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/edit`) }] : []),
               { label: 'نقل ملكية', icon: 'fa-exchange-alt', bg: '#10b981', border: '#10b981', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/transfer-ownership`) },
             ].map((btn, i) => (
@@ -235,7 +235,7 @@ export default function ViewInsuranceDocument() {
                   {document.eidc_transaction_code && <Row label="كود المعاملة (الهيئة)" value={document.eidc_transaction_code} />}
                   {document.eidc_policy_id && (
                     <Row label="رقم الوثيقة (الهيئة)" value={
-                      <a href={`${document.eidc_pdf_url}?t=${Date.now()}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: '700' }}>
+                      <a href={`${API_BASE_URL}/insurance-documents/${id}/eidc-print`} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: '700' }}>
                         {document.eidc_policy_id} <i className="fa-solid fa-external-link" style={{ fontSize: '10px' }}></i>
                       </a>
                     } />

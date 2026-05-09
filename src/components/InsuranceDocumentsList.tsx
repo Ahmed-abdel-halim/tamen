@@ -530,7 +530,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               )}
                               {doc.eidc_pdf_url && (
                                 <button
-                                  onClick={() => window.open(`${doc.eidc_pdf_url!}?t=${new Date().getTime()}`, '_blank')}
+                                  onClick={() => window.open(`${API_BASE_URL}/insurance-documents/${doc.id}/eidc-print`, '_blank')}
                                   className="action-btn"
                                   title="طابعة الهيئة"
                                   style={{ background: '#7c3aed', color: '#fff' }}

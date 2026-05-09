@@ -85,6 +85,146 @@ const ENGINE_POWERS_INDUSTRIAL = [
   'ألات تعبيد الطرق',
 ];
 
+// خيارات الجنسية
+const NATIONALITIES = ['ليبي', 'مصري', 'تونسي','المغرب','العراق'];
+
+// خيارات البريد الإلكتروني
+const EMAIL_OPTIONS = ['info@mli.ly', 'fake@example.com'];
+
+// خيارات المدن الليبية
+const LIBYAN_CITIES = [
+  'طرابلس', 'بنغازي', 'مصراتة', 'الزاوية', 'زليتن', 'البيضاء', 'غريان', 'طبرق', 'صبراتة', 'سبها', 'الخمس', 'سرت', 'الجميل', 'الكفرة', 'المرج', 'درنة', 'تارونا', 'بني وليد', 'أجدابيا', 'الأبيار'
+];
+
+// خيارات رقم المحرك
+const ENGINE_NUMBERS = ['123456'];
+
+// خيارات قوة المحرك بالحصان (1 إلى 100)
+const ENGINE_POWERS_LIST = Array.from({ length: 100 }, (_, i) => (i + 1).toString());
+
+// خيارات سعة المحرك (1000 إلى 10000) بتدرج 500
+const ENGINE_CC_LIST = Array.from({ length: 19 }, (_, i) => (1000 + (i * 500)).toString());
+
+// خيارات عدد الركاب (1 إلى 100)
+const PASSENGER_COUNTS = Array.from({ length: 100 }, (_, i) => (i + 1).toString());
+
+// خيارات وزن المركبة
+const VEHICLE_WEIGHTS = [
+  '500 كيلو', '1 طن', '2 طن', '3 طن', '4 طن', '5 طن', '6 طن', '7 طن', '8 طن', '9 طن', '10 طن'
+];
+
+/**
+ * مكون Combobox يسمح بالاختيار من قائمة أو إدخال قيمة جديدة
+ */
+const Combobox = ({ 
+  label, 
+  value, 
+  options, 
+  onChange, 
+  error, 
+  placeholder = "اختر من القائمة...",
+  type = "text"
+}: { 
+  label: string, 
+  value: string, 
+  options: string[], 
+  onChange: (val: string) => void, 
+  error?: string,
+  placeholder?: string,
+  type?: string
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isManual, setIsManual] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`form-group ${error ? 'has-error' : ''}`} ref={containerRef}>
+      {error ? (
+        <span className="error-message">{error}</span>
+      ) : (
+        <label>{label}</label>
+      )}
+      <div className="combobox-container">
+        <div className="combobox-input-wrapper">
+          <input
+            ref={inputRef}
+            type={type}
+            value={value}
+            onChange={(e) => {
+              onChange(e.target.value);
+              if (e.target.value === "") setIsManual(true);
+            }}
+            onFocus={() => !isManual && setIsOpen(true)}
+            onClick={() => !isManual && setIsOpen(true)}
+            placeholder={isManual ? "أدخل القيمة الجديدة..." : placeholder}
+            autoComplete="off"
+          />
+          {!isManual ? (
+            <i 
+              className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} 
+              style={{ position: 'absolute', left: '10px', cursor: 'pointer', color: '#64748b' }}
+              onClick={() => setIsOpen(!isOpen)}
+            ></i>
+          ) : (
+            <i 
+              className="fas fa-rotate-left" 
+              style={{ position: 'absolute', left: '10px', cursor: 'pointer', color: '#2563eb', fontSize: '0.8rem' }}
+              title="العودة للقائمة"
+              onClick={() => {
+                setIsManual(false);
+                setIsOpen(true);
+                onChange("");
+              }}
+            ></i>
+          )}
+        </div>
+        {isOpen && (
+          <div className="combobox-dropdown animate-fade-in">
+            {options.map((opt, i) => (
+              <div 
+                key={i} 
+                className="combobox-option"
+                onClick={() => {
+                  onChange(opt);
+                  setIsManual(false);
+                  setIsOpen(false);
+                }}
+              >
+                {opt}
+              </div>
+            ))}
+            <div 
+              className="combobox-option add-new"
+              onClick={() => {
+                onChange("");
+                setIsManual(true);
+                setIsOpen(false);
+                // تصفير الحقل وتركيز المؤشر للكتابة الفورية
+                setTimeout(() => {
+                  inputRef.current?.focus();
+                }, 0);
+              }}
+            >
+              <i className="fa-solid fa-plus-circle" style={{ marginLeft: '8px' }}></i> أخرى / كتابة يدوية...
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function CreateInsuranceDocument() {
   const navigate = useNavigate();
   const [plates, setPlates] = useState<Plate[]>([]);
@@ -1990,13 +2130,28 @@ export default function CreateInsuranceDocument() {
     }
     if (!formData.phone || !formData.phone.trim()) {
       errors.phone = 'رقم الهاتف مطلوب';
+    } else if (!/^\d{10}$/.test(formData.phone.trim())) {
+      errors.phone = 'رقم الهاتف يجب أن يتكون من 10 أرقام';
+    }
+    
+    if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
+      errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    } else if (!/^\d{10}$/.test(formData.whatsapp_number.trim())) {
+      errors.whatsapp_number = 'رقم الواتساب يجب أن يتكون من 10 أرقام';
     }
 
-    // EIDC Specific Validations
+    if (!formData.nationality || !formData.nationality.trim()) {
+      errors.nationality = 'الجنسية مطلوبة';
+    }
+    if (!formData.address || !formData.address.trim()) {
+      errors.address = 'العنوان التفصيلي مطلوب';
+    }
+    if (!formData.nid_passport || !formData.nid_passport.trim()) {
+      errors.nid_passport = 'رقم الهوية الوطنية أو جواز السفر مطلوب';
+    } else if (!/^\d{12}$/.test(formData.nid_passport.trim())) {
+      errors.nid_passport = 'رقم الهوية يجب أن يتكون من 12 رقم';
+    }
     if (isMandatoryInsurance) {
-      if (!formData.nid_passport || !formData.nid_passport.trim()) {
-        errors.nid_passport = 'رقم الهوية الوطنية أو جواز السفر مطلوب للهيئة';
-      }
       if (!formData.premium || parseFloat(formData.premium) <= 0) {
         errors.premium = 'يجب احتساب القسط من منظومة الهيئة أولاً. تأكد من إدخال كافة البيانات بشكل صحيح.';
       }
@@ -2297,6 +2452,60 @@ export default function CreateInsuranceDocument() {
                   background: var(--input-bg, #fff) !important;
                   width: 100% !important;
                 }
+                .form-group.has-error input,
+                .form-group.has-error select,
+                .form-group.has-error .select-display {
+                  border-color: #ef4444 !important;
+                  background-color: #fef2f2 !important;
+                }
+                .error-message {
+                  color: #ef4444;
+                  font-size: 0.8rem;
+                  font-weight: 700;
+                  margin-bottom: 2px;
+                  display: block;
+                  animation: slideDown 0.2s ease-out;
+                }
+                @keyframes slideDown {
+                  from { opacity: 0; transform: translateY(-5px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+                .combobox-container {
+                  position: relative;
+                  width: 100%;
+                }
+                .combobox-input-wrapper {
+                  position: relative;
+                  display: flex;
+                  align-items: center;
+                }
+                .combobox-dropdown {
+                  position: absolute;
+                  top: 100%;
+                  left: 0;
+                  right: 0;
+                  background: white;
+                  border: 1px solid #cbd5e1;
+                  border-radius: 6px;
+                  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+                  z-index: 50;
+                  max-height: 200px;
+                  overflow-y: auto;
+                }
+                .combobox-option {
+                  padding: 8px 12px;
+                  cursor: pointer;
+                  font-weight: 600;
+                }
+                .combobox-option:hover {
+                  background-color: #f1f5f9;
+                }
+                .combobox-option.add-new {
+                  color: #2563eb;
+                  border-top: 1px solid #e2e8f0;
+                  font-style: italic;
+                }
+
                 .price-input-wrapper .currency {
                   font-size: 12px !important;
                   font-weight: 700 !important;
@@ -2384,8 +2593,12 @@ export default function CreateInsuranceDocument() {
                   <div className="grid-header"><i className="fa-solid fa-user-shield"></i> بيانات المؤمن له والمشترك</div>
 
 
-                  <div className="form-group span-2">
-                    <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
+                  <div className={`form-group span-2 ${formErrors.insured_name ? 'has-error' : ''}`}>
+                    {formErrors.insured_name ? (
+                      <span className="error-message">{formErrors.insured_name}</span>
+                    ) : (
+                      <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
+                    )}
                     <input
                       type="text"
                       id="insured_name"
@@ -2393,38 +2606,60 @@ export default function CreateInsuranceDocument() {
                       onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
                       placeholder="اسم المؤمن له كما في الإثبات"
                     />
-                    {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="nationality">الجنسية <span className="required">*</span></label>
-                    <input type="text" id="nationality" value={formData.nationality} onChange={(e) => setFormData({ ...formData, nationality: e.target.value })} />
-                  </div>
+                  <Combobox 
+                    label="الجنسية" 
+                    value={formData.nationality} 
+                    options={NATIONALITIES} 
+                    onChange={(val) => setFormData({ ...formData, nationality: val })} 
+                    error={formErrors.nationality}
+                  />
 
-                  <div className="form-group">
-                    <label htmlFor="nid_passport">رقم الهوية / الجواز <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.nid_passport ? 'has-error' : ''}`}>
+                    {formErrors.nid_passport ? (
+                      <span className="error-message">{formErrors.nid_passport}</span>
+                    ) : (
+                      <label htmlFor="nid_passport">رقم الهوية / الجواز <span className="required">*</span></label>
+                    )}
                     <input type="text" id="nid_passport" value={formData.nid_passport} onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })} />
                   </div>
 
-                  <div className="form-group span-2">
-                    <label htmlFor="email">البريد الإلكتروني</label>
-                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="info@mli.ly" />
-                  </div>
+                  <Combobox 
+                    label="البريد الإلكتروني" 
+                    value={formData.email} 
+                    options={EMAIL_OPTIONS} 
+                    onChange={(val) => setFormData({ ...formData, email: val })} 
+                    error={formErrors.email}
+                    type="email"
+                  />
 
-                  <div className="form-group">
-                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.phone ? 'has-error' : ''}`}>
+                    {formErrors.phone ? (
+                      <span className="error-message">{formErrors.phone}</span>
+                    ) : (
+                      <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                    )}
                     <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="whatsapp_number">رقم الواتساب</label>
+                  <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
+                    {formErrors.whatsapp_number ? (
+                      <span className="error-message">{formErrors.whatsapp_number}</span>
+                    ) : (
+                      <label htmlFor="whatsapp_number">رقم الواتساب <span className="required">*</span></label>
+                    )}
                     <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} />
                   </div>
 
-                  <div className="form-group span-2">
-                    <label htmlFor="address">العنوان التفصيلي <span className="required">*</span></label>
-                    <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="مثلاً: طرابلس - حي الأندلس" />
-                  </div>
+                  <Combobox 
+                    label="العنوان التفصيلي" 
+                    value={formData.address} 
+                    options={LIBYAN_CITIES} 
+                    onChange={(val) => setFormData({ ...formData, address: val })} 
+                    error={formErrors.address}
+                    placeholder="اختر مدينة أو أدخل عنواناً تفصيلياً..."
+                  />
 
                   <div className="form-group">
                     <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
@@ -2453,22 +2688,35 @@ export default function CreateInsuranceDocument() {
 
                   <div className="grid-header"><i className="fa-solid fa-car"></i> بيانات المركبة</div>
 
-                  <div className="form-group">
-                    <label>الجهة المقيد بها <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.plate_id ? 'has-error' : ''}`}>
+                    {formErrors.plate_id ? (
+                      <span className="error-message">{formErrors.plate_id}</span>
+                    ) : (
+                      <label>الجهة المقيد بها <span className="required">*</span></label>
+                    )}
                     <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
                       <option value="">اختر الجهة...</option>
                       {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>رقم اللوحة <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.plate_number_manual ? 'has-error' : ''}`}>
+                    {formErrors.plate_number_manual ? (
+                      <span className="error-message">{formErrors.plate_number_manual}</span>
+                    ) : (
+                      <label>رقم اللوحة <span className="required">*</span></label>
+                    )}
                     <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
                   </div>
 
                   <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
                     <label>ماركة السيارة <span className="required">*</span></label>
-                    <div className="searchable-select" onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
+                    <div className={`searchable-select ${formErrors.vehicle_type_id ? 'has-error' : ''}`} onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
+                      {formErrors.vehicle_type_id ? (
+                        <span className="error-message">{formErrors.vehicle_type_id}</span>
+                      ) : (
+                        <label>ماركة السيارة <span className="required">*</span></label>
+                      )}
                       <div className="select-display">{selectedBrand || 'اختر الماركة...'}</div>
                       <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}></i>
                     </div>
@@ -2499,78 +2747,131 @@ export default function CreateInsuranceDocument() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>رقم الهيكل <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.chassis_number ? 'has-error' : ''}`}>
+                    {formErrors.chassis_number ? (
+                      <span className="error-message">{formErrors.chassis_number}</span>
+                    ) : (
+                      <label>رقم الهيكل <span className="required">*</span></label>
+                    )}
                     <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
                   </div>
 
-                  <div className="form-group">
-                    <label>رقم المحرك <span className="required">*</span></label>
-                    <input type="text" value={formData.engine_number} onChange={(e) => setFormData({ ...formData, engine_number: e.target.value })} />
-                  </div>
+                  <Combobox 
+                    label="رقم المحرك" 
+                    value={formData.engine_number} 
+                    options={ENGINE_NUMBERS} 
+                    onChange={(val) => setFormData({ ...formData, engine_number: val })} 
+                    error={formErrors.engine_number}
+                  />
 
-                  <div className="form-group">
-                    <label>سنة الصنع <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.year ? 'has-error' : ''}`}>
+                    {formErrors.year ? (
+                      <span className="error-message">{formErrors.year}</span>
+                    ) : (
+                      <label>سنة الصنع <span className="required">*</span></label>
+                    )}
                     <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
                       <option value="">اختر...</option>
                       {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>اللون <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.color ? 'has-error' : ''}`}>
+                    {formErrors.color ? (
+                      <span className="error-message">{formErrors.color}</span>
+                    ) : (
+                      <label>اللون <span className="required">*</span></label>
+                    )}
                     <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
                       <option value="">اختر...</option>
                       {colors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>الغرض من الترخيص <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.license_purpose ? 'has-error' : ''}`}>
+                    {formErrors.license_purpose ? (
+                      <span className="error-message">{formErrors.license_purpose}</span>
+                    ) : (
+                      <label>الغرض من الترخيص <span className="required">*</span></label>
+                    )}
                     <select value={formData.license_purpose} onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}>
                       <option value="">اختر...</option>
                       {LICENSE_PURPOSES.map(lp => <option key={lp.ar} value={`${lp.ar}/${lp.en}`}>{lp.ar}</option>)}
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>قوة المحرك (حصان) <span className="required">*</span></label>
-                    <input type="number" value={formData.engine_power} onChange={(e) => setFormData({ ...formData, engine_power: e.target.value })} />
-                  </div>
+                  <Combobox 
+                    label="قوة المحرك (حصان)" 
+                    value={formData.engine_power} 
+                    options={ENGINE_POWERS_LIST} 
+                    onChange={(val) => setFormData({ ...formData, engine_power: val })} 
+                    error={formErrors.engine_power}
+                    type="text"
+                  />
 
-                  <div className="form-group">
-                    <label>سعة المحرك (CC) <span className="required">*</span></label>
-                    <input type="text" value={formData.engine_cc} onChange={(e) => setFormData({ ...formData, engine_cc: e.target.value })} />
-                  </div>
+                  <Combobox 
+                    label="سعة المحرك (CC)" 
+                    value={formData.engine_cc} 
+                    options={ENGINE_CC_LIST} 
+                    onChange={(val) => setFormData({ ...formData, engine_cc: val })} 
+                    error={formErrors.engine_cc}
+                  />
 
-                  <div className="form-group">
-                    <label>عدد الركاب <span className="required">*</span></label>
-                    <input type="number" value={formData.authorized_passengers} onChange={(e) => setFormData({ ...formData, authorized_passengers: e.target.value })} />
-                  </div>
+                  <Combobox 
+                    label="عدد الركاب" 
+                    value={formData.authorized_passengers} 
+                    options={PASSENGER_COUNTS} 
+                    onChange={(val) => setFormData({ ...formData, authorized_passengers: val })} 
+                    error={formErrors.authorized_passengers}
+                    type="text"
+                  />
 
-                  <div className="form-group">
-                    <label>الحمولة (بالطن)</label>
+                  <div className={`form-group ${formErrors.load_capacity ? 'has-error' : ''}`}>
+                    {formErrors.load_capacity ? (
+                      <span className="error-message">{formErrors.load_capacity}</span>
+                    ) : (
+                      <label>الحمولة (بالطن)</label>
+                    )}
                     <input type="number" value={formData.load_capacity} onChange={(e) => setFormData({ ...formData, load_capacity: e.target.value })} />
                   </div>
 
-                  <div className="form-group">
-                    <label>وزن المركبة</label>
-                    <input type="text" value={formData.vehicle_weight} onChange={(e) => setFormData({ ...formData, vehicle_weight: e.target.value })} />
-                  </div>
+                  <Combobox 
+                    label="وزن المركبة" 
+                    value={formData.vehicle_weight} 
+                    options={VEHICLE_WEIGHTS} 
+                    onChange={(val) => setFormData({ ...formData, vehicle_weight: val })} 
+                    error={formErrors.vehicle_weight}
+                  />
 
-                  <div className="grid-header"><i className="fa-solid fa-calculator"></i> بيانات احتساب القسط والاشتراك (EIDC)</div>
+                  <div className="grid-header">
+                    <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط والاشتراك (EIDC)
+                  </div>
+                  {formErrors.premium && (
+                    <div className="span-4" style={{ background: '#fef2f2', border: '1px solid #ef4444', color: '#b91c1c', padding: '10px 15px', borderRadius: '8px', marginBottom: '10px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                      <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '8px' }}></i>
+                      {formErrors.premium}
+                    </div>
+                  )}
 
                   <div className="span-4 modern-grid-3">
-                    <div className="form-group">
-                      <label>نوع المركبة (هيئة) <span className="required">*</span></label>
+                    <div className={`form-group ${formErrors.eidc_vehicle_type_id ? 'has-error' : ''}`}>
+                      {formErrors.eidc_vehicle_type_id ? (
+                        <span className="error-message">{formErrors.eidc_vehicle_type_id}</span>
+                      ) : (
+                        <label>نوع المركبة (هيئة) <span className="required">*</span></label>
+                      )}
                       <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_type_id: e.target.value, eidc_vehicle_spec_id: '', eidc_vehicle_detail_id: '' })}>
                         <option value="">-- اختر --</option>
                         {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
                       </select>
                     </div>
 
-                    <div className="form-group">
-                      <label>النوع المحدد (هيئة) <span className="required">*</span></label>
+                    <div className={`form-group ${formErrors.eidc_vehicle_spec_id ? 'has-error' : ''}`}>
+                      {formErrors.eidc_vehicle_spec_id ? (
+                        <span className="error-message">{formErrors.eidc_vehicle_spec_id}</span>
+                      ) : (
+                        <label>النوع المحدد (هيئة) <span className="required">*</span></label>
+                      )}
                       <select
                         value={formData.eidc_vehicle_spec_id}
                         onChange={(e) => setFormData({ ...formData, eidc_vehicle_spec_id: e.target.value, eidc_vehicle_detail_id: '' })}
@@ -2692,15 +2993,58 @@ export default function CreateInsuranceDocument() {
                 <div className="modern-grid-4">
                   <div className="grid-header"><i className="fa-solid fa-user-tag"></i> بيانات المؤمن له</div>
 
-                  <div className="form-group span-2">
-                    <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
+                  <div className={`form-group span-2 ${formErrors.insured_name ? 'has-error' : ''}`}>
+                    {formErrors.insured_name ? (
+                      <span className="error-message">{formErrors.insured_name}</span>
+                    ) : (
+                      <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
+                    )}
                     <input type="text" id="insured_name" value={formData.insured_name} onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })} />
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                  <Combobox 
+                    label="الجنسية" 
+                    value={formData.nationality} 
+                    options={NATIONALITIES} 
+                    onChange={(val) => setFormData({ ...formData, nationality: val })} 
+                    error={formErrors.nationality}
+                  />
+
+                  <div className={`form-group ${formErrors.nid_passport ? 'has-error' : ''}`}>
+                    {formErrors.nid_passport ? (
+                      <span className="error-message">{formErrors.nid_passport}</span>
+                    ) : (
+                      <label htmlFor="nid_passport">رقم الهوية / الجواز <span className="required">*</span></label>
+                    )}
+                    <input type="text" id="nid_passport" value={formData.nid_passport} onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })} />
+                  </div>
+
+                  <div className={`form-group ${formErrors.phone ? 'has-error' : ''}`}>
+                    {formErrors.phone ? (
+                      <span className="error-message">{formErrors.phone}</span>
+                    ) : (
+                      <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                    )}
                     <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                   </div>
+
+                  <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
+                    {formErrors.whatsapp_number ? (
+                      <span className="error-message">{formErrors.whatsapp_number}</span>
+                    ) : (
+                      <label htmlFor="whatsapp_number">رقم الواتساب <span className="required">*</span></label>
+                    )}
+                    <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} />
+                  </div>
+
+                  <Combobox 
+                    label="العنوان التفصيلي" 
+                    value={formData.address} 
+                    options={LIBYAN_CITIES} 
+                    onChange={(val) => setFormData({ ...formData, address: val })} 
+                    error={formErrors.address}
+                    placeholder="اختر مدينة أو أدخل عنواناً تفصيلياً..."
+                  />
 
                   <div className="form-group">
                     <label htmlFor="duration">مدة التأمين <span className="required">*</span></label>
@@ -2710,10 +3054,14 @@ export default function CreateInsuranceDocument() {
                     </select>
                   </div>
 
-                  <div className="form-group span-2">
-                    <label htmlFor="email">البريد الإلكتروني</label>
-                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="info@mli.ly" />
-                  </div>
+                  <Combobox 
+                    label="البريد الإلكتروني" 
+                    value={formData.email} 
+                    options={EMAIL_OPTIONS} 
+                    onChange={(val) => setFormData({ ...formData, email: val })} 
+                    error={formErrors.email}
+                    type="email"
+                  />
 
                   <div className="grid-header"><i className="fa-solid fa-car-side"></i> بيانات المركبة</div>
 
@@ -2724,8 +3072,12 @@ export default function CreateInsuranceDocument() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>رقم اللوحة <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.plate_number_manual ? 'has-error' : ''}`}>
+                    {formErrors.plate_number_manual ? (
+                      <span className="error-message">{formErrors.plate_number_manual}</span>
+                    ) : (
+                      <label>رقم اللوحة <span className="required">*</span></label>
+                    )}
                     <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
                   </div>
 
@@ -2736,8 +3088,12 @@ export default function CreateInsuranceDocument() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>رقم الهيكل <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.chassis_number ? 'has-error' : ''}`}>
+                    {formErrors.chassis_number ? (
+                      <span className="error-message">{formErrors.chassis_number}</span>
+                    ) : (
+                      <label>رقم الهيكل <span className="required">*</span></label>
+                    )}
                     <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
                   </div>
 
