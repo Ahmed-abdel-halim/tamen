@@ -1915,11 +1915,26 @@ tbody tr:last-child td {
 
 [data-theme='dark'] .pagination-btn {
   background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme='dark'] .pagination-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
 }
 
 [data-theme='dark'] .pagination-number.active {
-  background: var(--accent);
-  color: white;
+  background: var(--accent-cyan) !important;
+  color: #000 !important;
+  border-color: var(--accent-cyan) !important;
+  font-weight: 800;
+  box-shadow: 0 0 15px var(--accent-shadow);
+}
+
+[data-theme='dark'] .pagination-info {
+  color: var(--muted);
 }
 
 .pagination-dots {
@@ -2886,7 +2901,7 @@ tbody tr:last-child td {
 
 .pagination-info {
   font-size: 13px;
-  color: #000;
+  color: var(--muted);
 }
 
 .pagination-controls {
@@ -2898,10 +2913,10 @@ tbody tr:last-child td {
 
 .pagination-btn {
   padding: 7px 14px;
-  border: 1px solid #000;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
-  color: #000;
+  background: var(--panel);
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -8731,7 +8746,7 @@ tbody tr:last-child td {
 
 .pagination-info {
   font-size: 13px;
-  color: #000;
+  color: var(--muted);
 }
 
 .pagination-controls {
@@ -8741,10 +8756,10 @@ tbody tr:last-child td {
 
 .pagination-btn {
   padding: 7px 14px;
-  border: 1px solid #000;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
-  color: #000;
+  background: var(--panel);
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -8777,10 +8792,10 @@ tbody tr:last-child td {
 
 .pagination-number {
   padding: 7px 10px;
-  border: 1px solid #000;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
-  color: #000;
+  background: var(--panel);
+  color: var(--text);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;

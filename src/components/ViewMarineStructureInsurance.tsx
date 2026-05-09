@@ -2,256 +2,62 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
-// قائمة بلدان الصنع (جميع دول العالم عدا إسرائيل)
-const COUNTRIES = [
-  { ar: 'مصري', en: 'Egyptian' },
-  { ar: 'سوداني', en: 'Sudanese' },
-  { ar: 'ليبي', en: 'Libyan' },
-  { ar: 'تونسي', en: 'Tunisian' },
-  { ar: 'جزائري', en: 'Algerian' },
-  { ar: 'مغربي', en: 'Moroccan' },
-  { ar: 'موريتاني', en: 'Mauritanian' },
-  { ar: 'صحراوي', en: 'Sahrawi' },
-  { ar: 'تشادي', en: 'Chadian' },
-  { ar: 'نيجري', en: 'Nigerien' },
-  { ar: 'مالي', en: 'Malian' },
-  { ar: 'سنغالي', en: 'Senegalese' },
-  { ar: 'غامبي', en: 'Gambian' },
-  { ar: 'غيني', en: 'Guinean' },
-  { ar: 'غيني-بيساوي', en: 'Bissau-Guinean' },
-  { ar: 'سيراليوني', en: 'Sierra Leonean' },
-  { ar: 'ليبيري', en: 'Liberian' },
-  { ar: 'إيفواري (ساحل العاج)', en: 'Ivorian' },
-  { ar: 'غاني', en: 'Ghanaian' },
-  { ar: 'توغولي', en: 'Togolese' },
-  { ar: 'بنيني', en: 'Beninese' },
-  { ar: 'نيجيري', en: 'Nigerian' },
-  { ar: 'كاميروني', en: 'Cameroonian' },
-  { ar: 'كونغولي', en: 'Congolese' },
-  { ar: 'كونغولي (جمهورية الكونغو الديمقراطية)', en: 'Congolese (DRC)' },
-  { ar: 'أنغولي', en: 'Angolan' },
-  { ar: 'زامبي', en: 'Zambian' },
-  { ar: 'زيمبابوي', en: 'Zimbabwean' },
-  { ar: 'بوتسواني', en: 'Botswanan' },
-  { ar: 'ناميبي', en: 'Namibian' },
-  { ar: 'ليسوتوي', en: 'Basotho' },
-  { ar: 'إسواتيني', en: 'Swazi' },
-  { ar: 'مدغشقري', en: 'Malagasy' },
-  { ar: 'موريشي', en: 'Mauritian' },
-  { ar: 'سيشيلي', en: 'Seychellois' },
-  { ar: 'جزر قمري', en: 'Comorian' },
-  { ar: 'جيبوتي', en: 'Djiboutian' },
-  { ar: 'صومالي', en: 'Somali' },
-  { ar: 'إثيوبي', en: 'Ethiopian' },
-  { ar: 'إريتري', en: 'Eritrean' },
-  { ar: 'جنوب سوداني', en: 'South Sudanese' },
-  { ar: 'أوغندي', en: 'Ugandan' },
-  { ar: 'كيني', en: 'Kenyan' },
-  { ar: 'تنزاني', en: 'Tanzanian' },
-  { ar: 'رواندي', en: 'Rwandan' },
-  { ar: 'بوروندي', en: 'Burundian' },
-  { ar: 'ملاوي', en: 'Malawian' },
-  { ar: 'موزمبيقي', en: 'Mozambican' },
-  { ar: 'سعودي', en: 'Saudi' },
-  { ar: 'كويتي', en: 'Kuwaiti' },
-  { ar: 'قطري', en: 'Qatari' },
-  { ar: 'بحريني', en: 'Bahraini' },
-  { ar: 'إماراتي', en: 'Emirati' },
-  { ar: 'عماني', en: 'Omani' },
-  { ar: 'يمني', en: 'Yemeni' },
-  { ar: 'عراقي', en: 'Iraqi' },
-  { ar: 'سوري', en: 'Syrian' },
-  { ar: 'لبناني', en: 'Lebanese' },
-  { ar: 'أردني', en: 'Jordanian' },
-  { ar: 'فلسطيني', en: 'Palestinian' },
-  { ar: 'تركي', en: 'Turkish' },
-  { ar: 'إيراني', en: 'Iranian' },
-  { ar: 'أفغاني', en: 'Afghan' },
-  { ar: 'باكستاني', en: 'Pakistani' },
-  { ar: 'هندي', en: 'Indian' },
-  { ar: 'نيبالي', en: 'Nepali' },
-  { ar: 'بنغلاديشي', en: 'Bangladeshi' },
-  { ar: 'سريلانكي', en: 'Sri Lankan' },
-  { ar: 'بوتاني', en: 'Bhutanese' },
-  { ar: 'مالديفي', en: 'Maldivian' },
-  { ar: 'صيني', en: 'Chinese' },
-  { ar: 'ياباني', en: 'Japanese' },
-  { ar: 'كوري جنوبي', en: 'South Korean' },
-  { ar: 'كوري شمالي', en: 'North Korean' },
-  { ar: 'منغولي', en: 'Mongolian' },
-  { ar: 'كازاخستاني', en: 'Kazakh' },
-  { ar: 'أوزبكي', en: 'Uzbek' },
-  { ar: 'تركماني', en: 'Turkmen' },
-  { ar: 'طاجيكي', en: 'Tajik' },
-  { ar: 'قيرغيزي', en: 'Kyrgyz' },
-  { ar: 'ميانماري', en: 'Burmese' },
-  { ar: 'تايلاندي', en: 'Thai' },
-  { ar: 'كامبودي', en: 'Cambodian' },
-  { ar: 'فيتنامي', en: 'Vietnamese' },
-  { ar: 'لاوسي', en: 'Laotian' },
-  { ar: 'ماليزاي', en: 'Malaysian' },
-  { ar: 'سنغافوري', en: 'Singaporean' },
-  { ar: 'إندونيسي', en: 'Indonesian' },
-  { ar: 'فلبيني', en: 'Filipino' },
-  { ar: 'تيموري', en: 'Timorese' },
-  { ar: 'جورجي', en: 'Georgian' },
-  { ar: 'أرميني', en: 'Armenian' },
-  { ar: 'أذربيجاني', en: 'Azerbaijani' },
-  { ar: 'قبرصي', en: 'Cypriot' },
-  { ar: 'بريطاني', en: 'British' },
-  { ar: 'إنجليزي', en: 'English' },
-  { ar: 'إسكتلندي', en: 'Scottish' },
-  { ar: 'ويلزي', en: 'Welsh' },
-  { ar: 'إيرلندي', en: 'Irish' },
-  { ar: 'فرنسي', en: 'French' },
-  { ar: 'ألماني', en: 'German' },
-  { ar: 'إيطالي', en: 'Italian' },
-  { ar: 'إسباني', en: 'Spanish' },
-  { ar: 'برتغالي', en: 'Portuguese' },
-  { ar: 'هولندي', en: 'Dutch' },
-  { ar: 'بلجيكي', en: 'Belgian' },
-  { ar: 'لوكسمبورغي', en: 'Luxembourger' },
-  { ar: 'نمساوي', en: 'Austrian' },
-  { ar: 'سويسري', en: 'Swiss' },
-  { ar: 'دنماركي', en: 'Danish' },
-  { ar: 'سويدي', en: 'Swedish' },
-  { ar: 'نرويجي', en: 'Norwegian' },
-  { ar: 'فنلندي', en: 'Finnish' },
-  { ar: 'آيسلندي', en: 'Icelandic' },
-  { ar: 'بولندي', en: 'Polish' },
-  { ar: 'تشيكي', en: 'Czech' },
-  { ar: 'سلوفاكي', en: 'Slovak' },
-  { ar: 'هنغاري', en: 'Hungarian' },
-  { ar: 'روماني', en: 'Romanian' },
-  { ar: 'بلغاري', en: 'Bulgarian' },
-  { ar: 'صربي', en: 'Serbian' },
-  { ar: 'كرواتي', en: 'Croatian' },
-  { ar: 'بوسني', en: 'Bosnian' },
-  { ar: 'سلوفيني', en: 'Slovenian' },
-  { ar: 'مقدوني', en: 'Macedonian' },
-  { ar: 'ألباني', en: 'Albanian' },
-  { ar: 'يوناني', en: 'Greek' },
-  { ar: 'مالطي', en: 'Maltese' },
-  { ar: 'ليتواني', en: 'Lithuanian' },
-  { ar: 'لاتفي', en: 'Latvian' },
-  { ar: 'إستوني', en: 'Estonian' },
-  { ar: 'أوكراني', en: 'Ukrainian' },
-  { ar: 'روسي', en: 'Russian' },
-  { ar: 'بيلاروسي', en: 'Belarusian' },
-  { ar: 'مولدوفي', en: 'Moldovan' },
-  { ar: 'أمريكي', en: 'American' },
-  { ar: 'كندي', en: 'Canadian' },
-  { ar: 'مكسيكي', en: 'Mexican' },
-  { ar: 'غواتيمالي', en: 'Guatemalan' },
-  { ar: 'هندوراسي', en: 'Honduran' },
-  { ar: 'سلفادوري', en: 'Salvadoran' },
-  { ar: 'نيكاراغوي', en: 'Nicaraguan' },
-  { ar: 'كوستاريكي', en: 'Costa Rican' },
-  { ar: 'بانامي', en: 'Panamanian' },
-  { ar: 'كوبي', en: 'Cuban' },
-  { ar: 'دومينيكاني', en: 'Dominican' },
-  { ar: 'هايتي', en: 'Haitian' },
-  { ar: 'جامايكي', en: 'Jamaican' },
-  { ar: 'باهامي', en: 'Bahamian' },
-  { ar: 'بربادوسي', en: 'Barbadian' },
-  { ar: 'ترينيدادي', en: 'Trinidadian' },
-  { ar: 'أنتيغوي', en: 'Antiguan' },
-  { ar: 'سانت لوسي', en: 'Saint Lucian' },
-  { ar: 'غرينادي', en: 'Grenadian' },
-  { ar: 'برازيلي', en: 'Brazilian' },
-  { ar: 'أرجنتيني', en: 'Argentine' },
-  { ar: 'أوروغواياني', en: 'Uruguayan' },
-  { ar: 'باراغوايي', en: 'Paraguayan' },
-  { ar: 'تشيلي', en: 'Chilean' },
-  { ar: 'بوليفي', en: 'Bolivian' },
-  { ar: 'بيروفي', en: 'Peruvian' },
-  { ar: 'إكوادوري', en: 'Ecuadorian' },
-  { ar: 'سورينامي', en: 'Surinamese' },
-  { ar: 'غوياني', en: 'Guyanese' },
-  { ar: 'أسترالي', en: 'Australian' },
-  { ar: 'نيوزيلندي', en: 'New Zealander' },
-  { ar: 'بابواني', en: 'Papuan' },
-  { ar: 'فيجياني', en: 'Fijian' },
-  { ar: 'سامواني', en: 'Samoan' },
-  { ar: 'تونغاني', en: 'Tongan' },
-  { ar: 'فانواتي', en: 'Vanuatuan' },
-  { ar: 'كيريباتي', en: 'Kiribati' },
-  { ar: 'ميكرونيزي', en: 'Micronesian' },
-  { ar: 'مارشالي', en: 'Marshallese' },
-  { ar: 'ناورووي', en: 'Nauruan' },
-  { ar: 'بالاوي', en: 'Palauan' },
-  { ar: 'توفالي', en: 'Tuvaluan' },
-];
 
-// دالة للبحث عن الاسم الإنجليزي المقابل للاسم العربي
-const getCountryDisplay = (arabicName: string): string => {
-  const country = COUNTRIES.find(c => c.ar === arabicName);
-  return country ? `${country.ar} ${country.en}` : arabicName;
-};
+const getCountryDisplay = (name: string): string => name;
 
-type Plate = {
-  id: number;
-  plate_number: string;
-  city: {
-    id: number;
-    name_ar: string;
-    name_en: string;
-    order?: number;
-  };
-};
-
-type Engine = {
-  id: number;
-  engine_type: 'main' | 'auxiliary';
-  engine_model?: string;
-  fuel_type?: string;
-  engine_number?: string;
-  manufacturing_country?: string;
-  horsepower?: number;
-  installation_date?: string;
-  cylinders_count?: number;
-  installation_type?: string;
-};
-
+type Plate = { id: number; plate_number: string; city: { id: number; name_ar: string; name_en: string; order?: number; }; };
+type Engine = { id: number; engine_type: 'main' | 'auxiliary'; engine_model?: string; fuel_type?: string; engine_number?: string; manufacturing_country?: string; horsepower?: number; installation_date?: string; cylinders_count?: number; installation_type?: string; };
 type MarineStructureInsuranceDocument = {
-  id: number;
-  insurance_number: string;
-  issue_date: string;
-  start_date: string;
-  end_date: string;
-  duration: string;
-  structure_type: string;
-  license_type?: string;
-  license_purpose?: string;
-  vessel_name?: string;
-  registration_code?: string;
-  registration_date?: string;
-  port?: string;
-  registration_authority?: Plate;
-  plate_number?: string;
-  hull_number?: string;
-  manufacturing_material?: string;
-  length?: number;
-  width?: number;
-  depth?: number;
-  manufacturing_year?: number;
-  manufacturing_country?: string;
-  color?: string;
-  fuel_tank_capacity?: number;
-  passenger_count?: number;
-  load_capacity?: number;
-  insured_name?: string;
-  phone?: string;
-  whatsapp_number?: string;
-  license_number?: string;
-  premium: number;
-  tax: number;
-  stamp: number;
-  issue_fees: number;
-  supervision_fees: number;
-  total: number;
+  id: number; insurance_number: string; issue_date: string; start_date: string; end_date: string; duration: string;
+  structure_type: string; license_type?: string; license_purpose?: string; vessel_name?: string;
+  registration_code?: string; registration_date?: string; port?: string; registration_authority?: Plate;
+  plate_number?: string; hull_number?: string; manufacturing_material?: string; length?: number;
+  width?: number; depth?: number; manufacturing_year?: number; manufacturing_country?: string;
+  color?: string; fuel_tank_capacity?: number; passenger_count?: number; load_capacity?: number;
+  insured_name?: string; phone?: string; whatsapp_number?: string; license_number?: string;
+  premium: number; tax: number; stamp: number; issue_fees: number; supervision_fees: number; total: number;
   engines?: Engine[];
 };
+
+const toNum = (v: any) => (typeof v === 'number' ? v : parseFloat(String(v)) || 0);
+const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
+const fmtDateTime = (d?: string) => d ? new Date(d).toLocaleString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+
+const Row = ({ label, value, highlight = false }: { label: string; value: React.ReactNode; highlight?: boolean }) => (
+  <div style={{ display: 'flex', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: highlight ? 'rgba(37,99,235,0.06)' : 'transparent', alignItems: 'center', gap: '12px' }}>
+    <span style={{ fontWeight: '700', color: 'var(--muted, #64748b)', fontSize: '0.82rem', minWidth: '140px', flexShrink: 0 }}>{label}</span>
+    <span style={{ fontWeight: highlight ? '800' : '600', color: highlight ? '#1d4ed8' : 'var(--text)', fontSize: highlight ? '1.05rem' : '0.9rem' }}>{value}</span>
+  </div>
+);
+
+const SectionCard = ({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) => (
+  <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+    <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg, #0f172a, #1e40af)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <i className={`fa-solid ${icon}`} style={{ color: '#38bdf8', fontSize: '1rem' }}></i>
+      <span style={{ color: '#fff', fontWeight: '700', fontSize: '0.95rem' }}>{title}</span>
+    </div>
+    <div>{children}</div>
+  </div>
+);
+
+const EngineCard = ({ engine, title }: { engine: Engine | undefined; title: string }) => (
+  <SectionCard title={title} icon="fa-gear">
+    {engine ? (
+      <>
+        {engine.engine_model && <Row label="نوع المحرك" value={engine.engine_model} />}
+        {engine.fuel_type && <Row label="نوع الوقود" value={engine.fuel_type} />}
+        {engine.engine_number && <Row label="رقم المحرك" value={engine.engine_number} />}
+        {engine.manufacturing_country && <Row label="مكان الصنع" value={getCountryDisplay(engine.manufacturing_country)} />}
+        {engine.horsepower && <Row label="القوة بالحصان" value={`${engine.horsepower} حصان`} />}
+        {engine.installation_date && <Row label="تاريخ التركيب" value={fmtDate(engine.installation_date)} />}
+        {engine.cylinders_count && <Row label="عدد الإسطوانات" value={engine.cylinders_count} />}
+        {engine.installation_type && <Row label="تركيب المحرك" value={engine.installation_type} />}
+      </>
+    ) : (
+      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '0.85rem' }}>لا توجد بيانات</div>
+    )}
+  </SectionCard>
+);
 
 export default function ViewMarineStructureInsurance() {
   const { id } = useParams<{ id: string }>();
@@ -259,567 +65,150 @@ export default function ViewMarineStructureInsurance() {
   const [document, setDocument] = useState<MarineStructureInsuranceDocument | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      fetchDocument();
-    }
-  }, [id]);
-
+  useEffect(() => { if (id) fetchDocument(); }, [id]);
 
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/marine-structure-insurance-documents/${id}`, {
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!res.ok) {
-        if (res.status === 404) {
-          showToast('الوثيقة غير موجودة', 'error');
-          setTimeout(() => navigate('/marine-structure-insurance-documents'), 2000);
-          return;
-        }
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-      setDocument(data);
-    } catch (error: any) {
-      showToast(`حدث خطأ أثناء جلب البيانات: ${error.message || ''}`, 'error');
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`${API_BASE_URL}/marine-structure-insurance-documents/${id}`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) { if (res.status === 404) { showToast('الوثيقة غير موجودة', 'error'); setTimeout(() => navigate('/marine-structure-insurance-documents'), 2000); return; } throw new Error(`HTTP error! status: ${res.status}`); }
+      setDocument(await res.json());
+    } catch (error: any) { showToast(`حدث خطأ: ${error.message || ''}`, 'error'); } finally { setLoading(false); }
   };
 
   const handlePrint = () => {
     const iframe = window.document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.cssText = 'position:fixed;right:-9999px;width:0;height:0';
     iframe.src = `${API_BASE_URL}/marine-structure-insurance-documents/${id}/print`;
     window.document.body.appendChild(iframe);
-    
-    iframe.onload = () => {
-      setTimeout(() => {
-        if (iframe.contentWindow) {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        }
-        setTimeout(() => {
-          if (window.document.body.contains(iframe)) {
-            window.document.body.removeChild(iframe);
-          }
-        }, 300);
-      }, 100);
-    };
+    iframe.onload = () => { setTimeout(() => { if (iframe.contentWindow) { iframe.contentWindow.focus(); iframe.contentWindow.print(); } setTimeout(() => { if (window.document.body.contains(iframe)) window.document.body.removeChild(iframe); }, 300); }, 100); };
   };
 
-  if (loading) {
-    return (
-      <section className="users-management">
-        <div className="users-breadcrumb">
-          <span>وثائق تأمين الهياكل البحرية / عرض وثيقة</span>
-        </div>
-        <div className="users-card">
-          <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
-        </div>
-      </section>
-    );
-  }
+  if (loading) return (
+    <section className="users-management">
+      <div className="users-breadcrumb"><span>وثائق تأمين الهياكل البحرية / عرض وثيقة</span></div>
+      <div className="users-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+        <div style={{ textAlign: 'center', color: 'var(--muted)' }}><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '12px' }}></i><p>جار التحميل...</p></div>
+      </div>
+    </section>
+  );
 
-  if (!document) {
-    return (
-      <section className="users-management">
-        <div className="users-breadcrumb">
-          <span>وثائق تأمين الهياكل البحرية / عرض وثيقة</span>
-        </div>
-        <div className="users-card">
-          <p style={{ textAlign: 'center', padding: '20px' }}>الوثيقة غير موجودة</p>
-        </div>
-      </section>
-    );
-  }
+  if (!document) return (
+    <section className="users-management">
+      <div className="users-breadcrumb"><span>وثائق تأمين الهياكل البحرية / عرض وثيقة</span></div>
+      <div className="users-card" style={{ textAlign: 'center', padding: '40px' }}>
+        <i className="fa-solid fa-file-circle-xmark" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '16px' }}></i>
+        <p style={{ marginBottom: '16px' }}>الوثيقة غير موجودة</p>
+        <button onClick={() => navigate('/marine-structure-insurance-documents')} className="btn-submit">العودة</button>
+      </div>
+    </section>
+  );
 
   const mainEngine = document.engines?.find(e => e.engine_type === 'main');
   const auxiliaryEngine = document.engines?.find(e => e.engine_type === 'auxiliary');
 
   return (
     <section className="users-management">
-      <div className="users-breadcrumb">
-        <span>وثائق تأمين الهياكل البحرية / عرض وثيقة</span>
-      </div>
-
-      <div className="users-card">
-        <div className="engineer-financial-details-container">
-          <div className="engineer-financial-details-header">
-            <h2 className="engineer-financial-details-title">عرض وثيقة تأمين هياكل بحرية</h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                className="back-button"
-                onClick={() => navigate('/marine-structure-insurance-documents')}
-              >
-                <i className="fa-solid fa-arrow-right" style={{ marginLeft: '8px' }}></i>
-                العودة للقائمة
+      <div className="users-breadcrumb"><span>وثائق تأمين الهياكل البحرية / عرض وثيقة</span></div>
+      <div className="users-card" style={{ padding: '0' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: 'var(--panel)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg,#1e40af,#0284c7)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="fa-solid fa-ship" style={{ color: '#fff', fontSize: '1.1rem' }}></i>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '600' }}>تأمين الهياكل البحرية - {document.structure_type}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text)' }}>تفاصيل: {document.insurance_number}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {[
+              { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/marine-structure-insurance-documents') },
+              { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
+              { label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/marine-structure-insurance-documents/${id}/edit`) },
+            ].map((btn, i) => (
+              <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                <i className={`fa-solid ${btn.icon}`}></i>{btn.label}
               </button>
-              <button
-                className="back-button print-button"
-                onClick={handlePrint}
-              >
-                <i className="fa-solid fa-print"></i>
-                <span className="back-button-text">طباعة الوثيقة</span>
-              </button>
-              <button
-                className="btn-submit"
-                onClick={() => navigate(`/marine-structure-insurance-documents/${id}/edit`)}
-              >
-                <i className="fa-solid fa-pencil" style={{ marginLeft: '6px' }}></i>
-                تعديل
-              </button>
-            </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+            {[
+              { icon: 'fa-calendar-check', label: 'تاريخ البداية', value: fmtDate(document.start_date), color: '#10b981' },
+              { icon: 'fa-calendar-times', label: 'تاريخ النهاية', value: fmtDate(document.end_date), color: '#ef4444' },
+              { icon: 'fa-clock', label: 'مدة التأمين', value: document.duration || '-', color: '#f59e0b' },
+              { icon: 'fa-money-bill-wave', label: 'الإجمالي', value: `${toNum(document.total).toFixed(3)} د.ل`, color: '#1d4ed8' },
+            ].map((s, i) => (
+              <div key={i} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <i className={`fa-solid ${s.icon}`} style={{ color: s.color, fontSize: '1rem' }}></i>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '600' }}>{s.label}</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text)' }}>{s.value}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '24px' }}>
-            {/* بيانات التأمين */}
-            <div className="form-section">
-              <h3 className="form-section-title">بيانات التأمين</h3>
-              <div className="form-group">
-                <label>رقم التأمين</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {document.insurance_number}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>تاريخ الإصدار</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {new Date(document.issue_date).toLocaleString('ar-LY', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>بداية التأمين</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {new Date(document.start_date).toLocaleDateString('ar-LY')}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>نهاية التأمين</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {new Date(document.end_date).toLocaleDateString('ar-LY')}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>مدة التأمين</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {document.duration}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>نوع الهيكل البحري</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {document.structure_type}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>نوع الترخيص</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {document.license_type || '-'}
-                </div>
-              </div>
-              {document.license_purpose && (
-                <div className="form-group">
-                  <label>الغرض من الترخيص</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.license_purpose}
-                  </div>
-                </div>
-              )}
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+            <SectionCard title="بيانات التأمين" icon="fa-file-contract">
+              <Row label="رقم التأمين" value={document.insurance_number} />
+              <Row label="تاريخ الإصدار" value={fmtDateTime(document.issue_date)} />
+              <Row label="نوع الهيكل" value={document.structure_type} />
+              <Row label="نوع الترخيص" value={document.license_type || '-'} />
+              {document.license_purpose && <Row label="الغرض من الترخيص" value={document.license_purpose} />}
+            </SectionCard>
 
-            {/* بيانات المركب/الهيكل البحري */}
-            <div className="form-section">
-              <h3 className="form-section-title">بيانات المركب/الهيكل البحري</h3>
-              {document.vessel_name && (
-                <div className="form-group">
-                  <label>اسم المركب/الهيكل</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.vessel_name}
-                  </div>
-                </div>
-              )}
-              {document.registration_code && (
-                <div className="form-group">
-                  <label>رمز ورقم التسجيل</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.registration_code}
-                  </div>
-                </div>
-              )}
-              {document.registration_date && (
-                <div className="form-group">
-                  <label>تاريخ التسجيل</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {new Date(document.registration_date).toLocaleDateString('ar-LY')}
-                  </div>
-                </div>
-              )}
-              {document.port && (
-                <div className="form-group">
-                  <label>الميناء أو المرفأ</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.port}
-                  </div>
-                </div>
-              )}
-              {document.registration_authority && (
-                <div className="form-group">
-                  <label>الجهة المقيد بها</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.registration_authority.city.name_ar}{document.registration_authority.city.name_en ? ` ${document.registration_authority.city.name_en}` : ''}
-                  </div>
-                </div>
-              )}
-              {document.plate_number && (
-                <div className="form-group">
-                  <label>رقم اللوحة</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.registration_authority && document.registration_authority.city.order
-                      ? `${document.registration_authority.city.order}-${document.plate_number}`
-                      : document.plate_number}
-                  </div>
-                </div>
-              )}
-              {document.hull_number && (
-                <div className="form-group">
-                  <label>رقم الهيكل</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.hull_number}
-                  </div>
-                </div>
-              )}
-              {document.manufacturing_material && (
-                <div className="form-group">
-                  <label>نوع مواد التصنيع</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.manufacturing_material}
-                  </div>
-                </div>
-              )}
-              {document.length && (
-                <div className="form-group">
-                  <label>الطول</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.length} م
-                  </div>
-                </div>
-              )}
-              {document.width && (
-                <div className="form-group">
-                  <label>العرض</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.width} م
-                  </div>
-                </div>
-              )}
-              {document.depth && (
-                <div className="form-group">
-                  <label>العمق</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.depth} م
-                  </div>
-                </div>
-              )}
-              {document.manufacturing_year && (
-                <div className="form-group">
-                  <label>تاريخ الصنع</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.manufacturing_year}
-                  </div>
-                </div>
-              )}
-              {document.manufacturing_country && (
-                <div className="form-group">
-                  <label>مكان الصنع</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {getCountryDisplay(document.manufacturing_country)}
-                  </div>
-                </div>
-              )}
-              {document.color && (
-                <div className="form-group">
-                  <label>اللون</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.color}
-                  </div>
-                </div>
-              )}
-              {document.fuel_tank_capacity && (
-                <div className="form-group">
-                  <label>سعة خزان الوقود</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.fuel_tank_capacity} لتر
-                  </div>
-                </div>
-              )}
-              {document.passenger_count && (
-                <div className="form-group">
-                  <label>عدد الركاب</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.passenger_count}
-                  </div>
-                </div>
-              )}
-              {document.load_capacity && (
-                <div className="form-group">
-                  <label>الحمولة بالطن</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.load_capacity} طن
-                  </div>
-                </div>
-              )}
-            </div>
+            <SectionCard title="بيانات المركب" icon="fa-anchor">
+              {document.vessel_name && <Row label="اسم المركب" value={document.vessel_name} />}
+              {document.registration_code && <Row label="رمز التسجيل" value={document.registration_code} />}
+              {document.registration_date && <Row label="تاريخ التسجيل" value={fmtDate(document.registration_date)} />}
+              {document.port && <Row label="الميناء / المرفأ" value={document.port} />}
+              {document.registration_authority && <Row label="الجهة المقيد بها" value={`${document.registration_authority.city.name_ar}${document.registration_authority.city.name_en ? ' ' + document.registration_authority.city.name_en : ''}`} />}
+              {document.plate_number && <Row label="رقم اللوحة" value={document.registration_authority?.city?.order ? `${document.registration_authority.city.order}-${document.plate_number}` : document.plate_number} />}
+              {document.hull_number && <Row label="رقم الهيكل" value={document.hull_number} />}
+              {document.manufacturing_material && <Row label="مواد التصنيع" value={document.manufacturing_material} />}
+              {document.length && <Row label="الطول" value={`${document.length} م`} />}
+              {document.width && <Row label="العرض" value={`${document.width} م`} />}
+              {document.depth && <Row label="العمق" value={`${document.depth} م`} />}
+              {document.manufacturing_year && <Row label="سنة الصنع" value={document.manufacturing_year} />}
+              {document.manufacturing_country && <Row label="مكان الصنع" value={getCountryDisplay(document.manufacturing_country)} />}
+              {document.color && <Row label="اللون" value={document.color} />}
+              {document.fuel_tank_capacity && <Row label="سعة خزان الوقود" value={`${document.fuel_tank_capacity} لتر`} />}
+              {document.passenger_count && <Row label="عدد الركاب" value={document.passenger_count} />}
+              {document.load_capacity && <Row label="الحمولة بالطن" value={`${document.load_capacity} طن`} />}
+            </SectionCard>
 
-            {/* بيانات المؤمن له */}
-            <div className="form-section">
-              <h3 className="form-section-title">بيانات المؤمن له</h3>
-              {document.insured_name && (
-                <div className="form-group">
-                  <label>اسم المؤمن له</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.insured_name}
-                  </div>
-                </div>
-              )}
-              {document.phone && (
-                <div className="form-group">
-                  <label>رقم الهاتف</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.phone}
-                  </div>
-                </div>
-              )}
-              {document.whatsapp_number && (
-                <div className="form-group">
-                  <label>رقم الواتساب</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)', color: '#25d366', fontWeight: '500' }}>
-                    {document.whatsapp_number}
-                  </div>
-                </div>
-              )}
-              {document.license_number && (
-                <div className="form-group">
-                  <label>رقم الرخصة</label>
-                  <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    {document.license_number}
-                  </div>
-                </div>
-              )}
-            </div>
+            <SectionCard title="بيانات المؤمن له" icon="fa-user-shield">
+              {document.insured_name && <Row label="اسم المؤمن له" value={document.insured_name} />}
+              {document.phone && <Row label="رقم الهاتف" value={document.phone} />}
+              {document.whatsapp_number && <Row label="رقم الواتساب" value={<span style={{ color: '#25d366', fontWeight: '700' }}><i className="fa-brands fa-whatsapp" style={{ marginLeft: '4px' }}></i>{document.whatsapp_number}</span>} />}
+              {document.license_number && <Row label="رقم الرخصة" value={document.license_number} />}
+            </SectionCard>
           </div>
 
-          {/* بيانات المحرك */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-            {/* بيانات المحرك الرئيسي */}
-            <div className="form-section">
-              <h3 className="form-section-title">بيانات المحرك الرئيسي</h3>
-              {mainEngine ? (
-                <>
-                  {mainEngine.engine_model && (
-                    <div className="form-group">
-                      <label>نوع المحرك</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {mainEngine.engine_model}
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.fuel_type && (
-                    <div className="form-group">
-                      <label>نوع الوقود</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {mainEngine.fuel_type}
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.engine_number && (
-                    <div className="form-group">
-                      <label>رقم المحرك</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {mainEngine.engine_number}
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.manufacturing_country && (
-                    <div className="form-group">
-                      <label>مكان الصنع</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {getCountryDisplay(mainEngine.manufacturing_country)}
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.horsepower && (
-                    <div className="form-group">
-                      <label>القوة بالحصان</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {mainEngine.horsepower} حصان
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.installation_date && (
-                    <div className="form-group">
-                      <label>تاريخ التركيب</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {new Date(mainEngine.installation_date).toLocaleDateString('ar-LY')}
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.cylinders_count && (
-                    <div className="form-group">
-                      <label>عدد الإسطوانات</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {mainEngine.cylinders_count}
-                      </div>
-                    </div>
-                  )}
-                  {mainEngine.installation_type && (
-                    <div className="form-group">
-                      <label>تركيب المحرك</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {mainEngine.installation_type}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>لا توجد بيانات للمحرك الرئيسي</p>
-              )}
-            </div>
-
-            {/* بيانات المحرك المساعد */}
-            <div className="form-section">
-              <h3 className="form-section-title">بيانات المحرك المساعد</h3>
-              {auxiliaryEngine ? (
-                <>
-                  {auxiliaryEngine.engine_model && (
-                    <div className="form-group">
-                      <label>نوع المحرك</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {auxiliaryEngine.engine_model}
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.fuel_type && (
-                    <div className="form-group">
-                      <label>نوع الوقود</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {auxiliaryEngine.fuel_type}
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.engine_number && (
-                    <div className="form-group">
-                      <label>رقم المحرك</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {auxiliaryEngine.engine_number}
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.manufacturing_country && (
-                    <div className="form-group">
-                      <label>مكان الصنع</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {getCountryDisplay(auxiliaryEngine.manufacturing_country)}
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.horsepower && (
-                    <div className="form-group">
-                      <label>القوة بالحصان</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {auxiliaryEngine.horsepower} حصان
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.installation_date && (
-                    <div className="form-group">
-                      <label>تاريخ التركيب</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {new Date(auxiliaryEngine.installation_date).toLocaleDateString('ar-LY')}
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.cylinders_count && (
-                    <div className="form-group">
-                      <label>عدد الإسطوانات</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {auxiliaryEngine.cylinders_count}
-                      </div>
-                    </div>
-                  )}
-                  {auxiliaryEngine.installation_type && (
-                    <div className="form-group">
-                      <label>تركيب المحرك</label>
-                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        {auxiliaryEngine.installation_type}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>لا توجد بيانات للمحرك المساعد</p>
-              )}
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+            <EngineCard engine={mainEngine} title="بيانات المحرك الرئيسي" />
+            <EngineCard engine={auxiliaryEngine} title="بيانات المحرك المساعد" />
           </div>
 
-          {/* القيمة المالية */}
-          <div className="form-section" style={{ marginTop: '20px' }}>
-            <h3 className="form-section-title">القيمة المالية</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-              <div className="form-group">
-                <label>القسط المقرر</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {(typeof document.premium === 'number' ? document.premium : parseFloat(String(document.premium)) || 0).toFixed(3)} د.ل
-                </div>
-              </div>
-              <div className="form-group">
-                <label>الضريبة</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {(typeof document.tax === 'number' ? document.tax : parseFloat(String(document.tax)) || 0).toFixed(3)} د.ل
-                </div>
-              </div>
-              <div className="form-group">
-                <label>الدمغة</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {(typeof document.stamp === 'number' ? document.stamp : parseFloat(String(document.stamp)) || 0).toFixed(3)} د.ل
-                </div>
-              </div>
-              <div className="form-group">
-                <label>مصاريف الإصدار</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {(typeof document.issue_fees === 'number' ? document.issue_fees : parseFloat(String(document.issue_fees)) || 0).toFixed(3)} د.ل
-                </div>
-              </div>
-              <div className="form-group">
-                <label>رسوم الإشراف</label>
-                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  {(typeof document.supervision_fees === 'number' ? document.supervision_fees : parseFloat(String(document.supervision_fees)) || 0).toFixed(3)} د.ل
-                </div>
-              </div>
-              <div className="form-group">
-                <label>الإجمالي</label>
-                <div style={{ padding: '10px 12px', background: '#f0f9ff', borderRadius: 8, border: '2px solid #3b82f6', fontWeight: 'bold', color: '#1e40af' }}>
-                  {(typeof document.total === 'number' ? document.total : parseFloat(String(document.total)) || 0).toFixed(3)} دينار
-                </div>
-              </div>
+          <SectionCard title="البيانات المالية" icon="fa-money-bill-wave">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              <Row label="القسط المقرر" value={`${toNum(document.premium).toFixed(3)} د.ل`} />
+              <Row label="الضريبة" value={`${toNum(document.tax).toFixed(3)} د.ل`} />
+              <Row label="الدمغة" value={`${toNum(document.stamp).toFixed(3)} د.ل`} />
+              <Row label="مصاريف الإصدار" value={`${toNum(document.issue_fees).toFixed(3)} د.ل`} />
+              <Row label="رسوم الإشراف" value={`${toNum(document.supervision_fees).toFixed(3)} د.ل`} />
+              <Row label="الإجمالي" value={`${toNum(document.total).toFixed(3)} د.ل`} highlight />
             </div>
-          </div>
+          </SectionCard>
         </div>
       </div>
     </section>
   );
 }
-

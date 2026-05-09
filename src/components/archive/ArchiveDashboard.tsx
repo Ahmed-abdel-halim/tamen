@@ -110,7 +110,7 @@ export default function ArchiveDashboard() {
           onClick={() => scroll('right')}
           className="scroll-nav-btn"
           style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--panel)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 2 }}
-          title="السابق"
+          title=""
         >
           <i className="fa-solid fa-chevron-right"></i>
         </button>
@@ -180,7 +180,7 @@ export default function ArchiveDashboard() {
           onClick={() => scroll('left')}
           className="scroll-nav-btn"
           style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--panel)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 2 }}
-          title="التالي"
+          title=""
         >
           <i className="fa-solid fa-chevron-left"></i>
         </button>

@@ -114,7 +114,7 @@ export default function CreateInsuranceDocument() {
     insured_name: '',
     phone: '',
     whatsapp_number: '',
-    email: '',
+    email: 'info@mli.ly',
     driving_license_number: '',
     nid_passport: '',
     premium: '',
@@ -123,7 +123,7 @@ export default function CreateInsuranceDocument() {
     eidc_vehicle_spec_id: '',
     eidc_vehicle_detail_id: '',
     nationality: 'ليبي',
-    engine_number: '',
+    engine_number: '0000',
     engine_cc: '2000',
     vehicle_weight: '1500',
     notes: '',
@@ -430,11 +430,11 @@ export default function CreateInsuranceDocument() {
         InsuredsName: formData.insured_name,
         Nationality: formData.nationality || 'ليبي',
         Address: formData.address || 'ليبيا',
-        Email: formData.email || 'no-reply@insurance.ly',
+        Email: formData.email || 'info@mli.ly',
 
         PlateNo: formData.plate_number_manual || '',
         ChassisNo: formData.chassis_number || '',
-        EngineNo: formData.engine_number || '',
+        EngineNo: formData.engine_number || '0000',
         Color: formData.color || '',
         YearMade: parseInt(formData.year) || new Date().getFullYear(),
         RegAuthority: selectedPlate ? selectedPlate.city.name_ar : 'طرابلس',
@@ -2408,7 +2408,7 @@ export default function CreateInsuranceDocument() {
 
                   <div className="form-group span-2">
                     <label htmlFor="email">البريد الإلكتروني</label>
-                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@domain.com" />
+                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="info@mli.ly" />
                   </div>
 
                   <div className="form-group">
@@ -2640,13 +2640,11 @@ export default function CreateInsuranceDocument() {
                     </div>
                   </div>
 
-                  <div className="form-group span-2">
-                    <div className="eidc-price-box total" style={{ marginTop: '0' }}>
-                      <label style={{ fontWeight: 'bold', color: '#1d4ed8' }}>الإجمالي النهائي (شامل الرسوم والضرائب)</label>
-                      <div className="price-input-wrapper" style={{ border: '2px solid #2563eb', height: '50px', background: '#f0f9ff' }}>
-                        <span className="currency" style={{ background: '#2563eb', color: '#fff', fontSize: '14px' }}>د.ل</span>
-                        <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000')} readOnly style={{ fontWeight: '900', color: '#1d4ed8', fontSize: '1.4rem' }} />
-                      </div>
+                  <div className="form-group span-2" style={{ paddingTop: '5px' }}>
+                    <label style={{ color: '#1d4ed8', fontWeight: '800' }}>الإجمالي النهائي (شامل الرسوم والضرائب)</label>
+                    <div className="price-input-wrapper" style={{ border: '2px solid #2563eb', height: '40px', background: '#f0f9ff' }}>
+                      <span className="currency" style={{ background: '#2563eb', color: '#fff', fontSize: '13px' }}>د.ل</span>
+                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000')} readOnly style={{ fontWeight: '900', color: '#1d4ed8', fontSize: '1.2rem' }} />
                     </div>
                   </div>
 
@@ -2714,7 +2712,7 @@ export default function CreateInsuranceDocument() {
 
                   <div className="form-group span-2">
                     <label htmlFor="email">البريد الإلكتروني</label>
-                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="example@domain.com" />
+                    <input type="email" id="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="info@mli.ly" />
                   </div>
 
                   <div className="grid-header"><i className="fa-solid fa-car-side"></i> بيانات المركبة</div>

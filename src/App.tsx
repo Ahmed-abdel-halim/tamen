@@ -34,6 +34,7 @@ import BranchAgentDetails from './components/BranchAgentDetails';
 import EditBranchAgent from './components/EditBranchAgent';
 import CitiesList from './components/CitiesList';
 import PlatesList from './components/PlatesList';
+import ColorsList from './components/ColorsList';
 import VehicleTypesList from './components/VehicleTypesList';
 import InsuranceDocumentsList from './components/InsuranceDocumentsList';
 import CreateInsuranceDocument from './components/CreateInsuranceDocument';
@@ -189,6 +190,7 @@ function hasAccessToRoute(
     'اجور ومرتبات ضمان': ['/reports/social-security'],
     'قائمة المدن': ['/cities'],
     'قائمة اللوحات': ['/plates'],
+    'قائمة الألوان': ['/colors'],
     'أنواع السيارات': ['/vehicle-types'],
   };
 
@@ -374,6 +376,7 @@ const menuSections: SidebarSection[] = [
         label: 'الإعدادات', icon: 'fa-solid fa-gear', children: [
           { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
           { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
+          { label: 'قائمة الألوان', icon: 'fa-solid fa-palette', to: '/colors' },
           { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
         ]
       },
@@ -454,6 +457,7 @@ const createMenuSections = (
     'اجور ومرتبات ضمان': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
+    'قائمة الألوان': { label: 'قائمة الألوان', icon: 'fa-solid fa-palette', to: '/colors' },
     'أنواع السيارات': { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
   };
 
@@ -499,7 +503,7 @@ const createMenuSections = (
 
 
   const technicalOrder: string[] = ['/claims', '/reports/indemnities'];
-  const settingsOrder: string[] = ['/cities', '/plates', '/vehicle-types'];
+  const settingsOrder: string[] = ['/cities', '/plates', '/colors', '/vehicle-types'];
 
   // إنشاء قائمة التأمين المصرح بها
   const insuranceItemsMap = new Map<string, SidebarItem>(); // لتجنب إضافة نفس الرابط مرتين
@@ -997,11 +1001,13 @@ export default function App() {
                   <Route path="/branches-agents/:id" element={<BranchAgentDetails />} />
                   <Route path="/branches-agents/:id/edit" element={<EditBranchAgent />} />
                   {/* إدارة المدن */}
-                  <Route path="/cities" element={<CitiesList />} />
+                  <Route path="/cities" element={<AuthorizedRoute requiredPath="/cities"><CitiesList /></AuthorizedRoute>} />
                   {/* إدارة اللوحات */}
-                  <Route path="/plates" element={<PlatesList />} />
+                  <Route path="/plates" element={<AuthorizedRoute requiredPath="/plates"><PlatesList /></AuthorizedRoute>} />
+                  {/* إدارة الألوان */}
+                  <Route path="/colors" element={<AuthorizedRoute requiredPath="/colors"><ColorsList /></AuthorizedRoute>} />
                   {/* إدارة أنواع السيارات */}
-                  <Route path="/vehicle-types" element={<VehicleTypesList />} />
+                  <Route path="/vehicle-types" element={<AuthorizedRoute requiredPath="/vehicle-types"><VehicleTypesList /></AuthorizedRoute>} />
                   {/* إدارة وثائق تأمين السيارات */}
                   <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument /></AuthorizedRoute>} />

@@ -6,79 +6,30 @@ import { API_BASE_URL } from "../config/api";
 type Plate = {
   id: number;
   plate_number: string;
-  city: {
-    id: number;
-    name_ar: string;
-    name_en: string;
-    order?: number;
-  };
+  city: { id: number; name_ar: string; name_en: string; order?: number; };
 };
-
-type VehicleType = {
-  id: number;
-  brand: string;
-  category: string;
-};
-
+type VehicleType = { id: number; brand: string; category: string; };
 type InsuranceDocument = {
-  id: number;
-  insurance_type: string;
-  insurance_number: string;
-  issue_date: string;
-  start_date: string;
-  end_date?: string;
-  duration?: string;
-  plate?: Plate;
-  port?: string;
-  plate_number_manual?: string;
-  chassis_number?: string;
-  vehicle_type_id?: number;
-  vehicleType?: VehicleType;
-  vehicle_type?: VehicleType;
-  color?: string;
-  year?: number;
-  fuel_type?: string;
-  license_purpose?: string;
-  engine_power?: string;
-  authorized_passengers?: number;
-  load_capacity?: number;
-  insured_name?: string;
-  phone?: string;
-  driving_license_number?: string;
-  premium: number;
-  tax: number;
-  stamp: number;
-  issue_fees: number;
-  supervision_fees: number;
-  total: number;
-  third_party_purpose?: string;
-  foreign_car_country?: string;
-  foreign_car_purpose?: string;
-  print_type?: string;
-  whatsapp_number?: string;
-  eidc_policy_id?: string;
-  eidc_transaction_code?: string;
-  eidc_sync_status?: string;
-  eidc_pdf_url?: string;
-  eidc_error?: string;
+  id: number; insurance_type: string; insurance_number: string;
+  issue_date: string; start_date: string; end_date?: string; duration?: string;
+  plate?: Plate; port?: string; plate_number_manual?: string; chassis_number?: string;
+  vehicle_type_id?: number; vehicleType?: VehicleType; vehicle_type?: VehicleType;
+  color?: string; year?: number; fuel_type?: string; license_purpose?: string;
+  engine_power?: string; authorized_passengers?: number; load_capacity?: number;
+  insured_name?: string; phone?: string; driving_license_number?: string;
+  premium: number; tax: number; stamp: number; issue_fees: number;
+  supervision_fees: number; total: number; third_party_purpose?: string;
+  foreign_car_country?: string; foreign_car_purpose?: string; print_type?: string;
+  whatsapp_number?: string; eidc_policy_id?: string; eidc_transaction_code?: string;
+  eidc_sync_status?: string; eidc_pdf_url?: string; eidc_error?: string;
 };
-
 type OwnershipTransfer = {
-  id: number;
-  previous_plate_id?: number;
-  previous_plate?: Plate;
-  previous_plate_number_manual?: string;
-  previous_insured_name?: string;
-  previous_phone?: string;
-  previous_driving_license_number?: string;
-  new_plate_id?: number;
-  new_plate?: Plate;
-  new_plate_number_manual?: string;
-  new_insured_name: string;
-  new_phone?: string;
-  new_driving_license_number?: string;
-  transferred_at: string;
-  created_at: string;
+  id: number; previous_plate_id?: number; previous_plate?: Plate;
+  previous_plate_number_manual?: string; previous_insured_name?: string;
+  previous_phone?: string; previous_driving_license_number?: string;
+  new_plate_id?: number; new_plate?: Plate; new_plate_number_manual?: string;
+  new_insured_name: string; new_phone?: string; new_driving_license_number?: string;
+  transferred_at: string; created_at: string;
 };
 
 export default function ViewInsuranceDocument() {
@@ -91,181 +42,121 @@ export default function ViewInsuranceDocument() {
 
   useEffect(() => {
     loadUserPermissions();
-    if (id) {
-      fetchDocument();
-      fetchOwnershipTransferHistory();
-    }
+    if (id) { fetchDocument(); fetchOwnershipTransferHistory(); }
   }, [id]);
 
   const loadUserPermissions = () => {
     try {
       const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        setIsAdmin(user.is_admin || false);
-      }
-    } catch (error) {
-      setIsAdmin(false);
-    }
+      if (userStr) { const user = JSON.parse(userStr); setIsAdmin(user.is_admin || false); }
+    } catch { setIsAdmin(false); }
   };
-
-
 
   const fetchDocument = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}`, {
-        headers: { 'Accept': 'application/json' }
-      });
-
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}`, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) {
-        if (res.status === 404) {
-          showToast('الوثيقة غير موجودة', 'error');
-          setTimeout(() => navigate('/insurance-documents'), 2000);
-          return;
-        }
+        if (res.status === 404) { showToast('الوثيقة غير موجودة', 'error'); setTimeout(() => navigate('/insurance-documents'), 2000); return; }
         throw new Error(`HTTP error! status: ${res.status}`);
       }
-
-      const data = await res.json();
-      setDocument(data);
+      setDocument(await res.json());
     } catch (error: any) {
-      showToast(`حدث خطأ أثناء جلب البيانات: ${error.message || ''}`, 'error');
-    } finally {
-      setLoading(false);
-    }
+      showToast(`حدث خطأ: ${error.message || ''}`, 'error');
+    } finally { setLoading(false); }
   };
 
   const fetchOwnershipTransferHistory = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}/ownership-transfer-history`, {
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setOwnershipTransfers(Array.isArray(data) ? data : []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching ownership transfer history:', error);
-    }
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}/ownership-transfer-history`, { headers: { 'Accept': 'application/json' } });
+      if (res.ok) { const data = await res.json(); setOwnershipTransfers(Array.isArray(data) ? data : []); }
+    } catch (error: any) { console.error(error); }
   };
 
   const handlePrint = () => {
     const iframe = window.document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.src = `${API_BASE_URL}/insurance-documents/${id}/print?t=${new Date().getTime()}`;
+    iframe.style.cssText = 'position:fixed;right:-9999px;width:0;height:0';
+    iframe.src = `${API_BASE_URL}/insurance-documents/${id}/print?t=${Date.now()}`;
     window.document.body.appendChild(iframe);
-
-    setTimeout(() => {
-      if (window.document.body.contains(iframe)) {
-        window.document.body.removeChild(iframe);
-      }
-    }, 5000);
+    setTimeout(() => { if (window.document.body.contains(iframe)) window.document.body.removeChild(iframe); }, 5000);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('ar-LY', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  };
+  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
+  const formatDateTime = (d?: string) => d ? new Date(d).toLocaleString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
 
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('ar-LY', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getPortNumber = (portName: string | undefined): string | null => {
+  const getPortNumber = (portName?: string): string | null => {
     if (!portName) return null;
-
-    const ports: { [key: string]: string } = {
-      'ميناء مصراته': '3',
-      'ميناء طرابلس': '5',
-      'ميناء الخمس': '6',
-      'ميناء بنغازي': '8',
-    };
-
-    // البحث عن رقم الميناء
-    for (const [port, number] of Object.entries(ports)) {
-      if (portName.includes(port) || port.includes(portName)) {
-        return number;
-      }
-    }
-
-    // إذا لم يتم العثور على رقم، حاول استخراج رقم من النص
-    const match = portName.match(/\d+/);
-    return match ? match[0] : null;
+    const ports: Record<string, string> = { 'ميناء مصراته': '3', 'ميناء طرابلس': '5', 'ميناء الخمس': '6', 'ميناء بنغازي': '8' };
+    for (const [port, number] of Object.entries(ports)) { if (portName.includes(port) || port.includes(portName)) return number; }
+    const match = portName.match(/\d+/); return match ? match[0] : null;
   };
 
   const formatPlateNumber = () => {
     if (!document) return '-';
-
-    const isCustomsInsurance = (document.insurance_type === 'تأمين سيارة جمرك');
-    const plateNumber = document.plate_number_manual ?? (document.plate ? document.plate.plate_number : null);
-    const cityOrder = document.plate && document.plate.city && document.plate.city.order ? document.plate.city.order : null;
-
-    // في حالة تأمين جمرك
-    if (isCustomsInsurance && document.port) {
-      // استخراج رقم الميناء من اسم الميناء
-      const portNumber = getPortNumber(document.port);
-
-      // إذا كان هناك رقم لوحة ورقم ميناء، نعرضهما معاً
-      if (plateNumber && portNumber) {
-        return `${portNumber}-${plateNumber}`;
-      } else if (plateNumber) {
-        // إذا كان هناك رقم لوحة فقط، نعرضه مع اسم الميناء
-        return `${document.port.trim()} - ${plateNumber}`;
-      } else if (portNumber) {
-        // إذا كان هناك رقم ميناء فقط
-        return portNumber;
-      } else {
-        // إذا كان هناك اسم الميناء فقط
-        return document.port.trim();
-      }
+    const isCustoms = document.insurance_type === 'تأمين سيارة جمرك';
+    const plateNumber = document.plate_number_manual ?? (document.plate?.plate_number ?? null);
+    const cityOrder = document.plate?.city?.order ?? null;
+    if (isCustoms && document.port) {
+      const portNum = getPortNumber(document.port);
+      if (plateNumber && portNum) return `${portNum}-${plateNumber}`;
+      if (plateNumber) return `${document.port.trim()} - ${plateNumber}`;
+      if (portNum) return portNum;
+      return document.port.trim();
     }
-
-    // في الحالات الأخرى
-    if (plateNumber && cityOrder) {
-      return `${cityOrder}-${plateNumber}`;
-    } else if (plateNumber) {
-      return plateNumber;
-    } else if (document.port) {
-      return 'جمرك';
-    }
-
+    if (plateNumber && cityOrder) return `${cityOrder}-${plateNumber}`;
+    if (plateNumber) return plateNumber;
+    if (document.port) return 'جمرك';
     return '-';
   };
 
   const formatCityName = () => {
     if (!document) return '-';
-
-    const isCustomsInsurance = (document.insurance_type === 'تأمين سيارة جمرك');
-    const portValue = document.port ? document.port.trim() : '';
-    const hasPort = portValue !== '';
-    const hasPlateCity = (document.plate && document.plate.city);
-
-    if (isCustomsInsurance) {
-      return hasPort ? portValue : '-';
-    } else if (hasPlateCity && document.plate) {
-      const city = document.plate.city;
-      return city.name_ar + (city.name_en ? ' ' + city.name_en : '');
-    } else if (hasPort) {
-      return portValue;
-    }
-
+    const isCustoms = document.insurance_type === 'تأمين سيارة جمرك';
+    if (isCustoms) return document.port ? document.port.trim() : '-';
+    if (document.plate?.city) { const c = document.plate.city; return c.name_ar + (c.name_en ? ' ' + c.name_en : ''); }
+    if (document.port) return document.port.trim();
     return '-';
   };
+
+  const Row = ({ label, value, highlight = false }: { label: string; value: React.ReactNode; highlight?: boolean }) => (
+    <div style={{ display: 'flex', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: highlight ? 'rgba(37,99,235,0.06)' : 'transparent', alignItems: 'center', gap: '12px' }}>
+      <span style={{ fontWeight: '700', color: 'var(--muted, #64748b)', fontSize: '0.82rem', minWidth: '140px', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontWeight: highlight ? '800' : '600', color: highlight ? '#1d4ed8' : 'var(--text)', fontSize: highlight ? '1.05rem' : '0.9rem' }}>{value}</span>
+    </div>
+  );
+
+  const SectionCard = ({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) => (
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg, #0f172a, #1e40af)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <i className={`fa-solid ${icon}`} style={{ color: '#38bdf8', fontSize: '1rem' }}></i>
+        <span style={{ color: '#fff', fontWeight: '700', fontSize: '0.95rem' }}>{title}</span>
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+
+  if (loading) return (
+    <section className="users-management">
+      <div className="users-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+        <div style={{ textAlign: 'center', color: 'var(--muted)' }}>
+          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '12px' }}></i>
+          <p>جار التحميل...</p>
+        </div>
+      </div>
+    </section>
+  );
+
+  if (!document) return (
+    <section className="users-management">
+      <div className="users-card" style={{ textAlign: 'center', padding: '40px' }}>
+        <i className="fa-solid fa-file-circle-xmark" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '16px' }}></i>
+        <p style={{ marginBottom: '16px', color: 'var(--text)' }}>الوثيقة غير موجودة</p>
+        <button onClick={() => navigate('/insurance-documents')} className="btn-submit">العودة إلى القائمة</button>
+      </div>
+    </section>
+  );
+
+  const isMandatory = document.insurance_type === 'تأمين إجباري سيارات';
+  const vt = document.vehicleType || document.vehicle_type;
 
   return (
     <section className="users-management">
@@ -273,442 +164,177 @@ export default function ViewInsuranceDocument() {
         <span>الإعدادات / وثائق تأمين السيارات / عرض الوثيقة</span>
       </div>
 
-      <div className="users-card">
-        {loading ? (
-          <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
-        ) : !document ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <p>الوثيقة غير موجودة</p>
-            <button onClick={() => navigate('/insurance-documents')} className="btn btn-primary" style={{ marginTop: '10px' }}>
-              العودة إلى القائمة
-            </button>
+      <div className="users-card" style={{ padding: '0' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: 'var(--panel)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg,#1e40af,#0284c7)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="fa-solid fa-file-shield" style={{ color: '#fff', fontSize: '1.1rem' }}></i>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '600' }}>{document.insurance_type}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text)' }}>تفاصيل: {document.insurance_number}</div>
+            </div>
           </div>
-        ) : (
-          <div className="engineer-financial-details-container">
-            <div className="engineer-financial-details-header">
-              <h2 className="engineer-financial-details-title">
-                تفاصيل: {document.insurance_number}
-              </h2>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  className="back-button"
-                  onClick={() => navigate('/insurance-documents')}
-                >
-                  <i className="fa-solid fa-arrow-right"></i>
-                  <span className="back-button-text">العودة للقائمة</span>
-                </button>
-                <button
-                  className="back-button print-button"
-                  onClick={handlePrint}
-                >
-                  <i className="fa-solid fa-print"></i>
-                  <span className="back-button-text">طباعة الوثيقة</span>
-                </button>
-                {document.eidc_pdf_url && (
-                  <button
-                    className="back-button print-button"
-                    onClick={() => window.open(`${document.eidc_pdf_url}?t=${new Date().getTime()}`, '_blank')}
-                    style={{ background: '#0284c7', borderColor: '#0284c7' }}
-                  >
-                    <i className="fa-solid fa-file-pdf"></i>
-                    <span className="back-button-text">وثيقة الهيئة (PDF)</span>
-                  </button>
-                )}
-                {isAdmin && (
-                  <button
-                    onClick={() => navigate(`/insurance-documents/${id}/edit`)}
-                    className="btn-submit"
-                  >
-                    <i className="fa-solid fa-pencil" style={{ marginLeft: '6px' }}></i>
-                    تعديل
-                  </button>
-                )}
-                <button
-                  onClick={() => navigate(`/insurance-documents/${id}/transfer-ownership`)}
-                  className="btn-submit"
-                  style={{ background: '#10b981', borderColor: '#10b981' }}
-                >
-                  <i className="fa-solid fa-exchange-alt" style={{ marginLeft: '6px' }}></i>
-                  نقل ملكية
-                </button>
-              </div>
-            </div>
-
-            <div className="engineer-info-card-wrapper">
-              <div className="engineer-info-card">
-                <div className="engineer-info-content">
-                  <div className="engineer-info-label">نوع التأمين</div>
-                  <div className="engineer-info-value">
-                    {document.insurance_type}
-                  </div>
-                  {document.insured_name && (
-                    <div className="engineer-info-detail">
-                      <i className="fa-solid fa-user"></i>
-                      {document.insured_name}
-                    </div>
-                  )}
-                  {document.phone && (
-                    <div className="engineer-info-detail">
-                      <i className="fa-solid fa-phone"></i>
-                      {document.phone}
-                    </div>
-                  )}
-                  {document.whatsapp_number && (
-                    <div className="engineer-info-detail" style={{ color: '#25d366' }}>
-                      <i className="fa-brands fa-whatsapp"></i>
-                      {document.whatsapp_number}
-                    </div>
-                  )}
-                  <div className="engineer-info-detail">
-                    <i className="fa-solid fa-hashtag"></i>
-                    رقم الوثيقة: {document.insurance_number}
-                  </div>
-                  <div className="engineer-info-detail">
-                    <i className="fa-solid fa-calendar"></i>
-                    تاريخ الإصدار: {formatDateTime(document.issue_date)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="engineer-stats-grid">
-              <div className="engineer-stat-card">
-                <i className="fa-solid fa-calendar-check engineer-stat-icon"></i>
-                <div className="engineer-stat-label">تاريخ البداية</div>
-                <div className="engineer-stat-value">
-                  {formatDate(document.start_date)}
-                </div>
-              </div>
-
-              <div className="engineer-stat-card">
-                <i className="fa-solid fa-calendar-times engineer-stat-icon"></i>
-                <div className="engineer-stat-label">تاريخ النهاية</div>
-                <div className="engineer-stat-value">
-                  {formatDate(document.end_date)}
-                </div>
-              </div>
-
-              <div className="engineer-stat-card">
-                <i className="fa-solid fa-clock engineer-stat-icon"></i>
-                <div className="engineer-stat-label">مدة التأمين</div>
-                <div className="engineer-stat-value">
-                  {document.duration || '-'}
-                </div>
-              </div>
-
-              <div className="engineer-stat-card">
-                <i className="fa-solid fa-money-bill-wave engineer-stat-icon"></i>
-                <div className="engineer-stat-label">الإجمالي</div>
-                <div className="engineer-stat-value">
-                  {Number(document.total).toFixed(3)} د.ل
-                </div>
-              </div>
-            </div>
-
-            {/* معلومات الوثيقة ومعلومات المؤمن له */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-              {/* معلومات الوثيقة */}
-              <div>
-                <h3 className="engineer-maps-section-title">معلومات الوثيقة</h3>
-                <div className="users-table-wrapper">
-                  <table className="users-table">
-                    <tbody>
-                      <tr>
-                        <td style={{ fontWeight: 'bold', width: '200px' }}>رقم الوثيقة</td>
-                        <td>{document.insurance_number}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>نوع التأمين</td>
-                        <td>{document.insurance_type}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>تاريخ الإصدار</td>
-                        <td>{formatDateTime(document.issue_date)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>تاريخ البداية</td>
-                        <td>{formatDate(document.start_date)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>تاريخ النهاية</td>
-                        <td>{formatDate(document.end_date)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>مدة التأمين</td>
-                        <td>{document.duration || '-'}</td>
-                      </tr>
-                      {document.insurance_type === 'تأمين إجباري سيارات' && (
-                        <>
-                          <tr>
-                            <td style={{ fontWeight: 'bold' }}>حالة الربط مع الهيئة</td>
-                            <td>
-                              <span 
-                                title={document.eidc_sync_status === 'failed' ? document.eidc_error : ''}
-                                style={{ 
-                                  color: document.eidc_policy_id ? '#10b981' : (document.eidc_sync_status === 'failed' ? '#ef4444' : '#f59e0b'),
-                                  fontWeight: 'bold',
-                                  cursor: document.eidc_sync_status === 'failed' ? 'help' : 'default'
-                                }}>
-                                {document.eidc_policy_id ? 'تم الربط بنجاح' : (document.eidc_sync_status === 'failed' ? 'فشل الربط' : 'قيد الانتظار')}
-                                {document.eidc_policy_id && document.eidc_sync_status === 'failed' && (
-                                  <span style={{ fontSize: '12px', color: '#ef4444', marginRight: '5px' }}> (فشل آخر تحديث)</span>
-                                )}
-                              </span>
-                            </td>
-                          </tr>
-                          {document.eidc_transaction_code && (
-                            <tr>
-                              <td style={{ fontWeight: 'bold' }}>كود المعاملة (الهيئة)</td>
-                              <td>{document.eidc_transaction_code}</td>
-                            </tr>
-                          )}
-                          {document.eidc_policy_id && (
-                            <tr>
-                              <td style={{ fontWeight: 'bold' }}>رقم الوثيقة (الهيئة)</td>
-                              <td>
-                                <a href={`${document.eidc_pdf_url}?t=${new Date().getTime()}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: 'bold' }}>
-                                  {document.eidc_policy_id} <i className="fa-solid fa-external-link" style={{ fontSize: '10px' }}></i>
-                                </a>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* معلومات المؤمن له */}
-              <div>
-                <h3 className="engineer-maps-section-title">معلومات المؤمن له</h3>
-                <div className="users-table-wrapper">
-                  <table className="users-table">
-                    <tbody>
-                      <tr>
-                        <td style={{ fontWeight: 'bold', width: '200px' }}>اسم المؤمن له</td>
-                        <td>{document.insured_name || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>رقم الهاتف</td>
-                        <td>{document.phone || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>رقم الواتساب</td>
-                        <td>{document.whatsapp_number || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>رقم رخصة القيادة</td>
-                        <td>{document.driving_license_number || '-'}</td>
-                      </tr>
-                      {document.third_party_purpose && (
-                        <tr>
-                          <td style={{ fontWeight: 'bold' }}>غرض الطرف الثالث</td>
-                          <td>{document.third_party_purpose}</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* معلومات المركبة والبيانات المالية */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-              {/* معلومات المركبة */}
-              <div>
-                <h3 className="engineer-maps-section-title">معلومات المركبة</h3>
-                <div className="users-table-wrapper">
-                  <table className="users-table">
-                    <tbody>
-                      <tr>
-                        <td style={{ fontWeight: 'bold', width: '200px' }}>رقم اللوحة المعدنية</td>
-                        <td>{formatPlateNumber()}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>الميناء / الجهة المقيّد بها</td>
-                        <td>{formatCityName()}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>رقم الهيكل</td>
-                        <td>{document.chassis_number || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>نوع المركبة</td>
-                        <td>
-                          {(document.vehicleType || document.vehicle_type) && (document.vehicleType?.brand || document.vehicle_type?.brand)
-                            ? `${document.vehicleType?.brand || document.vehicle_type?.brand}${(document.vehicleType?.category || document.vehicle_type?.category) ? ' / ' + (document.vehicleType?.category || document.vehicle_type?.category) : ''}`
-                            : '-'
-                          }
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>اللون</td>
-                        <td>{document.color || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>سنة الصنع</td>
-                        <td>{document.year || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>نوع الوقود</td>
-                        <td>{document.fuel_type || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>الغرض من الترخيص</td>
-                        <td>{document.license_purpose || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>قوة المحرك بالحصان</td>
-                        <td>{document.engine_power || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>الركاب المصرح بهم</td>
-                        <td>{document.authorized_passengers || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>الحمولة بالطن</td>
-                        <td>
-                          {document.load_capacity
-                            ? (() => {
-                              const capacity = typeof document.load_capacity === 'string'
-                                ? parseFloat(document.load_capacity)
-                                : document.load_capacity;
-                              if (isNaN(capacity)) return '-';
-                              return Number.isInteger(capacity)
-                                ? capacity.toString()
-                                : capacity.toFixed(2);
-                            })()
-                            : '-'
-                          }
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* البيانات المالية */}
-              <div>
-                <h3 className="engineer-maps-section-title">البيانات المالية</h3>
-                <div className="users-table-wrapper">
-                  <table className="users-table">
-                    <tbody>
-                      <tr>
-                        <td style={{ fontWeight: 'bold', width: '200px' }}>قيمة القسط المقرر</td>
-                        <td>{Number(document.premium).toFixed(3)} د.ل</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>الضريبة</td>
-                        <td>{Number(document.tax).toFixed(3)} د.ل</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>الدمغة</td>
-                        <td>{Number(document.stamp).toFixed(3)} د.ل</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>مصاريف الإصدار</td>
-                        <td>{Number(document.issue_fees).toFixed(3)} د.ل</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>رسوم الإشراف</td>
-                        <td>{Number(document.supervision_fees).toFixed(3)} د.ل</td>
-                      </tr>
-                      <tr style={{ backgroundColor: '#f0f9ff' }}>
-                        <td style={{ fontWeight: 'bold' }}>الإجمالي</td>
-                        <td style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1e40af' }}>{Number(document.total).toFixed(3)} د.ل</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* معلومات السيارات الأجنبية */}
-            {(document.foreign_car_country || document.foreign_car_purpose) && (
-              <div style={{ marginTop: '20px' }}>
-                <h3 className="engineer-maps-section-title">معلومات السيارة الأجنبية</h3>
-                <div className="users-table-wrapper">
-                  <table className="users-table">
-                    <tbody>
-                      {document.foreign_car_country && (
-                        <tr>
-                          <td style={{ fontWeight: 'bold', width: '200px' }}>بلد السيارة</td>
-                          <td>{document.foreign_car_country}</td>
-                        </tr>
-                      )}
-                      {document.foreign_car_purpose && (
-                        <tr>
-                          <td style={{ fontWeight: 'bold' }}>غرض السيارة</td>
-                          <td>{document.foreign_car_purpose}</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* تاريخ نقل الملكية */}
-            {ownershipTransfers.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <h3 className="engineer-maps-section-title">تاريخ نقل الملكية</h3>
-                <div className="users-table-wrapper">
-                  <table className="users-table">
-                    <thead>
-                      <tr>
-                        <th>التاريخ والوقت</th>
-                        <th>اسم المؤمن (السابق)</th>
-                        <th>اسم المؤمن (الجديد)</th>
-                        <th>الجهة المقيد بها (السابقة)</th>
-                        <th>الجهة المقيد بها (الجديدة)</th>
-                        <th>رقم اللوحة (السابق)</th>
-                        <th>رقم اللوحة (الجديد)</th>
-                        <th>رقم الهاتف (السابق)</th>
-                        <th>رقم الهاتف (الجديد)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ownershipTransfers.map((transfer: OwnershipTransfer) => (
-                        <tr key={transfer.id}>
-                          <td>
-                            {new Date(transfer.transferred_at).toLocaleString('ar-LY', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </td>
-                          <td>{transfer.previous_insured_name || '-'}</td>
-                          <td style={{ fontWeight: 'bold', color: '#10b981' }}>{transfer.new_insured_name}</td>
-                          <td>
-                            {transfer.previous_plate
-                              ? `${transfer.previous_plate.city.name_ar} - ${transfer.previous_plate.plate_number}`
-                              : transfer.previous_plate_number_manual || '-'}
-                          </td>
-                          <td style={{ fontWeight: 'bold', color: '#10b981' }}>
-                            {transfer.new_plate
-                              ? `${transfer.new_plate.city.name_ar} - ${transfer.new_plate.plate_number}`
-                              : transfer.new_plate_number_manual || '-'}
-                          </td>
-                          <td>{transfer.previous_plate_number_manual || '-'}</td>
-                          <td style={{ fontWeight: 'bold', color: '#10b981' }}>{transfer.new_plate_number_manual || '-'}</td>
-                          <td>{transfer.previous_phone || '-'}</td>
-                          <td style={{ fontWeight: 'bold', color: '#10b981' }}>{transfer.new_phone || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {[
+              { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/insurance-documents') },
+              { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
+              ...(document.eidc_pdf_url ? [{ label: 'وثيقة الهيئة (PDF)', icon: 'fa-file-pdf', bg: '#0284c7', border: '#0284c7', color: '#fff', onClick: () => window.open(`${document.eidc_pdf_url}?t=${Date.now()}`, '_blank') }] : []),
+              ...(isAdmin ? [{ label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/edit`) }] : []),
+              { label: 'نقل ملكية', icon: 'fa-exchange-alt', bg: '#10b981', border: '#10b981', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/transfer-ownership`) },
+            ].map((btn, i) => (
+              <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                <i className={`fa-solid ${btn.icon}`}></i>
+                {btn.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <div style={{ padding: '16px 20px' }}>
+          {/* Stats Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+            {[
+              { icon: 'fa-calendar-check', label: 'تاريخ البداية', value: formatDate(document.start_date), color: '#10b981' },
+              { icon: 'fa-calendar-times', label: 'تاريخ النهاية', value: formatDate(document.end_date), color: '#ef4444' },
+              { icon: 'fa-clock', label: 'مدة التأمين', value: document.duration || '-', color: '#f59e0b' },
+              { icon: 'fa-money-bill-wave', label: 'الإجمالي', value: `${Number(document.total).toFixed(3)} د.ل`, color: '#1d4ed8' },
+            ].map((s, i) => (
+              <div key={i} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <i className={`fa-solid ${s.icon}`} style={{ color: s.color, fontSize: '1rem' }}></i>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '600' }}>{s.label}</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text)' }}>{s.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Main Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+            <SectionCard title="معلومات الوثيقة" icon="fa-file-contract">
+              <Row label="رقم الوثيقة" value={document.insurance_number} />
+              <Row label="نوع التأمين" value={document.insurance_type} />
+              <Row label="تاريخ الإصدار" value={formatDateTime(document.issue_date)} />
+              <Row label="تاريخ البداية" value={formatDate(document.start_date)} />
+              <Row label="تاريخ النهاية" value={formatDate(document.end_date)} />
+              <Row label="مدة التأمين" value={document.duration || '-'} />
+              {isMandatory && (
+                <>
+                  <Row label="حالة الربط بالهيئة" value={
+                    <span style={{ color: document.eidc_policy_id ? '#10b981' : (document.eidc_sync_status === 'failed' ? '#ef4444' : '#f59e0b'), fontWeight: '700' }}>
+                      {document.eidc_policy_id ? '✓ تم الربط بنجاح' : (document.eidc_sync_status === 'failed' ? '✗ فشل الربط' : '⏳ قيد الانتظار')}
+                    </span>
+                  } />
+                  {document.eidc_transaction_code && <Row label="كود المعاملة (الهيئة)" value={document.eidc_transaction_code} />}
+                  {document.eidc_policy_id && (
+                    <Row label="رقم الوثيقة (الهيئة)" value={
+                      <a href={`${document.eidc_pdf_url}?t=${Date.now()}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline', fontWeight: '700' }}>
+                        {document.eidc_policy_id} <i className="fa-solid fa-external-link" style={{ fontSize: '10px' }}></i>
+                      </a>
+                    } />
+                  )}
+                </>
+              )}
+            </SectionCard>
+
+            <SectionCard title="معلومات المؤمن له" icon="fa-user-shield">
+              <Row label="اسم المؤمن له" value={document.insured_name || '-'} />
+              <Row label="رقم الهاتف" value={document.phone || '-'} />
+              <Row label="رقم الواتساب" value={
+                document.whatsapp_number
+                  ? <span style={{ color: '#25d366', fontWeight: '700' }}><i className="fa-brands fa-whatsapp" style={{ marginLeft: '4px' }}></i>{document.whatsapp_number}</span>
+                  : '-'
+              } />
+              <Row label="رقم رخصة القيادة" value={document.driving_license_number || '-'} />
+              {document.third_party_purpose && <Row label="غرض الطرف الثالث" value={document.third_party_purpose} />}
+            </SectionCard>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+            <SectionCard title="معلومات المركبة" icon="fa-car">
+              <Row label="رقم اللوحة المعدنية" value={formatPlateNumber()} />
+              <Row label="الميناء / الجهة المقيّد بها" value={formatCityName()} />
+              <Row label="رقم الهيكل" value={document.chassis_number || '-'} />
+              <Row label="نوع المركبة" value={vt ? `${vt.brand}${vt.category ? ' / ' + vt.category : ''}` : '-'} />
+              <Row label="اللون" value={document.color || '-'} />
+              <Row label="سنة الصنع" value={document.year || '-'} />
+              <Row label="نوع الوقود" value={document.fuel_type || '-'} />
+              <Row label="الغرض من الترخيص" value={document.license_purpose || '-'} />
+              <Row label="قوة المحرك بالحصان" value={document.engine_power || '-'} />
+              <Row label="الركاب المصرح بهم" value={document.authorized_passengers || '-'} />
+              <Row label="الحمولة بالطن" value={
+                document.load_capacity
+                  ? (() => { const c = typeof document.load_capacity === 'string' ? parseFloat(document.load_capacity) : document.load_capacity; return isNaN(c) ? '-' : Number.isInteger(c) ? c.toString() : c.toFixed(2); })()
+                  : '-'
+              } />
+            </SectionCard>
+
+            <SectionCard title="البيانات المالية" icon="fa-money-bill-wave">
+              <Row label="قيمة القسط المقرر" value={`${Number(document.premium).toFixed(3)} د.ل`} />
+              <Row label="الضريبة" value={`${Number(document.tax).toFixed(3)} د.ل`} />
+              <Row label="الدمغة" value={`${Number(document.stamp).toFixed(3)} د.ل`} />
+              <Row label="مصاريف الإصدار" value={`${Number(document.issue_fees).toFixed(3)} د.ل`} />
+              <Row label="رسوم الإشراف" value={`${Number(document.supervision_fees).toFixed(3)} د.ل`} />
+              <Row label="الإجمالي" value={`${Number(document.total).toFixed(3)} د.ل`} highlight />
+            </SectionCard>
+          </div>
+
+          {(document.foreign_car_country || document.foreign_car_purpose) && (
+            <div style={{ marginBottom: '14px' }}>
+              <SectionCard title="معلومات السيارة الأجنبية" icon="fa-globe">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                  {document.foreign_car_country && <Row label="بلد السيارة" value={document.foreign_car_country} />}
+                  {document.foreign_car_purpose && <Row label="غرض السيارة" value={document.foreign_car_purpose} />}
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {ownershipTransfers.length > 0 && (
+            <SectionCard title="تاريخ نقل الملكية" icon="fa-exchange-alt">
+              <div style={{ overflowX: 'auto' }}>
+                <table className="users-table">
+                  <thead>
+                    <tr>
+                      <th>التاريخ والوقت</th>
+                      <th>المؤمن (السابق)</th>
+                      <th>المؤمن (الجديد)</th>
+                      <th>الجهة (السابقة)</th>
+                      <th>الجهة (الجديدة)</th>
+                      <th>اللوحة (السابقة)</th>
+                      <th>اللوحة (الجديدة)</th>
+                      <th>الهاتف (السابق)</th>
+                      <th>الهاتف (الجديد)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ownershipTransfers.map((t) => (
+                      <tr key={t.id}>
+                        <td>{new Date(t.transferred_at).toLocaleString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>{t.previous_insured_name || '-'}</td>
+                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>{t.new_insured_name}</td>
+                        <td>{t.previous_plate ? `${t.previous_plate.city.name_ar} - ${t.previous_plate.plate_number}` : (t.previous_plate_number_manual || '-')}</td>
+                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>{t.new_plate ? `${t.new_plate.city.name_ar} - ${t.new_plate.plate_number}` : (t.new_plate_number_manual || '-')}</td>
+                        <td>{t.previous_plate_number_manual || '-'}</td>
+                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>{t.new_plate_number_manual || '-'}</td>
+                        <td>{t.previous_phone || '-'}</td>
+                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>{t.new_phone || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          )}
+        </div>
       </div>
-
-
     </section>
   );
 }
-

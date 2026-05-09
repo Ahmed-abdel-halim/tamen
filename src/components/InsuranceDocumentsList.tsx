@@ -729,7 +729,6 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                     disabled={currentPage === 1}
                   >
                     <i className="fa-solid fa-chevron-right"></i>
-                    <span className="pagination-btn-text">السابق</span>
                   </button>
                   {(() => {
                     const items: (number | 'dots')[] = [];
@@ -765,7 +764,6 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
                   >
-                    <span className="pagination-btn-text">التالي</span>
                     <i className="fa-solid fa-chevron-left"></i>
                   </button>
                 </div>

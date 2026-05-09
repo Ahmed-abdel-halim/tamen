@@ -2,41 +2,37 @@ import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 
-type City = {
+type Color = {
   id: number;
-  name_ar: string;
-  name_en: string;
+  name: string;
 };
 
-export default function CitiesList() {
-  const [cities, setCities] = useState<City[]>([]);
+export default function ColorsList() {
+  const [colors, setColors] = useState<Color[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', city?: City }>(null);
+  const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', color?: Color }>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
-    name_ar: '',
-    name_en: ''
+    name: ''
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<null | City>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<null | Color>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 10;
 
   useEffect(() => {
-    fetchCities();
+    fetchColors();
   }, []);
-
-
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, cities.length]);
+  }, [searchQuery, colors.length]);
 
-  const fetchCities = async () => {
+  const fetchColors = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/cities`, {
+      const res = await fetch(`${API_BASE_URL}/colors`, {
         headers: {
           'Accept': 'application/json',
         }
@@ -45,43 +41,40 @@ export default function CitiesList() {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       const data = await res.json();
-      setCities(Array.isArray(data) ? data : []);
+      setColors(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      console.error('Error fetching cities:', error);
-      showToast(`حدث خطأ أثناء جلب المدن: ${error.message || ''}`, 'error');
+      console.error('Error fetching colors:', error);
+      showToast(`حدث خطأ أثناء جلب الألوان: ${error.message || ''}`, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (showForm?.mode === 'edit' && showForm.city) {
+    if (showForm?.mode === 'edit' && showForm.color) {
       setFormData({
-        name_ar: showForm.city.name_ar || '',
-        name_en: showForm.city.name_en || ''
+        name: showForm.color.name || ''
       });
     } else {
       setFormData({
-        name_ar: '',
-        name_en: ''
+        name: ''
       });
     }
     setFormErrors({});
   }, [showForm]);
 
-  const filteredCities = cities.filter(c => 
-    c.name_ar.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.name_en.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredColors = colors.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalCities = filteredCities.length;
-  const totalPages = totalCities > 0 ? Math.ceil(totalCities / perPage) : 1;
+  const totalColors = filteredColors.length;
+  const totalPages = totalColors > 0 ? Math.ceil(totalColors / perPage) : 1;
   const startIndex = (currentPage - 1) * perPage;
   const endIndex = startIndex + perPage;
-  const paginatedCities = filteredCities.slice(startIndex, endIndex);
+  const paginatedColors = filteredColors.slice(startIndex, endIndex);
 
-  const handleDeleteClick = (city: City) => {
-    setDeleteConfirmation(city);
+  const handleDeleteClick = (color: Color) => {
+    setDeleteConfirmation(color);
   };
 
   const confirmDelete = async () => {
@@ -89,7 +82,7 @@ export default function CitiesList() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/cities/${deleteConfirmation.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/colors/${deleteConfirmation.id}`, { 
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -98,12 +91,12 @@ export default function CitiesList() {
       if (!res.ok) {
         throw new Error(`خطأ ${res.status}`);
       }
-      setCities(cities.filter(c => c.id !== deleteConfirmation.id));
+      setColors(colors.filter(c => c.id !== deleteConfirmation.id));
       setDeleteConfirmation(null);
-      showToast('تم حذف المدينة بنجاح', 'success');
+      showToast('تم حذف اللون بنجاح', 'success');
     } catch (error: any) {
-      console.error('Error deleting city:', error);
-      showToast(`حدث خطأ أثناء حذف المدينة: ${error.message || 'تأكد من أن الخادم يعمل'}`, 'error');
+      console.error('Error deleting color:', error);
+      showToast(`حدث خطأ أثناء حذف اللون: ${error.message || ''}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -111,11 +104,8 @@ export default function CitiesList() {
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!formData.name_ar.trim()) {
-      errors.name_ar = 'اسم المدينة بالعربي مطلوب';
-    }
-    if (!formData.name_en.trim()) {
-      errors.name_en = 'اسم المدينة بالإنجليزي مطلوب';
+    if (!formData.name.trim()) {
+      errors.name = 'اسم اللون مطلوب';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -128,45 +118,31 @@ export default function CitiesList() {
     setSubmitting(true);
     try {
       const url = showForm?.mode === 'edit' 
-        ? `${API_BASE_URL}/cities/${showForm.city?.id}` 
-        : `${API_BASE_URL}/cities`;
+        ? `${API_BASE_URL}/colors/${showForm.color?.id}` 
+        : `${API_BASE_URL}/colors`;
       
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
       
-      const body: any = {
-        name_ar: formData.name_ar,
-        name_en: formData.name_en,
-      };
-
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ name: formData.name }),
       });
 
       if (!res.ok) {
-        let errorMessage = 'حدث خطأ';
-        try {
-          const error = await res.json();
-          errorMessage = error.message || error.error || errorMessage;
-          if (error.errors) {
-            setFormErrors(error.errors);
-          }
-        } catch (e) {
-          errorMessage = `خطأ ${res.status}: ${res.statusText}`;
-        }
-        throw new Error(errorMessage);
+        const error = await res.json();
+        throw new Error(error.message || 'حدث خطأ أثناء الحفظ');
       }
 
-      await fetchCities();
+      await fetchColors();
       setShowForm(null);
-      setFormData({ name_ar: '', name_en: '' });
-      showToast(showForm?.mode === 'add' ? 'تم إضافة المدينة بنجاح' : 'تم تحديث المدينة بنجاح', 'success');
+      setFormData({ name: '' });
+      showToast(showForm?.mode === 'add' ? 'تم إضافة اللون بنجاح' : 'تم تحديث اللون بنجاح', 'success');
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ أثناء حفظ المدينة', 'error');
+      showToast(error.message || 'حدث خطأ أثناء حفظ اللون', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -175,7 +151,7 @@ export default function CitiesList() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>الإعدادات / المدن / قائمة المدن</span>
+        <span>الإعدادات / الألوان / قائمة الألوان</span>
       </div>
       
       <div className="users-card">
@@ -183,7 +159,7 @@ export default function CitiesList() {
           <div className="users-search-bar">
             <input 
               type="text" 
-              placeholder="بحث باسم المدينة..." 
+              placeholder="بحث باسم اللون..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="users-search-input"
@@ -197,7 +173,7 @@ export default function CitiesList() {
             onClick={() => setShowForm({ mode: 'add' })}
           >
             <i className="fa-solid fa-plus"></i>
-            إضافة مدينة
+            إضافة لون
           </button>
         </div>
 
@@ -210,30 +186,28 @@ export default function CitiesList() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>اسم المدينة (عربي)</th>
-                    <th>اسم المدينة (إنجليزي)</th>
+                    <th>اسم اللون</th>
                     <th>الإجراء</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCities.length === 0 ? (
+                  {filteredColors.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', fontSize: '16px', color: '#6b7280' }}>
-                        <i className="fa-solid fa-inbox" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
+                      <td colSpan={3} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', fontSize: '16px', color: '#6b7280' }}>
+                        <i className="fa-solid fa-palette" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
                         لا توجد نتائج
                       </td>
                     </tr>
                   ) : (
-                    paginatedCities.map((c, index) => (
+                    paginatedColors.map((c, index) => (
                       <tr key={c.id}>
                         <td>{startIndex + index + 1}</td>
-                        <td>{c.name_ar}</td>
-                        <td>{c.name_en}</td>
+                        <td>{c.name}</td>
                         <td>
                           <div className="action-buttons">
                             <button 
                               className="action-btn edit" 
-                              onClick={() => setShowForm({ mode: 'edit', city: c })}
+                              onClick={() => setShowForm({ mode: 'edit', color: c })}
                               aria-label="تعديل"
                               title="تعديل"
                             >
@@ -258,26 +232,22 @@ export default function CitiesList() {
 
             {/* Mobile Cards View */}
             <div className="users-mobile-cards">
-              {filteredCities.length === 0 ? (
+              {filteredColors.length === 0 ? (
                 <div className="empty-state">لا توجد نتائج</div>
               ) : (
-                paginatedCities.map((c, index) => (
+                paginatedColors.map((c, index) => (
                   <div key={c.id} className="user-mobile-card">
                     <div className="user-mobile-header">
                       <div>
-                        <h4 className="user-mobile-title">{c.name_ar}</h4>
+                        <h4 className="user-mobile-title">{c.name}</h4>
                         <span className="user-mobile-number">#{startIndex + index + 1}</span>
                       </div>
                     </div>
                     <div className="user-mobile-body">
-                      <div className="user-mobile-row">
-                        <span className="user-mobile-label">اسم المدينة (إنجليزي):</span>
-                        <span className="user-mobile-value">{c.name_en}</span>
-                      </div>
                       <div className="user-mobile-actions">
                         <button 
                           className="action-btn edit" 
-                          onClick={() => setShowForm({ mode: 'edit', city: c })}
+                          onClick={() => setShowForm({ mode: 'edit', color: c })}
                           aria-label="تعديل"
                           title="تعديل"
                         >
@@ -298,15 +268,15 @@ export default function CitiesList() {
               )}
             </div>
 
-            {totalCities > perPage && (
+            {totalColors > perPage && (
               <div className="pagination-wrapper">
                 <div className="pagination-info">
                   عرض {startIndex + 1}
                   {' إلى '}
-                  {Math.min(endIndex, totalCities)}
+                  {Math.min(endIndex, totalColors)}
                   {' من '}
-                  {totalCities}
-                  {' مدينة'}
+                  {totalColors}
+                  {' لون'}
                 </div>
                 <div className="pagination-controls">
                   <button
@@ -365,7 +335,7 @@ export default function CitiesList() {
         }}>
           <div className="modal-content user-form-modal">
             <div className="modal-header">
-              <h3>{showForm.mode === 'add' ? 'إضافة مدينة جديدة' : 'تعديل مدينة'}</h3>
+              <h3>{showForm.mode === 'add' ? 'إضافة لون جديد' : 'تعديل لون'}</h3>
               <button 
                 className="modal-close" 
                 onClick={() => setShowForm(null)}
@@ -377,29 +347,16 @@ export default function CitiesList() {
             
             <form onSubmit={handleSubmit} className="user-form">
               <div className="form-group">
-                <label htmlFor="name_ar">اسم المدينة بالعربي <span className="required">*</span></label>
+                <label htmlFor="name">اسم اللون <span className="required">*</span></label>
                 <input
                   type="text"
-                  id="name_ar"
-                  value={formData.name_ar}
-                  onChange={(e) => setFormData({...formData, name_ar: e.target.value})}
-                  className={formErrors.name_ar ? 'error' : ''}
-                  placeholder="أدخل اسم المدينة بالعربي"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({name: e.target.value})}
+                  className={formErrors.name ? 'error' : ''}
+                  placeholder="أدخل اسم اللون (مثلاً: أبيض - White)"
                 />
-                {formErrors.name_ar && <span className="error-message">{formErrors.name_ar}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="name_en">اسم المدينة بالإنجليزي <span className="required">*</span></label>
-                <input
-                  type="text"
-                  id="name_en"
-                  value={formData.name_en}
-                  onChange={(e) => setFormData({...formData, name_en: e.target.value})}
-                  className={formErrors.name_en ? 'error' : ''}
-                  placeholder="أدخل اسم المدينة بالإنجليزي"
-                />
-                {formErrors.name_en && <span className="error-message">{formErrors.name_en}</span>}
+                {formErrors.name && <span className="error-message">{formErrors.name}</span>}
               </div>
 
               <div className="form-actions">
@@ -430,11 +387,11 @@ export default function CitiesList() {
         }}>
           <div className="modal-content delete-confirm-modal">
             <div className="delete-confirm-icon">
-              <i className="fa-solid fa-triangle-exclamation"></i>
+              <i className="fa-solid fa-palette"></i>
             </div>
             <h3>تأكيد الحذف</h3>
             <p className="delete-confirm-message">
-              هل أنت متأكد من حذف المدينة <strong>{deleteConfirmation.name_ar}</strong>؟
+              هل أنت متأكد من حذف اللون <strong>{deleteConfirmation.name}</strong>؟
               <br />
               <span className="delete-warning">لا يمكن التراجع عن هذا الإجراء.</span>
             </p>
@@ -457,8 +414,6 @@ export default function CitiesList() {
           </div>
         </div>
       )}
-
-
     </section>
   );
 }

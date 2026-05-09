@@ -2,32 +2,35 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+
 type ProfessionalLiabilityInsuranceDocument = {
-  id: number;
-  insurance_number: string;
-  issue_date: string;
-  start_date: string;
-  end_date: string;
-  duration: string;
-  contract_relation: string;
-  contractor_name?: string;
-  insured_name: string;
-  birth_date?: string;
-  age?: number;
-  phone?: string;
-  whatsapp_number?: string;
-  workplace?: string;
-  gender?: string;
-  nationality?: string;
-  profession?: string;
-  marital_status?: string;
-  premium: number;
-  tax: number;
-  stamp: number;
-  issue_fees: number;
-  supervision_fees: number;
-  total: number;
+  id: number; insurance_number: string; issue_date: string; start_date: string; end_date: string; duration: string;
+  contract_relation: string; contractor_name?: string; insured_name: string; birth_date?: string; age?: number;
+  phone?: string; whatsapp_number?: string; workplace?: string; gender?: string; nationality?: string;
+  profession?: string; marital_status?: string;
+  premium: number; tax: number; stamp: number; issue_fees: number; supervision_fees: number; total: number;
 };
+
+const toNum = (v: any) => (typeof v === 'number' ? v : parseFloat(String(v)) || 0);
+const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
+const fmtDateTime = (d?: string) => d ? new Date(d).toLocaleString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+
+const Row = ({ label, value, highlight = false }: { label: string; value: React.ReactNode; highlight?: boolean }) => (
+  <div style={{ display: 'flex', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: highlight ? 'rgba(37,99,235,0.06)' : 'transparent', alignItems: 'center', gap: '12px' }}>
+    <span style={{ fontWeight: '700', color: 'var(--muted, #64748b)', fontSize: '0.82rem', minWidth: '140px', flexShrink: 0 }}>{label}</span>
+    <span style={{ fontWeight: highlight ? '800' : '600', color: highlight ? '#1d4ed8' : 'var(--text)', fontSize: highlight ? '1.05rem' : '0.9rem' }}>{value}</span>
+  </div>
+);
+
+const SectionCard = ({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) => (
+  <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+    <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg, #0f172a, #1e40af)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <i className={`fa-solid ${icon}`} style={{ color: '#38bdf8', fontSize: '1rem' }}></i>
+      <span style={{ color: '#fff', fontWeight: '700', fontSize: '0.95rem' }}>{title}</span>
+    </div>
+    <div>{children}</div>
+  </div>
+);
 
 export default function ViewProfessionalLiabilityInsurance() {
   const { id } = useParams<{ id: string }>();
@@ -35,332 +38,123 @@ export default function ViewProfessionalLiabilityInsurance() {
   const [document, setDocument] = useState<ProfessionalLiabilityInsuranceDocument | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      fetchDocument();
-    }
-  }, [id]);
-
+  useEffect(() => { if (id) fetchDocument(); }, [id]);
 
   const fetchDocument = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents/${id}`, {
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!res.ok) {
-        if (res.status === 404) {
-          showToast('الوثيقة غير موجودة', 'error');
-          setTimeout(() => navigate('/professional-liability-insurance-documents'), 2000);
-          return;
-        }
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-      setDocument(data);
-    } catch (error: any) {
-      showToast(`حدث خطأ أثناء جلب البيانات: ${error.message || ''}`, 'error');
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`${API_BASE_URL}/professional-liability-insurance-documents/${id}`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) { if (res.status === 404) { showToast('الوثيقة غير موجودة', 'error'); setTimeout(() => navigate('/professional-liability-insurance-documents'), 2000); return; } throw new Error(`HTTP error! status: ${res.status}`); }
+      setDocument(await res.json());
+    } catch (error: any) { showToast(`حدث خطأ: ${error.message || ''}`, 'error'); } finally { setLoading(false); }
   };
 
   const handlePrint = () => {
     const iframe = window.document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.cssText = 'position:fixed;right:-9999px;width:0;height:0';
     iframe.src = `${API_BASE_URL}/professional-liability-insurance-documents/${id}/print`;
     window.document.body.appendChild(iframe);
-    
-    iframe.onload = () => {
-      setTimeout(() => {
-        if (iframe.contentWindow) {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        }
-        setTimeout(() => {
-          if (window.document.body.contains(iframe)) {
-            window.document.body.removeChild(iframe);
-          }
-        }, 300);
-      }, 100);
-    };
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('ar-LY', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  };
-
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('ar-LY', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    iframe.onload = () => { setTimeout(() => { if (iframe.contentWindow) { iframe.contentWindow.focus(); iframe.contentWindow.print(); } setTimeout(() => { if (window.document.body.contains(iframe)) window.document.body.removeChild(iframe); }, 300); }, 100); };
   };
 
   return (
     <section className="users-management">
-      <div className="users-breadcrumb">
-        <span>تأمين المسؤولية المهنية (الطبية) / عرض الوثيقة</span>
-      </div>
-      
-      <div className="users-card">
+      <div className="users-breadcrumb"><span>تأمين المسؤولية المهنية (الطبية) / عرض الوثيقة</span></div>
+      <div className="users-card" style={{ padding: '0' }}>
         {loading ? (
-          <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+            <div style={{ textAlign: 'center', color: 'var(--muted)' }}><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '12px' }}></i><p>جار التحميل...</p></div>
+          </div>
         ) : !document ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <p>الوثيقة غير موجودة</p>
-            <button onClick={() => navigate('/professional-liability-insurance-documents')} className="btn btn-primary" style={{ marginTop: '10px' }}>
-              العودة إلى القائمة
-            </button>
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <i className="fa-solid fa-file-circle-xmark" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '16px' }}></i>
+            <p style={{ marginBottom: '16px' }}>الوثيقة غير موجودة</p>
+            <button onClick={() => navigate('/professional-liability-insurance-documents')} className="btn-submit">العودة</button>
           </div>
         ) : (
-          <div className="engineer-financial-details-container">
-          <div className="engineer-financial-details-header">
-            <h2 className="engineer-financial-details-title">
-              تفاصيل: {document.insurance_number}
-            </h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                className="back-button" 
-                onClick={() => navigate('/professional-liability-insurance-documents')}
-              >
-                <i className="fa-solid fa-arrow-right"></i>
-                <span className="back-button-text">العودة للقائمة</span>
-              </button>
-              <button 
-                className="back-button print-button" 
-                onClick={handlePrint}
-              >
-                <i className="fa-solid fa-print"></i>
-                <span className="back-button-text">طباعة الوثيقة</span>
-              </button>
-              <button
-                onClick={() => navigate(`/professional-liability-insurance-documents/${id}/edit`)}
-                className="btn-submit"
-              >
-                <i className="fa-solid fa-pencil" style={{ marginLeft: '6px' }}></i>
-                تعديل
-              </button>
-            </div>
-          </div>
-
-          <div className="engineer-info-card-wrapper">
-            <div className="engineer-info-card">
-              <div className="engineer-info-content">
-                <div className="engineer-info-label">تأمين المسؤولية المهنية (الطبية)</div>
-                <div className="engineer-info-value">
-                  {document.insurance_number}
+          <>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: 'var(--panel)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg,#1e40af,#0284c7)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className="fa-solid fa-stethoscope" style={{ color: '#fff', fontSize: '1.1rem' }}></i>
                 </div>
-                {document.insured_name && (
-                  <div className="engineer-info-detail">
-                    <i className="fa-solid fa-user"></i>
-                    {document.insured_name}
-                  </div>
-                )}
-                {document.phone && (
-                  <div className="engineer-info-detail">
-                    <i className="fa-solid fa-phone"></i>
-                    {document.phone}
-                  </div>
-                )}
-                {document.whatsapp_number && (
-                  <div className="engineer-info-detail" style={{ color: '#25d366' }}>
-                    <i className="fa-brands fa-whatsapp"></i>
-                    {document.whatsapp_number}
-                  </div>
-                )}
-                <div className="engineer-info-detail">
-                  <i className="fa-solid fa-hashtag"></i>
-                  رقم الوثيقة: {document.insurance_number}
-                </div>
-                <div className="engineer-info-detail">
-                  <i className="fa-solid fa-calendar"></i>
-                  تاريخ الإصدار: {formatDateTime(document.issue_date)}
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '600' }}>تأمين المسؤولية المهنية (الطبية)</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text)' }}>تفاصيل: {document.insurance_number}</div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="engineer-stats-grid">
-            <div className="engineer-stat-card">
-              <i className="fa-solid fa-calendar-check engineer-stat-icon"></i>
-              <div className="engineer-stat-label">تاريخ البداية</div>
-              <div className="engineer-stat-value">
-                {formatDate(document.start_date)}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {[
+                  { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/professional-liability-insurance-documents') },
+                  { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
+                  { label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/professional-liability-insurance-documents/${id}/edit`) },
+                ].map((btn, i) => (
+                  <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                    <i className={`fa-solid ${btn.icon}`}></i>{btn.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="engineer-stat-card">
-              <i className="fa-solid fa-calendar-times engineer-stat-icon"></i>
-              <div className="engineer-stat-label">تاريخ النهاية</div>
-              <div className="engineer-stat-value">
-                {formatDate(document.end_date)}
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                {[
+                  { icon: 'fa-calendar-check', label: 'تاريخ البداية', value: fmtDate(document.start_date), color: '#10b981' },
+                  { icon: 'fa-calendar-times', label: 'تاريخ النهاية', value: fmtDate(document.end_date), color: '#ef4444' },
+                  { icon: 'fa-clock', label: 'مدة التأمين', value: document.duration || '-', color: '#f59e0b' },
+                  { icon: 'fa-money-bill-wave', label: 'الإجمالي', value: `${toNum(document.total).toFixed(3)} د.ل`, color: '#1d4ed8' },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <i className={`fa-solid ${s.icon}`} style={{ color: s.color, fontSize: '1rem' }}></i>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '600' }}>{s.label}</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text)' }}>{s.value}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
 
-            <div className="engineer-stat-card">
-              <i className="fa-solid fa-clock engineer-stat-icon"></i>
-              <div className="engineer-stat-label">مدة التأمين</div>
-              <div className="engineer-stat-value">
-                {document.duration || '-'}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <SectionCard title="معلومات الوثيقة" icon="fa-file-contract">
+                  <Row label="رقم الوثيقة" value={document.insurance_number} />
+                  <Row label="تاريخ الإصدار" value={fmtDateTime(document.issue_date)} />
+                  <Row label="تاريخ البداية" value={fmtDate(document.start_date)} />
+                  <Row label="تاريخ النهاية" value={fmtDate(document.end_date)} />
+                  <Row label="مدة التأمين" value={document.duration || '-'} />
+                </SectionCard>
+
+                <SectionCard title="معلومات المؤمن له" icon="fa-user-shield">
+                  <Row label="صلة التعاقد" value={document.contract_relation || '-'} />
+                  {document.contractor_name && <Row label="اسم المتعاقد" value={document.contractor_name} />}
+                  <Row label="اسم المؤمن له" value={document.insured_name} />
+                  <Row label="تاريخ الميلاد" value={fmtDate(document.birth_date)} />
+                  <Row label="العمر" value={document.age || '-'} />
+                  <Row label="رقم الهاتف" value={document.phone || '-'} />
+                  <Row label="رقم الواتساب" value={document.whatsapp_number ? <span style={{ color: '#25d366', fontWeight: '700' }}><i className="fa-brands fa-whatsapp" style={{ marginLeft: '4px' }}></i>{document.whatsapp_number}</span> : '-'} />
+                  <Row label="مكان العمل" value={document.workplace || '-'} />
+                  <Row label="الجنس" value={document.gender || '-'} />
+                  <Row label="الجنسية" value={document.nationality || '-'} />
+                  <Row label="المهنة" value={document.profession || '-'} />
+                  <Row label="الحالة الاجتماعية" value={document.marital_status || '-'} />
+                </SectionCard>
               </div>
-            </div>
 
-            <div className="engineer-stat-card">
-              <i className="fa-solid fa-money-bill-wave engineer-stat-icon"></i>
-              <div className="engineer-stat-label">الإجمالي</div>
-              <div className="engineer-stat-value">
-                {Number(document.total).toFixed(3)} د.ل
-              </div>
+              <SectionCard title="البيانات المالية" icon="fa-money-bill-wave">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                  <Row label="قيمة القسط المقرر" value={`${toNum(document.premium).toFixed(3)} د.ل`} />
+                  <Row label="الضريبة" value={`${toNum(document.tax).toFixed(3)} د.ل`} />
+                  <Row label="الدمغة" value={`${toNum(document.stamp).toFixed(3)} د.ل`} />
+                  <Row label="مصاريف الإصدار" value={`${toNum(document.issue_fees).toFixed(3)} د.ل`} />
+                  <Row label="رسوم الإشراف" value={`${toNum(document.supervision_fees).toFixed(3)} د.ل`} />
+                  <Row label="الإجمالي" value={`${toNum(document.total).toFixed(3)} د.ل`} highlight />
+                </div>
+              </SectionCard>
             </div>
-          </div>
-
-          {/* معلومات الوثيقة ومعلومات المؤمن له */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-            {/* معلومات الوثيقة */}
-            <div>
-              <h3 className="engineer-maps-section-title">معلومات الوثيقة</h3>
-              <div className="users-table-wrapper">
-                <table className="users-table">
-                  <tbody>
-                    <tr>
-                      <td style={{ fontWeight: 'bold', width: '200px' }}>رقم الوثيقة</td>
-                      <td>{document.insurance_number}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>تاريخ الإصدار</td>
-                      <td>{formatDateTime(document.issue_date)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>تاريخ البداية</td>
-                      <td>{formatDate(document.start_date)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>تاريخ النهاية</td>
-                      <td>{formatDate(document.end_date)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>مدة التأمين</td>
-                      <td>{document.duration || '-'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* معلومات المؤمن له */}
-            <div>
-              <h3 className="engineer-maps-section-title">معلومات المؤمن له</h3>
-              <div className="users-table-wrapper">
-                <table className="users-table">
-                  <tbody>
-                    <tr>
-                      <td style={{ fontWeight: 'bold', width: '200px' }}>صلة التعاقد</td>
-                      <td>{document.contract_relation || '-'}</td>
-                    </tr>
-                    {document.contractor_name && (
-                      <tr>
-                        <td style={{ fontWeight: 'bold' }}>اسم المتعاقد</td>
-                        <td>{document.contractor_name}</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>اسم المؤمن له</td>
-                      <td>{document.insured_name || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>تاريخ الميلاد</td>
-                      <td>{formatDate(document.birth_date) || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>العمر</td>
-                      <td>{document.age || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>رقم الهاتف</td>
-                      <td>{document.phone || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>رقم الواتساب</td>
-                      <td>{document.whatsapp_number || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>مكان العمل</td>
-                      <td>{document.workplace || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>الجنس</td>
-                      <td>{document.gender || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>الجنسية</td>
-                      <td>{document.nationality || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>المهنة</td>
-                      <td>{document.profession || '-'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 'bold' }}>الحالة الإجتماعية</td>
-                      <td>{document.marital_status || '-'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* البيانات المالية */}
-          <div style={{ marginTop: '20px' }}>
-            <h3 className="engineer-maps-section-title">البيانات المالية</h3>
-            <div className="users-table-wrapper">
-              <table className="users-table">
-                <tbody>
-                  <tr>
-                    <td style={{ fontWeight: 'bold', width: '200px' }}>قيمة القسط المقرر</td>
-                    <td>{Number(document.premium).toFixed(3)} د.ل</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 'bold' }}>الضريبة</td>
-                    <td>{Number(document.tax).toFixed(3)} د.ل</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 'bold' }}>الدمغة</td>
-                    <td>{Number(document.stamp).toFixed(3)} د.ل</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 'bold' }}>مصاريف الإصدار</td>
-                    <td>{Number(document.issue_fees).toFixed(3)} د.ل</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 'bold' }}>رسوم الإشراف</td>
-                    <td>{Number(document.supervision_fees).toFixed(3)} د.ل</td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#f0f9ff' }}>
-                    <td style={{ fontWeight: 'bold' }}>الإجمالي</td>
-                    <td style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1e40af' }}>{Number(document.total).toFixed(3)} د.ل</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          </div>
+          </>
         )}
       </div>
     </section>
   );
 }
-
