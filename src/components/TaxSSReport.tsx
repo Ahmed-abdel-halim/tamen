@@ -20,6 +20,10 @@ type PayrollData = {
     start_date: string;
     tax_percentage: number | string;
     social_security_percentage: number | string;
+    tax_file_number?: string | null;
+    social_security_file_number?: string | null;
+    apply_tax?: boolean;
+    apply_social_security?: boolean;
   };
 };
 
@@ -72,6 +76,13 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
     loadData();
   }, [type, year, month, fromDate, toDate]);
 
+  const filteredData = useMemo(() => {
+    return data.filter(row => {
+      if (type === 'tax') return row.user?.apply_tax !== false;
+      return row.user?.apply_social_security !== false;
+    });
+  }, [data, type]);
+
   const getRowShare = (row: PayrollData) => {
     let share = type === 'tax' ? toNum(row.tax_amount) : toNum(row.social_security_amount);
     if (share === 0) {
@@ -82,23 +93,23 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
   };
 
   const totals = useMemo(() => {
-    return data.reduce((acc, r) => {
+    return filteredData.reduce((acc, r) => {
       acc.base += toNum(r.base_salary);
       acc.share += getRowShare(r);
       return acc;
     }, { base: 0, share: 0 });
-  }, [data, type]);
+  }, [filteredData, type]);
 
   const handlePrint = () => {
     const printWindow = window.open('', '', 'width=1200,height=900');
     if (!printWindow) return;
 
-    const bodyRows = data.map((row, idx) => `
+    const bodyRows = filteredData.map((row, idx) => `
       <tr>
         <td>${idx + 1}</td>
         <td style="text-align:right; font-weight:bold;">${row.user?.name}</td>
         <td>${row.user?.job_title || '-'}</td>
-        <td style="font-family:monospace">${row.user?.national_id_number || '-'}</td>
+        <td style="font-family:monospace">${type === 'tax' ? (row.user?.tax_file_number || '-') : (row.user?.social_security_file_number || '-')}</td>
         <td>${row.user?.nationality || '-'}</td>
         <td>${row.user?.start_date ? new Date(row.user.start_date).toLocaleDateString('ar-LY') : '-'}</td>
         <td>%${type === 'tax' ? row.user?.tax_percentage : row.user?.social_security_percentage}</td>
@@ -245,7 +256,7 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
               <th width="40">م</th>
               <th>الاسم</th>
               <th>المهنة</th>
-              <th>الرقم القومي</th>
+              <th>${type === 'tax' ? 'الرقم الضريبي' : 'رقم الضمان'}</th>
               <th>الجنسية</th>
               <th>بداية العمل</th>
               <th>النسبة</th>
@@ -307,7 +318,7 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
           <th width="50">م</th>
           <th width="250">الاسم</th>
           <th width="150">المهنة</th>
-          <th width="150">الرقم القومي</th>
+          <th width="150">${type === 'tax' ? 'الرقم الضريبي' : 'رقم الضمان'}</th>
           <th width="120">الجنسية</th>
           <th width="120">بداية العمل</th>
           <th width="80">النسبة</th>
@@ -315,12 +326,12 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
           <th width="150">${columnLabel}</th>
         </tr>
       `,
-      tableBody: data.map((row, index) => `
+      tableBody: filteredData.map((row, index) => `
         <tr class="${index % 2 === 0 ? 'row-even' : ''}">
           <td align="center">${index + 1}</td>
           <td class="bold">${row.user?.name}</td>
           <td>${row.user?.job_title || '-'}</td>
-          <td style="mso-number-format:'\@';">${row.user?.national_id_number || '-'}</td>
+          <td style="mso-number-format:'\@';">${type === 'tax' ? (row.user?.tax_file_number || '-') : (row.user?.social_security_file_number || '-')}</td>
           <td>${row.user?.nationality || '-'}</td>
           <td>${row.user?.start_date || '-'}</td>
           <td align="center">${type === 'tax' ? row.user?.tax_percentage : row.user?.social_security_percentage}%</td>
@@ -409,7 +420,7 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
                 <th style={{ width: '50px' }}>م</th>
                 <th>الاسم</th>
                 <th>المهنة</th>
-                <th>الرقم القومي</th>
+                <th>{type === 'tax' ? 'الرقم الضريبي' : 'رقم الضمان'}</th>
                 <th>الجنسية</th>
                 <th>بداية العمل</th>
                 <th>النسبة</th>
@@ -430,12 +441,14 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
                 </td></tr>
               ) : (
                 <>
-                  {data.map((row, idx) => (
+                  {filteredData.map((row, idx) => (
                     <tr key={row.id}>
                       <td>{idx + 1}</td>
                       <td style={{ fontWeight: 'bold' }}>{row.user?.name}</td>
                       <td>{row.user?.job_title || '-'}</td>
-                      <td style={{ fontFamily: 'monospace' }}>{row.user?.national_id_number || '-'}</td>
+                      <td style={{ fontFamily: 'monospace' }}>
+                        {type === 'tax' ? (row.user?.tax_file_number || '-') : (row.user?.social_security_file_number || '-')}
+                      </td>
                       <td>{row.user?.nationality || '-'}</td>
                       <td>{row.user?.start_date ? new Date(row.user.start_date).toLocaleDateString('ar-LY') : '-'}</td>
                       <td style={{ textAlign: 'center' }}>%{type === 'tax' ? row.user?.tax_percentage : row.user?.social_security_percentage}</td>

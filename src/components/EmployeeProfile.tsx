@@ -50,6 +50,11 @@ type User = {
   is_active?: boolean;
   social_security_percentage?: number;
   tax_percentage?: number;
+  tax_file_number?: string | null;
+  social_security_file_number?: string | null;
+  end_date?: string | null;
+  apply_tax?: boolean;
+  apply_social_security?: boolean;
   // URLs
   profile_photo_url?: string | null;
   personal_id_proof_url?: string | null;
@@ -230,7 +235,7 @@ export default function EmployeeProfile() {
   if (loading) return <div className="loading-container font-cairo">جارِ التحميل...</div>;
   if (!user) return <div className="error-container font-cairo">الموظف غير موجود.</div>;
 
-  const formatDate = (dateStr?: string) => {
+  const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('ar-LY');
   };
@@ -354,6 +359,9 @@ export default function EmployeeProfile() {
                   <InfoItem label="فرع المصرف" value={user.bank_branch} />
                   <InfoItem label="رقم الحساب" value={user.account_number} />
                   <InfoItem label="تاريخ مباشرة العمل" value={formatDate(user.start_date)} />
+                  <InfoItem label="تاريخ انتهاء العمل" value={formatDate(user.end_date)} />
+                  <InfoItem label="رقم الملف الضريبي" value={user.tax_file_number} />
+                  <InfoItem label="رقم الملف الضماني" value={user.social_security_file_number} />
                   <InfoItem label="ساعات الدوام" value={user.working_hours_from ? `${user.working_hours_from} إلى ${user.working_hours_to}` : '—'} />
                   <InfoItem label="أيام العمل" value={user.working_days_from ? `من ${user.working_days_from} إلى ${user.working_days_to}` : '—'} />
                   <InfoItem label="نوع العقد" value={user.contract_type} />
@@ -377,7 +385,9 @@ export default function EmployeeProfile() {
                   <FinancialCard label="خصم غياب (ساعة)" value={user.hourly_leave_deduction} type="penalty" />
                   <FinancialCard label="خصم غياب (يوم)" value={user.daily_leave_deduction} type="penalty" />
                   <PercentCard label="حصة مصلحة الضرائب" value={user.tax_percentage} type="penalty" />
+                  <InfoItem label="خاضع للضريبة؟" value={user.apply_tax === false ? 'لا' : 'نعم'} />
                   <PercentCard label="حصة الضمان الاجتماعي" value={user.social_security_percentage} type="penalty" />
+                  <InfoItem label="خاضع للضمان؟" value={user.apply_social_security === false ? 'لا' : 'نعم'} />
                 </div>
               </div>
             )}
@@ -509,7 +519,7 @@ export default function EmployeeProfile() {
   );
 }
 
-function InfoItem({ label, value }: { label: string, value?: string }) {
+function InfoItem({ label, value }: { label: string, value?: string | null }) {
   return (
     <div className="info-item-box">
       <span className="info-label-text">{label}</span>

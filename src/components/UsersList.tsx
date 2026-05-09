@@ -70,6 +70,11 @@ type User = {
   tax_percentage?: number;
   salary_type?: string;
   hourly_rate?: number;
+  tax_file_number?: string | null;
+  social_security_file_number?: string | null;
+  end_date?: string | null;
+  apply_tax?: boolean;
+  apply_social_security?: boolean;
   eidc_username?: string | null;
   eidc_password?: string | null;
   eidc_api_key?: string | null;
@@ -207,8 +212,13 @@ export default function UsersList() {
     is_active: true,
     social_security_percentage: 19.475 as string | number,
     tax_percentage: 10.000 as string | number,
+    apply_tax: true,
+    apply_social_security: true,
     salary_type: 'monthly',
     hourly_rate: '' as string | number,
+    tax_file_number: '',
+    social_security_file_number: '',
+    end_date: '',
     eidc_username: '',
     eidc_password: '',
     eidc_api_key: '',
@@ -701,8 +711,13 @@ export default function UsersList() {
         is_active: showForm.user.is_active !== undefined ? showForm.user.is_active : true,
         social_security_percentage: showForm.user.social_security_percentage ?? 19.475,
         tax_percentage: showForm.user.tax_percentage ?? 10.000,
+        apply_tax: showForm.user.apply_tax ?? true,
+        apply_social_security: showForm.user.apply_social_security ?? true,
         salary_type: showForm.user.salary_type || 'monthly',
         hourly_rate: showForm.user.hourly_rate || '',
+        tax_file_number: showForm.user.tax_file_number || '',
+        social_security_file_number: showForm.user.social_security_file_number || '',
+        end_date: showForm.user.end_date || '',
         eidc_username: showForm.user.eidc_username || '',
         eidc_password: showForm.user.eidc_password || '',
         eidc_api_key: showForm.user.eidc_api_key || '',
@@ -752,8 +767,13 @@ export default function UsersList() {
         is_active: true,
         social_security_percentage: 19.475,
         tax_percentage: 10.000,
+        apply_tax: true,
+        apply_social_security: true,
         salary_type: 'monthly',
         hourly_rate: '',
+        tax_file_number: '',
+        social_security_file_number: '',
+        end_date: '',
         eidc_username: '',
         eidc_password: '',
         eidc_api_key: '',
@@ -855,8 +875,13 @@ export default function UsersList() {
         is_active: formData.is_active,
         social_security_percentage: formData.social_security_percentage || 0,
         tax_percentage: formData.tax_percentage || 0,
+        apply_tax: formData.apply_tax,
+        apply_social_security: formData.apply_social_security,
         salary_type: formData.salary_type || 'monthly',
         hourly_rate: formData.hourly_rate || 0,
+        tax_file_number: formData.tax_file_number || null,
+        social_security_file_number: formData.social_security_file_number || null,
+        end_date: formData.end_date || null,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -957,10 +982,15 @@ export default function UsersList() {
         hourly_leave_deduction: '',
         daily_leave_deduction: '',
         is_active: true,
-        social_security_percentage: '',
-        tax_percentage: '',
-        salary_type: 'شهري',
+        social_security_percentage: 19.475,
+        tax_percentage: 10.000,
+        apply_tax: true,
+        apply_social_security: true,
+        salary_type: 'monthly',
         hourly_rate: '',
+        tax_file_number: '',
+        social_security_file_number: '',
+        end_date: '',
         eidc_username: '',
         eidc_password: '',
         eidc_api_key: '',
@@ -1647,6 +1677,20 @@ export default function UsersList() {
                     <label>تاريخ المباشرة</label>
                     <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
                   </div>
+                  <div className="form-group flex-1">
+                    <label>تاريخ انتهاء العمل</label>
+                    <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label>رقم الملف الضريبي</label>
+                    <input type="text" value={formData.tax_file_number} onChange={(e) => setFormData({ ...formData, tax_file_number: e.target.value })} placeholder="الرقم الضريبي" />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>رقم الملف الضماني</label>
+                    <input type="text" value={formData.social_security_file_number} onChange={(e) => setFormData({ ...formData, social_security_file_number: e.target.value })} placeholder="الرقم الضماني" />
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
@@ -1729,12 +1773,24 @@ export default function UsersList() {
                     <input type="number" value={formData.daily_leave_deduction} onChange={(e) => setFormData({ ...formData, daily_leave_deduction: e.target.value })} placeholder="0.00" />
                   </div>
                   <div className="form-group flex-1">
-                    <label>حصة الضرائب %</label>
-                    <input type="number" step="0.001" value={formData.tax_percentage} onChange={(e) => setFormData({ ...formData, tax_percentage: e.target.value })} placeholder="10" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ marginBottom: 0 }}>حصة الضرائب %</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer', color: formData.apply_tax ? 'var(--accent-blue)' : 'var(--muted)' }}>
+                        <input type="checkbox" checked={formData.apply_tax} onChange={(e) => setFormData({ ...formData, apply_tax: e.target.checked })} />
+                        <span>تنطبق</span>
+                      </label>
+                    </div>
+                    <input type="number" step="0.001" disabled={!formData.apply_tax} value={formData.tax_percentage} onChange={(e) => setFormData({ ...formData, tax_percentage: e.target.value })} placeholder="10" style={{ opacity: formData.apply_tax ? 1 : 0.6 }} />
                   </div>
                   <div className="form-group flex-1">
-                    <label>حصة الضمان الاجتماعي %</label>
-                    <input type="number" step="0.001" value={formData.social_security_percentage} onChange={(e) => setFormData({ ...formData, social_security_percentage: e.target.value })} placeholder="19.475" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ marginBottom: 0 }}>حصة الضمان %</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer', color: formData.apply_social_security ? '#139625' : 'var(--muted)' }}>
+                        <input type="checkbox" checked={formData.apply_social_security} onChange={(e) => setFormData({ ...formData, apply_social_security: e.target.checked })} />
+                        <span>ينطبق</span>
+                      </label>
+                    </div>
+                    <input type="number" step="0.001" disabled={!formData.apply_social_security} value={formData.social_security_percentage} onChange={(e) => setFormData({ ...formData, social_security_percentage: e.target.value })} placeholder="19.475" style={{ opacity: formData.apply_social_security ? 1 : 0.6 }} />
                   </div>
                 </div>
               </div>

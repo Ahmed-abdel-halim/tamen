@@ -11,6 +11,8 @@ type Employee = {
   salary?: number | string | null;
   tax_percentage?: number | string;
   social_security_percentage?: number | string;
+  apply_tax?: boolean;
+  apply_social_security?: boolean;
 };
 
 type Payroll = {
@@ -145,9 +147,13 @@ export default function EmployeeSalaries() {
     const tax_pct = toNum(e.tax_percentage || 10);
     const ss_pct = toNum(e.social_security_percentage || 19.475);
 
-    // إذا كانت القيمة في قاعدة البيانات 0 والمرتب لم يصرف بعد، نعرض القيمة المحسوبة تلقائياً
-    const tax_val = (p && toNum(p.tax_amount) > 0) ? toNum(p.tax_amount) : (base * tax_pct / 100);
-    const ss_val = (p && toNum(p.social_security_amount) > 0) ? toNum(p.social_security_amount) : (base * ss_pct / 100);
+    // التحقق من خيارات التطبيق
+    const isTaxApplied = e.apply_tax !== false;
+    const isSSApplied = e.apply_social_security !== false;
+
+    // إذا كانت القيمة في قاعدة البيانات 0 والمرتب لم يصرف بعد، نعرض القيمة المحسوبة تلقائياً مع احترام الخيارات
+    const tax_val = (p && toNum(p.tax_amount) > 0) ? toNum(p.tax_amount) : (isTaxApplied ? (base * tax_pct / 100) : 0);
+    const ss_val = (p && toNum(p.social_security_amount) > 0) ? toNum(p.social_security_amount) : (isSSApplied ? (base * ss_pct / 100) : 0);
 
     // حساب الصافي بناءً على القيم المعروضة لضمان الدقة في العرض
     const net = (base + housing + transport + communication + bonus + other + misc + extra_total - deduction - advance - penalty - tax_val - ss_val);
@@ -722,24 +728,38 @@ export default function EmployeeSalaries() {
                 <div className="form-group"><label>إضافات أخرى</label><input type="number" value={payrollForm.other_additions} onChange={(e) => setPayrollForm({ ...payrollForm, other_additions: e.target.value })} /></div>
 
                 <div className="form-group">
-                  <label style={{ color: '#ef4444' }}>ضرائب (%{employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10})</label>
+                  <label style={{ color: '#ef4444' }}>
+                    ضرائب (%{employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10})
+                    {employees.find(e => e.id === payrollForm.user_id)?.apply_tax === false && ' (غير منطبقة)'}
+                  </label>
                   <input
                     type="text"
                     readOnly
                     disabled
-                    style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold' }}
-                    value={money.format(toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100)}
+                    style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold', opacity: employees.find(e => e.id === payrollForm.user_id)?.apply_tax === false ? 0.5 : 1 }}
+                    value={money.format(
+                      employees.find(e => e.id === payrollForm.user_id)?.apply_tax !== false 
+                      ? (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100)
+                      : 0
+                    )}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label style={{ color: '#ef4444' }}>ضمان (%{employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475})</label>
+                  <label style={{ color: '#ef4444' }}>
+                    ضمان (%{employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475})
+                    {employees.find(e => e.id === payrollForm.user_id)?.apply_social_security === false && ' (غير منطبق)'}
+                  </label>
                   <input
                     type="text"
                     readOnly
                     disabled
-                    style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold' }}
-                    value={money.format(toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100)}
+                    style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold', opacity: employees.find(e => e.id === payrollForm.user_id)?.apply_social_security === false ? 0.5 : 1 }}
+                    value={money.format(
+                      employees.find(e => e.id === payrollForm.user_id)?.apply_social_security !== false
+                      ? (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100)
+                      : 0
+                    )}
                   />
                 </div>
 
