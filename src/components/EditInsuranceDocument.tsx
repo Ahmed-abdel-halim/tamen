@@ -131,9 +131,6 @@ const LIBYAN_CITIES = [
 // خيارات رقم المحرك
 const ENGINE_NUMBERS = ['123456'];
 
-// خيارات قوة المحرك بالحصان (1 إلى 100)
-const ENGINE_POWERS_LIST = Array.from({ length: 100 }, (_, i) => (i + 1).toString());
-
 // خيارات سعة المحرك (1000 إلى 10000) بتدرج 500
 const ENGINE_CC_LIST = Array.from({ length: 19 }, (_, i) => (1000 + (i * 500)).toString());
 
@@ -307,40 +304,20 @@ export default function EditInsuranceDocument() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
-  const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Select2 states
-  const [plateSearch, setPlateSearch] = useState("");
-  const [showPlateDropdown, setShowPlateDropdown] = useState(false);
-  const plateDropdownRef = useRef<HTMLDivElement>(null);
-
-  const [vehicleTypeSearch, setVehicleTypeSearch] = useState("");
-  const [showVehicleTypeDropdown, setShowVehicleTypeDropdown] = useState(false);
-  const vehicleTypeDropdownRef = useRef<HTMLDivElement>(null);
-  const [newVehicleTypeBrand, setNewVehicleTypeBrand] = useState("");
-  const [newVehicleTypeCategory, setNewVehicleTypeCategory] = useState("");
-  const [useCustomVehicleTypeBrand, setUseCustomVehicleTypeBrand] = useState(false);
-  const [showAddVehicleType, setShowAddVehicleType] = useState(false);
   const [showDeleteVehicleTypeModal, setShowDeleteVehicleTypeModal] = useState<{ id: number; brand: string; category: string } | null>(null);
   const [deletingVehicleType, setDeletingVehicleType] = useState(false);
 
-  const [categorySearch, setCategorySearch] = useState("");
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
 
   const [colors, setColors] = useState<Color[]>([]);
-  const [colorSearch, setColorSearch] = useState("");
-  const [showColorDropdown, setShowColorDropdown] = useState(false);
-  const [newColorName, setNewColorName] = useState("");
-  const [showAddColor, setShowAddColor] = useState(false);
+
   const [showDeleteColorModal, setShowDeleteColorModal] = useState<{ id: number; name: string } | null>(null);
   const [deletingColor, setDeletingColor] = useState(false);
-  const colorDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [yearSearch, setYearSearch] = useState("");
-  const [showYearDropdown, setShowYearDropdown] = useState(false);
-  const yearDropdownRef = useRef<HTMLDivElement>(null);
+
+
 
 
   useEffect(() => {
@@ -357,50 +334,25 @@ export default function EditInsuranceDocument() {
     try {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
-        setAuthorizedDocuments(null);
-        setIsAdmin(false);
         return;
       }
-      
-      const user = JSON.parse(userStr);
-      setIsAdmin(user.is_admin || false);
-      setAuthorizedDocuments(user.authorized_documents || null);
     } catch (error) {
       console.error('Error loading user permissions:', error);
-      setAuthorizedDocuments(null);
-      setIsAdmin(false);
     }
   };
 
   // تعيين فئة السيارة بعد تحميل البيانات
   useEffect(() => {
     if (formData.vehicle_type_id && vehicleTypes.length > 0) {
-      const vehicleType = vehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
-      if (vehicleType && vehicleType.category) {
-        setSelectedCategory(vehicleType.category);
-      }
+      // Logic removed as selectedCategory is no longer used
     }
   }, [formData.vehicle_type_id, vehicleTypes]);
 
 
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (plateDropdownRef.current && !plateDropdownRef.current.contains(event.target as Node)) {
-        setShowPlateDropdown(false);
-      }
-      if (vehicleTypeDropdownRef.current && !vehicleTypeDropdownRef.current.contains(event.target as Node)) {
-        setShowVehicleTypeDropdown(false);
-      }
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
-        setShowCategoryDropdown(false);
-      }
-      if (colorDropdownRef.current && !colorDropdownRef.current.contains(event.target as Node)) {
-        setShowColorDropdown(false);
-      }
-      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
-        setShowYearDropdown(false);
-      }
+    const handleClickOutside = (_event: MouseEvent) => {
+      // Dropdown refs checks removed as they are no longer used
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -471,7 +423,7 @@ export default function EditInsuranceDocument() {
       
       // تعيين الفئة المختارة إذا كان هناك نوع سيارة
       if (data.vehicle_type?.category) {
-        setSelectedCategory(data.vehicle_type.category);
+        // setSelectedCategory removed
       }
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء جلب الوثيقة', 'error');
@@ -1298,80 +1250,17 @@ export default function EditInsuranceDocument() {
     }
   };
 
-  const filteredPlates = plates.filter(p =>
-    p.plate_number.toLowerCase().includes(plateSearch.toLowerCase()) ||
-    p.city.name_ar.toLowerCase().includes(plateSearch.toLowerCase()) ||
-    p.city.name_en.toLowerCase().includes(plateSearch.toLowerCase())
-  );
 
-  // الحصول على قائمة فريدة من العلامات التجارية
-  const uniqueBrands = Array.from(new Set(vehicleTypes.map(vt => vt.brand)))
-    .filter(brand => brand.toLowerCase().includes(vehicleTypeSearch.toLowerCase()))
-    .sort();
 
-  const selectedVehicleType = vehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
-  const selectedBrand = selectedVehicleType ? selectedVehicleType.brand : '';
-  const [selectedCategory, setSelectedCategory] = useState('');
-  
-  // عرض الفئات الخاصة بالعلامة التجارية المختارة
-  const filteredCategories = selectedBrand
-    ? vehicleTypes.filter(vt => vt.brand === selectedBrand)
-    : [];
 
-  useEffect(() => {
-    setSelectedCategory(selectedVehicleType?.category || '');
-  }, [selectedVehicleType?.category]);
 
-  const filteredColors = colors.filter(color =>
-    color.name.toLowerCase().includes(colorSearch.toLowerCase())
-  );
 
-  const filteredYears = YEARS.filter(y =>
-    y.toString().includes(yearSearch)
-  );
 
-  // إضافة نوع سيارة جديد
-  const handleAddVehicleType = async (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!newVehicleTypeBrand.trim() || !newVehicleTypeCategory.trim()) return;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/vehicle-types`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          brand: newVehicleTypeBrand.trim(),
-          category: newVehicleTypeCategory.trim(),
-        }),
-      });
 
-      if (res.ok) {
-        const newVehicleType = await res.json();
-        setVehicleTypes([...vehicleTypes, newVehicleType]);
-        setFormData({ ...formData, vehicle_type_id: newVehicleType.id.toString() });
-        setSelectedCategory(newVehicleType.category);
-        // إبقاء الماركة لتسهيل إضافة أكثر من فئة
-        setNewVehicleTypeCategory('');
-        setShowAddVehicleType(true);
-        showToast('تم إضافة نوع السيارة بنجاح', 'success');
-      } else {
-        const data = await res.json();
-        showToast(data.message || 'حدث خطأ أثناء إضافة نوع السيارة', 'error');
-      }
-    } catch (error: any) {
-      showToast('حدث خطأ أثناء إضافة نوع السيارة', 'error');
-    }
-  };
 
-  const handleDeleteVehicleTypeClick = (e: React.MouseEvent, vehicleType: VehicleType) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowDeleteVehicleTypeModal({ id: vehicleType.id, brand: vehicleType.brand, category: vehicleType.category });
-  };
+
+
 
   const handleDeleteVehicleType = async () => {
     if (!showDeleteVehicleTypeModal) return;
@@ -1388,7 +1277,6 @@ export default function EditInsuranceDocument() {
         setVehicleTypes(vehicleTypes.filter(vt => vt.id !== showDeleteVehicleTypeModal.id));
         if (formData.vehicle_type_id === showDeleteVehicleTypeModal.id.toString()) {
           setFormData({ ...formData, vehicle_type_id: '' });
-          setSelectedCategory('');
         }
         setShowDeleteVehicleTypeModal(null);
         showToast('تم حذف نوع السيارة بنجاح', 'success');
@@ -1402,45 +1290,9 @@ export default function EditInsuranceDocument() {
       setDeletingVehicleType(false);
     }
   };
-  // إضافة لون جديد
-  const handleAddColor = async (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!newColorName.trim()) return;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/colors`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ name: newColorName.trim() }),
-      });
 
-      if (res.ok) {
-        const newColor = await res.json();
-        setColors([...colors, newColor]);
-        setFormData({ ...formData, color: newColor.name });
-        setNewColorName('');
-        setShowAddColor(false);
-        setShowColorDropdown(false);
-        showToast('تم إضافة اللون بنجاح', 'success');
-      } else {
-        const data = await res.json();
-        showToast(data.message || 'حدث خطأ أثناء إضافة اللون', 'error');
-      }
-    } catch (error: any) {
-      showToast('حدث خطأ أثناء إضافة اللون', 'error');
-    }
-  };
 
-  // حذف لون
-  const handleDeleteColorClick = (e: React.MouseEvent, colorId: number, colorName: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowDeleteColorModal({ id: colorId, name: colorName });
-  };
 
   const handleDeleteColor = async () => {
     if (!showDeleteColorModal) return;
@@ -1472,7 +1324,7 @@ export default function EditInsuranceDocument() {
   };
 
 
-  const selectedPlate = plates.find(p => p.id === parseInt(formData.plate_id));
+
 
   // تحديد قائمة قوة المحرك بناءً على الغرض من الترخيص
   const isPublicPurpose = formData.license_purpose && formData.license_purpose.includes('عامة');
@@ -1637,19 +1489,11 @@ export default function EditInsuranceDocument() {
     return premium + tax + stamp + issueFees + supervisionFees;
   };
 
-  // الموانئ المتاحة
-  const PORTS = [
-    { value: 'ميناء مصراته', cityName: 'مصراته' },
-    { value: 'ميناء طرابلس', cityName: 'طرابلس' },
-    { value: 'ميناء الخمس', cityName: 'الخمس' },
-    { value: 'ميناء بنغازي', cityName: 'بنغازي' },
-  ];
+
 
   // البحث عن اللوحة حسب الميناء المختار
-  const selectedPort = PORTS.find(p => p.value === formData.port);
-  const portPlate = selectedPort 
-    ? plates.find(p => p.city.name_ar === selectedPort.cityName)
-    : null;
+
+
 
   return (
     <section className="users-management">
