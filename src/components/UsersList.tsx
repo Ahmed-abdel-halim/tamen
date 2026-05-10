@@ -147,6 +147,7 @@ const ADMIN_SECTION_PERMISSIONS = [
   'دليل الجهات الخارجية',
   'طلبات الوثائق',
   'الشؤون الفنية',
+  'ملفات الشركة',
 ];
 
 const SETTINGS_PERMISSIONS = [

@@ -146,6 +146,7 @@ function hasAccessToRoute(
   const insuranceTypeMap: Record<string, string[]> = {
     'تأمين سيارات إجباري': ['/insurance-documents'],
     'تأمين سيارات': ['/insurance-documents'],
+    'تأمين سيارة جمرك': ['/insurance-documents'],
     'تأمين سيارات أجنبية': ['/insurance-documents'],
     'تأمين طرف ثالث سيارات': ['/insurance-documents'],
     'تأمين سيارات دولي': ['/international-insurance-documents'],
@@ -183,6 +184,7 @@ function hasAccessToRoute(
       '/reports/expenses',
       '/reports/indemnities',
       '/reports/union-balances',
+      '/reports/rental-vouchers',
       '/reports/employee-salaries',
       '/reports/financial-archive'
     ],
@@ -401,6 +403,7 @@ const createMenuSections = (
   const insuranceTypeMap: Record<string, SidebarItem | SidebarItem[]> = {
     'تأمين سيارات إجباري': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين سيارة جمرك': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات أجنبية': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين طرف ثالث سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
@@ -498,10 +501,17 @@ const createMenuSections = (
     '/reports/union-balances',
     '/reports/rental-vouchers',
   ];
-  const adminOrder: string[] = ['/branches-agents', '/users', '/employee-requests', '/agent-requests', '/agency-cancellations', '/archive'];
-
-
-
+  const adminOrder: string[] = [
+    '/branches-agents', 
+    '/users', 
+    '/employee-requests', 
+    '/agent-requests', 
+    '/agency-cancellations', 
+    '/external-entities',
+    '/mail/incoming',
+    '/mail/outgoing',
+    '/archive'
+  ];
   const technicalOrder: string[] = ['/claims', '/reports/indemnities'];
   const settingsOrder: string[] = ['/cities', '/plates', '/colors', '/vehicle-types'];
 
@@ -588,7 +598,7 @@ const createMenuSections = (
 
   // العناصر الإضافية التي تظهر في القائمة الرئيسية مباشرة
   const extraMainItems: SidebarItem[] = [];
-  if (isAdmin && insuranceItemsMap.has('/company-documents')) {
+  if (insuranceItemsMap.has('/company-documents')) {
     extraMainItems.push(insuranceItemsMap.get('/company-documents')!);
   }
   insuranceItemsMap.delete('/company-documents');
