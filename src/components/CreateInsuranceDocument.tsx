@@ -2130,14 +2130,10 @@ export default function CreateInsuranceDocument() {
     }
     if (!formData.phone || !formData.phone.trim()) {
       errors.phone = 'رقم الهاتف مطلوب';
-    } else if (!/^\d{10}$/.test(formData.phone.trim())) {
-      errors.phone = 'رقم الهاتف يجب أن يتكون من 10 أرقام';
     }
     
     if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
-    } else if (!/^\d{10}$/.test(formData.whatsapp_number.trim())) {
-      errors.whatsapp_number = 'رقم الواتساب يجب أن يتكون من 10 أرقام';
     }
 
     if (!formData.nationality || !formData.nationality.trim()) {
@@ -2148,8 +2144,6 @@ export default function CreateInsuranceDocument() {
     }
     if (!formData.nid_passport || !formData.nid_passport.trim()) {
       errors.nid_passport = 'رقم الهوية الوطنية أو جواز السفر مطلوب';
-    } else if (!/^\d{12}$/.test(formData.nid_passport.trim())) {
-      errors.nid_passport = 'رقم الهوية يجب أن يتكون من 12 رقم';
     }
     if (isMandatoryInsurance) {
       if (!formData.premium || parseFloat(formData.premium) <= 0) {

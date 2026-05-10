@@ -1391,14 +1391,10 @@ export default function EditInsuranceDocument() {
     
     if (!formData.phone?.trim()) {
       errors.phone = 'رقم الهاتف مطلوب';
-    } else if (formData.phone.trim().length !== 10) {
-      errors.phone = 'رقم الهاتف يجب أن يتكون من 10 أرقام';
     }
     
     if (!formData.whatsapp_number?.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
-    } else if (formData.whatsapp_number.trim().length !== 10) {
-      errors.whatsapp_number = 'رقم الواتساب يجب أن يتكون من 10 أرقام';
     }
     
     if (!formData.address?.trim()) errors.address = 'العنوان التفصيلي مطلوب';
