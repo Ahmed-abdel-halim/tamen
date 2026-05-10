@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 interface StoreItem {
   id: number;
@@ -659,113 +659,125 @@ export default function InventoryManagement() {
     gap: '8px',
   });
   
-  const handleExportFixedAssetsReport = () => {
+  const handleExportFixedAssetsReport = async () => {
     const fixedCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     let grandTotalValue = 0;
     let grandTotalDepreciation = 0;
     
-    const tableRows = fixedCustodies.map((c, index) => {
-      const price = getItemPrice(c.item) || 0;
-      const totalValue = price * c.quantity;
-      
-      const assignedDate = new Date(c.assigned_at);
-      const years = Math.max(0, (new Date().getTime() - assignedDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
-      const depreciationRate = 0.10; 
-      const depreciationValue = totalValue * depreciationRate * years;
-      
-      grandTotalValue += totalValue;
-      grandTotalDepreciation += depreciationValue;
-      
-      return `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td>${index + 1}</td>
-          <td style="text-align:right; font-weight:bold;">${c.item.name}</td>
-          <td>${c.quantity} ${c.item.unit}</td>
-          <td>${c.recipient.agency_name || c.recipient.name}</td>
-          <td>${totalValue.toLocaleString()} د.ل</td>
-          <td style="color:#ef4444;">${depreciationValue.toFixed(2)} د.ل</td>
-          <td>${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}</td>
-        </tr>
-      `;
-    }).join('');
+    try {
+      const columns = [
+        { header: '#', key: 'index', width: 8 },
+        { header: 'الصنف', key: 'name', width: 35 },
+        { header: 'الكمية', key: 'quantity', width: 15 },
+        { header: 'المستلم', key: 'recipient', width: 30 },
+        { header: 'إجمالي القيمة', key: 'total_value', width: 20 },
+        { header: 'قيمة الاستهلاك', key: 'depreciation', width: 20 },
+        { header: 'التفاصيل', key: 'details', width: 35 },
+      ];
 
-    const footerRow = `
-      <tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #000;">
-        <td colspan="4" style="text-align: center;">الإجمالي العام</td>
-        <td>${grandTotalValue.toLocaleString()} د.ل</td>
-        <td style="color:#ef4444;">${grandTotalDepreciation.toLocaleString()} د.ل</td>
-        <td>-</td>
-      </tr>
-    `;
+      const data = fixedCustodies.map((c, index) => {
+        const price = getItemPrice(c.item) || 0;
+        const totalValue = price * c.quantity;
+        
+        const assignedDate = new Date(c.assigned_at);
+        const years = Math.max(0, (new Date().getTime() - assignedDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+        const depreciationRate = 0.10; 
+        const depreciationValue = totalValue * depreciationRate * years;
+        
+        grandTotalValue += totalValue;
+        grandTotalDepreciation += depreciationValue;
+        
+        return {
+          index: index + 1,
+          name: c.item.name,
+          quantity: `${c.quantity} ${c.item.unit}`,
+          recipient: c.recipient.agency_name || c.recipient.name,
+          total_value: totalValue.toLocaleString() + ' د.ل',
+          depreciation: depreciationValue.toFixed(2) + ' د.ل',
+          details: `${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}`,
+        };
+      });
 
-    exportToExcel({
-      title: 'تقرير العهد والأصول الثابتة',
-      fileName: 'العهد_الثابتة',
-      columnCount: 7,
-      summaryRight: `إجمالي عدد الأصول: ${fixedCustodies.length}`,
-      summaryLeft: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="50">#</th>
-          <th width="150">الصنف</th>
-          <th width="120">الكمية</th>
-          <th width="150">المستلم</th>
-          <th width="120">إجمالي القيمة</th>
-          <th width="120">قيمة الاستهلاك</th>
-          <th width="200">التفاصيل</th>
-        </tr>
-      `,
-      tableBody: tableRows + footerRow
-    });
+      // Summary row
+      data.push({
+        index: '-' as any,
+        name: 'الإجمالي العام',
+        quantity: '',
+        recipient: '',
+        total_value: grandTotalValue.toLocaleString() + ' د.ل',
+        depreciation: grandTotalDepreciation.toLocaleString() + ' د.ل',
+        details: '',
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير العهد والأصول الثابتة',
+        subtitle: `إجمالي عدد الأصول: ${fixedCustodies.length} - تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'العهد_الثابتة',
+        qrData: `الأصول الثابتة - شركة المدار الليبي\nعدد الأصناف: ${fixedCustodies.length}\nإجمالي القيمة: ${grandTotalValue.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير تقرير الأصول الثابتة بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
-  const handleExportConsumableAssetsReport = () => {
+  const handleExportConsumableAssetsReport = async () => {
     const consumableCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'consumable' && c.status === 'active');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     let grandTotalValue = 0;
 
-    const tableRows = consumableCustodies.map((c, index) => {
-      const price = getItemPrice(c.item) || 0;
-      const totalValue = price * c.quantity;
-      grandTotalValue += totalValue;
-      
-      return `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td>${index + 1}</td>
-          <td style="text-align:right; font-weight:bold;">${c.item.name}</td>
-          <td>${c.quantity} ${c.item.unit}</td>
-          <td>${c.recipient.agency_name || c.recipient.name}</td>
-          <td>${totalValue.toLocaleString()} د.ل</td>
-          <td>${c.notes || '-'}</td>
-        </tr>
-      `;
-    }).join('');
+    try {
+      const columns = [
+        { header: '#', key: 'index', width: 8 },
+        { header: 'الصنف', key: 'name', width: 35 },
+        { header: 'الكمية', key: 'quantity', width: 15 },
+        { header: 'المستلم', key: 'recipient', width: 30 },
+        { header: 'إجمالي القيمة', key: 'total_value', width: 20 },
+        { header: 'التفاصيل', key: 'details', width: 35 },
+      ];
 
-    const footerRow = `
-      <tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #000;">
-        <td colspan="4" style="text-align: center;">إجمالي قيمة العهد المستهلكة</td>
-        <td>${grandTotalValue.toLocaleString()} د.ل</td>
-        <td>-</td>
-      </tr>
-    `;
+      const data = consumableCustodies.map((c, index) => {
+        const price = getItemPrice(c.item) || 0;
+        const totalValue = price * c.quantity;
+        grandTotalValue += totalValue;
+        
+        return {
+          index: index + 1,
+          name: c.item.name,
+          quantity: `${c.quantity} ${c.item.unit}`,
+          recipient: c.recipient.agency_name || c.recipient.name,
+          total_value: totalValue.toLocaleString() + ' د.ل',
+          details: c.notes || '-',
+        };
+      });
 
-    exportToExcel({
-      title: 'تقرير العهد والمخازن (المواد المستهلكة)',
-      fileName: 'العهد_المستهلكة',
-      columnCount: 6,
-      summaryRight: `إجمالي عدد العهد: ${consumableCustodies.length}`,
-      summaryLeft: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="50">#</th>
-          <th width="200">الصنف</th>
-          <th width="120">الكمية</th>
-          <th width="150">المستلم</th>
-          <th width="120">إجمالي القيمة</th>
-          <th width="200">التفاصيل</th>
-        </tr>
-      `,
-      tableBody: tableRows + footerRow
-    });
+      // Summary row
+      data.push({
+        index: '-' as any,
+        name: 'إجمالي قيمة العهد المستهلكة',
+        quantity: '',
+        recipient: '',
+        total_value: grandTotalValue.toLocaleString() + ' د.ل',
+        details: '',
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير العهد والمخازن (المواد المستهلكة)',
+        subtitle: `إجمالي عدد العهد: ${consumableCustodies.length} - تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'العهد_المستهلكة',
+        qrData: `العهد المستهلكة - شركة المدار الليبي\nعدد العهد: ${consumableCustodies.length}\nإجمالي القيمة: ${grandTotalValue.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير تقرير العهد المستهلكة بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   return (
@@ -817,40 +829,44 @@ export default function InventoryManagement() {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button 
                   className="secondary" 
-                  onClick={() => {
-                    exportToExcel({
-                      title: 'تقرير المخزن الرئيسي',
-                      fileName: 'المخزن_الرئيسي',
-                      columnCount: 8,
-                      summaryRight: `إجمالي الأصناف: ${filteredItems.length}`,
-                      summaryLeft: `تاريخ التصدير: ${new Date().toLocaleDateString('ar-LY')}`,
-                      tableHeaders: `
-                        <tr height="40">
-                          <th width="50">#</th>
-                          <th width="200">الصنف</th>
-                          <th width="120">النوع</th>
-                          <th width="120">التصنيف</th>
-                          <th width="120">السعر</th>
-                          <th width="100">الكمية</th>
-                          <th width="80">الوحدة</th>
-                          <th width="150">الموقع</th>
-                        </tr>
-                      `,
-                      tableBody: filteredItems.map((item, index) => `
-                        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-                          <td>${index + 1}</td>
-                          <td style="text-align:right; font-weight:bold;">${item.name}</td>
-                          <td>${getInventoryTypeName(item.inventory_type)}</td>
-                          <td>${getCategoryName(item.category)}</td>
-                          <td>${getItemPrice(item) ? item.price + ' د.ل' : '-'}</td>
-                          <td class="${(item.stocks?.[0]?.quantity || 0) <= item.min_threshold ? 'red bold' : 'green bold'}">
-                            ${item.stocks?.[0]?.quantity || 0}
-                          </td>
-                          <td>${item.unit}</td>
-                          <td>${item.stocks?.[0]?.warehouse_location || '-'}</td>
-                        </tr>
-                      `).join('')
-                    });
+                  onClick={async () => {
+                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    try {
+                      const columns = [
+                        { header: '#', key: 'index', width: 8 },
+                        { header: 'الصنف', key: 'name', width: 35 },
+                        { header: 'النوع', key: 'type', width: 20 },
+                        { header: 'التصنيف', key: 'category', width: 20 },
+                        { header: 'السعر', key: 'price', width: 15 },
+                        { header: 'الكمية', key: 'quantity', width: 12 },
+                        { header: 'الوحدة', key: 'unit', width: 12 },
+                        { header: 'الموقع', key: 'location', width: 20 },
+                      ];
+
+                      const data = filteredItems.map((item, index) => ({
+                        index: index + 1,
+                        name: item.name,
+                        type: getInventoryTypeName(item.inventory_type),
+                        category: getCategoryName(item.category),
+                        price: getItemPrice(item) ? item.price + ' د.ل' : '-',
+                        quantity: item.stocks?.[0]?.quantity || 0,
+                        unit: item.unit,
+                        location: item.stocks?.[0]?.warehouse_location || '-',
+                      }));
+
+                      await generatePremiumExcel({
+                        title: 'شركة المدار الليبي للتأمين - تقرير المخزن الرئيسي',
+                        subtitle: `إجمالي الأصناف: ${filteredItems.length} - تاريخ التصدير: ${new Date().toLocaleDateString('ar-LY')}`,
+                        columns,
+                        data,
+                        fileName: 'المخزن_الرئيسي',
+                        qrData: `المخزن الرئيسي - شركة المدار الليبي\nعدد الأصناف: ${filteredItems.length}\nبواسطة: ${currentUser.name || 'النظام'}`
+                      });
+
+                      showToast('تم تصدير تقرير المخزن بنجاح', 'success');
+                    } catch (error) {
+                      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+                    }
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
                 >

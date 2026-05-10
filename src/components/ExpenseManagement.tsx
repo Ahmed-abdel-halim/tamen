@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import SearchableSelect from './SearchableSelect';
 import { showToast } from './Toast';
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
 
 interface Expense {
@@ -479,70 +479,104 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     }
   };
 
-  const exportToExcelFunc = () => {
+  const exportToExcelFunc = async () => {
     if (expenses.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
-    exportToExcel({
-      title: 'تقرير المصروفات التشغيلية',
-      fileName: 'تقرير_مصروفات_المدار',
-      columnCount: 6,
-      summaryRight: `يوميات وتقارير الصرف`,
-      summaryLeft: `الإجمالي: ${statistics.monthly_total.toLocaleString()} د.ل  |  العمليات: ${statistics.monthly_count}`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="300">البند (الوصف)</th>
-          <th width="200">المستلم</th>
-          <th width="150">الفئة</th>
-          <th width="150">المبلغ (د.ل)</th>
-          <th width="150">التاريخ</th>
-          <th width="120">الحالة</th>
-        </tr>
-      `,
-      tableBody: expenses.map((e, index) => `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td style="text-align:right; font-weight:bold;">${e.name}</td>
-          <td>${e.recipient || '-'}</td>
-          <td>${e.category}</td>
-          <td class="red">${e.amount.toLocaleString()}</td>
-          <td>${e.expense_date}</td>
-          <td class="bold">${e.status}</td>
-        </tr>
-      `).join('')
-    });
-    showToast('تم تصدير التقرير باحترافية', 'success');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    try {
+      const columns = [
+        { header: 'البند (الوصف)', key: 'name', width: 35 },
+        { header: 'المستلم', key: 'recipient', width: 25 },
+        { header: 'الفئة', key: 'category', width: 20 },
+        { header: 'المبلغ (د.ل)', key: 'amount', width: 20 },
+        { header: 'التاريخ', key: 'expense_date', width: 15 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'ملاحظات', key: 'notes', width: 30 },
+      ];
+
+      const data = expenses.map((e) => ({
+        name: e.name,
+        recipient: e.recipient || '-',
+        category: e.category,
+        amount: e.amount.toLocaleString() + ' د.ل',
+        expense_date: e.expense_date,
+        status: e.status,
+        notes: e.notes || '-',
+      }));
+
+      // Summary row
+      data.push({
+        name: 'الإجمالي الكلي',
+        recipient: '',
+        category: '',
+        amount: statistics.monthly_total.toLocaleString() + ' د.ل',
+        expense_date: '',
+        status: `${statistics.monthly_count} عملية`,
+        notes: '',
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير المصروفات التشغيلية',
+        subtitle: `إجمالي المصروفات: ${statistics.monthly_total.toLocaleString()} د.ل - عدد العمليات: ${statistics.monthly_count}`,
+        columns,
+        data,
+        fileName: 'تقرير_المصروفات',
+        qrData: `تقرير المصروفات - شركة المدار الليبي\nإجمالي: ${statistics.monthly_total.toLocaleString()} د.ل\nعدد العمليات: ${statistics.monthly_count}\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير باحترافية', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
-  const exportUnionToExcelFunc = () => {
+  const exportUnionToExcelFunc = async () => {
     if (unionPurchases.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
-    exportToExcel({
-      title: 'تقرير رصيد الاتحاد والتكاليف',
-      fileName: 'تقرير_سجل_الاتحاد',
-      columnCount: 7,
-      summaryRight: `خصم الاتحاد: ${unionFilteredStats.totalFee.toLocaleString()} د.ل  |  وديعة الشركة: ${unionFilteredStats.totalDeposit.toLocaleString()} د.ل`,
-      summaryLeft: `المبلغ المدفوع: ${unionFilteredStats.totalPaid.toLocaleString()} د.ل  |  البطاقات: ${unionFilteredStats.totalCards}`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="200">رقم الواصل/الطلب</th>
-          <th width="200">المبلغ المدفوع</th>
-          <th width="150">عدد البطاقات</th>
-          <th width="200">خصم الاتحاد (المصروفات)</th>
-          <th width="200">وديعة الشركة</th>
-          <th width="150">تاريخ الطلب</th>
-          <th width="250">البيان/ملاحظات</th>
-        </tr>
-      `,
-      tableBody: filteredUnion.map((u, index) => `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td style="text-align:center; font-weight:bold; mso-number-format:'\@';">${u.request_number || '-'}</td>
-          <td class="blue">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
-          <td style="color:#10b981; font-weight:bold;">${u.cards_count}</td>
-          <td>${parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString()} د.ل</td>
-          <td>${parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString()} د.ل</td>
-          <td>${u.purchase_date ? u.purchase_date.split('T')[0] : ''}</td>
-          <td>${u.notes || '-'}</td>
-        </tr>
-      `).join('')
-    });
-    showToast('تم تصدير سجل الاتحاد بنجاح', 'success');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    try {
+      const columns = [
+        { header: 'رقم الواصل/الطلب', key: 'request_number', width: 25 },
+        { header: 'المبلغ المدفوع', key: 'amount_paid', width: 20 },
+        { header: 'عدد البطاقات', key: 'cards_count', width: 15 },
+        { header: 'خصم الاتحاد', key: 'union_fee', width: 20 },
+        { header: 'وديعة الشركة', key: 'company_deposit', width: 20 },
+        { header: 'تاريخ الطلب', key: 'purchase_date', width: 15 },
+        { header: 'البيان/ملاحظات', key: 'notes', width: 30 },
+      ];
+
+      const data = filteredUnion.map((u) => ({
+        request_number: u.request_number || '-',
+        amount_paid: parseFloat(u.amount_paid.toString()).toLocaleString() + ' د.ل',
+        cards_count: u.cards_count,
+        union_fee: parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString() + ' د.ل',
+        company_deposit: parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString() + ' د.ل',
+        purchase_date: u.purchase_date ? u.purchase_date.split('T')[0] : '',
+        notes: u.notes || '-',
+      }));
+
+      // Summary row
+      data.push({
+        request_number: 'الإجمالي المفلتر',
+        amount_paid: unionFilteredStats.totalPaid.toLocaleString() + ' د.ل',
+        cards_count: unionFilteredStats.totalCards,
+        union_fee: unionFilteredStats.totalFee.toLocaleString() + ' د.ل',
+        company_deposit: unionFilteredStats.totalDeposit.toLocaleString() + ' د.ل',
+        purchase_date: '',
+        notes: '',
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير رصيد الاتحاد والتكاليف',
+        subtitle: `خصم الاتحاد: ${unionFilteredStats.totalFee.toLocaleString()} د.ل - وديعة الشركة: ${unionFilteredStats.totalDeposit.toLocaleString()} د.ل`,
+        columns,
+        data,
+        fileName: 'تقرير_سجل_الاتحاد',
+        qrData: `سجل الاتحاد - شركة المدار الليبي\nإجمالي المدفوع: ${unionFilteredStats.totalPaid.toLocaleString()} د.ل\nعدد البطاقات: ${unionFilteredStats.totalCards}\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير سجل الاتحاد بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   return (

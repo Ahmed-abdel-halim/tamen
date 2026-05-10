@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { generatePremiumExcel } from "../utils/excelGenerator";
 
 type CashInTransitInsuranceDocument = {
   id: number;
@@ -147,6 +148,44 @@ export default function CashInTransitInsuranceList({ isArchive = false }: { isAr
     }
   };
 
+  const handleExportExcel = async () => {
+    if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    try {
+      const columns = [
+        { header: 'رقم الوثيقة', key: 'policy_number', width: 25 },
+        { header: 'تاريخ الإصدار', key: 'created_at', width: 20 },
+        { header: 'اسم المؤمن له', key: 'insured_name', width: 35 },
+        { header: 'حد النقلة', key: 'limit_per_transit', width: 20 },
+        { header: 'القسط', key: 'premium_amount', width: 15 },
+        { header: 'الوكالة', key: 'agency_name', width: 25 },
+      ];
+
+      const data = documents.map(doc => ({
+        policy_number: doc.policy_number,
+        created_at: new Date(doc.created_at).toLocaleDateString('ar-LY'),
+        insured_name: doc.insured_name,
+        limit_per_transit: parseFloat(String(doc.limit_per_transit)).toLocaleString() + ' د.ل',
+        premium_amount: parseFloat(String(doc.premium_amount)).toFixed(3) + ' د.ل',
+        agency_name: doc.agency_name || doc.branch_agent?.agency_name || '-',
+      }));
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير تأمين نقل النقدية',
+        subtitle: `عدد الوثائق: ${totalDocuments} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'تقرير_نقل_النقدية',
+        qrData: `تقرير نقل النقدية - شركة المدار الليبي\nعدد الوثائق: ${totalDocuments}\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -173,6 +212,14 @@ export default function CashInTransitInsuranceList({ isArchive = false }: { isAr
               إصدار وثيقة جديدة
             </button>
           )}
+          <button
+            className="primary add-user-btn"
+            onClick={handleExportExcel}
+            style={{ background: '#166534', marginRight: '10px' }}
+          >
+            <i className="fa-solid fa-file-excel"></i>
+            تصدير إكسل
+          </button>
         </div>
 
         {/* Advanced Filters Box */}

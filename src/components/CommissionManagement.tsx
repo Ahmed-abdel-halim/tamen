@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { showToast } from './Toast';
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 interface BranchAgent {
   id: number;
@@ -306,41 +306,47 @@ export default function CommissionManagement() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const total = totalCommission.toLocaleString();
     const period = startDate && endDate ? `من: ${startDate} إلى: ${endDate}` : (startDate ? `من: ${startDate}` : (endDate ? `إلى: ${endDate}` : 'جميع الفترات'));
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-    exportToExcel({
-      title: 'تقرير التسويات والعمولات',
-      fileName: 'تقرير_العمولات',
-      columnCount: 8,
-      summaryRight: `شامل الفترة: ${period}`,
-      summaryLeft: `إجمالي العمولات للتقرير: ${total} د.ل`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="350">الوكيل</th>
-          <th width="200">رقم الوثيقة</th>
-          <th width="250">نوع التأمين</th>
-          <th width="150">القيمة الإجمالية</th>
-          <th width="100">النسبة</th>
-          <th width="150">قيمة العمولة</th>
-          <th width="150">التاريخ</th>
-          <th width="120">الحالة</th>
-        </tr>
-      `,
-      tableBody: filteredCommissions.map((comm, index) => `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td>${comm.agent_name}</td>
-          <td style="mso-number-format:'\@';">${comm.document_number}</td>
-          <td>${comm.document_type}</td>
-          <td>${comm.total_amount}</td>
-          <td dir="ltr" align="center">${comm.commission_rate}%</td>
-          <td class="green">${comm.commission_amount}</td>
-          <td>${comm.date}</td>
-          <td class="bold">${comm.status === 'paid' ? 'مدفوع' : 'مستحق'}</td>
-        </tr>
-      `).join('')
-    });
+    try {
+      const columns = [
+        { header: 'الوكيل', key: 'agent_name', width: 35 },
+        { header: 'رقم الوثيقة', key: 'document_number', width: 20 },
+        { header: 'نوع التأمين', key: 'document_type', width: 30 },
+        { header: 'القيمة الإجمالية', key: 'total_amount', width: 15 },
+        { header: 'النسبة', key: 'commission_rate', width: 10 },
+        { header: 'قيمة العمولة', key: 'commission_amount', width: 15 },
+        { header: 'التاريخ', key: 'date', width: 15 },
+        { header: 'الحالة', key: 'status', width: 15 },
+      ];
+
+      const data = filteredCommissions.map(comm => ({
+        agent_name: comm.agent_name,
+        document_number: comm.document_number,
+        document_type: comm.document_type,
+        total_amount: comm.total_amount.toLocaleString() + ' د.ل',
+        commission_rate: comm.commission_rate + '%',
+        commission_amount: comm.commission_amount.toLocaleString() + ' د.ل',
+        date: comm.date,
+        status: comm.status === 'paid' ? 'مدفوع' : 'مستحق',
+      }));
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير التسويات والعمولات',
+        subtitle: `شامل الفترة: ${period} - إجمالي العمولات للتقرير: ${total} د.ل`,
+        columns,
+        data,
+        fileName: 'تقرير_العمولات',
+        qrData: `تقرير العمولات - شركة المدار الليبي\nالفترة: ${period}\nإجمالي: ${total} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   return (

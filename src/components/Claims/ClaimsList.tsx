@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { showToast } from '../Toast';
 import { API_BASE_URL } from '../../config/api';
 import CreateClaimModal from './CreateClaim';
-import ExcelJS from 'exceljs';
 // @ts-ignore
 import { saveAs } from 'file-saver';
+import { generatePremiumExcel } from '../../utils/excelGenerator';
 
 
 export default function ClaimsList() {
@@ -102,153 +102,69 @@ export default function ClaimsList() {
 
   const exportToExcel = async () => {
     try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('المطالبات');
-
-      // RTL Direction
-      worksheet.views = [{ rightToLeft: true }];
-
-      // Add Company Logo
-      try {
-        const response = await fetch('/img/logo.png');
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const logoImage = workbook.addImage({
-          buffer: arrayBuffer,
-          extension: 'png',
-        });
-        
-        // Position logo at the top right (cell A1 area)
-        worksheet.addImage(logoImage, {
-          tl: { col: 0, row: 0 },
-          ext: { width: 80, height: 80 }
-        });
-      } catch (err) {
-        console.warn('Could not load logo for excel:', err);
-      }
-
-      // Add QR Code
-      try {
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const qrData = `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nبواسطة: ${currentUser.name || 'النظام'}`;
-        const qrResponse = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`);
-        const qrBlob = await qrResponse.blob();
-        const qrArrayBuffer = await qrBlob.arrayBuffer();
-        const qrImage = workbook.addImage({
-          buffer: qrArrayBuffer,
-          extension: 'png',
-        });
-        
-        // Position QR code at the top left (Column G)
-        worksheet.addImage(qrImage, {
-          tl: { col: 6, row: 0 },
-          ext: { width: 80, height: 80 }
-        });
-      } catch (err) {
-        console.warn('Could not load QR code for excel:', err);
-      }
-
-      // Add Main Title
-      worksheet.mergeCells('B2:F2');
-      const titleCell = worksheet.getCell('B2');
-      titleCell.value = 'شركة المدار الليبي للتأمين - إدارة المطالبات';
-      titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: '1e293b' } };
-      titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-      // Add Report Info
-      worksheet.mergeCells('B3:F3');
-      const infoCell = worksheet.getCell('B3');
-      infoCell.value = `تقرير المطالبات المسجلة - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`;
-      infoCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: '64748b' } };
-      infoCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-      // Start table from row 6
-      const tableStartRow = 5;
-
-      // Define columns (just for widths)
-      worksheet.columns = [
-        { key: 'claim_number', width: 20 },
-        { key: 'claim_date', width: 20 },
-        { key: 'insurance_number', width: 25 },
-        { key: 'claimant_name', width: 35 },
-        { key: 'damage_type', width: 15 },
-        { key: 'status', width: 25 },
-        { key: 'created_at', width: 20 },
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const columns = [
+        { header: 'رقم المرجع/المطالبة', key: 'reference_number', width: 25 },
+        { header: 'تاريخ المطالبة', key: 'claim_date', width: 20 },
+        { header: 'رقم الوثيقة', key: 'insurance_number', width: 25 },
+        { header: 'نوع الوثيقة', key: 'document_coverage', width: 20 },
+        { header: 'نوع الأضرار', key: 'damage_type', width: 15 },
+        { header: 'مكان الحادث', key: 'accident_location', width: 25 },
+        { header: 'المبلغ المقدر', key: 'estimated_amount', width: 20 },
+        { header: 'مبلغ التعويض النهائي', key: 'final_amount', width: 25 },
+        { header: 'وين واصلة المطالبة', key: 'status', width: 25 },
+        { header: 'تاريخ التسجيل', key: 'created_at', width: 20 },
       ];
 
-      // Set Header Row
-      const headerRow = worksheet.getRow(tableStartRow);
-      headerRow.values = ['رقم المطالبة', 'تاريخ المطالبة', 'رقم الوثيقة', 'مقدم المطالبة', 'نوع الأضرار', 'الحالة', 'تاريخ التسجيل'];
-      headerRow.height = 30;
+      const toArabicNumerals = (str: string | number) => {
+        const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        return String(str).replace(/[0-9]/g, w => arabicNumbers[parseInt(w)]);
+      };
 
-      // Format Header
-      headerRow.eachCell((cell) => {
-        cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 12 };
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: '1e293b' }
-        };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-      });
-
-      // Add Data
-      filteredClaims.forEach((claim, index) => {
-        const row = worksheet.getRow(tableStartRow + 1 + index);
-        row.values = [
-          claim.claim_number,
-          new Date(claim.claim_date).toLocaleDateString('ar-LY'),
-          claim.document?.insurance_number || '—',
-          claim.claimant_name,
-          claim.damage_type,
-          getStatusLabel(claim.status),
-          new Date(claim.created_at).toLocaleDateString('ar-LY')
-        ];
-        row.height = 25;
-      });
-
-      // Format Data Rows
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber > tableStartRow) {
-          row.eachCell((cell) => {
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-              top: { style: 'thin' },
-              left: { style: 'thin' },
-              bottom: { style: 'thin' },
-              right: { style: 'thin' }
-            };
-          });
-          // Zebra stripes (alternate colors)
-          if (rowNumber % 2 !== 0) {
-            row.eachCell((cell) => {
-              cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'f1f5f9' }
-              };
-            });
-          }
+      const data = filteredClaims.map(claim => {
+        // Extract Estimated Amount (from assessor or settlement transfer)
+        let estimatedAmount = claim.assessor_amount_dinar ? Number(claim.assessor_amount_dinar) : 0;
+        const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+        if (settlementTransfer && settlementTransfer.details?.total_value) {
+          estimatedAmount = Number(settlementTransfer.details.total_value);
         }
+
+        // Extract Final Amount (from payment transfer)
+        let finalAmount = 0;
+        const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
+        if (paymentTransfer && paymentTransfer.details?.financial_value) {
+          finalAmount = Number(paymentTransfer.details.financial_value);
+        }
+
+        return {
+          reference_number: toArabicNumerals(claim.reference_number || claim.claim_number),
+          claim_date: claim.claim_date ? toArabicNumerals(new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
+          insurance_number: toArabicNumerals(claim.document?.insurance_number || '—'),
+          document_coverage: claim.document_coverage || '—',
+          damage_type: claim.damage_type === 'اخر' ? claim.other_damage_type : claim.damage_type,
+          accident_location: claim.accident_location || '—',
+          estimated_amount: estimatedAmount ? `${toArabicNumerals(estimatedAmount.toLocaleString('en-US'))} د.ل` : '—',
+          final_amount: finalAmount ? `${toArabicNumerals(finalAmount.toLocaleString('en-US'))} د.ل` : '—',
+          status: getStatusLabel(claim.status),
+          created_at: toArabicNumerals(new Date(claim.created_at).toLocaleDateString('en-GB')),
+        };
       });
 
-      // Generate Buffer and Save
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, `تقرير_المطالبات_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - إدارة المطالبات',
+        subtitle: `تقرير المطالبات المسجلة - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'تقرير_المطالبات',
+        qrData: `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
       showToast('تم تصدير التقرير بنجاح', 'success');
     } catch (error) {
-      console.error('Excel Export Error:', error);
       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
     }
   };
+
 
 
   const getStatusLabel = (status: string) => {
@@ -271,6 +187,326 @@ export default function ClaimsList() {
     c.status?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handlePrintClaim = async (claim: any) => {
+    let fullClaim = claim;
+    try {
+      const response = await fetch(`${API_BASE_URL}/claims/${claim.id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (response.ok) {
+        fullClaim = await response.json();
+      }
+    } catch (e) {}
+
+    const printWindow = window.open('', '', 'width=1000,height=900');
+    if (!printWindow) return;
+
+    const qrData = `مطالبة رقم: ${fullClaim.claim_number}\nمقدم المطالبة: ${fullClaim.claimant_name}\nرقم الوثيقة: ${fullClaim.document?.insurance_number || '---'}\nالتاريخ: ${new Date().toLocaleString('ar-LY')}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>طباعة مطالبة - ${fullClaim.claim_number}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
+          @media print { 
+            @page { margin: 5mm; size: A4; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body { margin: 0; }
+          }
+          body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0 auto; 
+            max-width: 190mm;
+            padding: 10px; 
+            color: #000;
+            background: #fff;
+            font-size: 11px;
+          }
+          .a4-container {
+            padding: 12px;
+            min-height: 260mm;
+            position: relative;
+          }
+          
+          /* Header Grid */
+          .print-header-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            grid-template-rows: auto auto;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: start;
+          }
+          
+          /* Top Right: Title and Logo */
+          .header-top-right {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start; /* Push logo to the right */
+          }
+          .header-top-right .eye-logo {
+            height: 70px;
+          }
+          .main-title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 5px;
+            font-size: 18px;
+            font-weight: 900;
+            color: #4b5563; /* Gray text color */
+            border: 1.5px solid #000;
+            padding: 6px 30px;
+            border-radius: 8px;
+            background-color: #fff;
+            text-align: center;
+            z-index: 10;
+          }
+          
+          /* Top Left: QR Code */
+          .header-top-left {
+            display: flex;
+            justify-content: flex-end; /* flex-end in RTL pushes to left */
+          }
+          .qr-wrapper {
+            border: 1px solid #000;
+            padding: 4px;
+            display: inline-block;
+          }
+          .qr-wrapper img {
+            width: 85px;
+            height: 85px;
+            display: block;
+          }
+          
+          /* Bottom Right: Company Info Box */
+          .header-bottom-right {
+            border: 1.5px solid #000;
+            padding: 10px 15px;
+            margin-left: 20px; /* Don't stretch all the way */
+          }
+          .company-info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 800;
+            margin-bottom: 5px;
+          }
+          .company-info-row .val { font-weight: 900; }
+          
+          /* Bottom Left: Legal Text Box */
+          .header-bottom-left {
+            border: 1.5px solid #000;
+            padding: 10px;
+            font-size: 10px;
+            font-weight: 800;
+            text-align: center;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          /* Sections */
+          .section { margin-bottom: 10px; }
+          .section-title {
+            background-color: #d1d5db;
+            color: #000;
+            font-weight: 900;
+            font-size: 12px;
+            text-align: center;
+            padding: 4px;
+            border: 1.5px solid #000;
+            margin-bottom: 8px;
+          }
+          .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 20px;
+          }
+          .field-row {
+            display: flex;
+            align-items: center;
+          }
+          .field-label {
+            width: 90px;
+            font-weight: 800;
+            font-size: 11px;
+            flex-shrink: 0;
+          }
+          .field-input {
+            flex-grow: 1;
+            border: 1px solid #000;
+            padding: 2px 6px;
+            font-weight: 700;
+            font-size: 11px;
+            min-height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #fff;
+          }
+          .full-width { grid-column: span 2; }
+          .full-width .field-label { width: 90px; }
+          
+          /* Signatures */
+          .signature-area {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+          }
+          .sig-box {
+            width: 160px;
+            text-align: center;
+          }
+          .sig-box .box-outline {
+            border: 1px solid #000;
+            height: 60px;
+            margin-bottom: 8px;
+          }
+          .sig-box .label {
+            font-size: 11px;
+            font-weight: 900;
+          }
+          
+          /* Footer */
+          .footer-note {
+            text-align: right;
+            font-size: 10px;
+            font-weight: 800;
+            margin-top: 30px;
+            line-height: 1.5;
+            color: #333;
+          }
+        </style>
+      </head>
+      <body onload="setTimeout(() => { window.print(); }, 500);">
+        <div class="a4-container">
+          
+          <div class="print-header-grid">
+            <!-- Top Right: Logo and Title -->
+            <div class="header-top-right">
+              <div class="main-title">ملخص المطالبة التأمينية</div>
+              <img src="/img/logo.png" class="eye-logo" onerror="this.style.display='none'" />
+            </div>
+            
+            <!-- Top Left: QR Code -->
+            <div class="header-top-left">
+              <div class="qr-wrapper">
+                <img src="${qrApiUrl}" class="qr-code" />
+              </div>
+            </div>
+            
+            <!-- Bottom Right: Company Info Box -->
+            <div class="header-bottom-right">
+              <div class="company-info-row"><span>الشركة المصدرة للوثيقة</span> <span class="val">المدار الليبي للتأمين</span></div>
+              <div class="company-info-row"><span>العنــــــــــــــوان</span> <span class="val">طرابلس</span></div>
+              <div class="company-info-row"><span>تاريــــخ التأسيس</span> <span class="val">29/01/2024</span></div>
+              <div class="company-info-row"><span>رأس المال المكتتب به</span> <span class="val">10,000,000.00</span></div>
+            </div>
+            
+            <!-- Bottom Left: Legal Text Box -->
+            <div class="header-bottom-left">
+              هذا المستند يمثل ملخصاً رسمياً<br/>
+              لبيانات المطالبة التأمينية<br/>
+              والمسجلة في نظام المدار الليبي للتأمين<br/>
+              وفقاً للإجراءات المعتمدة.
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">بيانات مقدم المطالبة / المشترك</div>
+            <div class="grid-container">
+              <div class="field-row"><div class="field-label">اسم مقدم المطالبة</div><div class="field-input">${fullClaim.claimant_name || '---'}</div></div>
+              <div class="field-row"><div class="field-label">الجنسيــــــــــــة</div><div class="field-input">${fullClaim.nationality || '---'}</div></div>
+              <div class="field-row"><div class="field-label">رقم الإثبات الشخصي</div><div class="field-input">${fullClaim.personal_id || '---'}</div></div>
+              <div class="field-row"><div class="field-label">صلـــــة القرابـــــة</div><div class="field-input">${fullClaim.kinship || '---'}</div></div>
+              <div class="field-row"><div class="field-label">رقم الهاتـــــــــــف</div><div class="field-input">${fullClaim.phone_number || '---'}</div></div>
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">بيانات المطالبة / الحادث</div>
+            <div class="grid-container">
+              <div class="field-row"><div class="field-label">رقم المطالبـــــــة</div><div class="field-input">${fullClaim.claim_number || '---'}</div></div>
+              <div class="field-row"><div class="field-label">تاريــــخ المطالبــــة</div><div class="field-input">${fullClaim.claim_date || '---'}</div></div>
+              <div class="field-row"><div class="field-label">تاريــــخ الحــــادث</div><div class="field-input">${fullClaim.accident_date || '---'}</div></div>
+              <div class="field-row"><div class="field-label">وقـــــت الحــــادث</div><div class="field-input">${fullClaim.accident_time || '---'}</div></div>
+              <div class="field-row"><div class="field-label">نـــوع الأضـــــرار</div><div class="field-input">${fullClaim.damage_type === 'اخر' ? (fullClaim.other_damage_type || '') : (fullClaim.damage_type || '---')}</div></div>
+              <div class="field-row"><div class="field-label">حـــالــة المطالبــــة</div><div class="field-input">${fullClaim.status || '---'}</div></div>
+              <div class="field-row full-width"><div class="field-label">مكـــان الحــــادث</div><div class="field-input">${fullClaim.accident_location || '---'}</div></div>
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">بيانات الوثيقة المربوطة</div>
+            <div class="grid-container">
+              <div class="field-row"><div class="field-label">رقــــم الوثيقــــة</div><div class="field-input">${fullClaim.document?.insurance_number || '---'}</div></div>
+              <div class="field-row"><div class="field-label">نــــوع التغطيــــة</div><div class="field-input">${fullClaim.document_coverage || '---'}</div></div>
+              <div class="field-row full-width"><div class="field-label">اسم المؤمـــن لـــه</div><div class="field-input">${fullClaim.document?.insured_name || '---'}</div></div>
+            </div>
+          </div>
+          
+          ${fullClaim.damaged_body_type === 'سيارة' ? `
+          <div class="section">
+            <div class="section-title">بيانات المركبة المتضررة</div>
+            <div class="grid-container">
+              <div class="field-row"><div class="field-label">نــــوع المركبــــة</div><div class="field-input">${fullClaim.damaged_vehicle_model || '---'}</div></div>
+              <div class="field-row"><div class="field-label">رقــــم اللوحـــــة</div><div class="field-input">${fullClaim.damaged_vehicle_plate || '---'}</div></div>
+              <div class="field-row"><div class="field-label">مبلغ الأضرار المقدر</div><div class="field-input">${fullClaim.damaged_vehicle_amount ? fullClaim.damaged_vehicle_amount + ' د.ل' : '---'}</div></div>
+            </div>
+          </div>
+          ` : ''}
+
+          ${fullClaim.driver_name ? `
+          <div class="section">
+            <div class="section-title">بيانات السائق المسبب</div>
+            <div class="grid-container">
+              <div class="field-row"><div class="field-label">اســـم السائـــــق</div><div class="field-input">${fullClaim.driver_name || '---'}</div></div>
+              <div class="field-row"><div class="field-label">رقــــم الرخصــــة</div><div class="field-input">${fullClaim.driver_license_number || '---'}</div></div>
+            </div>
+          </div>
+          ` : ''}
+          
+          <div class="section">
+            <div class="section-title">بيانات التقييم المالي</div>
+            <div class="grid-container">
+              <div class="field-row"><div class="field-label">مقــــدر الأضــــرار</div><div class="field-input">${fullClaim.assessor_name || '---'}</div></div>
+              <div class="field-row"><div class="field-label">قيمــــة التقييـــــم</div><div class="field-input">${fullClaim.assessor_amount_dinar ? fullClaim.assessor_amount_dinar + ' د.ل' : '---'}</div></div>
+            </div>
+          </div>
+          
+          <div class="signature-area">
+            <div class="sig-box">
+              <div class="box-outline"></div>
+              <div class="label">ختم وإعتماد الشركة</div>
+            </div>
+            <div class="sig-box">
+              <div class="box-outline"></div>
+              <div class="label">توقيع المستلم / مقدم المطالبة</div>
+            </div>
+          </div>
+          
+          <div class="footer-note">
+            أي كشط أو تعديل يلغي هذه الوثيقة<br/>
+            طبع بواسطة نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+          </div>
+          
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -282,7 +518,7 @@ export default function ClaimsList() {
           <div className="header-main-row">
             <h5 className="claims-title">قائمة المطالبات المسجلة</h5>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 className="export-excel-btn"
                 onClick={exportToExcel}
                 title="تصدير إكسل"
@@ -622,6 +858,14 @@ export default function ClaimsList() {
                     </td>
                     <td>
                       <div className="action-buttons">
+                        <button
+                          className="action-btn"
+                          title="طباعة نموذج المطالبة"
+                          onClick={() => handlePrintClaim(claim)}
+                          style={{ color: '#0f766e', background: '#ccfbf1' }}
+                        >
+                          <i className="fa-solid fa-print"></i>
+                        </button>
                         <Link to={`/claims/${claim.id}`} className="action-btn view" title="عرض التفاصيل">
                           <i className="fa-solid fa-eye"></i>
                         </Link>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
-import { exportToExcel } from "../utils/excelExport";
+import { generatePremiumExcel } from "../utils/excelGenerator";
 
 type MonthlyAccountClosure = {
   id: number;
@@ -175,63 +175,71 @@ export default function MonthlyAccountClosuresReport() {
   const totalPaid = closures.reduce((sum, closure) => sum + (Number(closure.paid_amount) || 0), 0);
   const totalRemaining = closures.reduce((sum, closure) => sum + (Number(closure.remaining_amount) || 0), 0);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (closures.length === 0) return;
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     const reportLabel = filterMode === 'monthly'
       ? `${selectedYear} / ${selectedMonth ? MONTHS.find(m => m.value === selectedMonth)?.label : 'جميع الأشهر'}`
       : `${dateFrom || '-'} إلى ${dateTo || '-'}`;
 
-    exportToExcel({
-      title: 'كشف إغلاق الحسابات الشهرية',
-      fileName: 'كشف_إغلاق_الحسابات',
-      columnCount: 8,
-      summaryRight: `الفترة: ${reportLabel}`,
-      summaryLeft: `إجمالي الشركة: ${totalCompanyShare.toLocaleString()} د.ل    |    حصة الوكلاء: ${totalAgentShare.toLocaleString()} د.ل    |    المدفوع: ${totalPaid.toLocaleString()} د.ل`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="250">الوكيل</th>
-          <th width="80">السنة</th>
-          <th width="80">الشهر</th>
-          <th width="120">الإجمالي الكلي</th>
-          <th width="120">حصة الوكلاء</th>
-          <th width="120">حصة الشركة</th>
-          <th width="120">المدفوع</th>
-          <th width="120">المتبقي</th>
-          <th width="120">تاريخ الإغلاق</th>
-        </tr>
-      `,
-      tableBody: closures.map((closure, index) => {
+    try {
+      const columns = [
+        { header: 'الوكيل', key: 'agency_name', width: 40 },
+        { header: 'السنة', key: 'year', width: 10 },
+        { header: 'الشهر', key: 'month', width: 15 },
+        { header: 'الإجمالي الكلي', key: 'grand_total', width: 20 },
+        { header: 'حصة الوكلاء', key: 'agent_share', width: 20 },
+        { header: 'حصة الشركة', key: 'company_share', width: 20 },
+        { header: 'المدفوع', key: 'paid_amount', width: 15 },
+        { header: 'المتبقي', key: 'remaining_amount', width: 15 },
+        { header: 'تاريخ الإغلاق', key: 'closed_at', width: 20 },
+      ];
+
+      const data = closures.map((closure) => {
         const agentShare = closure.documents_data?.reduce((sum, doc) => sum + (Number(doc.agent_amount) || 0), 0) || 0;
         const companyShare = Number(closure.due_amount) || 0;
         const grandTotal = agentShare + companyShare;
         
-        return `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td>${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}</td>
-          <td align="center">${closure.year}</td>
-          <td align="center">${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</td>
-          <td class="bold">${grandTotal.toFixed(2)}</td>
-          <td style="color: #6366f1;">${agentShare.toFixed(2)}</td>
-          <td class="bold" style="color: #139625;">${companyShare.toFixed(2)}</td>
-          <td class="green">${closure.paid_amount}</td>
-          <td class="red">${closure.remaining_amount}</td>
-          <td align="center">${formatDate(closure.created_at)}</td>
-        </tr>
-      `}).join('') + `
-        <tr height="35" style="background-color: #f3f4f6; font-weight: bold;">
-          <td colspan="3" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
-          <td class="bold">${totalGrand.toFixed(2)}</td>
-          <td style="color: #6366f1;">${totalAgentShare.toFixed(2)}</td>
-          <td class="bold" style="color: #139625;">${totalCompanyShare.toFixed(2)}</td>
-          <td class="green">${totalPaid.toFixed(2)}</td>
-          <td class="red">${totalRemaining.toFixed(2)}</td>
-          <td></td>
-        </tr>
-      `
-    });
-    
-    showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
+        return {
+          agency_name: `${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}`,
+          year: closure.year,
+          month: MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month,
+          grand_total: grandTotal.toFixed(2) + ' د.ل',
+          agent_share: agentShare.toFixed(2) + ' د.ل',
+          company_share: companyShare.toFixed(2) + ' د.ل',
+          paid_amount: closure.paid_amount.toFixed(2) + ' د.ل',
+          remaining_amount: closure.remaining_amount.toFixed(2) + ' د.ل',
+          closed_at: formatDate(closure.created_at),
+        };
+      });
+
+      // Add a summary row
+      data.push({
+        agency_name: 'الإجمالي الكلي',
+        year: '-' as any,
+        month: '',
+        grand_total: totalGrand.toFixed(2) + ' د.ل',
+        agent_share: totalAgentShare.toFixed(2) + ' د.ل',
+        company_share: totalCompanyShare.toFixed(2) + ' د.ل',
+        paid_amount: totalPaid.toFixed(2) + ' د.ل',
+        remaining_amount: totalRemaining.toFixed(2) + ' د.ل',
+        closed_at: '',
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - كشف إغلاق الحسابات الشهرية',
+        subtitle: `الفترة: ${reportLabel} - إجمالي الشركة: ${totalCompanyShare.toLocaleString()} د.ل | حصة الوكلاء: ${totalAgentShare.toLocaleString()} د.ل`,
+        columns,
+        data,
+        fileName: 'كشف_إغلاق_الحسابات',
+        qrData: `كشف إغلاق الحسابات - شركة المدار الليبي\nالفترة: ${reportLabel}\nإجمالي الشركة: ${totalCompanyShare.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   const handlePrint = () => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showToast } from './Toast';
 import { API_BASE_URL } from "../config/api";
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 type Employee = {
   id: number;
@@ -262,64 +262,85 @@ export default function EmployeeSalaries() {
     }
   };
 
-  const handleExportCsv = () => {
-    exportToExcel({
-      title: 'كشف مرتبات الموظفين',
-      fileName: 'كشف_مرتبات',
-      columnCount: 13 + allExtraLabels.length,
-      summaryRight: `كشف مرتبات شهر (${month}) سنة (${year})`,
-      summaryLeft: `إجمالي الصافي للموظفين: ${totals.total.toLocaleString()} د.ل    |    عدد الموظفين: ${rows.length}`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="200">الموظف</th>
-          <th width="100">الأساسي</th>
-          <th width="80">سكن</th>
-          <th width="80">مواصلات</th>
-          <th width="80">اتصالات</th>
-          <th width="100">مكافآت</th>
-          <th width="100">ضرائب</th>
-          <th width="100">ضمان</th>
-          <th width="100">خصومات</th>
-          <th width="80">سلف</th>
-          <th width="80">غرامات</th>
-          ${allExtraLabels.map(l => `<th width="100">${l}</th>`).join('')}
-          <th width="150">الصافي</th>
-          <th width="120">الحالة</th>
-          <th width="150">التسليم</th>
-        </tr>
-      `,
-      tableBody: rows.map((r, index) => `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td style="text-align:right; font-weight:bold;">${r.e.name}</td>
-          <td>${r.base}</td>
-          <td>${r.housing}</td>
-          <td>${r.transport}</td>
-          <td>${r.communication}</td>
-          <td>${r.bonus}</td>
-          <td>${r.tax_val.toFixed(2)}</td>
-          <td>${r.ss_val.toFixed(2)}</td>
-          <td>${r.deduction}</td>
-          <td>${r.advance}</td>
-          <td>${r.penalty}</td>
-          ${allExtraLabels.map(label => {
-        const f = r.extra_fields.find(x => x.label === label);
-        return `<td>${f ? f.amount : 0}</td>`;
-      }).join('')}
-          <td class="green">${r.net}</td>
-          <td>${r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
-          <td>${r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method || 'أخرى' : (r.p?.delivery_method || '-')}</td>
-        </tr>
-      `).join('') + `
-        <tr height="35" style="background-color: #f3f4f6; font-weight: bold;">
-          <td colspan="11" align="right" style="padding-right: 20px;">الإجمالي الكلي</td>
-          ${allExtraLabels.map(() => `<td></td>`).join('')}
-          <td class="bold">${totals.total.toFixed(2)}</td>
-          <td colspan="2">موظفين ( ${rows.length} )</td>
-        </tr>
-      `
-    });
+  const handleExportCsv = async () => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    try {
+      const columns = [
+        { header: 'الموظف', key: 'name', width: 30 },
+        { header: 'الأساسي', key: 'base', width: 15 },
+        { header: 'سكن', key: 'housing', width: 12 },
+        { header: 'مواصلات', key: 'transport', width: 12 },
+        { header: 'اتصالات', key: 'communication', width: 12 },
+        { header: 'مكافآت', key: 'bonus', width: 12 },
+        { header: 'ضرائب', key: 'tax', width: 12 },
+        { header: 'ضمان', key: 'ss', width: 12 },
+        { header: 'خصومات', key: 'deduction', width: 12 },
+        { header: 'سلف', key: 'advance', width: 12 },
+        { header: 'غرامات', key: 'penalty', width: 12 },
+        ...allExtraLabels.map(l => ({ header: l, key: `extra_${l}`, width: 15 })),
+        { header: 'الصافي', key: 'net', width: 20 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'التسليم', key: 'delivery', width: 20 },
+      ];
 
-    showToast('تم تصدير الكشف الاحترافي بنجاح', 'success');
+      const data = rows.map((r) => {
+        const rowData: any = {
+          name: r.e.name,
+          base: r.base,
+          housing: r.housing,
+          transport: r.transport,
+          communication: r.communication,
+          bonus: r.bonus,
+          tax: r.tax_val.toFixed(2),
+          ss: r.ss_val.toFixed(2),
+          deduction: r.deduction,
+          advance: r.advance,
+          penalty: r.penalty,
+          net: r.net.toLocaleString() + ' د.ل',
+          status: r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف',
+          delivery: r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method || 'أخرى' : (r.p?.delivery_method || '-'),
+        };
+
+        allExtraLabels.forEach(label => {
+          const f = r.extra_fields.find(x => x.label === label);
+          rowData[`extra_${label}`] = f ? f.amount : 0;
+        });
+
+        return rowData;
+      });
+
+      // Summary row
+      const summaryRow: any = {
+        name: 'الإجمالي الكلي',
+        base: '',
+        housing: '',
+        transport: '',
+        communication: '',
+        bonus: '',
+        tax: '',
+        ss: '',
+        deduction: '',
+        advance: '',
+        penalty: '',
+        net: totals.total.toLocaleString() + ' د.ل',
+        status: `${rows.length} موظف`,
+        delivery: '',
+      };
+      data.push(summaryRow);
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - كشف مرتبات الموظفين',
+        subtitle: `كشف مرتبات شهر (${month}) سنة (${year}) - إجمالي الصافي: ${totals.total.toLocaleString()} د.ل`,
+        columns,
+        data,
+        fileName: `مرتبات_${month}_${year}`,
+        qrData: `كشف المرتبات - المدار الليبي\nالشهر: ${month}/${year}\nعدد الموظفين: ${rows.length}\nالإجمالي: ${totals.total.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير الكشف المتميز بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   const handleBulkPay = async () => {

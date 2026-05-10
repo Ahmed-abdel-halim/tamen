@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { showToast } from './Toast';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 type PayrollData = {
   id: number;
@@ -147,20 +148,16 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
             padding-bottom: 15px;
             border-bottom: 3px double #1a365d;
           }
-          .header-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+          .header-right, .header-left {
+            width: 150px;
           }
-          .header-left {
-            text-align: left;
-            font-size: 13px;
-            color: #1a365d;
-            font-weight: 600;
+          .header-center {
+            flex: 1;
+            text-align: center;
           }
-          .header-info h1 { margin: 0; font-size: 22px; color: #1a365d; font-weight: 900; line-height: 1.2; }
-          .header-info p { margin: 2px 0; color: #4a5568; font-size: 13px; }
-          .logo { height: 75px; width: 75px; object-fit: contain; }
+          .header-info h1 { margin: 0; font-size: 24px; color: #1a365d; font-weight: 900; line-height: 1.2; }
+          .header-info p { margin: 5px 0; color: #4a5568; font-size: 15px; font-weight: 700; }
+          .logo { height: 90px; width: auto; object-fit: contain; }
           
           .report-title-container {
             text-align: center;
@@ -170,10 +167,10 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
             display: inline-block;
             padding: 12px 40px;
             background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 50px;
+            border: 2px solid #1a365d;
+            border-radius: 10px;
             font-size: 19px;
-            font-weight: 700;
+            font-weight: 800;
             color: #1a365d;
           }
 
@@ -231,16 +228,18 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
       </head>
       <body onload="window.print(); window.close();">
         <div class="header">
-          <div class="header-right">
-            <img src="${BACKEND_URL}/img/logo.png" style="height: 90px; width: auto;" alt="Logo" onerror="this.src='/img/logo.png'">
-            <div class="header-info" style="margin-right: 15px;">
-              <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
-              <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>
-            </div>
-          </div>
-          <div class="header-left">
+          <div class="header-left" style="text-align: right; font-size: 13px; color: #4a5568;">
             التاريخ: ${new Date().toLocaleDateString('ar-LY')}<br/>
             الوقت: ${new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+          <div class="header-center">
+            <div class="header-info">
+              <h1>المدار الليبي للتأمين</h1>
+              <p>قسم الشؤون المالية والموارد البشرية</p>
+            </div>
+          </div>
+          <div class="header-right" style="text-align: left;">
+            <img src="${BACKEND_URL}/img/logo.png" class="logo" alt="Logo" onerror="this.src='/img/logo.png'">
           </div>
         </div>
 
@@ -301,51 +300,64 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
     printWindow.document.close();
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const period = fromDate && toDate ? `من: ${fromDate} إلى: ${toDate}` : (year ? `خلال ( شهر ${year}/${month} )` : 'جميع الفترات');
     const displayTitle = type === 'tax' 
       ? `حصه ضريبة الدخل من أجور ومرتبات الموظفين` 
       : `حصه الضمان الاجتماعي من أجور ومرتبات الموظفين`;
-    
-    exportToExcel({
-      title: `${displayTitle} ${period}`,
-      fileName: type === 'tax' ? 'تقرير_الضرائب' : 'تقرير_الضمان_الاجتماعي',
-      columnCount: 9,
-      summaryRight: `شامل الفترة: ${period}`,
-      summaryLeft: `إجمالي الحصة: ${money.format(totals.share)} د.ل`,
-      tableHeaders: `
-        <tr height="40">
-          <th width="50">م</th>
-          <th width="250">الاسم</th>
-          <th width="150">المهنة</th>
-          <th width="150">${type === 'tax' ? 'الرقم الضريبي' : 'رقم الضمان'}</th>
-          <th width="120">الجنسية</th>
-          <th width="120">بداية العمل</th>
-          <th width="80">النسبة</th>
-          <th width="150">الراتب الأساسي</th>
-          <th width="150">${columnLabel}</th>
-        </tr>
-      `,
-      tableBody: filteredData.map((row, index) => `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td align="center">${index + 1}</td>
-          <td class="bold">${row.user?.name}</td>
-          <td>${row.user?.job_title || '-'}</td>
-          <td style="mso-number-format:'\@';">${type === 'tax' ? (row.user?.tax_file_number || '-') : (row.user?.social_security_file_number || '-')}</td>
-          <td>${row.user?.nationality || '-'}</td>
-          <td>${row.user?.start_date || '-'}</td>
-          <td align="center">${type === 'tax' ? row.user?.tax_percentage : row.user?.social_security_percentage}%</td>
-          <td>${row.base_salary}</td>
-          <td class="green">${getRowShare(row)}</td>
-        </tr>
-      `).join('') + `
-        <tr height="40" style="background-color: #f3f4f6; font-weight: bold;">
-          <td colspan="7" align="center">الإجمالي</td>
-          <td>${totals.base}</td>
-          <td class="blue">${totals.share}</td>
-        </tr>
-      `
-    });
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+    try {
+      const columns = [
+        { header: 'م', key: 'index', width: 8 },
+        { header: 'الاسم', key: 'name', width: 35 },
+        { header: 'المهنة', key: 'job_title', width: 25 },
+        { header: type === 'tax' ? 'الرقم الضريبي' : 'رقم الضمان', key: 'file_number', width: 20 },
+        { header: 'الجنسية', key: 'nationality', width: 15 },
+        { header: 'بداية العمل', key: 'start_date', width: 15 },
+        { header: 'النسبة', key: 'percentage', width: 10 },
+        { header: 'الراتب الأساسي', key: 'base_salary', width: 20 },
+        { header: columnLabel, key: 'share', width: 20 },
+      ];
+
+      const data = filteredData.map((row, index) => ({
+        index: index + 1,
+        name: row.user?.name,
+        job_title: row.user?.job_title || '-',
+        file_number: type === 'tax' ? (row.user?.tax_file_number || '-') : (row.user?.social_security_file_number || '-'),
+        nationality: row.user?.nationality || '-',
+        start_date: row.user?.start_date || '-',
+        percentage: (type === 'tax' ? row.user?.tax_percentage : row.user?.social_security_percentage) + '%',
+        base_salary: toNum(row.base_salary).toLocaleString() + ' د.ل',
+        share: getRowShare(row).toLocaleString() + ' د.ل',
+      }));
+
+      // Add summary row
+      data.push({
+        index: '-' as any,
+        name: 'الإجمالي العام',
+        job_title: '',
+        file_number: '',
+        nationality: '',
+        start_date: '',
+        percentage: '',
+        base_salary: totals.base.toLocaleString() + ' د.ل',
+        share: totals.share.toLocaleString() + ' د.ل',
+      });
+
+      await generatePremiumExcel({
+        title: `شركة المدار الليبي للتأمين - ${displayTitle}`,
+        subtitle: `الفترة: ${period} - إجمالي الحصة: ${money.format(totals.share)} د.ل`,
+        columns,
+        data,
+        fileName: type === 'tax' ? 'تقرير_الضرائب' : 'تقرير_الضمان_الاجتماعي',
+        qrData: `${displayTitle}\nالفترة: ${period}\nإجمالي: ${totals.share.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   return (

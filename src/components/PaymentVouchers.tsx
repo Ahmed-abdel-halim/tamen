@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 interface BranchAgent {
   id: number;
@@ -256,33 +256,50 @@ export default function PaymentVouchers() {
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => {
-              exportToExcel({
-                title: 'سجل إيصالات القبض المالي',
-                fileName: 'إيصالات_القبض',
-                columnCount: 5,
-                summaryRight: `إجمالي المقبوضات: ${vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل`,
-                summaryLeft: `عدد الإيصالات: ${vouchers.length}`,
-                tableHeaders: `
-                  <tr height="40">
-                    <th width="150">رقم الإيصال</th>
-                    <th width="250">اسم الوكيل</th>
-                    <th width="120">المبلغ</th>
-                    <th width="150">طريقة الدفع</th>
-                    <th width="150">التاريخ</th>
-                  </tr>
-                `,
-                tableBody: vouchers.map((v, index) => `
-                  <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-                    <td style="font-weight:bold; color:#014cb1;">${v.voucher_number}</td>
-                    <td>${v.agent_name}</td>
-                    <td style="color:#139625; font-weight:bold;">${v.amount.toLocaleString()} د.ل</td>
-                    <td>${v.payment_method}</td>
-                    <td>${v.payment_date}</td>
-                  </tr>
-                `).join('')
-              });
-              showToast('تم تصدير سجل الإيصالات بنجاح', 'success');
+            onClick={async () => {
+              const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+              try {
+                const columns = [
+                  { header: 'رقم الإيصال', key: 'voucher_number', width: 20 },
+                  { header: 'اسم الوكيل', key: 'agent_name', width: 35 },
+                  { header: 'المبلغ', key: 'amount', width: 20 },
+                  { header: 'طريقة الدفع', key: 'payment_method', width: 20 },
+                  { header: 'التاريخ', key: 'payment_date', width: 20 },
+                  { header: 'ملاحظات', key: 'notes', width: 35 },
+                ];
+
+                const data = vouchers.map((v) => ({
+                  voucher_number: v.voucher_number,
+                  agent_name: v.agent_name,
+                  amount: v.amount.toLocaleString() + ' د.ل',
+                  payment_method: v.payment_method,
+                  payment_date: v.payment_date,
+                  notes: v.notes || '-',
+                }));
+
+                // Summary row
+                data.push({
+                  voucher_number: 'الإجمالي',
+                  agent_name: '',
+                  amount: vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString() + ' د.ل',
+                  payment_method: '',
+                  payment_date: '',
+                  notes: '',
+                });
+
+                await generatePremiumExcel({
+                  title: 'شركة المدار الليبي للتأمين - سجل إيصالات القبض المالي',
+                  subtitle: `إجمالي المقبوضات: ${vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل - عدد الإيصالات: ${vouchers.length}`,
+                  columns,
+                  data,
+                  fileName: 'إيصالات_القبض',
+                  qrData: `إيصالات القبض - شركة المدار الليبي\nعدد الإيصالات: ${vouchers.length}\nإجمالي: ${vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+                });
+
+                showToast('تم تصدير سجل الإيصالات بنجاح', 'success');
+              } catch (error) {
+                showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+              }
             }}
             className="secondary"
             style={{

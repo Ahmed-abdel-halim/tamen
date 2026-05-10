@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { generatePremiumExcel } from "../utils/excelGenerator";
 
 type SchoolStudentInsuranceDocument = {
   id: number;
@@ -146,6 +147,44 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
     }
   };
 
+  const handleExportExcel = async () => {
+    if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    try {
+      const columns = [
+        { header: 'رقم الوثيقة', key: 'policy_number', width: 25 },
+        { header: 'تاريخ الإصدار', key: 'created_at', width: 25 },
+        { header: 'اسم الطالب', key: 'student_name', width: 35 },
+        { header: 'المدرسة', key: 'school_name', width: 30 },
+        { header: 'القسط الكلي', key: 'total', width: 15 },
+        { header: 'الوكالة', key: 'agency_name', width: 25 },
+      ];
+
+      const data = documents.map(doc => ({
+        policy_number: doc.policy_number,
+        created_at: doc.created_at ? new Date(doc.created_at).toLocaleDateString('ar-LY') : '-',
+        student_name: doc.student_name,
+        school_name: doc.school_name,
+        total: (typeof doc.premium_amount === 'number' ? doc.premium_amount : parseFloat(String(doc.premium_amount)) || 0).toFixed(3) + ' د.ل',
+        agency_name: doc.agency_name || (doc as any).branch_agent?.agency_name || '-',
+      }));
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير تأمين حماية طلاب المدارس',
+        subtitle: `عدد الوثائق: ${totalDocuments} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'تقرير_تأمين_الطلاب',
+        qrData: `تأمين طلاب مدارس - شركة المدار الليبي\nعدد الوثائق: ${totalDocuments}\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -172,6 +211,14 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
               إصدار وثيقة جديدة
             </button>
           )}
+          <button
+            className="primary add-user-btn"
+            onClick={handleExportExcel}
+            style={{ background: '#166534', marginRight: '10px' }}
+          >
+            <i className="fa-solid fa-file-excel"></i>
+            تصدير إكسل
+          </button>
         </div>
 
         {/* Advanced Filters Box */}

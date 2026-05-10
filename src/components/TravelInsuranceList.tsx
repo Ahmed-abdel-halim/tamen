@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { generatePremiumExcel } from "../utils/excelGenerator";
 
 type TravelInsurancePassenger = {
   id: number;
@@ -166,6 +167,49 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
     }
   };
 
+  const handleExportExcel = async () => {
+    if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    try {
+      const columns = [
+        { header: 'رقم التأمين', key: 'insurance_number', width: 25 },
+        { header: 'تاريخ الإصدار', key: 'issue_date', width: 25 },
+        { header: 'اسم المؤمن', key: 'insured_name', width: 35 },
+        { header: 'رقم الهاتف', key: 'phone', width: 15 },
+        { header: 'نوع التأمين', key: 'insurance_type', width: 20 },
+        { header: 'القسط الكلي', key: 'total', width: 15 },
+        { header: 'الوكالة', key: 'agency_name', width: 25 },
+      ];
+
+      const data = documents.map(doc => {
+        const mainPassenger = doc.passengers?.find(p => p.is_main_passenger);
+        return {
+          insurance_number: doc.insurance_number,
+          issue_date: doc.issue_date ? new Date(doc.issue_date).toLocaleString('ar-LY') : '-',
+          insured_name: mainPassenger?.name_ar || '-',
+          phone: mainPassenger?.phone || '-',
+          insurance_type: doc.insurance_type,
+          total: (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) + ' د.ل',
+          agency_name: doc.agency_name || '-',
+        };
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير تأمين المسافرين',
+        subtitle: `عدد الوثائق: ${totalDocuments} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'تقرير_تأمين_المسافرين',
+        qrData: `تأمين مسافرين - شركة المدار الليبي\nعدد الوثائق: ${totalDocuments}\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -195,6 +239,14 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
               إضافة وثيقة
             </button>
           )}
+          <button
+            className="primary add-user-btn"
+            onClick={handleExportExcel}
+            style={{ background: '#166534', marginRight: '10px' }}
+          >
+            <i className="fa-solid fa-file-excel"></i>
+            تصدير إكسل
+          </button>
         </div>
 
         {/* Advanced Filters Box */}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
-import { exportToExcel as exportUtil } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 interface RevenueSource {
   name: string;
@@ -59,32 +59,36 @@ export default function RevenueManagement() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!stats) return;
-    
-    exportUtil({
-      title: 'تقرير الإيرادات والمقبوضات المالية',
-      fileName: 'تقرير_إيرادات_المدار',
-      columnCount: 6,
-      summaryRight: `إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل    |    إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل`,
-      summaryLeft: `الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل`,
-      tableHeaders: `
-        <tr height="40">
-          <th colspan="3">نوع التأمين</th>
-          <th colspan="2">عدد الوثائق الصادرة</th>
-          <th colspan="1">نسبة المساهمة</th>
-        </tr>
-      `,
-      tableBody: stats.sources.map((s, index) => `
-        <tr class="${index % 2 === 0 ? 'row-even' : ''}">
-          <td colspan="3" style="text-align:right; font-weight:bold;">${s.name}</td>
-          <td colspan="2">${s.value.toLocaleString()} وثيقة</td>
-          <td colspan="1">100%</td>
-        </tr>
-      `).join('')
-    });
-    
-    showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+    try {
+      const columns = [
+        { header: 'نوع التأمين', key: 'name', width: 40 },
+        { header: 'عدد الوثائق الصادرة', key: 'value', width: 25 },
+        { header: 'نسبة المساهمة', key: 'contribution', width: 15 },
+      ];
+
+      const data = stats.sources.map(s => ({
+        name: s.name,
+        value: s.value.toLocaleString() + ' وثيقة',
+        contribution: '100%',
+      }));
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير الإيرادات والمقبوضات المالية',
+        subtitle: `إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل | إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل | الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل`,
+        columns,
+        data,
+        fileName: 'تقرير_إيرادات_المدار',
+        qrData: `تقرير الإيرادات - شركة المدار الليبي\nإجمالي: ${stats.total_revenue.toLocaleString()} د.ل\nالمقبوض: ${stats.total_paid.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
   };
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>جاري تحميل قسم الإيرادات...</div>;

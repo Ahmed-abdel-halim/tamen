@@ -116,6 +116,10 @@ export default function ViewClaim() {
 
     const displayStatus = statusMap[claim.status] || claim.status;
 
+
+    const qrData = `مطالبة رقم: ${claim.claim_number}\nمقدم المطالبة: ${claim.claimant_name}\nرقم الوثيقة: ${claim.document?.insurance_number || '---'}\nالتاريخ: ${new Date().toLocaleString('ar-LY')}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
     printWindow.document.write(`
       <html dir="rtl">
       <head>
@@ -129,7 +133,7 @@ export default function ViewClaim() {
           body { 
             font-family: 'Cairo', sans-serif; 
             margin: 0; 
-            padding: 30px; 
+            padding: 20px; 
             color: #1e293b;
             background: #fff;
             line-height: 1.6;
@@ -138,31 +142,34 @@ export default function ViewClaim() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px double #1e293b;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1e293b;
           }
-          .header-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
+          .header-center {
+            text-align: center;
+            flex: 1;
           }
-          .header-info h1 { margin: 0; font-size: 22px; color: #1e293b; font-weight: 900; }
-          .header-info p { margin: 2px 0; color: #475569; font-size: 14px; font-weight: 600; }
-          .logo { height: 90px; width: auto; }
+          .header-center h1 { margin: 0; font-size: 20px; color: #1e293b; font-weight: 900; }
+          .header-center p { margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: 700; }
+          
+          .logo-container { width: 100px; text-align: right; }
+          .qr-container { width: 100px; text-align: left; }
+          .logo { height: 80px; width: auto; }
+          .qr-code { height: 80px; width: 80px; }
           
           .doc-title-container {
             text-align: center;
-            margin: 30px 0;
+            margin: 20px 0;
           }
           .doc-title { 
             display: inline-block;
-            padding: 10px 40px;
+            padding: 8px 30px;
             background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: 800;
+            border: 2px solid #1e293b;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 900;
             color: #1e293b;
           }
 
@@ -222,18 +229,17 @@ export default function ViewClaim() {
           }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="setTimeout(() => { window.print(); }, 500);">
         <div class="header">
-          <div class="header-right">
-            <img src="/img/logo3.png" class="logo" alt="Logo">
-            <div class="header-info">
-              <h1>المدار الليبي للتأمين</h1>
-              <p>إدارة المطالبات والحوادث</p>
-            </div>
+          <div class="qr-container">
+            <img src="${qrApiUrl}" class="qr-code" alt="QR Code">
           </div>
-          <div style="text-align: left; font-size: 13px; font-weight: 600;">
-            تاريخ الطباعة: ${new Date().toLocaleDateString('ar-LY')}<br/>
-            رقم المطالبة: ${claim.claim_number}
+          <div class="header-center">
+            <h1>شركة المدار الليبي للتأمين</h1>
+            <p>إدارة المطالبات والحوادث</p>
+          </div>
+          <div class="logo-container">
+            <img src="/img/logo.png" class="logo" alt="Logo">
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
-import { exportToExcel } from '../utils/excelExport';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 interface RentalVoucher {
   id: number;
@@ -138,7 +138,8 @@ export default function RentalVouchersList() {
   const handleExport = async () => {
     if (filtered.length === 0) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
     setExportLoading(true);
-    showToast('جاري تجهيز ملف الإكسيل...', 'success');
+    showToast('جاري تجهيز ملف الإكسيل المتميز...', 'success');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     try {
       // جلب التفاصيل الكاملة لكل وثيقة
@@ -146,99 +147,102 @@ export default function RentalVouchersList() {
         filtered.map(v => fetch(`${API_BASE_URL}/rental-vouchers/${v.id}`).then(r => r.json()).then(d => d.data))
       );
 
-      const rows: string[] = [];
+      const columns = [
+        { header: '#', key: 'index', width: 8 },
+        { header: 'اسم صاحب العقار', key: 'owner_name', width: 30 },
+        { header: 'رقم الهاتف', key: 'phone', width: 15 },
+        { header: 'الرقم الوطني', key: 'national_id', width: 20 },
+        { header: 'الملاحظات', key: 'notes', width: 25 },
+        { header: 'تاريخ الإضافة', key: 'created_at', width: 15 },
+        { header: 'من تاريخ', key: 'from_date', width: 15 },
+        { header: 'الى تاريخ', key: 'to_date', width: 15 },
+        { header: 'عدد الشقق', key: 'apartments', width: 12 },
+        { header: 'اسم المستلم', key: 'recipient', width: 25 },
+        { header: 'المبلغ (د.ل)', key: 'amount', width: 15 },
+      ];
+
+      const data: any[] = [];
       let rowNum = 1;
 
-      details.forEach((voucher: any, vIdx: number) => {
+      details.forEach((voucher: any) => {
         const records = voucher.records || [];
         const voucherTotal = records.reduce((s: number, r: any) => s + parseFloat(r.total_amount || 0), 0);
-        const isEven = vIdx % 2 === 0;
-        const ownerBg = isEven ? '#eff6ff' : '#f0fdf4';
 
         if (records.length === 0) {
-          // وثيقة بدون سجلات - صف واحد
-          rows.push(`
-            <tr style="background:${ownerBg}; border-top:2px solid #2563eb;">
-              <td style="text-align:center;font-weight:900;color:#2563eb;">${rowNum++}</td>
-              <td style="font-weight:bold;color:#1e293b;">${voucher.owner_name}</td>
-              <td>${voucher.phone}</td>
-              <td>${voucher.national_id}</td>
-              <td style="color:#64748b;font-style:italic;">${voucher.notes || '-'}</td>
-              <td style="color:#64748b;font-size:11px;">${new Date(voucher.created_at).toLocaleDateString('ar-LY')}</td>
-              <td style="color:#94a3b8;">-</td>
-              <td style="color:#94a3b8;">-</td>
-              <td style="text-align:center;color:#94a3b8;">-</td>
-              <td style="color:#94a3b8;">-</td>
-              <td style="color:#94a3b8;">-</td>
-            </tr>
-          `);
+          data.push({
+            index: rowNum++,
+            owner_name: voucher.owner_name,
+            phone: voucher.phone,
+            national_id: voucher.national_id,
+            notes: voucher.notes || '-',
+            created_at: new Date(voucher.created_at).toLocaleDateString('ar-LY'),
+            from_date: '-',
+            to_date: '-',
+            apartments: '-',
+            recipient: '-',
+            amount: '-',
+          });
         } else {
-          // صف لكل سجل إيجار مع تكرار بيانات المالك
           records.forEach((rec: any, rIdx: number) => {
-            const isFirst = rIdx === 0;
-            rows.push(`
-              <tr style="background:${isFirst ? ownerBg : '#ffffff'}; border-top:${isFirst ? '2px solid #2563eb' : '1px solid #e2e8f0'};">
-                <td style="text-align:center;font-weight:900;color:#2563eb;">${isFirst ? rowNum++ : ''}</td>
-                <td style="font-weight:${isFirst ? 'bold' : '400'};color:${isFirst ? '#1e293b' : '#64748b'};">${isFirst ? voucher.owner_name : ''}</td>
-                <td style="color:${isFirst ? '#475569' : '#94a3b8'};">${isFirst ? voucher.phone : ''}</td>
-                <td style="color:${isFirst ? '#475569' : '#94a3b8'};">${isFirst ? voucher.national_id : ''}</td>
-                <td style="color:#64748b;font-style:italic;">${isFirst ? (voucher.notes || '-') : ''}</td>
-                <td style="color:#64748b;font-size:11px;">${isFirst ? new Date(voucher.created_at).toLocaleDateString('ar-LY') : ''}</td>
-                <td style="color:#334155;font-size:12px;">${rec.from_date ? new Date(rec.from_date).toLocaleDateString('ar-LY') : '-'}</td>
-                <td style="color:#334155;font-size:12px;">${rec.to_date ? new Date(rec.to_date).toLocaleDateString('ar-LY') : '-'}</td>
-                <td style="text-align:center;color:#0369a1;font-weight:bold;">${rec.apartments_count} شقة</td>
-                <td style="color:#1e293b;">${rec.recipient_name}</td>
-                <td style="color:#166534;font-weight:bold;">${parseFloat(rec.total_amount || 0).toLocaleString()}</td>
-              </tr>
-            `);
+            data.push({
+              index: rIdx === 0 ? rowNum++ : '',
+              owner_name: rIdx === 0 ? voucher.owner_name : '',
+              phone: rIdx === 0 ? voucher.phone : '',
+              national_id: rIdx === 0 ? voucher.national_id : '',
+              notes: rIdx === 0 ? (voucher.notes || '-') : '',
+              created_at: rIdx === 0 ? new Date(voucher.created_at).toLocaleDateString('ar-LY') : '',
+              from_date: rec.from_date ? new Date(rec.from_date).toLocaleDateString('ar-LY') : '-',
+              to_date: rec.to_date ? new Date(rec.to_date).toLocaleDateString('ar-LY') : '-',
+              apartments: rec.apartments_count + ' شقة',
+              recipient: rec.recipient_name,
+              amount: parseFloat(rec.total_amount || 0).toLocaleString() + ' د.ل',
+            });
           });
 
-          // سطر إجمالي الوثيقة
-          rows.push(`
-            <tr style="background:#dcfce7;border-top:1px solid #86efac;border-bottom:2px solid #22c55e;">
-              <td></td>
-              <td colspan="9" style="text-align:right;font-weight:bold;color:#166534;padding-left:8px;">إجمالي ${voucher.owner_name} (${records.length} سجل)</td>
-              <td style="font-weight:900;color:#15803d;font-size:14px;">${voucherTotal.toLocaleString()} د.ل</td>
-            </tr>
-          `);
+          // Add a summary row for this voucher
+          data.push({
+            index: '',
+            owner_name: `إجمالي ${voucher.owner_name}`,
+            phone: '',
+            national_id: '',
+            notes: '',
+            created_at: '',
+            from_date: '',
+            to_date: '',
+            apartments: '',
+            recipient: '',
+            amount: voucherTotal.toLocaleString() + ' د.ل',
+          });
         }
       });
 
-      // سطر الإجمالي الكلي
-      rows.push(`
-        <tr style="background:#1e3a8a;">
-          <td colspan="10" style="text-align:center;font-weight:900;color:#fff;font-size:15px;padding:14px;">الإجمالي الكلي لجميع الوثائق (${filtered.length} وثيقة - ${totalRecords} سجل)</td>
-          <td style="font-weight:900;color:#fbbf24;font-size:18px;">${totalAmount.toLocaleString()} د.ل</td>
-        </tr>
-      `);
+      // Grand total row
+      data.push({
+        index: '',
+        owner_name: 'الإجمالي الكلي لجميع الوثائق',
+        phone: '',
+        national_id: '',
+        notes: '',
+        created_at: '',
+        from_date: '',
+        to_date: '',
+        apartments: `${totalRecords} سجل`,
+        recipient: '',
+        amount: totalAmount.toLocaleString() + ' د.ل',
+      });
 
-      exportToExcel({
-        title: 'سجل ورقة الإيجارات',
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - سجل ورقة الإيجارات',
+        subtitle: `إجمالي المبالغ: ${totalAmount.toLocaleString()} د.ل - عدد الوثائق: ${filtered.length} | إجمالي السجلات: ${totalRecords}`,
+        columns,
+        data,
         fileName: 'ورقة_الإيجارات',
-        columnCount: 11,
-        summaryRight: `إجمالي المبالغ: ${totalAmount.toLocaleString()} د.ل`,
-        summaryLeft: `عدد الوثائق: ${filtered.length} | إجمالي السجلات: ${totalRecords}`,
-        tableHeaders: `
-          <tr height="44">
-            <th width="40">#</th>
-            <th width="170">اسم صاحب العقار</th>
-            <th width="120">رقم الهاتف</th>
-            <th width="120">الرقم الوطني</th>
-            <th width="180">الملاحظات</th>
-            <th width="100">تاريخ الإضافة</th>
-            <th width="100">من تاريخ</th>
-            <th width="100">الى تاريخ</th>
-            <th width="80">عدد الشقق</th>
-            <th width="170">اسم المستلم</th>
-            <th width="120">المبلغ (د.ل)</th>
-          </tr>
-        `,
-        tableBody: rows.join(''),
+        qrData: `ورقة الإيجارات - شركة المدار الليبي\nعدد الوثائق: ${filtered.length}\nإجمالي: ${totalAmount.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير السجل الكامل بنجاح', 'success');
-    } catch {
-      showToast('حدث خطأ أثناء جلب البيانات للتصدير', 'error');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
     } finally {
       setExportLoading(false);
     }
