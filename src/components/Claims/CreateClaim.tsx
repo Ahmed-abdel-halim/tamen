@@ -154,8 +154,12 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     claim_number: claim?.claim_number || '',
     claim_number_auto: !claim?.claim_number,
     reference_number: claim?.reference_number || '',
+    admin_number: claim?.admin_number || '',
     claim_date: claim?.claim_date || new Date().toISOString().split('T')[0],
     accident_date: claim?.accident_date || '',
+    accident_location: claim?.accident_location || '',
+    accident_time: claim?.accident_time || '',
+    has_fatalities: claim?.has_fatalities || false,
     damage_type: claim?.damage_type || 'مادي',
     other_damage_type: claim?.other_damage_type || '',
     claimant_name: claim?.claimant_name || '',
@@ -163,7 +167,45 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     personal_id: claim?.personal_id || '',
     nationality: claim?.nationality || '',
     phone_number: claim?.phone_number || '',
+    claimant_check_number: claim?.claimant_check_number || '',
+    // Driver
+    driver_name: claim?.driver_name || '',
+    driver_nationality: claim?.driver_nationality || '',
+    driver_id_number: claim?.driver_id_number || '',
+    driver_license_number: claim?.driver_license_number || '',
+    driver_license_issue_date: claim?.driver_license_issue_date || '',
+    driver_license_expiry_date: claim?.driver_license_expiry_date || '',
+    // Damaged body
+    damaged_body_type: claim?.damaged_body_type || 'سيارة',
+    damaged_vehicle_model: claim?.damaged_vehicle_model || '',
+    damaged_vehicle_plate: claim?.damaged_vehicle_plate || '',
+    damaged_vehicle_amount: claim?.damaged_vehicle_amount || '',
+    damaged_vehicle_repair_shop: claim?.damaged_vehicle_repair_shop || '',
+    damaged_person_name: claim?.damaged_person_name || '',
+    damaged_person_amount: claim?.damaged_person_amount || '',
+    damaged_building_description: claim?.damaged_building_description || '',
+    damaged_building_amount: claim?.damaged_building_amount || '',
+    // Victim insurance
+    victim_insurance_company: claim?.victim_insurance_company || '',
+    victim_insurance_number: claim?.victim_insurance_number || '',
+    victim_insurance_type: claim?.victim_insurance_type || '',
+    victim_insurance_issue_date: claim?.victim_insurance_issue_date || '',
+    victim_insurance_expiry_date: claim?.victim_insurance_expiry_date || '',
+    // Assessor
+    assessor_name: claim?.assessor_name || '',
+    assessor_phone: claim?.assessor_phone || '',
+    assessor_date: claim?.assessor_date || '',
+    assessor_amount_dinar: claim?.assessor_amount_dinar || '',
+    assessor_amount_dollar: claim?.assessor_amount_dollar || '',
   });
+
+  const [driverPhoto, setDriverPhoto] = useState<File|null>(null);
+  const [driverLicensePhoto, setDriverLicensePhoto] = useState<File|null>(null);
+  const [victimInsurancePhoto, setVictimInsurancePhoto] = useState<File|null>(null);
+  const [assessorReportPhoto, setAssessorReportPhoto] = useState<File|null>(null);
+  const [damagedVehiclePhotos, setDamagedVehiclePhotos] = useState<File[]>([]);
+  const [damagedPersonPhotos, setDamagedPersonPhotos] = useState<File[]>([]);
+  const [damagedBuildingPhotos, setDamagedBuildingPhotos] = useState<File[]>([]);
 
   const [reports, setReports] = useState<any[]>(claim?.reports || [
     { id: 1, report_type: 'تقرير طبي معتمد', report_date: '', preparer_name: '', report_number: '', file: null },
@@ -300,25 +342,34 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
       }
 
       Object.keys(claimData).forEach(key => {
+        const val = (claimData as any)[key];
         if (key === 'claim_number') {
           formData.append(key, finalClaimNumber);
-        } else {
-          formData.append(key, (claimData as any)[key]);
+        } else if (key === 'claim_number_auto') {
+          // skip this internal flag
+        } else if (typeof val === 'boolean') {
+          // Laravel boolean validation requires 1/0, not "true"/"false"
+          formData.append(key, val ? '1' : '0');
+        } else if (val !== null && val !== undefined && val !== '') {
+          formData.append(key, val.toString());
         }
       });
       formData.append('document_type', documentType);
-      if (documentData) {
-        formData.append('document_id', documentData.id);
-      }
+      if (documentData) formData.append('document_id', documentData.id);
       formData.append('document_coverage', documentCoverage);
 
-      // Branch Agent ID from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (user.id && !claim) {
-        formData.append('branch_agent_id', user.branch_agent_id || user.id);
-      }
+      if (user.id && !claim) formData.append('branch_agent_id', user.branch_agent_id || user.id);
 
-      // Append reports
+      // File uploads
+      if (driverPhoto) formData.append('driver_photo', driverPhoto);
+      if (driverLicensePhoto) formData.append('driver_license_photo', driverLicensePhoto);
+      if (victimInsurancePhoto) formData.append('victim_insurance_photo', victimInsurancePhoto);
+      if (assessorReportPhoto) formData.append('assessor_report_photo', assessorReportPhoto);
+      damagedVehiclePhotos.forEach(f => formData.append('damaged_vehicle_photos[]', f));
+      damagedPersonPhotos.forEach(f => formData.append('damaged_person_photos[]', f));
+      damagedBuildingPhotos.forEach(f => formData.append('damaged_building_photos[]', f));
+
       formData.append('reports_count', reports.length.toString());
       reports.forEach((report, index) => {
         formData.append(`reports_${index}_report_type`, report.report_type);
@@ -326,9 +377,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
         formData.append(`reports_${index}_report_date`, report.report_date);
         formData.append(`reports_${index}_preparer_name`, report.preparer_name);
         formData.append(`reports_${index}_report_number`, report.report_number);
-        if (report.file) {
-          formData.append(`reports_${index}_report_image`, report.file);
-        }
+        if (report.file) formData.append(`reports_${index}_report_image`, report.file);
       });
 
       const url = claim ? `${API_BASE_URL}/claims/${claim.id}?_method=PUT` : `${API_BASE_URL}/claims`;
@@ -347,8 +396,16 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
       showToast(claim ? 'تم تحديث المطالبة بنجاح' : 'تم إضافة المطالبة بنجاح', 'success');
       onSuccess();
     } catch (error: any) {
-      showToast('حدث خطأ أثناء حفظ المطالبة: ' + (error.response?.data?.message || ''), 'error');
-      console.error(error.response?.data);
+      const errData = error.response?.data;
+      let errMsg = 'حدث خطأ أثناء حفظ المطالبة';
+      if (errData?.errors) {
+        const fieldErrors = Object.values(errData.errors).flat() as string[];
+        errMsg = 'خطأ في التحقق من البيانات: ' + fieldErrors[0];
+      } else if (errData?.message) {
+        errMsg = 'حدث خطأ أثناء حفظ المطالبة: ' + errData.message;
+      }
+      showToast(errMsg, 'error');
+      console.error('Claim save error:', errData);
     } finally {
       setLoading(false);
     }
@@ -763,7 +820,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 />
               </div>
 
-              <div className="field-group" style={{ gridColumn: 'span 2' }}>
+              <div className="field-group">
                 <label className="premium-label">رقم الهاتف</label>
                 <input type="text" className="premium-field" required
                   value={claimData.phone_number}
@@ -771,6 +828,127 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                   placeholder="091XXXXXXX"
                 />
               </div>
+              <div className="field-group">
+                <label className="premium-label">رقم الشيك / الإيصال (اختياري)</label>
+                <input type="text" className="premium-field"
+                  value={claimData.claimant_check_number}
+                  onChange={(e) => setClaimData({...claimData, claimant_check_number: e.target.value})}
+                  placeholder="رقم الشيك..."
+                />
+              </div>
+              <div className="field-group">
+                <label className="premium-label">مكان الحادث</label>
+                <input type="text" className="premium-field"
+                  value={claimData.accident_location}
+                  onChange={(e) => setClaimData({...claimData, accident_location: e.target.value})}
+                  placeholder="المكان..."
+                />
+              </div>
+              <div className="field-group">
+                <label className="premium-label">وقت الحادث</label>
+                <input type="time" className="premium-field"
+                  value={claimData.accident_time}
+                  onChange={(e) => setClaimData({...claimData, accident_time: e.target.value})}
+                />
+              </div>
+              <div className="field-group" style={{ gridColumn: 'span 2' }}>
+                <label className="premium-label d-flex align-items-center gap-3">
+                  <span>هل يوجد وفيات؟</span>
+                  <input type="checkbox" className="form-check-input m-0"
+                    checked={claimData.has_fatalities}
+                    onChange={(e) => setClaimData({...claimData, has_fatalities: e.target.checked})}
+                  />
+                  <span style={{ color: claimData.has_fatalities ? '#ef4444' : 'var(--muted)', fontWeight: 700 }}>
+                    {claimData.has_fatalities ? 'نعم' : 'لا'}
+                  </span>
+                </label>
+              </div>
+              <div className="field-group">
+                <label className="premium-label">الرقم الإداري (اختياري)</label>
+                <input type="text" className="premium-field"
+                  value={claimData.admin_number}
+                  onChange={(e) => setClaimData({...claimData, admin_number: e.target.value})}
+                  placeholder="الرقم الإداري..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ===== بيانات السائق ===== */}
+          <div className="section-card">
+            <div className="section-header"><i className="fa-solid fa-id-card"></i><h4>بيانات السائق</h4></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <div className="field-group"><label className="premium-label">اسم السائق</label><input className="premium-field" value={claimData.driver_name} onChange={e=>setClaimData({...claimData,driver_name:e.target.value})} placeholder="الاسم الكامل..." /></div>
+              <div className="field-group"><label className="premium-label">الجنسية</label><input className="premium-field" value={claimData.driver_nationality} onChange={e=>setClaimData({...claimData,driver_nationality:e.target.value})} placeholder="الجنسية..." /></div>
+              <div className="field-group"><label className="premium-label">رقم الهوية</label><input className="premium-field" value={claimData.driver_id_number} onChange={e=>setClaimData({...claimData,driver_id_number:e.target.value})} placeholder="رقم الهوية..." /></div>
+              <div className="field-group"><label className="premium-label">رقم رخصة القيادة</label><input className="premium-field" value={claimData.driver_license_number} onChange={e=>setClaimData({...claimData,driver_license_number:e.target.value})} placeholder="رقم الرخصة..." /></div>
+              <div className="field-group"><label className="premium-label">تاريخ إصدار الرخصة</label><input type="date" className="premium-field" value={claimData.driver_license_issue_date} onChange={e=>setClaimData({...claimData,driver_license_issue_date:e.target.value})} /></div>
+              <div className="field-group"><label className="premium-label">تاريخ انتهاء الرخصة</label><input type="date" className="premium-field" value={claimData.driver_license_expiry_date} onChange={e=>setClaimData({...claimData,driver_license_expiry_date:e.target.value})} /></div>
+              <div className="field-group"><label className="premium-label">صورة السائق</label><input type="file" accept="image/*" className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setDriverPhoto(e.target.files?.[0]||null)} /></div>
+              <div className="field-group"><label className="premium-label">صورة رخصة القيادة</label><input type="file" accept="image/*" className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setDriverLicensePhoto(e.target.files?.[0]||null)} /></div>
+            </div>
+          </div>
+
+          {/* ===== بيانات الجسم المتضرر ===== */}
+          <div className="section-card">
+            <div className="section-header"><i className="fa-solid fa-car-burst"></i><h4>بيانات الجسم المتضرر</h4></div>
+            <div className="d-flex gap-3 mb-3">
+              {['سيارة','شخص','مبنى'].map(t=>(
+                <label key={t} className="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                  style={{background:claimData.damaged_body_type===t?'var(--accent-cyan)':'var(--input-bg)',color:claimData.damaged_body_type===t?'white':'inherit',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700}}>
+                  <input type="radio" className="d-none" checked={claimData.damaged_body_type===t} onChange={()=>setClaimData({...claimData,damaged_body_type:t})} />
+                  <i className={`fa-solid ${t==='سيارة'?'fa-car':t==='شخص'?'fa-person':'fa-building'}`}></i>{t}
+                </label>
+              ))}
+            </div>
+            {claimData.damaged_body_type === 'سيارة' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div className="field-group"><label className="premium-label">موديل السيارة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_model} onChange={e=>setClaimData({...claimData,damaged_vehicle_model:e.target.value})} placeholder="الموديل..." /></div>
+                <div className="field-group"><label className="premium-label">رقم لوحة السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_plate} onChange={e=>setClaimData({...claimData,damaged_vehicle_plate:e.target.value})} placeholder="رقم اللوحة..." /></div>
+                <div className="field-group"><label className="premium-label">ورشة التصليح</label><input className="premium-field" value={claimData.damaged_vehicle_repair_shop} onChange={e=>setClaimData({...claimData,damaged_vehicle_repair_shop:e.target.value})} placeholder="اسم وعنوان الورشة..." /></div>
+                <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_vehicle_amount} onChange={e=>setClaimData({...claimData,damaged_vehicle_amount:e.target.value})} placeholder="0.000" /></div>
+                <div className="field-group" style={{gridColumn:'span 2'}}><label className="premium-label">صور الأضرار (يمكن اختيار أكثر من صورة)</label><input type="file" accept="image/*" multiple className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setDamagedVehiclePhotos(Array.from(e.target.files||[]))} /></div>
+              </div>
+            )}
+            {claimData.damaged_body_type === 'شخص' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div className="field-group"><label className="premium-label">اسم الشخص المتضرر</label><input className="premium-field" value={claimData.damaged_person_name} onChange={e=>setClaimData({...claimData,damaged_person_name:e.target.value})} placeholder="الاسم الكامل..." /></div>
+                <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_person_amount} onChange={e=>setClaimData({...claimData,damaged_person_amount:e.target.value})} placeholder="0.000" /></div>
+                <div className="field-group" style={{gridColumn:'span 2'}}><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setDamagedPersonPhotos(Array.from(e.target.files||[]))} /></div>
+              </div>
+            )}
+            {claimData.damaged_body_type === 'مبنى' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div className="field-group" style={{gridColumn:'span 2'}}><label className="premium-label">وصف المبنى المتضرر</label><input className="premium-field" value={claimData.damaged_building_description} onChange={e=>setClaimData({...claimData,damaged_building_description:e.target.value})} placeholder="وصف الضرر..." /></div>
+                <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_building_amount} onChange={e=>setClaimData({...claimData,damaged_building_amount:e.target.value})} placeholder="0.000" /></div>
+                <div className="field-group"><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setDamagedBuildingPhotos(Array.from(e.target.files||[]))} /></div>
+              </div>
+            )}
+          </div>
+
+          {/* ===== بيانات وثيقة تأمين المتضرر ===== */}
+          <div className="section-card">
+            <div className="section-header"><i className="fa-solid fa-shield-halved"></i><h4>بيانات وثيقة تأمين المتضرر</h4></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <div className="field-group"><label className="premium-label">اسم شركة التأمين</label><input className="premium-field" value={claimData.victim_insurance_company} onChange={e=>setClaimData({...claimData,victim_insurance_company:e.target.value})} placeholder="شركة التأمين..." /></div>
+              <div className="field-group"><label className="premium-label">رقم الوثيقة</label><input className="premium-field" value={claimData.victim_insurance_number} onChange={e=>setClaimData({...claimData,victim_insurance_number:e.target.value})} placeholder="رقم الوثيقة..." /></div>
+              <div className="field-group"><label className="premium-label">نوع الوثيقة</label><input className="premium-field" value={claimData.victim_insurance_type} onChange={e=>setClaimData({...claimData,victim_insurance_type:e.target.value})} placeholder="شامل / طرف ثالث..." /></div>
+              <div className="field-group"><label className="premium-label">تاريخ إصدار الوثيقة</label><input type="date" className="premium-field" value={claimData.victim_insurance_issue_date} onChange={e=>setClaimData({...claimData,victim_insurance_issue_date:e.target.value})} /></div>
+              <div className="field-group"><label className="premium-label">تاريخ انتهاء الوثيقة</label><input type="date" className="premium-field" value={claimData.victim_insurance_expiry_date} onChange={e=>setClaimData({...claimData,victim_insurance_expiry_date:e.target.value})} /></div>
+              <div className="field-group"><label className="premium-label">صورة الوثيقة</label><input type="file" accept="image/*" className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setVictimInsurancePhoto(e.target.files?.[0]||null)} /></div>
+            </div>
+          </div>
+
+          {/* ===== تقرير مقدر الأضرار ===== */}
+          <div className="section-card">
+            <div className="section-header"><i className="fa-solid fa-calculator"></i><h4>تقرير مقدر الأضرار</h4></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <div className="field-group"><label className="premium-label">اسم مقدر الأضرار</label><input className="premium-field" value={claimData.assessor_name} onChange={e=>setClaimData({...claimData,assessor_name:e.target.value})} placeholder="الاسم..." /></div>
+              <div className="field-group"><label className="premium-label">رقم الهاتف</label><input className="premium-field" value={claimData.assessor_phone} onChange={e=>setClaimData({...claimData,assessor_phone:e.target.value})} placeholder="091..." /></div>
+              <div className="field-group"><label className="premium-label">تاريخ التقييم</label><input type="date" className="premium-field" value={claimData.assessor_date} onChange={e=>setClaimData({...claimData,assessor_date:e.target.value})} /></div>
+              <div className="field-group"><label className="premium-label">قيمة الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.assessor_amount_dinar} onChange={e=>setClaimData({...claimData,assessor_amount_dinar:e.target.value})} placeholder="0.000" /></div>
+              <div className="field-group"><label className="premium-label">قيمة الأضرار (دولار)</label><input type="number" className="premium-field" value={claimData.assessor_amount_dollar} onChange={e=>setClaimData({...claimData,assessor_amount_dollar:e.target.value})} placeholder="0.00" /></div>
+              <div className="field-group"><label className="premium-label">صورة تقرير المقدر</label><input type="file" accept="image/*" className="premium-field" style={{fontSize:'0.8rem'}} onChange={e=>setAssessorReportPhoto(e.target.files?.[0]||null)} /></div>
             </div>
           </div>
 

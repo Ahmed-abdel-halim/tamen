@@ -54,6 +54,27 @@ export default function ClaimsList() {
     setShowDeleteConfirm(true);
   };
 
+  const handleEditClick = async (claim: any) => {
+    try {
+      // Fetch full claim details to ensure all fields are available (e.g., personal_id)
+      const response = await fetch(`${API_BASE_URL}/claims/${claim.id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const fullClaim = await response.json();
+        setEditingClaim(fullClaim);
+      } else {
+        setEditingClaim(claim);
+      }
+    } catch {
+      setEditingClaim(claim);
+    }
+    setShowAddModal(true);
+  };
+
   const confirmDelete = async () => {
     if (!claimIdToDelete) return;
     try {
@@ -607,10 +628,7 @@ export default function ClaimsList() {
                         <button
                           className="action-btn edit"
                           title="تعديل"
-                          onClick={() => {
-                            setEditingClaim(claim);
-                            setShowAddModal(true);
-                          }}
+                          onClick={() => handleEditClick(claim)}
                         >
                           <i className="fa-solid fa-pen-to-square"></i>
                         </button>

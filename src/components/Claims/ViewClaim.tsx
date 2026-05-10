@@ -247,8 +247,12 @@ export default function ViewClaim() {
             <div class="data-item"><span class="label">رقم المطالبة:</span> <span class="value">${claim.claim_number}</span></div>
             <div class="data-item"><span class="label">تاريخ المطالبة:</span> <span class="value">${claim.claim_date}</span></div>
             <div class="data-item"><span class="label">تاريخ الحادث:</span> <span class="value">${claim.accident_date}</span></div>
+            <div class="data-item"><span class="label">وقت الحادث:</span> <span class="value">${claim.accident_time || '---'}</span></div>
+            <div class="data-item"><span class="label">مكان الحادث:</span> <span class="value">${claim.accident_location || '---'}</span></div>
             <div class="data-item"><span class="label">الرقم الإشاري:</span> <span class="value">${claim.reference_number || '---'}</span></div>
+            <div class="data-item"><span class="label">الرقم الإداري:</span> <span class="value">${claim.admin_number || '---'}</span></div>
             <div class="data-item"><span class="label">نوع الأضرار:</span> <span class="value">${claim.damage_type === 'اخر' ? claim.other_damage_type : claim.damage_type}</span></div>
+            <div class="data-item"><span class="label">يوجد وفيات:</span> <span class="value">${claim.has_fatalities ? 'نعم' : 'لا'}</span></div>
             <div class="data-item"><span class="label">حالة المطالبة:</span> <span class="value">${displayStatus}</span></div>
           </div>
         </div>
@@ -259,9 +263,51 @@ export default function ViewClaim() {
             <div class="data-item"><span class="label">الاسم بالكامل:</span> <span class="value">${claim.claimant_name}</span></div>
             <div class="data-item"><span class="label">صلة القرابة:</span> <span class="value">${claim.kinship}</span></div>
             <div class="data-item"><span class="label">الجنسية:</span> <span class="value">${claim.nationality}</span></div>
+            <div class="data-item"><span class="label">إثبات الشخصية:</span> <span class="value">${claim.personal_id}</span></div>
             <div class="data-item"><span class="label">رقم الهاتف:</span> <span class="value">${claim.phone_number}</span></div>
+            ${claim.claimant_check_number ? `<div class='data-item'><span class='label'>رقم الشيك/الإيصال:</span> <span class='value'>${claim.claimant_check_number}</span></div>` : ''}
           </div>
         </div>
+
+        ${(claim.driver_name || claim.driver_license_number) ? `
+        <div class='section'>
+          <div class='section-header'>بيانات السائق</div>
+          <div class='data-grid'>
+            ${claim.driver_name ? `<div class='data-item'><span class='label'>اسم السائق:</span> <span class='value'>${claim.driver_name}</span></div>` : ''}
+            ${claim.driver_nationality ? `<div class='data-item'><span class='label'>الجنسية:</span> <span class='value'>${claim.driver_nationality}</span></div>` : ''}
+            ${claim.driver_id_number ? `<div class='data-item'><span class='label'>رقم الهوية:</span> <span class='value'>${claim.driver_id_number}</span></div>` : ''}
+            ${claim.driver_license_number ? `<div class='data-item'><span class='label'>رقم الرخصة:</span> <span class='value'>${claim.driver_license_number}</span></div>` : ''}
+            ${claim.driver_license_issue_date ? `<div class='data-item'><span class='label'>تاريخ إصدار الرخصة:</span> <span class='value'>${claim.driver_license_issue_date}</span></div>` : ''}
+            ${claim.driver_license_expiry_date ? `<div class='data-item'><span class='label'>تاريخ انتهاء الرخصة:</span> <span class='value'>${claim.driver_license_expiry_date}</span></div>` : ''}
+          </div>
+        </div>` : ''}
+
+        ${claim.damaged_body_type ? `
+        <div class='section'>
+          <div class='section-header'>بيانات الجسم المتضرر (${claim.damaged_body_type})</div>
+          <div class='data-grid'>
+            ${claim.damaged_vehicle_model ? `<div class='data-item'><span class='label'>موديل السيارة:</span> <span class='value'>${claim.damaged_vehicle_model}</span></div>` : ''}
+            ${claim.damaged_vehicle_plate ? `<div class='data-item'><span class='label'>رقم اللوحة:</span> <span class='value'>${claim.damaged_vehicle_plate}</span></div>` : ''}
+            ${claim.damaged_vehicle_repair_shop ? `<div class='data-item'><span class='label'>ورشة التصليح:</span> <span class='value'>${claim.damaged_vehicle_repair_shop}</span></div>` : ''}
+            ${claim.damaged_vehicle_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.damaged_person_name ? `<div class='data-item'><span class='label'>اسم المتضرر:</span> <span class='value'>${claim.damaged_person_name}</span></div>` : ''}
+            ${claim.damaged_person_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.damaged_building_description ? `<div class='data-item'><span class='label'>وصف المبنى:</span> <span class='value'>${claim.damaged_building_description}</span></div>` : ''}
+            ${claim.damaged_building_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+          </div>
+        </div>` : ''}
+
+        ${claim.assessor_name ? `
+        <div class='section'>
+          <div class='section-header'>تقرير مقدر الأضرار</div>
+          <div class='data-grid'>
+            <div class='data-item'><span class='label'>اسم المقدر:</span> <span class='value'>${claim.assessor_name}</span></div>
+            ${claim.assessor_phone ? `<div class='data-item'><span class='label'>رقم الهاتف:</span> <span class='value'>${claim.assessor_phone}</span></div>` : ''}
+            ${claim.assessor_date ? `<div class='data-item'><span class='label'>تاريخ التقييم:</span> <span class='value'>${claim.assessor_date}</span></div>` : ''}
+            ${claim.assessor_amount_dinar ? `<div class='data-item'><span class='label'>القيمة (دينار):</span> <span class='value'>${Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.assessor_amount_dollar ? `<div class='data-item'><span class='label'>القيمة (دولار):</span> <span class='value'>$${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>` : ''}
+          </div>
+        </div>` : ''}
 
         <div class="section">
           <div class="section-header">بيانات الوثيقة المربوطة</div>
@@ -558,19 +604,40 @@ export default function ViewClaim() {
                 <span className="value">{claim.reference_number || '---'}</span>
               </div>
               <div className="detail-item">
+                <span className="label">الرقم الإداري</span>
+                <span className="value">{claim.admin_number || '---'}</span>
+              </div>
+              <div className="detail-item">
                 <span className="label">نوع الأضرار</span>
                 <span className="value badge-value">{claim.damage_type === 'اخر' ? claim.other_damage_type : claim.damage_type}</span>
+              </div>
+              {claim.accident_location && (
+                <div className="detail-item">
+                  <span className="label">مكان الحادث</span>
+                  <span className="value">{claim.accident_location}</span>
+                </div>
+              )}
+              {claim.accident_time && (
+                <div className="detail-item">
+                  <span className="label">وقت الحادث</span>
+                  <span className="value">{claim.accident_time}</span>
+                </div>
+              )}
+              <div className="detail-item">
+                <span className="label">يوجد وفيات</span>
+                <span className="value" style={{color: claim.has_fatalities ? '#ef4444' : '#22c55e', fontWeight: 700}}>
+                  {claim.has_fatalities ? 'نعم ⚠️' : 'لا'}
+                </span>
               </div>
             </div>
           </section>
 
-          {/* Section 2: Claimant Info */}
           <section className="dashboard-card">
             <div className="card-header">
               <i className="fa-solid fa-user-tie text-success"></i>
               <h3>بيانات مقدم المطالبة</h3>
             </div>
-            <div className="details-grid three-cols">
+            <div className="details-grid">
               <div className="detail-item">
                 <span className="label">الاسم بالكامل</span>
                 <span className="value fw-bold">{claim.claimant_name}</span>
@@ -591,8 +658,134 @@ export default function ViewClaim() {
                 <span className="label">رقم الهاتف</span>
                 <span className="value">{claim.phone_number}</span>
               </div>
+              {claim.claimant_check_number && (
+                <div className="detail-item">
+                  <span className="label">رقم الشيك / الإيصال</span>
+                  <span className="value">{claim.claimant_check_number}</span>
+                </div>
+              )}
             </div>
           </section>
+
+          {/* Section: Driver Info */}
+          {(claim.driver_name || claim.driver_id_number || claim.driver_license_number) && (
+            <section className="dashboard-card">
+              <div className="card-header">
+                <i className="fa-solid fa-id-card text-warning"></i>
+                <h3>بيانات السائق</h3>
+              </div>
+              <div className="details-grid three-cols">
+                {claim.driver_name && <div className="detail-item"><span className="label">اسم السائق</span><span className="value">{claim.driver_name}</span></div>}
+                {claim.driver_nationality && <div className="detail-item"><span className="label">الجنسية</span><span className="value">{claim.driver_nationality}</span></div>}
+                {claim.driver_id_number && <div className="detail-item"><span className="label">رقم الهوية</span><span className="value">{claim.driver_id_number}</span></div>}
+                {claim.driver_license_number && <div className="detail-item"><span className="label">رقم الرخصة</span><span className="value">{claim.driver_license_number}</span></div>}
+                {claim.driver_license_issue_date && <div className="detail-item"><span className="label">تاريخ الإصدار</span><span className="value">{claim.driver_license_issue_date}</span></div>}
+                {claim.driver_license_expiry_date && <div className="detail-item"><span className="label">تاريخ الانتهاء</span><span className="value">{claim.driver_license_expiry_date}</span></div>}
+              </div>
+              <div className="d-flex gap-3 mt-2">
+                {claim.driver_photo && (
+                  <a href={`${BACKEND_URL}/storage/${claim.driver_photo}`} target="_blank" rel="noreferrer" className="attachment-btn">
+                    <i className="fa-solid fa-user"></i> صورة السائق
+                  </a>
+                )}
+                {claim.driver_license_photo && (
+                  <a href={`${BACKEND_URL}/storage/${claim.driver_license_photo}`} target="_blank" rel="noreferrer" className="attachment-btn">
+                    <i className="fa-solid fa-id-card"></i> صورة الرخصة
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Section: Damaged Body */}
+          {claim.damaged_body_type && (
+            <section className="dashboard-card">
+              <div className="card-header">
+                <i className="fa-solid fa-car-burst text-danger"></i>
+                <h3>بيانات الجسم المتضرر - <span style={{color:'var(--accent-cyan)'}}>{claim.damaged_body_type}</span></h3>
+              </div>
+              {claim.damaged_body_type === 'سيارة' && (
+                <div className="details-grid three-cols">
+                  {claim.damaged_vehicle_model && <div className="detail-item"><span className="label">موديل السيارة</span><span className="value">{claim.damaged_vehicle_model}</span></div>}
+                  {claim.damaged_vehicle_plate && <div className="detail-item"><span className="label">رقم اللوحة</span><span className="value">{claim.damaged_vehicle_plate}</span></div>}
+                  {claim.damaged_vehicle_repair_shop && <div className="detail-item"><span className="label">ورشة التصليح</span><span className="value">{claim.damaged_vehicle_repair_shop}</span></div>}
+                  {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{color:'#ef4444'}}>{Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                </div>
+              )}
+              {claim.damaged_body_type === 'شخص' && (
+                <div className="details-grid">
+                  {claim.damaged_person_name && <div className="detail-item"><span className="label">اسم المتضرر</span><span className="value">{claim.damaged_person_name}</span></div>}
+                  {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{color:'#ef4444'}}>{Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                </div>
+              )}
+              {claim.damaged_body_type === 'مبنى' && (
+                <div className="details-grid">
+                  {claim.damaged_building_description && <div className="detail-item" style={{gridColumn:'span 2'}}><span className="label">وصف المبنى</span><span className="value">{claim.damaged_building_description}</span></div>}
+                  {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{color:'#ef4444'}}>{Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                </div>
+              )}
+              {/* Damage photos */}
+              {(() => {
+                const photos = claim.damaged_body_type === 'سيارة' ? claim.damaged_vehicle_photos
+                  : claim.damaged_body_type === 'شخص' ? claim.damaged_person_photos
+                  : claim.damaged_building_photos;
+                const photoArr = Array.isArray(photos) ? photos : [];
+                return photoArr.length > 0 ? (
+                  <div className="photos-strip mt-2">
+                    {photoArr.map((p: string, i: number) => (
+                      <a key={i} href={`${BACKEND_URL}/storage/${p}`} target="_blank" rel="noreferrer">
+                        <img src={`${BACKEND_URL}/storage/${p}`} alt={`ضرر ${i+1}`} className="damage-thumb" />
+                      </a>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+            </section>
+          )}
+
+          {/* Section: Victim Insurance */}
+          {claim.victim_insurance_company && (
+            <section className="dashboard-card">
+              <div className="card-header">
+                <i className="fa-solid fa-shield-halved" style={{color:'#7c3aed'}}></i>
+                <h3>بيانات وثيقة تأمين المتضرر</h3>
+              </div>
+              <div className="details-grid three-cols">
+                {claim.victim_insurance_company && <div className="detail-item"><span className="label">شركة التأمين</span><span className="value">{claim.victim_insurance_company}</span></div>}
+                {claim.victim_insurance_number && <div className="detail-item"><span className="label">رقم الوثيقة</span><span className="value">{claim.victim_insurance_number}</span></div>}
+                {claim.victim_insurance_type && <div className="detail-item"><span className="label">نوع الوثيقة</span><span className="value">{claim.victim_insurance_type}</span></div>}
+                {claim.victim_insurance_issue_date && <div className="detail-item"><span className="label">تاريخ الإصدار</span><span className="value">{claim.victim_insurance_issue_date}</span></div>}
+                {claim.victim_insurance_expiry_date && <div className="detail-item"><span className="label">تاريخ الانتهاء</span><span className="value">{claim.victim_insurance_expiry_date}</span></div>}
+              </div>
+              {claim.victim_insurance_photo && (
+                <a href={`${BACKEND_URL}/storage/${claim.victim_insurance_photo}`} target="_blank" rel="noreferrer" className="attachment-btn mt-2">
+                  <i className="fa-solid fa-file-image"></i> صورة الوثيقة
+                </a>
+              )}
+            </section>
+          )}
+
+          {/* Section: Assessor */}
+          {claim.assessor_name && (
+            <section className="dashboard-card">
+              <div className="card-header">
+                <i className="fa-solid fa-calculator" style={{color:'#059669'}}></i>
+                <h3>تقرير مقدر الأضرار</h3>
+              </div>
+              <div className="details-grid three-cols">
+                {claim.assessor_name && <div className="detail-item"><span className="label">اسم المقدر</span><span className="value">{claim.assessor_name}</span></div>}
+                {claim.assessor_phone && <div className="detail-item"><span className="label">رقم الهاتف</span><span className="value">{claim.assessor_phone}</span></div>}
+                {claim.assessor_date && <div className="detail-item"><span className="label">تاريخ التقييم</span><span className="value">{claim.assessor_date}</span></div>}
+                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (دينار)</span><span className="value fw-bold" style={{color:'#059669'}}>{Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>}
+                {claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{color:'#059669'}}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
+              </div>
+              {claim.assessor_report_photo && (
+                <a href={`${BACKEND_URL}/storage/${claim.assessor_report_photo}`} target="_blank" rel="noreferrer" className="attachment-btn mt-2">
+                  <i className="fa-solid fa-file-pdf"></i> تقرير المقدر
+                </a>
+              )}
+            </section>
+          )}
 
           {/* Section 3: Document Info */}
           <section className="dashboard-card highlight-card">
@@ -753,13 +946,12 @@ export default function ViewClaim() {
         
         /* Header Styling */
         .claim-page-header {
-          margin-bottom: 28px;
+          margin-bottom: 16px;
           background: var(--panel);
-          padding: 24px 30px;
-          border-radius: 20px;
+          padding: 10px 18px;
+          border-radius: 14px;
           border: 1px solid var(--border);
-          box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
-          backdrop-filter: blur(8px);
+          box-shadow: 0 4px 12px -2px rgba(0,0,0,0.05);
           position: sticky;
           top: 0;
           z-index: 10;
@@ -767,10 +959,10 @@ export default function ViewClaim() {
         .breadcrumb-nav {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           color: var(--text-muted);
-          font-size: 0.9rem;
-          margin-bottom: 12px;
+          font-size: 0.82rem;
+          margin-bottom: 8px;
         }
         .breadcrumb-nav a { color: var(--sidebar); text-decoration: none; font-weight: 500; }
         .breadcrumb-nav i { font-size: 0.7rem; opacity: 0.5; }
@@ -779,20 +971,20 @@ export default function ViewClaim() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 10px 0 0 0;
+          padding: 6px 0 0 0;
         }
-        .title-section { display: flex; align-items: center; gap: 20px; }
-        .title-section h1 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--text); }
+        .title-section { display: flex; align-items: center; gap: 14px; }
+        .title-section h1 { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--text); }
         .id-highlight { color: var(--sidebar); }
         [data-theme='dark'] .id-highlight { color: var(--accent-cyan); }
         
         .status-pill {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 18px;
+          gap: 6px;
+          padding: 6px 14px;
           border-radius: 50px;
-          font-size: 0.9rem;
+          font-size: 0.82rem;
           font-weight: 800;
           box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           border: 1px solid rgba(0,0,0,0.05);
@@ -831,74 +1023,74 @@ export default function ViewClaim() {
         /* Dashboard Grid Layout */
         .claim-dashboard-grid {
           display: grid;
-          grid-template-columns: 1fr 340px;
-          gap: 24px;
+          grid-template-columns: 1fr 300px;
+          gap: 16px;
         }
         
         .dashboard-card {
           background: var(--panel);
-          border-radius: 20px;
-          padding: 24px;
-          margin-bottom: 24px;
+          border-radius: 12px;
+          padding: 12px 16px;
+          margin-bottom: 12px;
           border: 1px solid var(--border);
-          box-shadow: 0 10px 30px -5px rgba(0,0,0,0.04);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          box-shadow: 0 4px 12px -2px rgba(0,0,0,0.04);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .dashboard-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 15px 35px -5px rgba(0,0,0,0.08);
+          transform: translateY(-1px);
+          box-shadow: 0 8px 20px -4px rgba(0,0,0,0.08);
         }
         .dashboard-card .card-header {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 20px;
-          padding-bottom: 15px;
+          gap: 8px;
+          margin-bottom: 10px;
+          padding-bottom: 8px;
           border-bottom: 1px solid var(--border) !important;
         }
-        .dashboard-card .card-header i { font-size: 1.2rem; }
-        .dashboard-card .card-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text); }
+        .dashboard-card .card-header i { font-size: 1rem; }
+        .dashboard-card .card-header h3 { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
         
         .highlight-card { border-right: 4px solid var(--sidebar); }
         
         .details-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 24px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px 14px;
         }
         .details-grid.three-cols { grid-template-columns: repeat(3, 1fr); }
+        .details-grid.two-cols { grid-template-columns: repeat(2, 1fr); }
         
         .detail-item { 
           display: flex; 
           flex-direction: column; 
-          gap: 8px; 
-          padding-bottom: 15px;
-          border-bottom: 1.5px solid var(--border) !important;
+          gap: 4px; 
+          padding-bottom: 10px;
+          border-bottom: 1px solid var(--border) !important;
           border-top: none !important;
           border-left: none !important;
           border-right: none !important;
-          transition: all 0.3s ease;
         }
         
         [data-theme='dark'] .detail-item {
-          border-bottom: 1.5px solid rgba(6, 182, 212, 0.4) !important;
+          border-bottom: 1px solid rgba(6, 182, 212, 0.25) !important;
         }
 
-        .detail-item .label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .detail-item .value { font-size: 1rem; font-weight: 600; color: var(--text); }
-        .badge-value { background: rgba(37, 99, 235, 0.1); color: #3b82f6; padding: 2px 10px; border-radius: 6px; width: fit-content; }
+        .detail-item .label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+        .detail-item .value { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+        .badge-value { background: rgba(37, 99, 235, 0.1); color: #3b82f6; padding: 1px 8px; border-radius: 5px; width: fit-content; font-size: 0.82rem; }
 
         /* Timeline Styling */
-        .timeline-wrapper { padding-right: 10px; margin-top: 10px; }
-        .timeline-item { display: flex; gap: 20px; margin-bottom: 25px; }
+        .timeline-wrapper { padding-right: 8px; margin-top: 8px; }
+        .timeline-item { display: flex; gap: 14px; margin-bottom: 16px; }
         .timeline-marker { position: relative; display: flex; flex-direction: column; align-items: center; }
         .marker-dot { 
-          width: 14px; 
-          height: 14px; 
+          width: 10px; 
+          height: 10px; 
           border-radius: 50%; 
           background: var(--sidebar); 
-          border: 3px solid var(--panel); 
-          box-shadow: 0 0 0 4px rgba(1, 76, 177, 0.1); 
+          border: 2px solid var(--panel); 
+          box-shadow: 0 0 0 3px rgba(1, 76, 177, 0.1); 
           z-index: 2; 
         }
         [data-theme='dark'] .marker-dot {
@@ -912,8 +1104,8 @@ export default function ViewClaim() {
         .item-head h4 { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
         .item-head .time { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
         
-        .item-details-box { background: rgba(0,0,0,0.02); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); }
-        [data-theme='dark'] .item-details-box { background: rgba(255,255,255,0.02); }
+        .item-details-box { background: rgba(0,0,0,0.015); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); }
+        [data-theme='dark'] .item-details-box { background: rgba(255,255,255,0.015); }
         
         .details-inline { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 8px; }
         .tiny-detail { font-size: 0.85rem; }
@@ -1056,6 +1248,57 @@ export default function ViewClaim() {
           .details-grid, .details-grid.three-cols { grid-template-columns: 1fr; }
           .dynamic-fields-grid { grid-template-columns: 1fr; }
           .field-group.full { grid-column: span 1; }
+        }
+
+        /* Attachment Button */
+        .attachment-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          border-radius: 10px;
+          background: color-mix(in srgb, var(--sidebar) 10%, var(--panel));
+          border: 1.5px solid color-mix(in srgb, var(--sidebar) 30%, var(--border));
+          color: var(--sidebar);
+          font-size: 0.85rem;
+          font-weight: 700;
+          text-decoration: none;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+        [data-theme='dark'] .attachment-btn {
+          background: color-mix(in srgb, var(--accent-cyan) 10%, var(--panel));
+          border-color: color-mix(in srgb, var(--accent-cyan) 30%, var(--border));
+          color: var(--accent-cyan);
+        }
+        .attachment-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Damage Photos Strip */
+        .photos-strip {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          padding: 12px;
+          background: rgba(0,0,0,0.02);
+          border-radius: 12px;
+          border: 1px dashed var(--border);
+        }
+        .damage-thumb {
+          width: 80px;
+          height: 80px;
+          object-fit: cover;
+          border-radius: 10px;
+          border: 2px solid var(--border);
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+        .damage-thumb:hover {
+          transform: scale(1.08);
+          border-color: var(--sidebar);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
       `}</style>
     </div>

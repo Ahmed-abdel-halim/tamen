@@ -162,7 +162,11 @@ function hasAccessToRoute(
     'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
 
     'إدارة الموظفين': ['/users', '/employee-requests'],
+    'الشؤون الفنية': ['/claims', '/reports/indemnities'],
+    'المطالبات': ['/claims'],
     'البريد الصادر والوارد': ['/mail/incoming', '/mail/outgoing'],
+    'البريد الوارد والصادر': ['/mail/incoming', '/mail/outgoing'],
+    'المراسلات الإدارية': ['/mail/incoming', '/mail/outgoing'],
     'دليل الجهات الخارجية': ['/external-entities'],
     'أرشيف المستندات الإدارية': ['/archive'],
     'طلبات الوثائق': ['/document-requests'],
@@ -432,6 +436,10 @@ const createMenuSections = (
       { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
       { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
     ],
+    'البريد الوارد والصادر': [
+      { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
+      { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
+    ],
     'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
@@ -532,7 +540,7 @@ const createMenuSections = (
                 if (!reportsItemsMap.has(item.to)) {
                   reportsItemsMap.set(item.to, item);
                 }
-              } else if (adminOrder.includes(item.to)) {
+              } else if (adminOrder.includes(item.to) || technicalOrder.includes(item.to)) {
                 if (!adminItemsMap.has(item.to)) {
                   adminItemsMap.set(item.to, item);
                 }
@@ -552,19 +560,11 @@ const createMenuSections = (
           if (itemInfo.to) {
             if (itemInfo.to.startsWith('/reports/')) {
               if (!reportsItemsMap.has(itemInfo.to)) {
-                reportsItemsMap.set(itemInfo.to, {
-                  label: itemInfo.label,
-                  icon: itemInfo.icon,
-                  to: itemInfo.to,
-                });
+                reportsItemsMap.set(itemInfo.to, itemInfo);
               }
-            } else if (adminOrder.includes(itemInfo.to)) {
+            } else if (adminOrder.includes(itemInfo.to) || technicalOrder.includes(itemInfo.to)) {
               if (!adminItemsMap.has(itemInfo.to)) {
-                adminItemsMap.set(itemInfo.to, {
-                  label: itemInfo.label,
-                  icon: itemInfo.icon,
-                  to: itemInfo.to,
-                });
+                adminItemsMap.set(itemInfo.to, itemInfo);
               }
             } else if (settingsOrder.includes(itemInfo.to)) {
               if (!settingsItemsMap.has(itemInfo.to)) {
@@ -903,6 +903,45 @@ export default function App() {
       window.removeEventListener('userLoggedOut', () => { });
     };
   }, [])
+
+  // تحديث بيانات المستخدم من الخادم عند التحميل لضمان مزامنة الصلاحيات
+  useEffect(() => {
+    const refreshUserProfile = async () => {
+      const userStr = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      if (!userStr || !token) return;
+
+      try {
+        const user = JSON.parse(userStr);
+        // لا نحتاج للتحديث إذا كان المستخدم وكيلاً (بياناتهم عادة لا تتغير من قسم الموظفين)
+        if (user.branch_agent_id) return;
+
+        const res = await fetch(`${API_BASE_URL}/users/${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (res.ok) {
+          const latestUser = await res.json();
+          // تأكد من أن البيانات صالحة قبل الحفظ
+          if (latestUser && latestUser.id) {
+            localStorage.setItem('user', JSON.stringify(latestUser));
+            // تحديث الصلاحيات في الواجهة
+            setAuthorizedDocuments(latestUser.authorized_documents || null);
+            setIsAdmin(latestUser.is_admin || false);
+            setBranchAgentId(latestUser.branch_agent_id || null);
+            setCurrentUserId(latestUser.id);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to auto-refresh user profile:', error);
+      }
+    };
+
+    refreshUserProfile();
+  }, []);
 
   const getMenuSectionsSafely = () => {
     try {
