@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar'
+import { API_BASE_URL } from './config/api';
 import './premium-hr.css';
 
 type SidebarItem = {
@@ -172,8 +173,6 @@ function hasAccessToRoute(
     'طلبات الوثائق': ['/document-requests'],
     'ملفات الشركة': ['/company-documents'],
 
-    'المطالبات': ['/claims'],
-    'الشؤون الفنية': ['/claims', '/reports/indemnities'],
     'المحاسب المالي': [
       '/reports/financial-statistics',
       '/reports/revenue',
