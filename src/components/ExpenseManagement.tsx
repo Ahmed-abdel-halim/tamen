@@ -1,8 +1,17 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SearchableSelect from './SearchableSelect';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
+
+interface ExpenseItem {
+  item_number?: string;
+  statement: string;
+  quantity: number;
+  price: number;
+  value: number;
+}
 
 interface Expense {
   id: number;
@@ -10,9 +19,14 @@ interface Expense {
   recipient?: string;
   category: string;
   amount: number;
+  currency: 'LYD' | 'USD';
+  voucher_number?: string;
+  receipt_image?: string;
+  expense_type: 'fixed' | 'consumable';
   expense_date: string;
   status: string;
   notes?: string;
+  items?: ExpenseItem[];
   is_indemnity?: boolean;
   indemnity_type?: string;
   payment_source?: string;
@@ -45,6 +59,7 @@ interface UnionPurchase {
 const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة', 'التعويضات'];
 
 export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { activeTabOverride?: 'expenses' | 'union' | 'indemnities' }) {
+  const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     monthly_total: 0,
@@ -74,6 +89,11 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [recipient, setRecipient] = useState('');
   const [category, setCategory] = useState('قرطاسية');
   const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState<'LYD' | 'USD'>('LYD');
+  const [voucherNumber, setVoucherNumber] = useState('');
+  const [expenseType, setExpenseType] = useState<'fixed' | 'consumable'>('consumable');
+  const [items, setItems] = useState<ExpenseItem[]>([]);
+  const [expenseReceiptImage, setExpenseReceiptImage] = useState<File | null>(null);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState('مدفوع');
   const [notes, setNotes] = useState('');
@@ -322,7 +342,11 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       setDate(expense.expense_date);
       setStatus(expense.status);
       setNotes(expense.notes || '');
-      setIndemnityType(expense.indemnity_type || 'orange_card');
+      setCurrency(expense.currency || 'LYD');
+      setVoucherNumber(expense.voucher_number || '');
+      setExpenseType(expense.expense_type || 'consumable');
+      setItems(expense.items || []);
+      setExpenseReceiptImage(null);
       
       const isEmployee = employees.some(emp => emp.name === expense.recipient);
       setIsCustomRecipient(expense.recipient && !isEmployee ? true : false);
@@ -332,6 +356,11 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       setRecipient('');
       setCategory(activeTab === 'indemnities' ? 'التعويضات' : 'قرطاسية');
       setAmount('');
+      setCurrency('LYD');
+      setVoucherNumber('');
+      setExpenseType('consumable');
+      setItems([]);
+      setExpenseReceiptImage(null);
       setDate(new Date().toISOString().split('T')[0]);
       setStatus('مدفوع');
       setNotes('');
@@ -346,18 +375,38 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     if (!name || !amount) return;
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('recipient', recipient);
+      formData.append('category', category.includes('أخرى') ? customCategory : category);
+      formData.append('amount', amount);
+      formData.append('currency', currency);
+      formData.append('voucher_number', voucherNumber);
+      formData.append('expense_type', expenseType);
+      formData.append('expense_date', date);
+      formData.append('status', status);
+      formData.append('notes', notes);
+      formData.append('items', JSON.stringify(items));
+      formData.append('is_indemnity', category === 'التعويضات' ? '1' : '0');
+      formData.append('indemnity_type', category === 'التعويضات' ? indemnityType : '');
+      formData.append('payment_source', category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : 'bank');
+      
+      if (expenseReceiptImage) {
+        formData.append('receipt_image', expenseReceiptImage);
+      }
+
+      if (editingExpense) {
+        formData.append('_method', 'PUT');
+      }
+
       const url = editingExpense ? `${API_BASE_URL}/expenses/${editingExpense.id}` : `${API_BASE_URL}/expenses`;
-      const method = editingExpense ? 'PUT' : 'POST';
       const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, recipient, category: category.includes('أخرى') ? customCategory : category,
-          amount: parseFloat(amount), expense_date: date, status, notes,
-          is_indemnity: category === 'التعويضات',
-          indemnity_type: category === 'التعويضات' ? indemnityType : null,
-          payment_source: category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : 'bank'
-        }),
+        method: 'POST', // Use POST for FormData, with _method=PUT if editing
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData,
       });
       if (response.ok) {
         showToast(editingExpense ? 'تم تحديث المصروف بنجاح' : 'تم إضافة المصروف بنجاح', 'success');
@@ -485,9 +534,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     try {
       const columns = [
         { header: 'البند (الوصف)', key: 'name', width: 35 },
+        { header: 'رقم الواصل', key: 'voucher_number', width: 15 },
+        { header: 'نوع المصروف', key: 'expense_type', width: 15 },
         { header: 'المستلم', key: 'recipient', width: 25 },
         { header: 'الفئة', key: 'category', width: 20 },
-        { header: 'المبلغ (د.ل)', key: 'amount', width: 20 },
+        { header: 'المبلغ', key: 'amount', width: 20 },
+        { header: 'العملة', key: 'currency', width: 10 },
         { header: 'التاريخ', key: 'expense_date', width: 15 },
         { header: 'الحالة', key: 'status', width: 15 },
         { header: 'ملاحظات', key: 'notes', width: 30 },
@@ -495,9 +547,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
       const data = expenses.map((e) => ({
         name: e.name,
+        voucher_number: e.voucher_number || '-',
+        expense_type: e.expense_type === 'fixed' ? 'ثابت' : 'مستهلك',
         recipient: e.recipient || '-',
         category: e.category,
-        amount: e.amount.toLocaleString() + ' د.ل',
+        amount: e.amount.toLocaleString(),
+        currency: e.currency === 'USD' ? 'دولار' : 'دينار',
         expense_date: e.expense_date,
         status: e.status,
         notes: e.notes || '-',
@@ -506,9 +561,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       // Summary row
       data.push({
         name: 'الإجمالي الكلي',
+        voucher_number: '',
+        expense_type: '',
         recipient: '',
         category: '',
-        amount: statistics.monthly_total.toLocaleString() + ' د.ل',
+        amount: statistics.monthly_total.toLocaleString(),
+        currency: '',
         expense_date: '',
         status: `${statistics.monthly_count} عملية`,
         notes: '',
@@ -738,6 +796,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   <th>الفئة</th>
                   <th>المبلغ</th>
                   <th>التاريخ</th>
+                  <th>رقم الواصل</th>
+                  <th>صورة الواصل</th>
                   <th>الحالة</th>
                   <th className="no-print">الإجراءات</th>
                 </tr>
@@ -751,8 +811,16 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       <td style={{ fontWeight: 700 }}>{e.name}</td>
                       <td>{e.recipient || '-'}</td>
                       <td><span style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg)', fontSize: '0.85rem', fontWeight: 600 }}>{e.category}</span></td>
-                      <td style={{ fontWeight: '900', color: '#ef4444' }}>{e.amount.toLocaleString()} د.ل</td>
+                      <td style={{ fontWeight: '900', color: '#ef4444' }}>{e.amount.toLocaleString()} {e.currency === 'USD' ? '$' : 'د.ل'}</td>
                       <td style={{ fontSize: '0.9rem' }}>{e.expense_date}</td>
+                      <td style={{ fontWeight: 600 }}>{e.voucher_number || '-'}</td>
+                      <td>
+                        {e.receipt_image ? (
+                          <button onClick={() => { setSelectedImage(resolveImageUrl(e.receipt_image)); setPreviewRotation(0); }} style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
+                            <i className="fa-solid fa-image"></i> عرض
+                          </button>
+                        ) : <span style={{ color: '#94a3b8' }}>-</span>}
+                      </td>
                       <td>
                         <span className={`status-badge ${e.status === 'مدفوع' ? 'active' : 'inactive'}`} style={{ 
                           background: e.status === 'مدفوع' ? '#dcfce7' : '#fee2e2', 
@@ -764,6 +832,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       </td>
                       <td className="no-print">
                         <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => navigate(`/reports/expenses/${e.id}`)} style={{ background: '#10b981', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
                           <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
                         </div>
@@ -929,10 +998,10 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         <div className="modal-overlay no-print" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px'
         }}>
-          <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '600px', borderRadius: '15px', padding: '30px', position: 'relative' }}>
+          <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '1100px', borderRadius: '15px', padding: '30px', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <h3>{editingExpense ? 'تعديل بيانات' : (activeTab === 'expenses' ? 'تسجيل مصروف' : 'تسجيل تعويض')}</h3>
-            <form onSubmit={handleAddExpense} style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div style={{ gridColumn: 'span 2' }}>
+            <form onSubmit={handleAddExpense} style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+              <div style={{ gridColumn: 'span 4' }}>
                 <label>الوصف / البيان</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
@@ -986,35 +1055,160 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   <option value="أخرى">أخرى...</option>
                 </select>
               </div>
-              {category === 'أخرى' && (
+              {category === 'أخرى' ? (
                 <div style={{ gridColumn: 'span 2' }}>
                   <label>فئة جديدة</label>
                   <input type="text" value={customCategory} onChange={e => setCustomCategory(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
                 </div>
+              ) : (
+                <>
+                  <div>
+                    <label>التاريخ</label>
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+                  </div>
+                  {activeTab === 'indemnities' ? (
+                    <div>
+                      <label>نوع التعويض</label>
+                      <select value={indemnityType} onChange={e => setIndemnityType(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                        <option value="orange_card">خصم من رصيد الاتحاد</option>
+                        <option value="bank">صرف بنكي (شيك/حوالة)</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label>الحالة</label>
+                      <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                        <option value="مدفوع">مدفوع</option>
+                        <option value="معلق">معلق</option>
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
-              {activeTab === 'indemnities' && (
-                <div>
-                  <label>نوع التعويض</label>
-                  <select value={indemnityType} onChange={e => setIndemnityType(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
-                    <option value="orange_card">خصم من رصيد الاتحاد</option>
-                    <option value="bank">صرف بنكي (شيك/حوالة)</option>
-                  </select>
-                </div>
-              )}
+              
               <div>
                 <label>المبلغ (د.ل)</label>
                 <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
+
               <div>
-                <label>التاريخ</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+                <label>نوع العملة</label>
+                <select value={currency} onChange={e => setCurrency(e.target.value as any)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontWeight: 700 }}>
+                  <option value="LYD">دينار ليبي (LYD)</option>
+                  <option value="USD">دولار أمريكي (USD)</option>
+                </select>
               </div>
-              <div style={{ gridColumn: 'span 2' }}>
+
+              <div>
+                <label>نوع المصروف</label>
+                <select value={expenseType} onChange={e => setExpenseType(e.target.value as any)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontWeight: 700 }}>
+                  <option value="consumable">مستهلك</option>
+                  <option value="fixed">ثابت</option>
+                </select>
+              </div>
+
+              <div>
+                <label>رقم الواصل</label>
+                <input type="text" value={voucherNumber} onChange={e => setVoucherNumber(e.target.value)} placeholder="مثال: 3167" style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              </div>
+
+              <div>
+                <label>صورة الواصل</label>
+                <input type="file" accept="image/*" onChange={e => setExpenseReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '8px', border: '1px dashed var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 4' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <label style={{ fontWeight: 800 }}>تفاصيل الأصناف (الفاتورة)</label>
+                  <button type="button" onClick={() => setItems([...items, { statement: '', quantity: 1, price: 0, value: 0 }])} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <i className="fa-solid fa-plus"></i> إضافة صنف
+                  </button>
+                </div>
+                
+                <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead style={{ background: 'var(--bg)' }}>
+                      <tr>
+                        <th style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>رقم الصنف</th>
+                        <th style={{ padding: '8px', borderBottom: '1px solid var(--border)', width: '40%' }}>البيان</th>
+                        <th style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>الكمية</th>
+                        <th style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>السعر</th>
+                        <th style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>القيمة</th>
+                        <th style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: '5px' }}>
+                            <input type="text" value={item.item_number || ''} onChange={e => {
+                              const newItems = [...items];
+                              newItems[idx].item_number = e.target.value;
+                              setItems(newItems);
+                            }} style={{ width: '100%', padding: '5px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                          </td>
+                          <td style={{ padding: '5px' }}>
+                            <input type="text" value={item.statement} onChange={e => {
+                              const newItems = [...items];
+                              newItems[idx].statement = e.target.value;
+                              setItems(newItems);
+                            }} style={{ width: '100%', padding: '5px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                          </td>
+                          <td style={{ padding: '5px' }}>
+                            <input type="number" value={item.quantity} onChange={e => {
+                              const newItems = [...items];
+                              newItems[idx].quantity = parseFloat(e.target.value) || 0;
+                              newItems[idx].value = newItems[idx].quantity * newItems[idx].price;
+                              setItems(newItems);
+                              // Update total amount
+                              const total = newItems.reduce((sum, it) => sum + it.value, 0);
+                              setAmount(total.toString());
+                            }} style={{ width: '100%', padding: '5px', border: '1px solid #ddd', borderRadius: '4px', textAlign: 'center' }} />
+                          </td>
+                          <td style={{ padding: '5px' }}>
+                            <input type="number" step="0.01" value={item.price} onChange={e => {
+                              const newItems = [...items];
+                              newItems[idx].price = parseFloat(e.target.value) || 0;
+                              newItems[idx].value = newItems[idx].quantity * newItems[idx].price;
+                              setItems(newItems);
+                              // Update total amount
+                              const total = newItems.reduce((sum, it) => sum + it.value, 0);
+                              setAmount(total.toString());
+                            }} style={{ width: '100%', padding: '5px', border: '1px solid #ddd', borderRadius: '4px', textAlign: 'center' }} />
+                          </td>
+                          <td style={{ padding: '5px' }}>
+                            <input type="number" value={item.value} readOnly style={{ width: '100%', padding: '5px', border: '1px solid #eee', borderRadius: '4px', textAlign: 'center', background: '#f9f9f9' }} />
+                          </td>
+                          <td style={{ padding: '5px' }}>
+                            <button type="button" onClick={() => {
+                              const newItems = items.filter((_, i) => i !== idx);
+                              setItems(newItems);
+                              const total = newItems.reduce((sum, it) => sum + it.value, 0);
+                              setAmount(total.toString());
+                            }} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {items.length === 0 && (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '15px', color: '#94a3b8' }}>لا توجد بنود مضافة</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{ gridColumn: 'span 4' }}>
                 <label>ملاحظات</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', minHeight: '80px' }} />
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', minHeight: '60px' }} />
               </div>
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button type="submit" className="btn-primary" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#014cb1', color: '#fff', fontWeight: 'bold' }}>حفظ</button>
+              <div style={{ gridColumn: 'span 4', display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#014cb1', color: '#fff', fontWeight: 'bold' }}>
+                  {loading ? 'جاري الحفظ...' : 'حفظ'}
+                </button>
                 <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#475569' }}>إلغاء</button>
               </div>
             </form>

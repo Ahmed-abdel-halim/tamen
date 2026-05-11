@@ -66,6 +66,7 @@ import PersonalAccidentInsuranceList from './components/PersonalAccidentInsuranc
 import CreatePersonalAccidentInsurance from './components/CreatePersonalAccidentInsurance';
 import ViewPersonalAccidentInsurance from './components/ViewPersonalAccidentInsurance';
 import EditPersonalAccidentInsurance from './components/EditPersonalAccidentInsurance';
+import ViewExpenseDetails from './components/ViewExpenseDetails';
 // // import UserDetails from './components/UserDetails';
 import EmployeeProfile from './components/EmployeeProfile';
 
@@ -1138,6 +1139,7 @@ export default function App() {
                   <Route path="/reports/tax" element={<AuthorizedRoute requiredPath="/reports/tax"><TaxSSReport type="tax" /></AuthorizedRoute>} />
                   <Route path="/reports/social-security" element={<AuthorizedRoute requiredPath="/reports/social-security"><TaxSSReport type="social_security" /></AuthorizedRoute>} />
                   <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><ExpenseManagement activeTabOverride="expenses" /></AuthorizedRoute>} />
+                  <Route path="/reports/expenses/:id" element={<AuthorizedRoute requiredPath="/reports/expenses"><ViewExpenseDetails /></AuthorizedRoute>} />
                   <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><ExpenseManagement activeTabOverride="indemnities" /></AuthorizedRoute>} />
                   <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
                   {/* ورقة الإيجارات */}
