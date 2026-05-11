@@ -225,6 +225,26 @@ const Combobox = ({
   );
 };
 
+export const EidcApiServiceMapping = {
+  mapDurationToDays: (duration: string) => {
+    if (duration.includes('سنتين') || duration.includes('730')) return 730;
+    if (duration.includes('سنة')) return 365;
+    if (duration.includes('ثلاثة أشهر') || duration.includes('3 أشهر') || duration.includes('90')) return 90;
+    if (duration.includes('شهرين') || duration.includes('60')) return 60;
+    if (duration.includes('شهر') || duration.includes('30')) return 30;
+    if (duration.includes('15 يوم') || duration.includes('15')) return 15;
+    return 365;
+  },
+  mapPurposeLicense: (purpose: string) => {
+    if (purpose.includes('خاصة')) return 'خاصة';
+    if (purpose.includes('عامة')) return 'عامة';
+    if (purpose.includes('نقل')) return 'نقل';
+    if (purpose.includes('زراعي')) return 'زراعي';
+    if (purpose.includes('صناعي')) return 'صناعي';
+    return 'خاصة';
+  }
+};
+
 export default function CreateInsuranceDocument() {
   const navigate = useNavigate();
   const [plates, setPlates] = useState<Plate[]>([]);
@@ -280,7 +300,7 @@ export default function CreateInsuranceDocument() {
   const [eidcVehicleTypes, setEidcVehicleTypes] = useState<any[]>([]);
   const [eidcVehicleSpecs, setEidcVehicleSpecs] = useState<any[]>([]);
   const [eidcVehicleDetails, setEidcVehicleDetails] = useState<any[]>([]);
-  const [_loadingEidcData, setLoadingEidcData] = useState(false);
+  const [loadingEidcData, setLoadingEidcData] = useState(false);
   const [loadingSpecs, setLoadingSpecs] = useState(false);
   const [loadingInquiry, setLoadingInquiry] = useState(false);
   const [eidcPremiumData, setEidcPremiumData] = useState<any>(null);
@@ -555,6 +575,18 @@ export default function CreateInsuranceDocument() {
         return;
       }
 
+      // التحقق من طول رقم الهاتف (يجب أن يكون 10 أرقام على الأقل للهيئة)
+      if (formData.phone.length < 10) {
+        setLoadingInquiry(false);
+        return;
+      }
+
+      // التحقق من طول الرقم الوطني / الجواز (6 أرقام على الأقل)
+      if (formData.nid_passport.length < 6) {
+        setLoadingInquiry(false);
+        return;
+      }
+
       const vt = vehicleTypes.find(t => t.id.toString() === formData.vehicle_type_id);
       const vehicleMakeModel = vt ? `${vt.brand}` : ""; // إرسال الماركة فقط بناءً على طلبك
 
@@ -572,18 +604,20 @@ export default function CreateInsuranceDocument() {
         Address: formData.address || 'ليبيا',
         Email: formData.email || 'info@mli.ly',
 
-        PlateNo: formData.plate_number_manual || '',
+        // EIDC system allows max 20 characters for PlateNo
+        PlateNo: (formData.plate_number_manual || '').substring(0, 20),
         ChassisNo: formData.chassis_number || '',
         EngineNo: formData.engine_number || '0000',
         Color: formData.color || '',
         YearMade: parseInt(formData.year) || new Date().getFullYear(),
-        RegAuthority: selectedPlate ? selectedPlate.city.name_ar : 'طرابلس',
+        RegAuthority: selectedPlate?.city?.name_ar || 'طرابلس',
 
         DayOfCarType: EidcApiServiceMapping.mapDurationToDays(formData.duration),
         PurposeLicense: EidcApiServiceMapping.mapPurposeLicense(formData.license_purpose),
         PassengersNo: Math.min(100, Math.max(0, parseInt(formData.authorized_passengers) || 4)),
         EngineHp: parseInt(formData.engine_power) || 4,
-        Tonnage: parseFloat(formData.load_capacity) || 0,
+        // EIDC system allows Tonnage between 0 and 1000
+        Tonnage: Math.min(1000, Math.max(0, parseFloat(formData.load_capacity) || 0)),
         IssuingFeesOptions: 2  // يجب أن تكون 2 (رسوم الإصدار الافتراضية)
       };
 
@@ -640,7 +674,9 @@ export default function CreateInsuranceDocument() {
       } else {
         const data = await res.json();
         console.error('EIDC Inquiry Failed:', data);
-        showToast(data.message || data.error || 'خطأ في الاتصال بالهيئة', 'error');
+        // Display specific error message from EIDC if available (data.data.message was added in our backend fix)
+        const errorMsg = data.data?.message || data.message || data.error || 'خطأ في الاتصال بالهيئة';
+        showToast(errorMsg, 'error');
         setEidcPremiumData(null);
       }
     } catch (error) {
@@ -2130,10 +2166,14 @@ export default function CreateInsuranceDocument() {
     }
     if (!formData.phone || !formData.phone.trim()) {
       errors.phone = 'رقم الهاتف مطلوب';
+    } else if (formData.phone.length < 10) {
+      errors.phone = 'رقم الهاتف يجب أن يكون 10 أرقام على الأقل';
     }
     
     if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
+    } else if (formData.whatsapp_number.length < 10) {
+      errors.whatsapp_number = 'رقم الواتساب يجب أن يكون 10 أرقام على الأقل';
     }
 
     if (!formData.nationality || !formData.nationality.trim()) {
@@ -2144,6 +2184,8 @@ export default function CreateInsuranceDocument() {
     }
     if (!formData.nid_passport || !formData.nid_passport.trim()) {
       errors.nid_passport = 'رقم الهوية الوطنية أو جواز السفر مطلوب';
+    } else if (formData.nid_passport.length < 6) {
+      errors.nid_passport = 'رقم الهوية / الجواز يجب أن يكون 6 أرقام على الأقل';
     }
     if (isMandatoryInsurance) {
       if (!formData.premium || parseFloat(formData.premium) <= 0) {
@@ -2847,39 +2889,41 @@ export default function CreateInsuranceDocument() {
                     </div>
                   )}
 
-                  <div className="span-4 modern-grid-3">
-                    <div className={`form-group ${formErrors.eidc_vehicle_type_id ? 'has-error' : ''}`}>
-                      {formErrors.eidc_vehicle_type_id ? (
-                        <span className="error-message">{formErrors.eidc_vehicle_type_id}</span>
-                      ) : (
-                        <label>نوع المركبة (هيئة) <span className="required">*</span></label>
-                      )}
-                      <select value={formData.eidc_vehicle_type_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_type_id: e.target.value, eidc_vehicle_spec_id: '', eidc_vehicle_detail_id: '' })}>
-                        <option value="">-- اختر --</option>
+                  <div className="span-4 modern-grid-3" style={{ background: '#f1f5f9', padding: '15px', borderRadius: '10px', marginTop: '10px' }}>
+                    <div className="form-group">
+                      <label>نوع المركبة (هيئة) <span className="required">*</span></label>
+                      <select 
+                        value={formData.eidc_vehicle_type_id} 
+                        onChange={(e) => setFormData({ ...formData, eidc_vehicle_type_id: e.target.value, eidc_vehicle_spec_id: '', eidc_vehicle_detail_id: '' })}
+                        className={formErrors.eidc_vehicle_type_id ? 'has-error' : ''}
+                      >
+                        <option value="">{loadingEidcData ? 'جاري التحميل...' : '-- اختر النوع الرئيسي --'}</option>
                         {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
                       </select>
+                      {formErrors.eidc_vehicle_type_id && <span className="error-message" style={{ marginTop: '4px' }}>{formErrors.eidc_vehicle_type_id}</span>}
                     </div>
 
-                    <div className={`form-group ${formErrors.eidc_vehicle_spec_id ? 'has-error' : ''}`}>
-                      {formErrors.eidc_vehicle_spec_id ? (
-                        <span className="error-message">{formErrors.eidc_vehicle_spec_id}</span>
-                      ) : (
-                        <label>النوع المحدد (هيئة) <span className="required">*</span></label>
-                      )}
+                    <div className="form-group">
+                      <label>النوع المحدد (هيئة) <span className="required">*</span></label>
                       <select
                         value={formData.eidc_vehicle_spec_id}
                         onChange={(e) => setFormData({ ...formData, eidc_vehicle_spec_id: e.target.value, eidc_vehicle_detail_id: '' })}
                         disabled={!formData.eidc_vehicle_type_id || loadingSpecs}
-                        style={loadingSpecs ? { background: '#f8fafc', color: '#94a3b8' } : {}}
+                        className={formErrors.eidc_vehicle_spec_id ? 'has-error' : ''}
                       >
-                        <option value="">{loadingSpecs ? 'جاري التحميل...' : '-- اختر --'}</option>
+                        <option value="">{loadingSpecs ? 'جاري التحميل...' : '-- اختر النوع التفصيلي --'}</option>
                         {!loadingSpecs && eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
                       </select>
+                      {formErrors.eidc_vehicle_spec_id && <span className="error-message" style={{ marginTop: '4px' }}>{formErrors.eidc_vehicle_spec_id}</span>}
                     </div>
 
                     <div className="form-group">
                       <label>التفاصيل الإضافية (هيئة)</label>
-                      <select value={formData.eidc_vehicle_detail_id} onChange={(e) => setFormData({ ...formData, eidc_vehicle_detail_id: e.target.value })} disabled={!formData.eidc_vehicle_spec_id}>
+                      <select 
+                        value={formData.eidc_vehicle_detail_id} 
+                        onChange={(e) => setFormData({ ...formData, eidc_vehicle_detail_id: e.target.value })} 
+                        disabled={!formData.eidc_vehicle_spec_id}
+                      >
                         <option value="">-- لا يوجد / اختر --</option>
                         {eidcVehicleDetails.map(d => <option key={d.id} value={d.id}>{d.specVehicle || d.name}</option>)}
                       </select>
