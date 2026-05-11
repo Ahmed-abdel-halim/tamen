@@ -2170,6 +2170,11 @@ export default function CreateInsuranceDocument() {
       errors.phone = 'رقم الهاتف يجب أن يكون 10 أرقام على الأقل';
     }
     
+    // التحقق من البريد الإلكتروني (خصوصاً إذا كان يدوياً)
+    if (formData.email === "" || !formData.email.trim()) {
+      errors.email = 'البريد الإلكتروني مطلوب';
+    }
+
     if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
     } else if (formData.whatsapp_number.length < 10) {
@@ -2187,6 +2192,18 @@ export default function CreateInsuranceDocument() {
     } else if (formData.nid_passport.length < 6) {
       errors.nid_passport = 'رقم الهوية / الجواز يجب أن يكون 6 أرقام على الأقل';
     }
+
+    // التحقق من الحقول التي تدعم الإدخال اليدوي
+    if (!formData.engine_number || !formData.engine_number.trim()) {
+      errors.engine_number = 'رقم المحرك مطلوب';
+    }
+    if (!formData.engine_cc || !formData.engine_cc.trim()) {
+      errors.engine_cc = 'سعة المحرك (CC) مطلوبة';
+    }
+    if (!formData.vehicle_weight || !formData.vehicle_weight.trim()) {
+      errors.vehicle_weight = 'وزن المركبة مطلوب';
+    }
+
     if (isMandatoryInsurance) {
       if (!formData.premium || parseFloat(formData.premium) <= 0) {
         errors.premium = 'يجب احتساب القسط من منظومة الهيئة أولاً. تأكد من إدخال كافة البيانات بشكل صحيح.';
