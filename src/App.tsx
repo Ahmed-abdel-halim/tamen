@@ -312,9 +312,9 @@ const menuSections: SidebarSection[] = [
       {
         label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
           { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+          { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
           { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
-
         ]
       },
       {
@@ -422,9 +422,9 @@ const createMenuSections = (
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
     'إدارة الفروع والوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+      { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
       { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
-
     ],
     'إدارة الموظفين': [
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
@@ -510,6 +510,7 @@ const createMenuSections = (
   ];
   const adminOrder: string[] = [
     '/branches-agents', 
+    '/branches-agents?status=pending',
     '/users', 
     '/employee-requests', 
     '/agent-requests', 

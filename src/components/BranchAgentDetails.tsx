@@ -48,7 +48,9 @@ type BranchAgent = {
   user?: { id: number; username: string; name: string };
   notes?: string;
   contract_conditions?: string;
-  status: 'نشط' | 'غير نشط';
+  status: 'نشط' | 'غير نشط' | 'قيد الانتظار';
+  requested_documents?: string[];
+  authorized_documents?: string[];
   created_at: string;
   updated_at: string;
 };
@@ -537,9 +539,23 @@ export default function BranchAgentDetails() {
                   <div className="details-section-card">
                     <h4 className="section-title-sm"><i className="fa-solid fa-file-contract"></i> وثائق التأمين المتاحة</h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
-                      {(branchAgent as any).authorized_documents?.filter((doc: string) => !['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).map((doc: string, i: number) => (
-                        <span key={i} className="perm-badge-blue">{doc}</span>
-                      ))}
+                      {branchAgent.status === 'قيد الانتظار' ? (
+                        <>
+                          {branchAgent.requested_documents && branchAgent.requested_documents.length > 0 ? (
+                             branchAgent.requested_documents.map((doc: string, i: number) => (
+                               <span key={i} className="perm-badge-blue" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}>
+                                 {doc} (مطلوب)
+                               </span>
+                             ))
+                          ) : (
+                            <span style={{ color: '#64748b' }}>لم يتم اختيار وثائق بعد</span>
+                          )}
+                        </>
+                      ) : (
+                        branchAgent.authorized_documents?.filter((doc: string) => !['كشف حساب الوكيل', 'إغلاق حساب شهري', 'كشف إغلاق الحساب الشهري', 'إيصالات القبض', 'إدارة المصروفات', 'التسويات والعمولات', 'الديون المستحقة', 'الأرشيف المالي', 'المخازن والعهدة', 'الإحصائيات المالية', 'مرتبات الموظفين'].includes(doc)).map((doc: string, i: number) => (
+                          <span key={i} className="perm-badge-blue">{doc}</span>
+                        ))
+                      )}
                     </div>
                   </div>
                   <div className="details-section-card">

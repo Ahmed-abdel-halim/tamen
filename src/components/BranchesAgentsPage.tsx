@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import WebsiteNavbar from './WebsiteNavbar';
 import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
+import NewAgentRegistration from './NewAgentRegistration';
 import { API_BASE_URL } from "../config/api";
 
 type BranchAgent = {
@@ -22,6 +23,7 @@ export default function BranchesAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'وكيل' | 'فرع من شركة'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const getInitialLanguage = (): 'ar' | 'en' => {
     if (typeof window === 'undefined') return 'ar';
     const stored = localStorage.getItem('siteLang');
@@ -163,9 +165,54 @@ export default function BranchesAgentsPage() {
             <p className="branches-hero-description">
               {t.heroDesc}
             </p>
+            <button 
+              onClick={() => setShowRegistrationModal(true)}
+              style={{
+                marginTop: '20px',
+                padding: '12px 30px',
+                background: '#10b981',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '30px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.25)',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <i className="fas fa-handshake" style={{ marginLeft: '10px' }}></i>
+              انضم إلينا كوكيل/فرع
+            </button>
           </div>
         </div>
       </section>
+
+      {showRegistrationModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px', overflowY: 'auto'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '900px',
+            maxHeight: '90vh', overflowY: 'auto', position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowRegistrationModal(false)}
+              style={{
+                position: 'absolute', top: '15px', right: '15px',
+                background: 'none', border: 'none', fontSize: '24px',
+                cursor: 'pointer', color: '#64748b', zIndex: 10
+              }}
+            >
+              &times;
+            </button>
+            <NewAgentRegistration onClose={() => setShowRegistrationModal(false)} />
+          </div>
+        </div>
+      )}
 
       <section className="branches-content">
         <div className="container">

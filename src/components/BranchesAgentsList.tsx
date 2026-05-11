@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
 
@@ -13,7 +13,7 @@ type BranchAgent = {
   phone?: string;
   address?: string;
   notes?: string;
-  status: 'نشط' | 'غير نشط';
+  status: 'نشط' | 'غير نشط' | 'قيد الانتظار';
   authorized_documents?: string[];
   consumed_custodies?: Array<{ description: string; quantity: number }>;
   fixed_custodies?: Array<{ description: string; quantity: number }>;
@@ -24,6 +24,7 @@ type BranchAgent = {
 
 export default function BranchesAgentsList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [branchesAgents, setBranchesAgents] = useState<BranchAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +34,15 @@ export default function BranchesAgentsList() {
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("نشط");
   const perPage = 10;
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    if (queryParams.get('status') === 'pending') {
+      setFilterStatus('قيد الانتظار');
+    } else {
+      setFilterStatus('نشط');
+    }
+  }, [location.search]);
 
   useEffect(() => {
     fetchBranchesAgents();
@@ -482,6 +492,35 @@ export default function BranchesAgentsList() {
     }
   };
 
+  const handleApproveAgent = async (ba: BranchAgent) => {
+    if (!window.confirm(`هل أنت متأكد من تفعيل الوكيل "${ba.agency_name}"؟`)) {
+        return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${ba.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'حدث خطأ أثناء التفعيل');
+      }
+
+      const data = await res.json();
+      showToast(data.message || 'تم التفعيل بنجاح', 'success');
+      fetchBranchesAgents();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -554,6 +593,7 @@ export default function BranchesAgentsList() {
               <option value="all">كل الحالات</option>
               <option value="نشط">نشط</option>
               <option value="غير نشط">غير نشط</option>
+              <option value="قيد الانتظار">الوكلاء الجدد (قيد الانتظار)</option>
             </select>
           </div>
         </div>
@@ -636,45 +676,60 @@ export default function BranchesAgentsList() {
                             >
                               <i className="fa-solid fa-pencil"></i>
                             </button>
-                            <button
-                              onClick={() => printAgentA4(branchAgent)}
-                              className="action-btn"
-                              aria-label="طباعة البيانات"
-                              title="طباعة بيانات الوكيل A4"
-                              style={{ background: '#6366f1', color: '#fff' }}
-                            >
-                              <i className="fa-solid fa-file-lines"></i>
-                            </button>
-                            <button
-                              onClick={() => printAgentIdCard(branchAgent)}
-                              className="action-btn"
-                              aria-label="بطاقة وكيل"
-                              title="طباعة بطاقة وكيل"
-                              style={{ background: '#f59e0b', color: '#fff' }}
-                            >
-                              <i className="fa-solid fa-id-card"></i>
-                            </button>
-                            <button
-                              onClick={() => handlePrint(branchAgent)}
-                              className="action-btn"
-                              aria-label="طباعة العقد"
-                              title="طباعة العقد"
-                              style={{ background: '#3b82f6', color: '#fff' }}
-                            >
-                              <i className="fa-solid fa-print"></i>
-                            </button>
-                            <button
-                              onClick={() => handleToggleBlock(branchAgent)}
-                              className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
-                              aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
-                              title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
-                              style={{
-                                background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444',
-                                color: '#fff'
-                              }}
-                            >
-                              <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
-                            </button>
+                            {branchAgent.status !== 'قيد الانتظار' && (
+                              <>
+                                <button
+                                  onClick={() => printAgentA4(branchAgent)}
+                                  className="action-btn"
+                                  aria-label="طباعة البيانات"
+                                  title="طباعة بيانات الوكيل A4"
+                                  style={{ background: '#6366f1', color: '#fff' }}
+                                >
+                                  <i className="fa-solid fa-file-lines"></i>
+                                </button>
+                                <button
+                                  onClick={() => printAgentIdCard(branchAgent)}
+                                  className="action-btn"
+                                  aria-label="بطاقة وكيل"
+                                  title="طباعة بطاقة وكيل"
+                                  style={{ background: '#f59e0b', color: '#fff' }}
+                                >
+                                  <i className="fa-solid fa-id-card"></i>
+                                </button>
+                                <button
+                                  onClick={() => handlePrint(branchAgent)}
+                                  className="action-btn"
+                                  aria-label="طباعة العقد"
+                                  title="طباعة العقد"
+                                  style={{ background: '#3b82f6', color: '#fff' }}
+                                >
+                                  <i className="fa-solid fa-print"></i>
+                                </button>
+                                <button
+                                  onClick={() => handleToggleBlock(branchAgent)}
+                                  className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
+                                  aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
+                                  title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
+                                  style={{
+                                    background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444',
+                                    color: '#fff'
+                                  }}
+                                >
+                                  <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
+                                </button>
+                              </>
+                            )}
+                            {branchAgent.status === 'قيد الانتظار' && (
+                              <button
+                                onClick={() => handleApproveAgent(branchAgent)}
+                                className="action-btn"
+                                aria-label="تفعيل الوكيل"
+                                title="تفعيل الوكيل"
+                                style={{ background: '#10b981', color: '#fff' }}
+                              >
+                                <i className="fa-solid fa-check"></i>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -738,45 +793,60 @@ export default function BranchesAgentsList() {
                         >
                           <i className="fa-solid fa-pencil"></i>
                         </button>
-                        <button
-                          onClick={() => printAgentA4(branchAgent)}
-                          className="action-btn"
-                          aria-label="طباعة البيانات"
-                          title="طباعة بيانات الوكيل A4"
-                          style={{ background: '#6366f1', color: '#fff' }}
-                        >
-                          <i className="fa-solid fa-file-lines"></i>
-                        </button>
-                        <button
-                          onClick={() => printAgentIdCard(branchAgent)}
-                          className="action-btn"
-                          aria-label="بطاقة وكيل"
-                          title="طباعة بطاقة وكيل"
-                          style={{ background: '#f59e0b', color: '#fff' }}
-                        >
-                          <i className="fa-solid fa-id-card"></i>
-                        </button>
-                        <button
-                          onClick={() => handlePrint(branchAgent)}
-                          className="action-btn"
-                          aria-label="طباعة العقد"
-                          title="طباعة العقد"
-                          style={{ background: '#3b82f6', color: '#fff' }}
-                        >
-                          <i className="fa-solid fa-print"></i>
-                        </button>
-                        <button
-                          onClick={() => handleToggleBlock(branchAgent)}
-                          className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
-                          aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
-                          title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
-                          style={{
-                            background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444',
-                            color: '#fff'
-                          }}
-                        >
-                          <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
-                        </button>
+                        {branchAgent.status !== 'قيد الانتظار' && (
+                          <>
+                            <button
+                              onClick={() => printAgentA4(branchAgent)}
+                              className="action-btn"
+                              aria-label="طباعة البيانات"
+                              title="طباعة بيانات الوكيل A4"
+                              style={{ background: '#6366f1', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-file-lines"></i>
+                            </button>
+                            <button
+                              onClick={() => printAgentIdCard(branchAgent)}
+                              className="action-btn"
+                              aria-label="بطاقة وكيل"
+                              title="طباعة بطاقة وكيل"
+                              style={{ background: '#f59e0b', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-id-card"></i>
+                            </button>
+                            <button
+                              onClick={() => handlePrint(branchAgent)}
+                              className="action-btn"
+                              aria-label="طباعة العقد"
+                              title="طباعة العقد"
+                              style={{ background: '#3b82f6', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-print"></i>
+                            </button>
+                            <button
+                              onClick={() => handleToggleBlock(branchAgent)}
+                              className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
+                              aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
+                              title={branchAgent.user?.is_blocked ? "إلغاء حظر الوكيل" : "حظر الوكيل"}
+                              style={{
+                                background: branchAgent.user?.is_blocked ? '#10b981' : '#ef4444',
+                                color: '#fff'
+                              }}
+                            >
+                              <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
+                            </button>
+                          </>
+                        )}
+                        {branchAgent.status === 'قيد الانتظار' && (
+                          <button
+                            onClick={() => handleApproveAgent(branchAgent)}
+                            className="action-btn"
+                            aria-label="تفعيل الوكيل"
+                            title="تفعيل الوكيل"
+                            style={{ background: '#10b981', color: '#fff' }}
+                          >
+                            <i className="fa-solid fa-check"></i>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

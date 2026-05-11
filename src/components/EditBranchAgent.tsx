@@ -115,9 +115,10 @@ export default function EditBranchAgent() {
     username: '',
     password: '',
     notes: '',
-    status: 'نشط' as 'نشط' | 'غير نشط',
+    status: 'نشط' as 'نشط' | 'غير نشط' | 'قيد الانتظار',
     contract_conditions: '',
     authorized_documents: [] as string[],
+    requested_documents: [] as string[],
     document_percentages: {} as Record<string, number>,
     eidc_username: '',
     eidc_password: '',
@@ -228,7 +229,10 @@ export default function EditBranchAgent() {
         notes: data.notes || '',
         status: data.status || 'نشط',
         contract_conditions: data.contract_conditions || DEFAULT_CONTRACT_TERMS,
-        authorized_documents: data.authorized_documents || [],
+        authorized_documents: (data.authorized_documents && data.authorized_documents.length > 0) 
+          ? data.authorized_documents 
+          : (data.status === 'قيد الانتظار' ? (data.requested_documents || []) : []),
+        requested_documents: data.requested_documents || [],
         document_percentages: data.document_percentages || {},
         eidc_username: data.user?.eidc_username || '',
         eidc_password: data.user?.eidc_password || '',
@@ -901,6 +905,7 @@ export default function EditBranchAgent() {
               >
                 <option value="نشط">نشط</option>
                 <option value="غير نشط">غير نشط</option>
+                {formData.status === 'قيد الانتظار' && <option value="قيد الانتظار">قيد الانتظار</option>}
               </select>
             </div>
 
@@ -928,10 +933,16 @@ export default function EditBranchAgent() {
                         style={{
                           cursor: 'pointer',
                           color: '#111827',
-                          fontSize: '14px'
+                          fontSize: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
                         }}
                       >
                         {insuranceType}
+                        {formData.requested_documents.includes(insuranceType) && (
+                          <span style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>مطلوب</span>
+                        )}
                       </label>
                     </div>
                   );

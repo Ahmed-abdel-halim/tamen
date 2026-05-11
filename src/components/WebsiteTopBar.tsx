@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import NewAgentRegistration from './NewAgentRegistration';
 
 export default function WebsiteTopBar() {
   const getInitialLanguage = (): 'ar' | 'en' => {
@@ -9,6 +11,7 @@ export default function WebsiteTopBar() {
   };
 
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   const isWebsiteRoute = () => {
     const path = window.location.pathname;
@@ -61,6 +64,15 @@ export default function WebsiteTopBar() {
             </div>
           </div>
           <div className="top-bar-right">
+            <button 
+              onClick={() => setShowRegistrationModal(true)}
+              className="top-bar-link"
+              style={{ cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <i className="fas fa-handshake"></i>
+              <span>{language === 'ar' ? 'انضم إلينا كوكيل' : 'Join us as Agent'}</span>
+            </button>
+            <div className="top-bar-divider"></div>
             <Link to="/login" className="top-bar-link">
               <i className="fas fa-sign-in-alt"></i>
               <span>{language === 'ar' ? 'دخول الوكلاء أو الفروع' : 'Agents / Branches Login'}</span>
@@ -78,6 +90,33 @@ export default function WebsiteTopBar() {
           </div>
         </div>
       </div>
+
+      {showRegistrationModal && typeof document !== 'undefined' && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 99999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px', overflowY: 'auto'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '900px',
+            maxHeight: '90vh', overflowY: 'auto', position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowRegistrationModal(false)}
+              style={{
+                position: 'absolute', top: '15px', right: '15px',
+                background: 'none', border: 'none', fontSize: '24px',
+                cursor: 'pointer', color: '#64748b', zIndex: 10
+              }}
+            >
+              &times;
+            </button>
+            <NewAgentRegistration onClose={() => setShowRegistrationModal(false)} />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
