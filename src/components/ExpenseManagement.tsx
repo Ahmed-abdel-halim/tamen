@@ -56,7 +56,6 @@ interface UnionPurchase {
 
 
 
-const DEFAULT_CATEGORIES = ['قرطاسية', 'صيانة', 'خدمات', 'إيجار', 'ضيافة', 'التعويضات'];
 
 export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { activeTabOverride?: 'expenses' | 'union' | 'indemnities' }) {
   const navigate = useNavigate();
@@ -97,10 +96,18 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState('مدفوع');
   const [notes, setNotes] = useState('');
-  const [customCategory, setCustomCategory] = useState('');
   const [indemnityType, setIndemnityType] = useState('orange_card');
   const [employees, setEmployees] = useState<{ id: number; name: string }[]>([]);
   const [isCustomRecipient, setIsCustomRecipient] = useState(false);
+  
+  // Categories Management States
+  const [dbCategories, setDbCategories] = useState<{ id: number; name: string }[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategory, setEditingCategory] = useState<{ id: number; name: string } | null>(null);
+
+  // Custom Confirmation Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
 
   // Union Balance States
   const [activeTab, setActiveTab] = useState<'expenses' | 'union' | 'indemnities'>(activeTabOverride);
@@ -202,10 +209,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   }, [filteredUnion]);
 
   const dynamicCategories = useMemo(() => {
-    const existing = expenses.map(e => e.category);
-    const combined = [...DEFAULT_CATEGORIES, ...existing];
-    return Array.from(new Set(combined)).filter(cat => cat && !cat.includes('أخرى'));
-  }, [expenses]);
+    return dbCategories.map(c => c.name);
+  }, [dbCategories]);
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
@@ -276,7 +281,29 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     fetchExpenses();
     fetchUnionBalances();
     fetchEmployees();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/expense-categories`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDbCategories(data.data);
+        if (data.data.length > 0 && category === 'قرطاسية') {
+          setCategory(data.data[0].name);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching categories:', e);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -378,7 +405,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       const formData = new FormData();
       formData.append('name', name);
       formData.append('recipient', recipient);
-      formData.append('category', category.includes('أخرى') ? customCategory : category);
+      formData.append('category', category);
       formData.append('amount', amount);
       formData.append('currency', currency);
       formData.append('voucher_number', voucherNumber);
@@ -432,20 +459,28 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   };
 
   const handleDeleteExpense = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        showToast('تم حذف المصروف بنجاح', 'success');
-        fetchExpenses();
-      } else {
-        showToast('فشل حذف المصروف', 'error');
+    setConfirmDialog({
+      isOpen: true,
+      title: 'تأكيد الحذف',
+      message: 'هل أنت متأكد من حذف هذا المصروف نهائياً؟',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const response = await fetch(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' });
+          if (response.ok) {
+            showToast('تم حذف المصروف بنجاح', 'success');
+            fetchExpenses();
+          } else {
+            showToast('فشل حذف المصروف', 'error');
+          }
+        } catch (error) {
+          console.error('Error deleting expense:', error);
+          showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+        }
       }
-    } catch (error) {
-      console.error('Error deleting expense:', error);
-      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
-    }
+    });
   };
+
 
   const handleOpenUnionModal = (purchase: UnionPurchase | null = null) => {
     if (purchase) {
@@ -516,17 +551,25 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   };
 
   const handleDeleteUnionPurchase = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الإيصال؟')) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/union-balances/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        showToast('تم حذف الإيصال بنجاح', 'success');
-        fetchUnionBalances();
+    setConfirmDialog({
+      isOpen: true,
+      title: 'تأكيد الحذف',
+      message: 'هل أنت متأكد من حذف إيصال الاتحاد هذا نهائياً؟',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const response = await fetch(`${API_BASE_URL}/union-balances/${id}`, { method: 'DELETE' });
+          if (response.ok) {
+            showToast('تم حذف الإيصال بنجاح', 'success');
+            fetchUnionBalances();
+          }
+        } catch (e) {
+          showToast('خطأ أثناء الحذف', 'error');
+        }
       }
-    } catch (e) {
-      showToast('خطأ أثناء الحذف', 'error');
-    }
+    });
   };
+
 
   const exportToExcelFunc = async () => {
     if (expenses.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
@@ -744,6 +787,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setShowCategoryModal(true)} className="btn-secondary" style={{ background: '#475569', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                  <i className="fa-solid fa-tags"></i> إدارة الفئات
+                </button>
                 <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
                   <i className="fa-solid fa-file-excel"></i> تصدير Excel
                 </button>
@@ -1052,20 +1098,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 <label>الفئة</label>
                 <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
                   {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  <option value="أخرى">أخرى...</option>
                 </select>
               </div>
-              {category === 'أخرى' ? (
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label>فئة جديدة</label>
-                  <input type="text" value={customCategory} onChange={e => setCustomCategory(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
+              <>
+                <div>
+                  <label>التاريخ</label>
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <label>التاريخ</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
-                  </div>
                   {activeTab === 'indemnities' ? (
                     <div>
                       <label>نوع التعويض</label>
@@ -1083,8 +1122,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       </select>
                     </div>
                   )}
-                </>
-              )}
+              </>
               
               <div>
                 <label>المبلغ (د.ل)</label>
@@ -1329,6 +1367,186 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               </button>
               <button onClick={() => setSelectedImage(null)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '45px', height: '45px', cursor: 'pointer', fontSize: '22px', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="إغلاق">
                 &times;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Categories Management Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay no-print" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, padding: '20px'
+        }} onClick={() => setShowCategoryModal(false)}>
+          <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '800px', borderRadius: '15px', padding: '30px', position: 'relative', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}><i className="fa-solid fa-tags text-primary me-2"></i> إدارة فئات المصروفات</h3>
+              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--muted)' }} onClick={() => setShowCategoryModal(false)}>
+                &times;
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px', overflowX: 'hidden' }}>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <input 
+                  type="text" 
+                  value={newCategoryName} 
+                  onChange={e => setNewCategoryName(e.target.value)} 
+                  placeholder="اسم الفئة الجديدة..." 
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                />
+                <button 
+                  type="button" 
+                  style={{ whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: '10px', border: 'none', background: editingCategory ? '#f59e0b' : '#38bdf8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                  onClick={async () => {
+                    if (!newCategoryName) return;
+                    try {
+                      setLoading(true);
+                      const url = editingCategory 
+                        ? `${API_BASE_URL}/expense-categories/${editingCategory.id}` 
+                        : `${API_BASE_URL}/expense-categories`;
+                      
+                      const method = editingCategory ? 'PUT' : 'POST';
+                      
+                      const response = await fetch(url, {
+                        method,
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({ name: newCategoryName })
+                      });
+                      
+                      if (response.ok) {
+                        showToast(editingCategory ? 'تم تعديل الفئة بنجاح' : 'تم إضافة الفئة بنجاح', 'success');
+                        setNewCategoryName('');
+                        setEditingCategory(null);
+                        fetchCategories();
+                      } else {
+                        const err = await response.json();
+                        showToast(err.message || 'فشلت العملية', 'error');
+                      }
+                    } catch (e) {
+                      showToast('خطأ في الاتصال', 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? 'جاري الحفظ...' : (editingCategory ? 'تحديث' : 'إضافة')}
+                </button>
+                {editingCategory && (
+                  <button type="button" style={{ padding: '10px 15px', borderRadius: '10px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => { setEditingCategory(null); setNewCategoryName(''); }}>إلغاء</button>
+                )}
+              </div>
+              
+              <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
+                <table className="users-table" style={{ width: '100%', tableLayout: 'fixed', wordWrap: 'break-word' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '10px' }}>اسم الفئة</th>
+                      <th style={{ width: '120px', padding: '10px', textAlign: 'center' }}>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dbCategories.map(cat => (
+                      <tr key={cat.id}>
+                        <td style={{ padding: '10px', whiteSpace: 'normal', lineHeight: '1.5' }}>{cat.name}</td>
+                        <td style={{ padding: '10px' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button 
+                            type="button" 
+                            style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
+                            onClick={() => { setEditingCategory(cat); setNewCategoryName(cat.name); }}
+                            disabled={cat.name === 'التعويضات'}
+                            title="تعديل"
+                          >
+                            <i className="fa-solid fa-pencil"></i>
+                          </button>
+                          <button 
+                            type="button" 
+                            style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
+                            disabled={cat.name === 'التعويضات'}
+                            title="حذف"
+                            onClick={async () => {
+                              setConfirmDialog({
+                                isOpen: true,
+                                title: 'تأكيد حذف الفئة',
+                                message: `هل أنت متأكد من حذف فئة "${cat.name}"؟ قد يؤثر ذلك على تقارير المصروفات القديمة!`,
+                                onConfirm: async () => {
+                                  setConfirmDialog(null);
+                                  try {
+                                    const response = await fetch(`${API_BASE_URL}/expense-categories/${cat.id}`, {
+                                      method: 'DELETE',
+                                      headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                      }
+                                    });
+                                    if (response.ok) {
+                                      showToast('تم حذف الفئة بنجاح', 'success');
+                                      fetchCategories();
+                                    } else {
+                                      showToast('لا يمكن حذف هذه الفئة', 'error');
+                                    }
+                                  } catch (e) {
+                                    showToast('خطأ في الاتصال', 'error');
+                                  }
+                                }
+                              });
+                            }}
+
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {dbCategories.length === 0 && (
+                      <tr><td colSpan={2} style={{ textAlign: 'center', padding: '20px' }}>جاري التحميل أو لا توجد فئات...</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="premium-modal-footer">
+              <button type="button" className="btn btn-link text-muted fw-bold text-decoration-none px-4" onClick={() => setShowCategoryModal(false)}>
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Professional Confirmation Modal */}
+      {confirmDialog && confirmDialog.isOpen && (
+        <div className="modal-overlay no-print" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999999, padding: '20px', backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '400px', borderRadius: '20px', padding: '30px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', textAlign: 'center', animation: 'fadeIn 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#fee2e2', color: '#ef4444', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2.5rem', margin: '0 auto 20px auto' }}>
+              <i className="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1.4rem', fontWeight: 800, color: 'var(--text)' }}>
+              {confirmDialog.title}
+            </h3>
+            <p style={{ margin: '0 0 30px 0', fontSize: '1rem', color: 'var(--muted)', lineHeight: '1.6' }}>
+              {confirmDialog.message}
+            </p>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button 
+                type="button" 
+                onClick={confirmDialog.onConfirm}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#ef4444', color: '#fff', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}
+              >
+                نعم، تأكيد الحذف
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setConfirmDialog(null)}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}
+              >
+                إلغاء
               </button>
             </div>
           </div>
