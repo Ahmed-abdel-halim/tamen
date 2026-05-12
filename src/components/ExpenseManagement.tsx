@@ -814,15 +814,15 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>البند / الوصف</th>
-                  <th>المستلم</th>
-                  <th>الفئة</th>
-                  <th>المبلغ</th>
-                  <th>التاريخ</th>
-                  <th>رقم الواصل</th>
-                  <th>صورة الواصل</th>
-                  <th>الحالة</th>
-                  <th className="no-print">الإجراءات</th>
+                  <th style={{ verticalAlign: 'middle' }}>البند / الوصف</th>
+                  <th style={{ verticalAlign: 'middle' }}>المستلم</th>
+                  <th style={{ verticalAlign: 'middle' }}>الفئة</th>
+                  <th style={{ verticalAlign: 'middle' }}>المبلغ</th>
+                  <th style={{ verticalAlign: 'middle' }}>التاريخ</th>
+                  <th style={{ verticalAlign: 'middle' }}>رقم الواصل</th>
+                  <th style={{ verticalAlign: 'middle' }}>صورة الواصل</th>
+                  <th style={{ verticalAlign: 'middle' }}>الحالة</th>
+                  <th className="no-print" style={{ verticalAlign: 'middle' }}>الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -831,20 +831,20 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 ) : (
                   paginatedExpenses.map(e => (
                     <tr key={e.id}>
-                      <td style={{ fontWeight: 700 }}>{e.name}</td>
-                      <td>{e.recipient || '-'}</td>
-                      <td><span style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg)', fontSize: '0.85rem', fontWeight: 600 }}>{e.category}</span></td>
-                      <td style={{ fontWeight: '900', color: '#ef4444' }}>{e.amount.toLocaleString()} {e.currency === 'USD' ? '$' : 'د.ل'}</td>
-                      <td style={{ fontSize: '0.9rem' }}>{e.expense_date}</td>
-                      <td style={{ fontWeight: 600 }}>{e.voucher_number || '-'}</td>
-                      <td>
+                      <td style={{ fontWeight: 700, verticalAlign: 'middle' }}>{e.name}</td>
+                      <td style={{ verticalAlign: 'middle' }}>{e.recipient || '-'}</td>
+                      <td style={{ verticalAlign: 'middle' }}><span style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg)', fontSize: '0.85rem', fontWeight: 600 }}>{e.category}</span></td>
+                      <td style={{ fontWeight: '900', color: '#ef4444', verticalAlign: 'middle' }}>{e.amount.toLocaleString()} {e.currency === 'USD' ? '$' : 'د.ل'}</td>
+                      <td style={{ fontSize: '0.9rem', verticalAlign: 'middle' }}>{e.expense_date}</td>
+                      <td style={{ fontWeight: 600, verticalAlign: 'middle' }}>{e.voucher_number || '-'}</td>
+                      <td style={{ verticalAlign: 'middle' }}>
                         {e.receipt_image ? (
                           <button onClick={() => { setSelectedImage(resolveImageUrl(e.receipt_image)); setPreviewRotation(0); }} style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
                             <i className="fa-solid fa-image"></i> عرض
                           </button>
                         ) : <span style={{ color: '#94a3b8' }}>-</span>}
                       </td>
-                      <td>
+                      <td style={{ verticalAlign: 'middle' }}>
                         <span className={`status-badge ${e.status === 'مدفوع' ? 'active' : 'inactive'}`} style={{ 
                           background: e.status === 'مدفوع' ? '#dcfce7' : '#fee2e2', 
                           color: e.status === 'مدفوع' ? '#166534' : '#991b1b',
@@ -853,8 +853,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                           {e.status}
                         </span>
                       </td>
-                      <td className="no-print">
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <td className="no-print" style={{ verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
                           <button onClick={() => navigate(`/reports/expenses/${e.id}`)} style={{ background: '#10b981', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
                           <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
@@ -961,14 +961,14 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>رقم الواصل/الطلب</th>
-                  <th>المبلغ المدفوع</th>
-                  <th>عدد البطاقات</th>
-                  <th>خصم الاتحاد (المصروفات)</th>
-                  <th>وديعة الشركة</th>
-                  <th>تاريخ الطلب</th>
-                  <th>صورة الواصل</th>
-                  <th className="no-print">الإجراءات</th>
+                  <th style={{ verticalAlign: 'middle' }}>رقم الواصل/الطلب</th>
+                  <th style={{ verticalAlign: 'middle' }}>المبلغ المدفوع</th>
+                  <th style={{ verticalAlign: 'middle' }}>عدد البطاقات</th>
+                  <th style={{ verticalAlign: 'middle' }}>خصم الاتحاد (المصروفات)</th>
+                  <th style={{ verticalAlign: 'middle' }}>وديعة الشركة</th>
+                  <th style={{ verticalAlign: 'middle' }}>تاريخ الطلب</th>
+                  <th style={{ verticalAlign: 'middle' }}>صورة الواصل</th>
+                  <th className="no-print" style={{ verticalAlign: 'middle' }}>الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -977,13 +977,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 ) : (
                   paginatedUnion.map(u => (
                     <tr key={u.id}>
-                      <td style={{ fontWeight: 'bold' }}>{u.request_number || '-'}</td>
-                      <td style={{ color: '#ef4444', fontWeight: 800 }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#065f46', fontWeight: 'bold' }}>{u.cards_count}</td>
-                      <td>{(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#92400e', fontWeight: 700 }}>{(u.cards_count * u.company_deposit_per_card).toLocaleString()} د.ل</td>
-                      <td>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
-                      <td style={{ textAlign: 'center' }}>
+                      <td style={{ fontWeight: 'bold', verticalAlign: 'middle' }}>{u.request_number || '-'}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 800, verticalAlign: 'middle' }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#065f46', fontWeight: 'bold', verticalAlign: 'middle' }}>{u.cards_count}</td>
+                      <td style={{ verticalAlign: 'middle' }}>{(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#92400e', fontWeight: 700, verticalAlign: 'middle' }}>{(u.cards_count * u.company_deposit_per_card).toLocaleString()} د.ل</td>
+                      <td style={{ verticalAlign: 'middle' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
+                      <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {u.receipt_image ? (
                             <button onClick={() => { setSelectedImage(resolveImageUrl(u.receipt_image)); setPreviewRotation(0); }} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
@@ -992,8 +992,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                           ) : <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>لا يوجد</span>}
                         </div>
                       </td>
-                      <td className="no-print">
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <td className="no-print" style={{ verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
                           <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
                         </div>

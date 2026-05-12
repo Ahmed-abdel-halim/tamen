@@ -2649,7 +2649,7 @@ tbody tr:last-child td {
   color: var(--text);
   border-bottom: 2px solid var(--border);
   font-size: 15px;
-  vertical-align: middle;
+  vertical-align: middle !important;
 }
 
 .users-table td {
@@ -2657,7 +2657,7 @@ tbody tr:last-child td {
   text-align: right;
   border-bottom: 1px solid var(--border);
   color: var(--text);
-  vertical-align: middle;
+  vertical-align: middle !important;
 }
 
 .users-table tbody tr:hover {
