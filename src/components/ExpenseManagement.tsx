@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchableSelect from './SearchableSelect';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
-import { API_BASE_URL, BACKEND_URL, resolveImageUrl } from '../config/api';
+import { API_BASE_URL, resolveImageUrl } from '../config/api';
 
 interface ExpenseItem {
   item_number?: string;
