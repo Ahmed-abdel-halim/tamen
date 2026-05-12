@@ -115,7 +115,8 @@ export default function ViewExpenseDetails() {
           .main-border {
             border: 2px solid #000;
             padding: 15px;
-            min-height: 270mm;
+            min-height: 250mm;
+            position: relative;
           }
           .header-table {
             width: 100%;
@@ -217,8 +218,8 @@ export default function ViewExpenseDetails() {
             text-align: center;
             font-size: 10px;
             color: #666;
-            border-top: 1px solid #ccc;
-            padding-top: 5px;
+            border-top: 2px solid #000;
+            padding-top: 10px;
           }
         </style>
       </head>

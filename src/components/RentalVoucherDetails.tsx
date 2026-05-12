@@ -90,9 +90,9 @@ export default function RentalVoucherDetails() {
           }
             .main-border {
               border: 2px solid #000;
-            padding: 15px;
-            min-height: 270mm;
-          }
+              padding: 15px;
+              min-height: 250mm;
+            }
             .header-table {
               width: 100%;
             border-collapse: collapse;

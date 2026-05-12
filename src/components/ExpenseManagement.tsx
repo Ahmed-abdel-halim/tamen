@@ -139,7 +139,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
           .main-border {
             border: 2px solid #000;
             padding: 15px;
-            min-height: 270mm;
+            min-height: 250mm;
             position: relative;
           }
           .header-table {
@@ -432,7 +432,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
           @media print { @page { margin: 10mm; size: A4; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
           body { font-family: 'Cairo', sans-serif; margin: 0; padding: 10px; color: #000; background: #fff; }
-          .main-border { border: 2px solid #000; padding: 15px; min-height: 270mm; position: relative; }
+          .main-border { border: 2px solid #000; padding: 15px; min-height: 250mm; position: relative; }
           .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           .header-table td { border: 1px solid #000; padding: 10px; vertical-align: middle; }
           .logo-cell { width: 20%; text-align: center; }

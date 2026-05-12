@@ -269,7 +269,7 @@ export default function RentalVouchersList() {
             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
             @media print { @page { margin: 10mm; size: A4; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
             body { font-family: 'Cairo', sans-serif; margin: 0; padding: 10px; color: #000; background: #fff; }
-            .main-border { border: 2px solid #000; padding: 15px; min-height: 270mm; }
+            .main-border { border: 2px solid #000; padding: 15px; min-height: 250mm; position: relative; }
             .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .header-table td { border: 1px solid #000; padding: 10px; vertical-align: middle; }
             .logo-cell { width: 20%; text-align: center; }
@@ -287,7 +287,7 @@ export default function RentalVouchersList() {
             .signature-box { margin-top: 40px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
             .sig-item { border: 1.5px solid #000; padding: 15px 10px; text-align: center; }
             .sig-line { border-top: 1px dashed #000; margin-top: 35px; padding-top: 5px; font-size: 12px; font-weight: 800; }
-            .footer-meta { position: absolute; bottom: 20px; left: 20px; right: 20px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ccc; padding-top: 5px; }
+            .footer-meta { position: absolute; bottom: 20px; left: 20px; right: 20px; text-align: center; font-size: 10px; color: #666; border-top: 2px solid #000; padding-top: 10px; }
           </style>
         </head>
         <body onload="window.print(); window.close();">

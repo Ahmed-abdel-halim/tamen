@@ -367,7 +367,7 @@ export default function UsersList() {
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
         @page { size: A4; margin: 10mm; }
         body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.4; background: #fff; }
-        .page-container { border: 1px solid #e2e8f0; padding: 8mm; position: relative; min-height: 270mm; box-sizing: border-box; display: flex; flex-direction: column; }
+        .page-container { border: 1px solid #e2e8f0; padding: 8mm; position: relative; min-height: 250mm; box-sizing: border-box; display: flex; flex-direction: column; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
         .header-info h1 { margin: 0; color: #1e40af; font-size: 1.6rem; font-weight: 800; }
