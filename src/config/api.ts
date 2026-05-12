@@ -43,3 +43,57 @@ export const apiUrl = (path: string): string => {
   return `${API_BASE_URL}/${cleanPath}`;
 };
 
+/**
+ * Resolves a storage path from the backend to a full URL.
+ * Handles different storage directory formats and environment-specific domains.
+ */
+export const resolveImageUrl = (path: string | null | undefined): string => {
+  if (!path) return '';
+  
+  // 1. Handle absolute URLs already in the DB
+  if (path.startsWith('http')) {
+    // If it's a localhost URL from a migration but we're on production, fix it
+    if (path.includes('localhost') && !window.location.hostname.includes('localhost')) {
+      const cleanPath = path.replace(/http:\/\/[^\/]+/, '');
+      return resolveImageUrl(cleanPath);
+    }
+    return path;
+  }
+  
+  // 2. Clean the path
+  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  
+  // 3. Determine the base backend URL
+  const isLive = window.location.hostname.includes('mli.ly');
+  const defaultBackend = isLive ? 'https://api.mli.ly' : 'http://localhost:8000';
+  
+  // Use BACKEND_URL if it's absolute, otherwise fallback to guessed domain
+  const finalBase = (BACKEND_URL && BACKEND_URL.startsWith('http')) 
+    ? BACKEND_URL.replace(/\/$/, '') 
+    : defaultBackend;
+
+  // 4. Handle paths that already start with storage/
+  if (cleanPath.startsWith('storage/')) {
+    return `${finalBase}/${cleanPath}`;
+  }
+
+  // 5. Handle known storage directories missing the storage/ prefix
+  const storageDirs = ['expense_receipts', 'union_receipts', 'public', 'uploads', 'documents'];
+  for (const dir of storageDirs) {
+    if (cleanPath.startsWith(dir)) {
+      const actualPath = cleanPath.startsWith('public') 
+        ? cleanPath.replace('public/', 'storage/') 
+        : `storage/${cleanPath}`;
+      return `${finalBase}/${actualPath}`;
+    }
+  }
+  
+  // 6. Generic fallback for anything that looks like a storage file
+  if (cleanPath.includes('.') && !cleanPath.includes('/')) {
+    // Likely a file in the root of storage? (rare)
+    return `${finalBase}/storage/${cleanPath}`;
+  }
+
+  // 7. Static assets in the frontend public folder
+  return `/${cleanPath}`;
+};

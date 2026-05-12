@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, resolveImageUrl } from "../config/api";
 
 type ExpenseItem = {
   item_number?: string;
@@ -60,11 +60,7 @@ export default function ViewExpenseDetails() {
     }
   };
 
-  const resolveImageUrl = (path: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    return `${API_BASE_URL.replace('/api', '')}/storage/${path}`;
-  };
+
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' });
