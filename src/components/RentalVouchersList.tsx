@@ -248,6 +248,169 @@ export default function RentalVouchersList() {
     }
   };
 
+  const handlePrintVoucher = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/rental-vouchers/${id}`);
+      if (!res.ok) throw new Error();
+      const { data: voucher } = await res.json();
+      
+      const totalAmount = (voucher.records || []).reduce((sum: number, r: any) => sum + parseFloat(r.total_amount || 0), 0);
+      const qrData = `ورقة إيجار رقم: ${voucher.id}\nالمالك: ${voucher.owner_name}\nالهاتف: ${voucher.phone}\nالإجمالي: ${totalAmount} د.ل`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
+      const printWindow = window.open('', '', 'width=1200,height=900');
+      if (!printWindow) return;
+
+      printWindow.document.write(`
+        <html dir="rtl">
+        <head>
+          <title>ورقة إيجار #${voucher.id} - ${voucher.owner_name}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+            @media print { @page { margin: 10mm; size: A4; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+            body { font-family: 'Cairo', sans-serif; margin: 0; padding: 10px; color: #000; background: #fff; }
+            .main-border { border: 2px solid #000; padding: 15px; min-height: 270mm; }
+            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .header-table td { border: 1px solid #000; padding: 10px; vertical-align: middle; }
+            .logo-cell { width: 20%; text-align: center; }
+            .title-cell { width: 60%; text-align: center; background: #f8f9fa; }
+            .qr-cell { width: 20%; text-align: center; }
+            .doc-title { font-size: 20px; font-weight: 900; margin: 0; color: #000; }
+            .section-title { background: #e2e8f0; border: 1.5px solid #000; padding: 6px 15px; font-weight: 900; font-size: 15px; margin: 20px 0 0 0; text-align: center; }
+            .data-table { width: 100%; border-collapse: collapse; }
+            .data-table td { border: 1px solid #000; padding: 8px 12px; font-size: 13px; }
+            .label { background: #f8f9fa; font-weight: 800; width: 25%; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: -1px; }
+            .items-table th, .items-table td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 13px; }
+            .items-table th { background: #f1f5f9; font-weight: 900; }
+            .total-row { background: #f8f9fa; font-weight: 900; font-size: 15px; }
+            .signature-box { margin-top: 40px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+            .sig-item { border: 1.5px solid #000; padding: 15px 10px; text-align: center; }
+            .sig-line { border-top: 1px dashed #000; margin-top: 35px; padding-top: 5px; font-size: 12px; font-weight: 800; }
+            .footer-meta { position: absolute; bottom: 20px; left: 20px; right: 20px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ccc; padding-top: 5px; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="main-border">
+            <table class="header-table">
+              <tr>
+                <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
+                <td class="title-cell">
+                  <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
+                  <h1 class="doc-title">إيـصـال سـداد إيـجـار عـقـاري</h1>
+                  <div style="font-size: 12px; margin-top: 5px;">إدارة العقارات والتحصيل</div>
+                </td>
+                <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
+              </tr>
+            </table>
+            <div class="section-title">بيانات صاحب العقار</div>
+            <table class="data-table">
+              <tr><td class="label">اسم صاحب العقار:</td><td>${voucher.owner_name}</td><td class="label">رقم الإيصال:</td><td>${voucher.id}</td></tr>
+              <tr><td class="label">رقم الهاتف:</td><td>${voucher.phone}</td><td class="label">الرقم الوطني:</td><td>${voucher.national_id}</td></tr>
+              <tr><td class="label">تاريخ الإصدار:</td><td>${new Date(voucher.created_at).toLocaleDateString('ar-LY')}</td><td class="label">إجمالي المبلغ:</td><td style="font-weight: 900;">${totalAmount.toLocaleString()} د.ل</td></tr>
+            </table>
+            <div class="section-title">تفاصيل دفعات الإيجار</div>
+            <table class="items-table">
+              <thead><tr><th>#</th><th>الفترة من</th><th>الفترة إلى</th><th>الوحدات</th><th>المستلم</th><th>القيمة</th></tr></thead>
+              <tbody>
+                ${(voucher.records || []).map((rec: any, idx: number) => `
+                  <tr><td>${idx + 1}</td><td>${rec.from_date ? new Date(rec.from_date).toLocaleDateString('ar-LY') : '-'}</td><td>${rec.to_date ? new Date(rec.to_date).toLocaleDateString('ar-LY') : '-'}</td><td>${rec.apartments_count}</td><td>${rec.recipient_name}</td><td style="font-weight: bold;">${parseFloat(rec.total_amount).toLocaleString()} د.ل</td></tr>
+                `).join('')}
+                <tr class="total-row"><td colspan="5" style="text-align: left; padding-left: 20px;">الإجمالي الكلي:</td><td>${totalAmount.toLocaleString()} د.ل</td></tr>
+              </tbody>
+            </table>
+            <div class="section-title">ملاحظات إضافية</div>
+            <div style="border: 1px solid #000; padding: 10px; min-height: 50px; font-size: 13px;">${voucher.notes || 'لا توجد ملاحظات'}</div>
+            <div class="signature-box">
+              <div class="sig-item"><div style="font-weight: 900;">توقيع المحصل</div><div class="sig-line">توقيع / ختم</div></div>
+              <div class="sig-item"><div style="font-weight: 900;">توقيع المستأجر</div><div class="sig-line">توقيع / بصمة</div></div>
+            </div>
+            <div class="footer-meta">تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}</div>
+          </div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch {
+      showToast('حدث خطأ أثناء طباعة الوصل', 'error');
+    }
+  };
+
+  const handlePrintReport = () => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>تقرير سجل الإيجارات العقارية</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          body { font-family: 'Cairo', sans-serif; margin: 20px; padding: 20px; color: #1e293b; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; }
+          .header h1 { margin: 0; color: #0ea5e9; font-size: 24px; font-weight: 900; }
+          .meta-info { margin-bottom: 20px; font-size: 14px; color: #64748b; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: right; font-size: 13px; }
+          th { background: #f8fafc; font-weight: 900; color: #0ea5e9; }
+          .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 15px; }
+          .total-row { background: #f0f9ff; font-weight: 900; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="header">
+          <div>
+            <h1>شركة المدار الليبي للتأمين</h1>
+            <p>تقرير سجل الإيجارات العقارية</p>
+          </div>
+          <img src="/img/logo.png" style="height: 70px;">
+        </div>
+        <div class="meta-info">
+          تاريخ التقرير: ${new Date().toLocaleString('ar-LY')} | عدد الوثائق: ${filtered.length} | إجمالي المبالغ: ${totalAmount.toLocaleString()} د.ل
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>اسم صاحب العقار</th>
+              <th>رقم الهاتف</th>
+              <th>الرقم الوطني</th>
+              <th>عدد السجلات</th>
+              <th>إجمالي المبالغ</th>
+              <th>تاريخ الإضافة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map((v, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td style="font-weight: 700;">${v.owner_name}</td>
+                <td>${v.phone}</td>
+                <td>${v.national_id}</td>
+                <td>${v.records_count}</td>
+                <td style="font-weight: 700;">${(v.records_sum_total_amount || 0).toLocaleString()} د.ل</td>
+                <td>${new Date(v.created_at).toLocaleDateString('ar-LY')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="4">المجموع الكلي</td>
+              <td>${totalRecords}</td>
+              <td>${totalAmount.toLocaleString()} د.ل</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        <div class="footer">
+          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
 
 
   const SortIcon = ({ field }: { field: typeof sortBy }) => (
@@ -270,6 +433,13 @@ export default function RentalVouchersList() {
           سجل الإيجارات العقارية
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handlePrintReport}
+            className="secondary"
+            style={{ padding: '10px 18px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '7px', border: '1px solid var(--border)', background: '#0ea5e9', color: '#fff' }}
+          >
+            <i className="fa-solid fa-print"></i> طباعة التقرير
+          </button>
           <button
             onClick={handleExport}
             disabled={exportLoading}
@@ -517,6 +687,11 @@ export default function RentalVouchersList() {
                   </td>
                   <td onClick={e => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => handlePrintVoucher(v.id)}
+                        style={{ background: '#f0f9ff', border: '1.5px solid #0ea5e9', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#0ea5e9' }}
+                        title="طباعة الوصل"
+                      ><i className="fa-solid fa-print"></i></button>
                       <button
                         onClick={() => navigate(`/reports/rental-vouchers/${v.id}`)}
                         style={{ background: '#e0f2fe', border: 'none', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#0369a1' }}

@@ -76,7 +76,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [statusFilter, setStatusFilter] = useState('الكل');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  
+
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -99,7 +99,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [indemnityType, setIndemnityType] = useState('orange_card');
   const [employees, setEmployees] = useState<{ id: number; name: string }[]>([]);
   const [isCustomRecipient, setIsCustomRecipient] = useState(false);
-  
+
   // Categories Management States
   const [dbCategories, setDbCategories] = useState<{ id: number; name: string }[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -107,10 +107,394 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const [editingCategory, setEditingCategory] = useState<{ id: number; name: string } | null>(null);
 
   // Custom Confirmation Dialog State
-  const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void } | null>(null);
 
   // Union Balance States
   const [activeTab, setActiveTab] = useState<'expenses' | 'union' | 'indemnities'>(activeTabOverride);
+
+  const handlePrintUnionVoucher = (u: UnionPurchase) => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) return;
+
+    const qrData = `وصل رصيد اتحاد رقم: ${u.request_number}\nعدد البطاقات: ${u.cards_count}\nالمبلغ المدفوع: ${u.amount_paid} د.ل\nالتاريخ: ${u.purchase_date}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>وصل رصيد اتحاد #${u.request_number}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { 
+            @page { margin: 10mm; size: A4; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+          body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 10px; 
+            color: #000;
+            background: #fff;
+          }
+          .main-border {
+            border: 2px solid #000;
+            padding: 15px;
+            min-height: 270mm;
+            position: relative;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .header-table td {
+            border: 1px solid #000;
+            padding: 10px;
+            vertical-align: middle;
+          }
+          .logo-cell { width: 20%; text-align: center; }
+          .title-cell { width: 60%; text-align: center; background: #f8f9fa; }
+          .qr-cell { width: 20%; text-align: center; }
+          
+          .doc-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin: 0;
+            color: #000;
+          }
+
+          .section-title {
+            background: #e2e8f0;
+            border: 1.5px solid #000;
+            padding: 6px 15px;
+            font-weight: 900;
+            font-size: 15px;
+            margin: 20px 0 0 0;
+            text-align: center;
+          }
+
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+          }
+          .data-table td {
+            border: 1px solid #000;
+            padding: 8px 12px;
+            font-size: 13px;
+          }
+          .label {
+            background: #f8f9fa;
+            font-weight: 800;
+            width: 25%;
+          }
+          .value {
+            width: 25%;
+            font-weight: 600;
+          }
+
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: -1px;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+            font-size: 13px;
+          }
+          .items-table th {
+            background: #f1f5f9;
+            font-weight: 900;
+          }
+
+          .total-row {
+            background: #f8f9fa;
+            font-weight: 900;
+            font-size: 15px;
+          }
+
+          .signature-box {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+          .sig-item {
+            border: 1.5px solid #000;
+            padding: 15px 10px;
+            text-align: center;
+          }
+          .sig-line {
+            border-top: 1px dashed #000;
+            margin-top: 35px;
+            padding-top: 5px;
+            font-size: 12px;
+            font-weight: 800;
+          }
+
+          .footer-meta {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 2px solid #000;
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="main-border">
+          <table class="header-table">
+            <tr>
+              <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
+              <td class="title-cell">
+                <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
+                <h1 class="doc-title">إيـصـال شـراء رصـيـد (الـبـرتـقـالـيـة)</h1>
+                <div style="font-size: 12px; margin-top: 5px;">إدارة البطاقات الموحدة - رصيد الاتحاد</div>
+              </td>
+              <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
+            </tr>
+          </table>
+
+          <div class="section-title">بيانات طلب الرصيد</div>
+          <table class="data-table">
+            <tr>
+              <td class="label">رقم الطلب:</td>
+              <td class="value">${u.request_number}</td>
+              <td class="label">تاريخ الطلب:</td>
+              <td class="value">${u.purchase_date}</td>
+            </tr>
+            <tr>
+              <td class="label">طريقة الدفع:</td>
+              <td class="value">${u.payment_method}</td>
+              <td class="label">عدد البطاقات:</td>
+              <td class="value">${u.cards_count} بطاقة</td>
+            </tr>
+          </table>
+
+          <div class="section-title">تفاصيل الحصص والودائع</div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width: 50%;">البيان</th>
+                <th style="width: 20%;">الكمية</th>
+                <th style="width: 15%;">سعر الوحدة</th>
+                <th style="width: 15%;">الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="text-align: right;">شراء رصيد بطاقات اتحاد</td>
+                <td>${u.cards_count}</td>
+                <td>${u.card_price} د.ل</td>
+                <td style="font-weight: 700;">${(u.cards_count * u.card_price).toLocaleString()} د.ل</td>
+              </tr>
+              <tr>
+                <td style="text-align: right;">خصم الاتحاد (المصروفات)</td>
+                <td>${u.cards_count}</td>
+                <td>${u.union_fee_per_card} د.ل</td>
+                <td>${(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
+              </tr>
+              <tr>
+                <td style="text-align: right;">وديعة الشركة</td>
+                <td>${u.cards_count}</td>
+                <td>${u.company_deposit_per_card} د.ل</td>
+                <td>${(u.cards_count * u.company_deposit_per_card).toLocaleString()} د.ل</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="3" style="text-align: left; padding-left: 20px;">صافي المبلغ المدفوع:</td>
+                <td style="font-size: 16px;">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="section-title">ملاحظات</div>
+          <div style="border: 1px solid #000; padding: 10px; min-height: 50px; font-size: 13px;">
+            ${u.notes || 'لا توجد ملاحظات'}
+          </div>
+
+          <div class="signature-box">
+            <div class="sig-item">
+              <div style="font-weight: 900;">الموظف المختص</div>
+              <div class="sig-line">توقيع / ختم</div>
+            </div>
+            <div class="sig-item">
+              <div style="font-weight: 900;">المدير المالي</div>
+              <div class="sig-line">توقيع / ختم</div>
+            </div>
+          </div>
+
+          <div class="footer-meta">
+            تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handlePrintReport = () => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) return;
+
+    const currentData = activeTab === 'union' ? filteredUnion : filteredExpenses;
+    const title = activeTab === 'union' ? 'تقرير سجل رصيد الاتحاد' :
+      activeTab === 'expenses' ? 'تقرير المصروفات التشغيلية' : 'تقرير التعويضات والمطالبات المالية';
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>${title}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          body { font-family: 'Cairo', sans-serif; margin: 20px; padding: 20px; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #014cb1; padding-bottom: 15px; }
+          .header h1 { margin: 0; color: #014cb1; font-size: 24px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: right; font-size: 13px; }
+          th { background: #f8fafc; font-weight: 900; }
+          .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #64748b; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="header">
+          <div><h1>شركة المدار الليبي للتأمين</h1><p>${title}</p></div>
+          <img src="/img/logo.png" style="height: 60px;">
+        </div>
+        <table>
+          <thead>
+            <tr>
+              ${activeTab === 'union' ? `
+                <th>رقم الطلب</th>
+                <th>المبلغ</th>
+                <th>عدد البطاقات</th>
+                <th>خصم الاتحاد</th>
+                <th>وديعة الشركة</th>
+                <th>التاريخ</th>
+              ` : `
+                <th>البيان</th>
+                <th>المستلم</th>
+                <th>الفئة</th>
+                <th>المبلغ</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+              `}
+            </tr>
+          </thead>
+          <tbody>
+            ${currentData.map((item: any) => `
+              <tr>
+                ${activeTab === 'union' ? `
+                  <td>${item.request_number}</td>
+                  <td>${item.amount_paid.toLocaleString()} د.ل</td>
+                  <td>${item.cards_count}</td>
+                  <td>${(item.cards_count * item.union_fee_per_card).toLocaleString()} د.ل</td>
+                  <td>${(item.cards_count * item.company_deposit_per_card).toLocaleString()} د.ل</td>
+                  <td>${item.purchase_date ? item.purchase_date.split('T')[0] : '-'}</td>
+                ` : `
+                  <td>${item.name}</td>
+                  <td>${item.recipient || '-'}</td>
+                  <td>${item.category}</td>
+                  <td>${item.amount.toLocaleString()} ${item.currency}</td>
+                  <td>${item.expense_date}</td>
+                  <td>${item.status}</td>
+                `}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">تم استخراج التقرير بتاريخ: ${new Date().toLocaleString('ar-LY')}</div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handlePrintExpenseVoucher = (expense: Expense) => {
+    const qrData = `وصل مصروف رقم: ${expense.voucher_number || expense.id}\nالبيان: ${expense.name}\nالمبلغ: ${expense.amount} ${expense.currency}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>وصل مصروف #${expense.voucher_number || expense.id}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { @page { margin: 10mm; size: A4; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+          body { font-family: 'Cairo', sans-serif; margin: 0; padding: 10px; color: #000; background: #fff; }
+          .main-border { border: 2px solid #000; padding: 15px; min-height: 270mm; position: relative; }
+          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          .header-table td { border: 1px solid #000; padding: 10px; vertical-align: middle; }
+          .logo-cell { width: 20%; text-align: center; }
+          .title-cell { width: 60%; text-align: center; background: #f8f9fa; }
+          .qr-cell { width: 20%; text-align: center; }
+          .doc-title { font-size: 20px; font-weight: 900; margin: 0; color: #000; }
+          .section-title { background: #e2e8f0; border: 1.5px solid #000; padding: 6px 15px; font-weight: 900; font-size: 15px; margin: 20px 0 0 0; text-align: center; }
+          .data-table { width: 100%; border-collapse: collapse; }
+          .data-table td { border: 1px solid #000; padding: 8px 12px; font-size: 13px; }
+          .label { background: #f8f9fa; font-weight: 800; width: 25%; }
+          .items-table { width: 100%; border-collapse: collapse; margin-top: -1px; }
+          .items-table th, .items-table td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 13px; }
+          .items-table th { background: #f1f5f9; font-weight: 900; }
+          .total-row { background: #f8f9fa; font-weight: 900; font-size: 15px; }
+          .signature-box { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+          .sig-item { border: 1.5px solid #000; padding: 15px 10px; text-align: center; }
+          .sig-line { border-top: 1px dashed #000; margin-top: 35px; padding-top: 5px; font-size: 12px; font-weight: 800; }
+          .footer-meta { position: absolute; bottom: 20px; left: 20px; right: 20px; text-align: center; font-size: 10px; color: #666; border-top: 2px solid #000; padding-top: 10px; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="main-border">
+          <table class="header-table">
+            <tr>
+              <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
+              <td class="title-cell">
+                <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
+                <h1 class="doc-title">مـلخـص تـفاصـيـل المـصـروف</h1>
+                <div style="font-size: 12px; margin-top: 5px;">إدارة الشؤون المالية - الموارد البشرية</div>
+              </td>
+              <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
+            </tr>
+          </table>
+          <div class="section-title">بيانات المصروف الأساسية</div>
+          <table class="data-table">
+            <tr><td class="label">رقم المصروف:</td><td>${expense.voucher_number || expense.id}</td><td class="label">تاريخ الصرف:</td><td>${expense.expense_date}</td></tr>
+            <tr><td class="label">الفئة:</td><td>${expense.category}</td><td class="label">نوع المصروف:</td><td>${expense.expense_type === 'fixed' ? 'ثابت' : 'مستهلك'}</td></tr>
+            <tr><td class="label">المستلم:</td><td colspan="3">${expense.recipient || '---'}</td></tr>
+            <tr><td class="label">البيان / الغرض:</td><td colspan="3" style="font-weight: 900;">${expense.name}</td></tr>
+          </table>
+          <div class="section-title">تفاصيل البنود والكميات</div>
+          <table class="items-table">
+            <thead><tr><th style="width: 15%;">رقم الصنف</th><th style="width: 45%;">البيان التفصيلي</th><th style="width: 10%;">الكمية</th><th style="width: 15%;">سعر الوحدة</th><th style="width: 15%;">القيمة</th></tr></thead>
+            <tbody>
+              ${expense.items && expense.items.length > 0 ? expense.items.map(item => `
+                <tr><td>${item.item_number || '-'}</td><td style="text-align: right;">${item.statement}</td><td>${item.quantity}</td><td>${(item.price || 0).toLocaleString()}</td><td style="font-weight: bold;">${(item.value || 0).toLocaleString()}</td></tr>
+              `).join('') : `<tr><td colspan="5" style="padding: 20px;">لا توجد بنود تفصيلية مضافة</td></tr>`}
+              <tr class="total-row"><td colspan="4" style="text-align: left; padding-left: 20px;">إجمالي القيمة المستحقة:</td><td style="font-size: 16px;">${(expense.amount || 0).toLocaleString()} ${expense.currency === 'USD' ? '$' : 'د.ل'}</td></tr>
+            </tbody>
+          </table>
+          <div class="signature-box">
+            <div class="sig-item"><div style="font-weight: 900;">إعداد المحاسب</div><div class="sig-line">توقيع / ختم</div></div>
+            <div class="sig-item"><div style="font-weight: 900;">اعتماد المدير المالي</div><div class="sig-line">توقيع / ختم</div></div>
+            <div class="sig-item"><div style="font-weight: 900;">استلام المستفيد</div><div class="sig-line">توقيع / بصمة</div></div>
+          </div>
+          <div class="footer-meta">تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}</div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   useEffect(() => {
     setActiveTab(activeTabOverride);
@@ -154,15 +538,15 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
   const filteredUnion = useMemo(() => {
     return unionPurchases.filter(u => {
       const matchesSearch = !unionSearchFilter || u.request_number?.toLowerCase().includes(unionSearchFilter.toLowerCase());
-      
+
       const purchaseDate = new Date(u.purchase_date);
       const matchesYear = unionYearFilter === 'الكل' || purchaseDate.getFullYear().toString() === unionYearFilter;
       const matchesMonth = unionMonthFilter === 'الكل' || (purchaseDate.getMonth() + 1).toString() === unionMonthFilter;
-      
+
       const pDateClean = new Date(purchaseDate.toISOString().split('T')[0]);
       const matchesFrom = !unionFromDate || pDateClean >= new Date(unionFromDate);
       const matchesTo = !unionToDate || pDateClean <= new Date(unionToDate);
-      
+
       return matchesSearch && matchesYear && matchesMonth && matchesFrom && matchesTo;
     });
   }, [unionPurchases, unionSearchFilter, unionYearFilter, unionMonthFilter, unionFromDate, unionToDate]);
@@ -348,7 +732,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       setExpenseType(expense.expense_type || 'consumable');
       setItems(expense.items || []);
       setExpenseReceiptImage(null);
-      
+
       const isEmployee = employees.some(emp => emp.name === expense.recipient);
       setIsCustomRecipient(expense.recipient && !isEmployee ? true : false);
     } else {
@@ -391,7 +775,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       formData.append('is_indemnity', category === 'التعويضات' ? '1' : '0');
       formData.append('indemnity_type', category === 'التعويضات' ? indemnityType : '');
       formData.append('payment_source', category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : 'bank');
-      
+
       if (expenseReceiptImage) {
         formData.append('receipt_image', expenseReceiptImage);
       }
@@ -692,8 +1076,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         <div style={{ textAlign: 'center', flex: 1, marginTop: '15px' }}>
           <div style={{ display: 'inline-block', border: '1.5px solid #000', padding: '12px 40px', borderRadius: '15px', backgroundColor: '#f9f9f9' }}>
             <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800 }}>
-              {activeTab === 'union' ? 'سجل تداول أرصدة بطاقة الاتحاد (البرتقالية)' : 
-               activeTab === 'expenses' ? 'كشف المصروفات التشغيلية المعتمدة' : 'كشف التعويضات والمطالبات المالية'}
+              {activeTab === 'union' ? 'سجل تداول أرصدة بطاقة الاتحاد (البرتقالية)' :
+                activeTab === 'expenses' ? 'كشف المصروفات التشغيلية المعتمدة' : 'كشف التعويضات والمطالبات المالية'}
             </h2>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.1rem', fontWeight: 600 }}>
               بتاريخ: {new Date().toLocaleDateString('ar-LY')}
@@ -719,7 +1103,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.1, pointerEvents: 'none' }}>
               <i className={activeTab === 'expenses' ? "fa-solid fa-file-invoice-dollar" : "fa-solid fa-scale-unbalanced"} style={{ fontSize: '150px', position: 'absolute', left: '-20px', bottom: '-20px' }}></i>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', zIndex: 1 }}>
               <h2 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <i className={activeTab === 'expenses' ? "fa-solid fa-file-invoice-dollar" : "fa-solid fa-scale-unbalanced"} style={{ color: activeTab === 'expenses' ? '#38bdf8' : '#fcd34d' }}></i>
@@ -731,6 +1115,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             </div>
 
             <div style={{ display: 'flex', gap: '12px', zIndex: 1 }}>
+              <button onClick={handlePrintReport} className="btn-secondary" style={{ background: '#014cb1', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-print"></i> طباعة التقرير
+              </button>
               <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-solid fa-file-excel"></i> تصدير Excel
               </button>
@@ -751,7 +1138,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             </div>
             <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
               <div style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 600, marginBottom: '5px' }}>متوسط العملية الواحد</div>
-              <div style={{ fontSize: '26px', fontWeight: '900', color: '#10b981' }}>{filteredStats.average.toLocaleString(undefined, {maximumFractionDigits:2})} <span style={{ fontSize: '14px' }}>د.ل</span></div>
+              <div style={{ fontSize: '26px', fontWeight: '900', color: '#10b981' }}>{filteredStats.average.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
           </div>
 
@@ -845,8 +1232,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                         ) : <span style={{ color: '#94a3b8' }}>-</span>}
                       </td>
                       <td style={{ verticalAlign: 'middle' }}>
-                        <span className={`status-badge ${e.status === 'مدفوع' ? 'active' : 'inactive'}`} style={{ 
-                          background: e.status === 'مدفوع' ? '#dcfce7' : '#fee2e2', 
+                        <span className={`status-badge ${e.status === 'مدفوع' ? 'active' : 'inactive'}`} style={{
+                          background: e.status === 'مدفوع' ? '#dcfce7' : '#fee2e2',
                           color: e.status === 'مدفوع' ? '#166534' : '#991b1b',
                           padding: '4px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700
                         }}>
@@ -855,6 +1242,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       </td>
                       <td className="no-print" style={{ verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+                          <button onClick={() => handlePrintExpenseVoucher(e)} style={{ background: '#f59e0b', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="طباعة الوصل"><i className="fa-solid fa-print"></i></button>
                           <button onClick={() => navigate(`/reports/expenses/${e.id}`)} style={{ background: '#10b981', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
                           <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
@@ -888,7 +1276,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.1, pointerEvents: 'none' }}>
               <i className="fa-solid fa-id-card" style={{ fontSize: '150px', position: 'absolute', left: '-20px', bottom: '-20px' }}></i>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', zIndex: 1 }}>
               <h2 style={{ margin: 0, fontSize: '26px', display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <i className="fa-solid fa-id-card" style={{ color: '#fcd34d' }}></i> سجل شراء رصيد البطاقة البرتقالية (الاتحاد)
@@ -897,11 +1285,14 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             </div>
 
             <div style={{ display: 'flex', gap: '12px', zIndex: 1 }}>
-              <button onClick={() => handleOpenUnionModal()} className="btn-primary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)' }}>
-                <i className="fa-solid fa-plus"></i> طلب رصيد جديد
+              <button onClick={handlePrintReport} className="btn-secondary" style={{ background: '#014cb1', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-print"></i> طباعة التقرير
               </button>
               <button onClick={exportUnionToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-solid fa-file-excel"></i> تصدير Excel
+              </button>
+              <button onClick={() => handleOpenUnionModal()} className="btn-primary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)' }}>
+                <i className="fa-solid fa-plus"></i> طلب رصيد جديد
               </button>
             </div>
           </div>
@@ -909,19 +1300,19 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
             <div className="stat-box" style={{ background: '#fef3c7', padding: '25px', borderRadius: '15px', border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ color: '#92400e', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#92400e' }}>{unionFilteredStats.totalDeposit.toLocaleString()} <span style={{fontSize: '16px'}}>د.ل</span></div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#92400e' }}>{unionFilteredStats.totalDeposit.toLocaleString()} <span style={{ fontSize: '16px' }}>د.ل</span></div>
             </div>
             <div className="stat-box" style={{ background: '#fee2e2', padding: '25px', borderRadius: '15px', border: '1px solid #fecaca', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ color: '#991b1b', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي خصم الاتحاد</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#991b1b' }}>{unionFilteredStats.totalFee.toLocaleString()} <span style={{fontSize: '16px'}}>د.ل</span></div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#991b1b' }}>{unionFilteredStats.totalFee.toLocaleString()} <span style={{ fontSize: '16px' }}>د.ل</span></div>
             </div>
             <div className="stat-box" style={{ background: '#d1fae5', padding: '25px', borderRadius: '15px', border: '1px solid #a7f3d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ color: '#065f46', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي البطاقات المشتراة</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#065f46' }}>{unionFilteredStats.totalCards} <span style={{fontSize: '16px'}}>بطاقة</span></div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#065f46' }}>{unionFilteredStats.totalCards} <span style={{ fontSize: '16px' }}>بطاقة</span></div>
             </div>
             <div className="stat-box" style={{ background: '#dbeafe', padding: '25px', borderRadius: '15px', border: '1px solid #bfdbfe', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ color: '#1e40af', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي المبلغ المدفوع</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#1e40af' }}>{unionFilteredStats.totalPaid.toLocaleString()} <span style={{fontSize: '16px'}}>د.ل</span></div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#1e40af' }}>{unionFilteredStats.totalPaid.toLocaleString()} <span style={{ fontSize: '16px' }}>د.ل</span></div>
             </div>
           </div>
 
@@ -936,13 +1327,13 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>السنة</label>
                 <select value={unionYearFilter} onChange={e => setUnionYearFilter(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
                   <option value="الكل">كل السنين</option>
-                  {['2023','2024','2025','2026'].map(y => <option key={y} value={y}>{y}</option>)}
+                  {['2023', '2024', '2025', '2026'].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>الشهر</label>
                 <select value={unionMonthFilter} onChange={e => setUnionMonthFilter(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
                   <option value="الكل">كل الشهور</option>
-                  {Array.from({length:12}, (_,i)=>i+1).map(m => <option key={m} value={m.toString()}>{m}</option>)}
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m.toString()}>{m}</option>)}
                 </select>
               </div>
               <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>من تاريخ</label>
@@ -989,11 +1380,12 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                             <button onClick={() => { setSelectedImage(resolveImageUrl(u.receipt_image)); setPreviewRotation(0); }} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
                               <i className="fa-solid fa-image"></i> عرض الواصل
                             </button>
-                          ) : <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>لا يوجد</span>}
+                          ) : <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>لا يوجد</span>}
                         </div>
                       </td>
                       <td className="no-print" style={{ verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+                          <button onClick={() => handlePrintUnionVoucher(u)} style={{ background: '#ea580c', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="طباعة الواصل"><i className="fa-solid fa-print"></i></button>
                           <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
                         </div>
@@ -1033,7 +1425,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   {!isCustomRecipient ? (
                     <div style={{ flex: 1 }}>
-                      <SearchableSelect 
+                      <SearchableSelect
                         options={employees.map(emp => ({ value: emp.name, label: emp.name }))}
                         value={recipient}
                         onChange={(val) => setRecipient(val)}
@@ -1041,15 +1433,15 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                       />
                     </div>
                   ) : (
-                    <input 
-                      type="text" 
-                      value={recipient} 
-                      onChange={e => setRecipient(e.target.value)} 
+                    <input
+                      type="text"
+                      value={recipient}
+                      onChange={e => setRecipient(e.target.value)}
                       placeholder="ادخل اسم المستلم..."
-                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }} 
+                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }}
                     />
                   )}
-                  <button 
+                  <button
                     type="button"
                     onClick={() => {
                       setIsCustomRecipient(!isCustomRecipient);
@@ -1082,25 +1474,25 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   <label>التاريخ</label>
                   <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
                 </div>
-                  {activeTab === 'indemnities' ? (
-                    <div>
-                      <label>نوع التعويض</label>
-                      <select value={indemnityType} onChange={e => setIndemnityType(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
-                        <option value="orange_card">خصم من رصيد الاتحاد</option>
-                        <option value="bank">صرف بنكي (شيك/حوالة)</option>
-                      </select>
-                    </div>
-                  ) : (
-                    <div>
-                      <label>الحالة</label>
-                      <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
-                        <option value="مدفوع">مدفوع</option>
-                        <option value="معلق">معلق</option>
-                      </select>
-                    </div>
-                  )}
+                {activeTab === 'indemnities' ? (
+                  <div>
+                    <label>نوع التعويض</label>
+                    <select value={indemnityType} onChange={e => setIndemnityType(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                      <option value="orange_card">خصم من رصيد الاتحاد</option>
+                      <option value="bank">صرف بنكي (شيك/حوالة)</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label>الحالة</label>
+                    <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                      <option value="مدفوع">مدفوع</option>
+                      <option value="معلق">معلق</option>
+                    </select>
+                  </div>
+                )}
               </>
-              
+
               <div>
                 <label>المبلغ (د.ل)</label>
                 <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
@@ -1139,7 +1531,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                     <i className="fa-solid fa-plus"></i> إضافة صنف
                   </button>
                 </div>
-                
+
                 <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '10px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                     <thead style={{ background: 'var(--bg)' }}>
@@ -1238,9 +1630,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
         }}>
           <div style={{ background: '#fff', width: '100%', maxWidth: '850px', borderRadius: '24px', padding: '40px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowUnionModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
-            
+
             <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '28px', fontWeight: 900, color: '#1e293b' }}>تسجيل رصيد اتحاد جديد (بطاقة برتقالية)</h2>
-            
+
             <form onSubmit={handleAddUnionPurchase}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1336,7 +1728,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             ) : (
               <img src={selectedImage} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', transform: `rotate(${previewRotation}deg)`, transition: 'transform 0.3s ease' }} />
             )}
-            
+
             {/* Action Buttons */}
             <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', gap: '10px', zIndex: 10 }}>
               <button onClick={() => setPreviewRotation(prev => prev + 90)} style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '50%', width: '45px', height: '45px', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="تدوير الصورة">
@@ -1363,26 +1755,26 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
             </div>
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px', overflowX: 'hidden' }}>
               <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                <input 
-                  type="text" 
-                  value={newCategoryName} 
-                  onChange={e => setNewCategoryName(e.target.value)} 
-                  placeholder="اسم الفئة الجديدة..." 
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value)}
+                  placeholder="اسم الفئة الجديدة..."
                   style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)' }}
                 />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   style={{ whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: '10px', border: 'none', background: editingCategory ? '#f59e0b' : '#38bdf8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
                   onClick={async () => {
                     if (!newCategoryName) return;
                     try {
                       setLoading(true);
-                      const url = editingCategory 
-                        ? `${API_BASE_URL}/expense-categories/${editingCategory.id}` 
+                      const url = editingCategory
+                        ? `${API_BASE_URL}/expense-categories/${editingCategory.id}`
                         : `${API_BASE_URL}/expense-categories`;
-                      
+
                       const method = editingCategory ? 'PUT' : 'POST';
-                      
+
                       const response = await fetch(url, {
                         method,
                         headers: {
@@ -1392,7 +1784,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                         },
                         body: JSON.stringify({ name: newCategoryName })
                       });
-                      
+
                       if (response.ok) {
                         showToast(editingCategory ? 'تم تعديل الفئة بنجاح' : 'تم إضافة الفئة بنجاح', 'success');
                         setNewCategoryName('');
@@ -1416,7 +1808,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                   <button type="button" style={{ padding: '10px 15px', borderRadius: '10px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => { setEditingCategory(null); setNewCategoryName(''); }}>إلغاء</button>
                 )}
               </div>
-              
+
               <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
                 <table className="users-table" style={{ width: '100%', tableLayout: 'fixed', wordWrap: 'break-word' }}>
                   <thead>
@@ -1431,50 +1823,50 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                         <td style={{ padding: '10px', whiteSpace: 'normal', lineHeight: '1.5' }}>{cat.name}</td>
                         <td style={{ padding: '10px' }}>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            <button 
-                            type="button" 
-                            style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
-                            onClick={() => { setEditingCategory(cat); setNewCategoryName(cat.name); }}
-                            disabled={cat.name === 'التعويضات'}
-                            title="تعديل"
-                          >
-                            <i className="fa-solid fa-pencil"></i>
-                          </button>
-                          <button 
-                            type="button" 
-                            style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
-                            disabled={cat.name === 'التعويضات'}
-                            title="حذف"
-                            onClick={async () => {
-                              setConfirmDialog({
-                                isOpen: true,
-                                title: 'تأكيد حذف الفئة',
-                                message: `هل أنت متأكد من حذف فئة "${cat.name}"؟ قد يؤثر ذلك على تقارير المصروفات القديمة!`,
-                                onConfirm: async () => {
-                                  setConfirmDialog(null);
-                                  try {
-                                    const response = await fetch(`${API_BASE_URL}/expense-categories/${cat.id}`, {
-                                      method: 'DELETE',
-                                      headers: {
-                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            <button
+                              type="button"
+                              style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
+                              onClick={() => { setEditingCategory(cat); setNewCategoryName(cat.name); }}
+                              disabled={cat.name === 'التعويضات'}
+                              title="تعديل"
+                            >
+                              <i className="fa-solid fa-pencil"></i>
+                            </button>
+                            <button
+                              type="button"
+                              style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
+                              disabled={cat.name === 'التعويضات'}
+                              title="حذف"
+                              onClick={async () => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'تأكيد حذف الفئة',
+                                  message: `هل أنت متأكد من حذف فئة "${cat.name}"؟ قد يؤثر ذلك على تقارير المصروفات القديمة!`,
+                                  onConfirm: async () => {
+                                    setConfirmDialog(null);
+                                    try {
+                                      const response = await fetch(`${API_BASE_URL}/expense-categories/${cat.id}`, {
+                                        method: 'DELETE',
+                                        headers: {
+                                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                        }
+                                      });
+                                      if (response.ok) {
+                                        showToast('تم حذف الفئة بنجاح', 'success');
+                                        fetchCategories();
+                                      } else {
+                                        showToast('لا يمكن حذف هذه الفئة', 'error');
                                       }
-                                    });
-                                    if (response.ok) {
-                                      showToast('تم حذف الفئة بنجاح', 'success');
-                                      fetchCategories();
-                                    } else {
-                                      showToast('لا يمكن حذف هذه الفئة', 'error');
+                                    } catch (e) {
+                                      showToast('خطأ في الاتصال', 'error');
                                     }
-                                  } catch (e) {
-                                    showToast('خطأ في الاتصال', 'error');
                                   }
-                                }
-                              });
-                            }}
+                                });
+                              }}
 
-                          >
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1511,15 +1903,15 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               {confirmDialog.message}
             </p>
             <div style={{ display: 'flex', gap: '15px' }}>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={confirmDialog.onConfirm}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#ef4444', color: '#fff', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}
               >
                 نعم، تأكيد الحذف
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setConfirmDialog(null)}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}
               >

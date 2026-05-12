@@ -88,16 +88,273 @@ export default function ViewExpenseDetails() {
     </div>
   );
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow || !expense) return;
+
+    const qrData = `مصروف رقم: ${expense.voucher_number || expense.id}\nالبيان: ${expense.name}\nالمبلغ: ${expense.amount} ${expense.currency}\nالتاريخ: ${formatDate(expense.expense_date)}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>وصل مصروف #${expense.voucher_number || expense.id}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { 
+            @page { margin: 10mm; size: A4; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+          body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 10px; 
+            color: #000;
+            background: #fff;
+          }
+          .main-border {
+            border: 2px solid #000;
+            padding: 15px;
+            min-height: 270mm;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .header-table td {
+            border: 1px solid #000;
+            padding: 10px;
+            vertical-align: middle;
+          }
+          .logo-cell { width: 20%; text-align: center; }
+          .title-cell { width: 60%; text-align: center; background: #f8f9fa; }
+          .qr-cell { width: 20%; text-align: center; }
+          
+          .doc-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin: 0;
+            color: #000;
+          }
+
+          .section-title {
+            background: #e2e8f0;
+            border: 1.5px solid #000;
+            padding: 6px 15px;
+            font-weight: 900;
+            font-size: 15px;
+            margin: 20px 0 0 0;
+            text-align: center;
+          }
+
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+          }
+          .data-table td {
+            border: 1px solid #000;
+            padding: 8px 12px;
+            font-size: 13px;
+          }
+          .label {
+            background: #f8f9fa;
+            font-weight: 800;
+            width: 25%;
+          }
+          .value {
+            width: 25%;
+            font-weight: 600;
+          }
+
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: -1px;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+            font-size: 13px;
+          }
+          .items-table th {
+            background: #f1f5f9;
+            font-weight: 900;
+          }
+
+          .total-row {
+            background: #f8f9fa;
+            font-weight: 900;
+            font-size: 15px;
+          }
+
+          .signature-box {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+          }
+          .sig-item {
+            border: 1.5px solid #000;
+            padding: 15px 10px;
+            text-align: center;
+          }
+          .sig-line {
+            border-top: 1px dashed #000;
+            margin-top: 35px;
+            padding-top: 5px;
+            font-size: 12px;
+            font-weight: 800;
+          }
+
+          .footer-meta {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+          }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="main-border">
+          <table class="header-table">
+            <tr>
+              <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
+              <td class="title-cell">
+                <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
+                <h1 class="doc-title">مـلخـص تـفاصـيـل المـصـروف</h1>
+                <div style="font-size: 12px; margin-top: 5px;">إدارة الشؤون المالية - الموارد البشرية</div>
+              </td>
+              <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
+            </tr>
+          </table>
+
+          <div class="section-title">بيانات المصروف الأساسية</div>
+          <table class="data-table">
+            <tr>
+              <td class="label">رقم المصروف:</td>
+              <td class="value">${expense.voucher_number || expense.id}</td>
+              <td class="label">تاريخ الصرف:</td>
+              <td class="value">${formatDate(expense.expense_date)}</td>
+            </tr>
+            <tr>
+              <td class="label">الفئة:</td>
+              <td class="value">${expense.category}</td>
+              <td class="label">نوع المصروف:</td>
+              <td class="value">${expense.expense_type === 'fixed' ? 'ثابت' : 'مستهلك'}</td>
+            </tr>
+            <tr>
+              <td class="label">المستلم:</td>
+              <td class="value" colspan="3">${expense.recipient || '---'}</td>
+            </tr>
+            <tr>
+              <td class="label">البيان / الغرض:</td>
+              <td class="value" colspan="3" style="font-weight: 900; font-size: 14px;">${expense.name}</td>
+            </tr>
+          </table>
+
+          <div class="section-title">تفاصيل البنود والكميات</div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width: 15%;">رقم الصنف</th>
+                <th style="width: 45%;">البيان التفصيلي</th>
+                <th style="width: 10%;">الكمية</th>
+                <th style="width: 15%;">سعر الوحدة</th>
+                <th style="width: 15%;">القيمة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expense.items && expense.items.length > 0 ? expense.items.map(item => `
+                <tr>
+                  <td>${item.item_number || '-'}</td>
+                  <td style="text-align: right;">${item.statement}</td>
+                  <td>${item.quantity}</td>
+                  <td>${(item.price || 0).toLocaleString()}</td>
+                  <td style="font-weight: bold;">${(item.value || 0).toLocaleString()}</td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="5" style="padding: 20px;">لا توجد بنود تفصيلية مضافة</td>
+                </tr>
+              `}
+              <tr class="total-row">
+                <td colspan="4" style="text-align: left; padding-left: 20px;">إجمالي القيمة المستحقة:</td>
+                <td style="font-size: 16px; color: #000;">${(expense.amount || 0).toLocaleString()} ${expense.currency === 'USD' ? '$' : 'د.ل'}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="section-title">ملاحظات إضافية</div>
+          <div style="border: 1px solid #000; padding: 10px; min-height: 60px; font-size: 13px;">
+            ${expense.notes || 'لا توجد ملاحظات إضافية'}
+          </div>
+
+          <div class="signature-box">
+            <div class="sig-item">
+              <div style="font-weight: 900;">إعداد المحاسب</div>
+              <div class="sig-line">توقيع / ختم</div>
+            </div>
+            <div class="sig-item">
+              <div style="font-weight: 900;">اعتماد المدير المالي</div>
+              <div class="sig-line">توقيع / ختم</div>
+            </div>
+            <div class="sig-item">
+              <div style="font-weight: 900;">استلام المستفيد</div>
+              <div class="sig-line">توقيع / بصمة</div>
+            </div>
+          </div>
+
+          <div class="footer-meta">
+            تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  if (loading) return (
+    <div style={{ padding: '100px', textAlign: 'center', color: 'var(--muted)' }}>
+      <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '15px' }}></i>
+      <p>جار التحميل...</p>
+    </div>
+  );
+
+  if (!expense) return (
+    <div style={{ padding: '100px', textAlign: 'center' }}>
+      <i className="fa-solid fa-circle-exclamation" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '20px' }}></i>
+      <p style={{ color: 'var(--text)' }}>المصروف غير موجود</p>
+      <button onClick={() => navigate('/reports/expenses')} className="btn-primary" style={{ marginTop: '20px' }}>العودة للقائمة</button>
+    </div>
+  );
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>الشؤون المالية / إدارة المصروفات / تفاصيل المصروف</span>
-        <button
-          onClick={() => navigate('/reports/expenses')}
-          style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <i className="fa-solid fa-arrow-right"></i> رجوع
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handlePrint}
+            style={{ background: '#014cb1', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <i className="fa-solid fa-print"></i> طباعة الواصل
+          </button>
+          <button
+            onClick={() => navigate('/reports/expenses')}
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <i className="fa-solid fa-arrow-right"></i> رجوع
+          </button>
+        </div>
       </div>
 
       <div className="users-card" style={{ padding: '0', overflow: 'hidden' }}>
@@ -207,9 +464,9 @@ export default function ViewExpenseDetails() {
               <div style={{ textAlign: 'center' }}>
                 {expense.receipt_image.toLowerCase().endsWith('.pdf') ? (
                   <div style={{ width: '100%', height: '400px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-                    <iframe 
-                      src={resolveImageUrl(expense.receipt_image)} 
-                      style={{ width: '100%', height: '100%', border: 'none' }} 
+                    <iframe
+                      src={resolveImageUrl(expense.receipt_image)}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
                       title="Receipt PDF"
                     />
                   </div>
