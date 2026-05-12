@@ -854,7 +854,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                         </span>
                       </td>
                       <td className="no-print">
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <button onClick={() => navigate(`/reports/expenses/${e.id}`)} style={{ background: '#10b981', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
                           <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
@@ -993,7 +993,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                         </div>
                       </td>
                       <td className="no-print">
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
                         </div>
