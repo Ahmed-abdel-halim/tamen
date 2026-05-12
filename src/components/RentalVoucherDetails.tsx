@@ -87,7 +87,7 @@ export default function RentalVoucherDetails() {
       }}>
         <span style={{ fontSize: '17px', fontWeight: 'bold', color: 'var(--text)' }}>
           <i className="fa-solid fa-building" style={{ marginLeft: '10px', color: '#0ea5e9' }}></i>
-          تفاصيل ورقة الإيجار
+          تفاصيل الإيجار العقاري
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={() => window.print()} className="secondary" style={{ padding: '9px 18px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)' }}>

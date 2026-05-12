@@ -50,7 +50,7 @@ export default function RentalVouchersList() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف ورقة الإيجار هذه؟')) return;
+    if (!window.confirm('هل أنت متأكد من حذف الإيجار العقاري هذا؟')) return;
     try {
       const res = await fetch(`${API_BASE_URL}/rental-vouchers/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -232,12 +232,12 @@ export default function RentalVouchersList() {
       });
 
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - سجل ورقة الإيجارات',
+        title: 'شركة المدار الليبي للتأمين - سجل الإيجارات العقارية',
         subtitle: `إجمالي المبالغ: ${totalAmount.toLocaleString()} د.ل - عدد الوثائق: ${filtered.length} | إجمالي السجلات: ${totalRecords}`,
         columns,
         data,
-        fileName: 'ورقة_الإيجارات',
-        qrData: `ورقة الإيجارات - شركة المدار الليبي\nعدد الوثائق: ${filtered.length}\nإجمالي: ${totalAmount.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: 'الإيجارات_العقارية',
+        qrData: `الإيجارات العقارية - شركة المدار الليبي\nعدد الوثائق: ${filtered.length}\nإجمالي: ${totalAmount.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير السجل الكامل بنجاح', 'success');
@@ -267,7 +267,7 @@ export default function RentalVouchersList() {
       }}>
         <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text)' }}>
           <i className="fa-solid fa-building" style={{ marginLeft: '10px', color: '#0ea5e9' }}></i>
-          سجل ورقة الإيجارات
+          سجل الإيجارات العقارية
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
@@ -287,7 +287,7 @@ export default function RentalVouchersList() {
             style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <i className="fa-solid fa-plus"></i>
-            إضافة ورقة إيجار جديدة
+            إضافة إيجار عقاري جديد
           </button>
         </div>
       </div>

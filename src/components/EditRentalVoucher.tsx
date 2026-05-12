@@ -201,7 +201,7 @@ export default function EditRentalVoucher() {
       }}>
         <span style={{ fontSize: '17px', fontWeight: 'bold' }}>
           <i className="fa-solid fa-pen-to-square" style={{ marginLeft: '10px', color: '#f59e0b' }}></i>
-          تعديل ورقة الإيجار
+          تعديل الإيجار العقاري
         </span>
         <button onClick={() => navigate(`/reports/rental-vouchers/${id}`)} className="ghost" style={{ padding: '9px 18px', borderRadius: '10px', fontSize: '13px', border: '1px solid var(--border)' }}>
           <i className="fa-solid fa-arrow-right" style={{ marginLeft: '6px' }}></i> رجوع

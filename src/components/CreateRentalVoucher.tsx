@@ -101,7 +101,7 @@ export default function CreateRentalVoucher() {
 
       const res = await fetch(`${API_BASE_URL}/rental-vouchers`, { method: 'POST', body: formData });
       if (res.ok) {
-        showToast('تم حفظ ورقة الإيجار بنجاح', 'success');
+        showToast('تم حفظ الإيجار العقاري بنجاح', 'success');
         navigate('/reports/rental-vouchers');
       } else {
         const err = await res.json().catch(() => ({}));
@@ -158,7 +158,7 @@ export default function CreateRentalVoucher() {
       }}>
         <span style={{ fontSize: '17px', fontWeight: 'bold' }}>
           <i className="fa-solid fa-plus-circle" style={{ marginLeft: '10px', color: '#0ea5e9' }}></i>
-          إضافة ورقة إيجار جديدة
+          إضافة إيجار عقاري جديد
         </span>
         <button onClick={() => navigate('/reports/rental-vouchers')} className="ghost" style={{ padding: '9px 18px', borderRadius: '10px', fontSize: '13px', border: '1px solid var(--border)' }}>
           <i className="fa-solid fa-arrow-right" style={{ marginLeft: '6px' }}></i> رجوع
@@ -309,7 +309,7 @@ export default function CreateRentalVoucher() {
             إلغاء
           </button>
           <button type="submit" className="primary" disabled={loading} style={{ padding: '12px 36px', borderRadius: '10px', fontSize: '15px' }}>
-            {loading ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginLeft: '8px' }}></i>جاري الحفظ...</> : <><i className="fa-solid fa-save" style={{ marginLeft: '8px' }}></i>حفظ ورقة الإيجار</>}
+            {loading ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginLeft: '8px' }}></i>جاري الحفظ...</> : <><i className="fa-solid fa-save" style={{ marginLeft: '8px' }}></i>حفظ الإيجار العقاري</>}
           </button>
         </div>
       </form>

@@ -361,7 +361,7 @@ const menuSections: SidebarSection[] = [
             label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
               { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
               { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
-              { label: 'ورقة الإيجارات', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
+              { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
             ]
           },
           { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
@@ -453,7 +453,7 @@ const createMenuSections = (
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
       { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
-      { label: 'ورقة الإيجارات', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
+      { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
       { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
       { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
       { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },

@@ -492,6 +492,9 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       formData.append('card_price', cardPrice);
       formData.append('union_fee_per_card', unionFeePerCard);
       formData.append('company_deposit_per_card', companyDepositPerCard);
+      formData.append('cards_count', cardsCount.toString());
+      formData.append('total_union_fee', totalUnionFee.toString());
+      formData.append('total_company_deposit', totalCompanyDeposit.toString());
       formData.append('payment_method', paymentMethod);
       formData.append('purchase_date', unionPurchaseDate);
       formData.append('notes', unionNotes);
@@ -1126,7 +1129,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
 
               <div>
                 <label>صورة الواصل</label>
-                <input type="file" accept="image/*" onChange={e => setExpenseReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '8px', border: '1px dashed var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }} />
+                <input type="file" accept="image/*,application/pdf" onChange={e => setExpenseReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '8px', border: '1px dashed var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }} />
               </div>
 
               <div style={{ gridColumn: 'span 4' }}>
@@ -1306,7 +1309,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>إرفاق صورة الإيصال</label>
-                  <input type="file" accept="image/*" onChange={e => setReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '15px', marginTop: '10px', borderRadius: '14px', border: '1px dashed #cbd5e1' }} />
+                  <input type="file" accept="image/*,application/pdf" onChange={e => setReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '15px', marginTop: '10px', borderRadius: '14px', border: '1px dashed #cbd5e1' }} />
                   {editingUnionPurchase?.receipt_image && <p style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '5px' }}>✓ يوجد إيصال مرفق مسبقاً</p>}
                 </div>
               </div>
