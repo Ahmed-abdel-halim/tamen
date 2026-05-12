@@ -22,6 +22,9 @@ type InsuranceDocument = {
   foreign_car_country?: string; foreign_car_purpose?: string; print_type?: string;
   whatsapp_number?: string; eidc_policy_id?: string; eidc_transaction_code?: string;
   eidc_sync_status?: string; eidc_pdf_url?: string; eidc_error?: string;
+  nationality?: string; nid_passport?: string; address?: string;
+  email?: string; engine_number?: string; engine_cc?: string;
+  vehicle_weight?: string; notes?: string;
 };
 type OwnershipTransfer = {
   id: number; previous_plate_id?: number; previous_plate?: Plate;
@@ -246,14 +249,19 @@ export default function ViewInsuranceDocument() {
 
             <SectionCard title="معلومات المؤمن له" icon="fa-user-shield">
               <Row label="اسم المؤمن له" value={document.insured_name || '-'} />
+              <Row label="الجنسية" value={document.nationality || '-'} />
+              <Row label="الرقم الوطني / جواز السفر" value={document.nid_passport || '-'} />
+              <Row label="العنوان" value={document.address || '-'} />
               <Row label="رقم الهاتف" value={document.phone || '-'} />
               <Row label="رقم الواتساب" value={
                 document.whatsapp_number
                   ? <span style={{ color: '#25d366', fontWeight: '700' }}><i className="fa-brands fa-whatsapp" style={{ marginLeft: '4px' }}></i>{document.whatsapp_number}</span>
                   : '-'
               } />
+              <Row label="البريد الإلكتروني" value={document.email || '-'} />
               <Row label="رقم رخصة القيادة" value={document.driving_license_number || '-'} />
               {document.third_party_purpose && <Row label="غرض الطرف الثالث" value={document.third_party_purpose} />}
+              {document.notes && <Row label="ملاحظات" value={document.notes} />}
             </SectionCard>
           </div>
 
@@ -274,6 +282,9 @@ export default function ViewInsuranceDocument() {
                   ? (() => { const c = typeof document.load_capacity === 'string' ? parseFloat(document.load_capacity) : document.load_capacity; return isNaN(c) ? '-' : Number.isInteger(c) ? c.toString() : c.toFixed(2); })()
                   : '-'
               } />
+              {document.engine_number && <Row label="رقم المحرك" value={document.engine_number} />}
+              {document.engine_cc && <Row label="سعة المحرك (سي سي)" value={document.engine_cc} />}
+              {document.vehicle_weight && <Row label="وزن المركبة" value={document.vehicle_weight} />}
             </SectionCard>
 
             <SectionCard title="البيانات المالية" icon="fa-money-bill-wave">

@@ -20,7 +20,7 @@ export default function ViewClaim() {
   const fetchClaim = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/claims/${id}`, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Accept': 'application/json'
         }
@@ -65,7 +65,7 @@ export default function ViewClaim() {
 
       const response = await fetch(`${API_BASE_URL}/claims/${id}/transfers`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Accept': 'application/json'
         },
@@ -88,14 +88,14 @@ export default function ViewClaim() {
     try {
       const response = await fetch(`${API_BASE_URL}/claims/${id}`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Accept': 'application/json'
         }
       });
-      
+
       if (!response.ok) throw new Error('Failed to delete claim');
-      
+
       showToast('تم حذف المطالبة بنجاح', 'success');
       navigate('/claims');
     } catch (error) {
@@ -337,47 +337,47 @@ export default function ViewClaim() {
               </thead>
               <tbody>
                 ${claim.transfers.map((t: any) => {
-                  const detailsText = Object.entries(t.details || {}).map(([k, v]) => {
-                    if (typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i))) {
-                      return `${k.replace(/_/g, ' ')}: [مرفق]`;
-                    }
-                    const label = k === 'case_number' ? 'رقم القضية' : 
-                                  k === 'transfer_date' ? 'تاريخ الإحالة' :
-                                  k === 'prosecution_name' ? 'النيابة' :
-                                  k === 'committee_manager' ? 'مدير اللجنة' :
-                                  k === 'deputy_manager' ? 'نائب المدير' :
-                                  k === 'total_value' ? 'إجمالي القيمة' :
-                                  k === 'manager_report' ? 'تقرير المدير' :
-                                  k === 'report_number' ? 'رقم البلاغ' :
-                                  k === 'report_date' ? 'تاريخ البلاغ' :
-                                  k === 'police_station' ? 'مركز الشرطة' :
-                                  k === 'book_number' ? 'رقم الكتاب' :
-                                  k === 'financial_value' ? 'القيمة المالية' :
-                                  k === 'recipient_name' ? 'اسم المستلم' :
+      const detailsText = Object.entries(t.details || {}).map(([k, v]) => {
+        if (typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i))) {
+          return `${k.replace(/_/g, ' ')}: [مرفق]`;
+        }
+        const label = k === 'case_number' ? 'رقم القضية' :
+          k === 'transfer_date' ? 'تاريخ الإحالة' :
+            k === 'prosecution_name' ? 'النيابة' :
+              k === 'committee_manager' ? 'مدير اللجنة' :
+                k === 'deputy_manager' ? 'نائب المدير' :
+                  k === 'total_value' ? 'إجمالي القيمة' :
+                    k === 'manager_report' ? 'تقرير المدير' :
+                      k === 'report_number' ? 'رقم البلاغ' :
+                        k === 'report_date' ? 'تاريخ البلاغ' :
+                          k === 'police_station' ? 'مركز الشرطة' :
+                            k === 'book_number' ? 'رقم الكتاب' :
+                              k === 'financial_value' ? 'القيمة المالية' :
+                                k === 'recipient_name' ? 'اسم المستلم' :
                                   k === 'session_date' ? 'تاريخ الجلسة' :
-                                  k === 'court_name' ? 'المحكمة' :
-                                  k === 'appeal_case_number' ? 'رقم الاستئناف' :
-                                  k === 'appeal_date' ? 'تاريخ الاستئناف' :
-                                  k === 'appeal_court' ? 'محكمة الاستئناف' :
-                                  k === 'notes' ? 'ملاحظات' :
-                                  k === 'report_image' ? 'صورة البلاغ' :
-                                  k === 'financial_value_image' ? 'إثبات القيمة' :
-                                  k === 'transfer_image' ? 'صورة الإحالة' :
-                                  k === 'court_file_image' ? 'ملف القضية' :
-                                  k === 'previous_judgment_image' ? 'الحكم السابق' :
-                                  k === 'image' ? 'الصورة المرفقة' :
-                                  k.replace(/_/g, ' ');
-                    return `${label}: ${v}`;
-                  }).join(' | ');
-                  
-                  return `
+                                    k === 'court_name' ? 'المحكمة' :
+                                      k === 'appeal_case_number' ? 'رقم الاستئناف' :
+                                        k === 'appeal_date' ? 'تاريخ الاستئناف' :
+                                          k === 'appeal_court' ? 'محكمة الاستئناف' :
+                                            k === 'notes' ? 'ملاحظات' :
+                                              k === 'report_image' ? 'صورة البلاغ' :
+                                                k === 'financial_value_image' ? 'إثبات القيمة' :
+                                                  k === 'transfer_image' ? 'صورة الإحالة' :
+                                                    k === 'court_file_image' ? 'ملف القضية' :
+                                                      k === 'previous_judgment_image' ? 'الحكم السابق' :
+                                                        k === 'image' ? 'الصورة المرفقة' :
+                                                          k.replace(/_/g, ' ');
+        return `${label}: ${v}`;
+      }).join(' | ');
+
+      return `
                     <tr>
                       <td>${new Date(t.created_at).toLocaleDateString('ar-LY')}</td>
                       <td>${t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</td>
                       <td>${detailsText}</td>
                     </tr>
                   `;
-                }).join('')}
+    }).join('')}
               </tbody>
             </table>
           </div>
@@ -408,7 +408,7 @@ export default function ViewClaim() {
   };
 
   const getStatusStyle = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'pending': return { bg: '#fef3c7', color: '#d97706', text: 'قيد الانتظار' };
       case 'تسويه وديه': return { bg: '#dcfce7', color: '#166534', text: 'تسويه وديه' };
       case 'تحويل الى مركز الشرطة': return { bg: '#e0f2fe', color: '#075985', text: 'بمركز الشرطة' };
@@ -524,7 +524,7 @@ export default function ViewClaim() {
           <i className="fa-solid fa-chevron-left"></i>
           <span>تفاصيل المطالبة #{claim.claim_number}</span>
         </div>
-        
+
         <div className="header-actions-row">
           <div className="title-section">
             <h1>مطالبة رقم <span className="id-highlight">#{claim.claim_number}</span></h1>
@@ -533,7 +533,7 @@ export default function ViewClaim() {
               {statusInfo.text}
             </span>
           </div>
-          
+
           <div className="button-group">
             <button className="btn-transfer" onClick={() => setShowTransferForm(!showTransferForm)}>
               <i className="fa-solid fa-share-nodes"></i>
@@ -586,10 +586,10 @@ export default function ViewClaim() {
 
       {/* Main Content Dashboard */}
       <div className="claim-dashboard-grid">
-        
+
         {/* Left Column: Data Sections */}
         <div className="dashboard-main-col">
-          
+
           {/* Section 1: Claim Info */}
           <section className="dashboard-card">
             <div className="card-header">
@@ -631,7 +631,7 @@ export default function ViewClaim() {
               )}
               <div className="detail-item">
                 <span className="label">يوجد وفيات</span>
-                <span className="value" style={{color: claim.has_fatalities ? '#ef4444' : '#22c55e', fontWeight: 700}}>
+                <span className="value" style={{ color: claim.has_fatalities ? '#ef4444' : '#22c55e', fontWeight: 700 }}>
                   {claim.has_fatalities ? 'نعم ⚠️' : 'لا'}
                 </span>
               </div>
@@ -708,39 +708,39 @@ export default function ViewClaim() {
             <section className="dashboard-card">
               <div className="card-header">
                 <i className="fa-solid fa-car-burst text-danger"></i>
-                <h3>بيانات الجسم المتضرر - <span style={{color:'var(--accent-cyan)'}}>{claim.damaged_body_type}</span></h3>
+                <h3>بيانات الجسم المتضرر - <span style={{ color: 'var(--accent-cyan)' }}>{claim.damaged_body_type}</span></h3>
               </div>
               {claim.damaged_body_type === 'سيارة' && (
                 <div className="details-grid three-cols">
                   {claim.damaged_vehicle_model && <div className="detail-item"><span className="label">موديل السيارة</span><span className="value">{claim.damaged_vehicle_model}</span></div>}
                   {claim.damaged_vehicle_plate && <div className="detail-item"><span className="label">رقم اللوحة</span><span className="value">{claim.damaged_vehicle_plate}</span></div>}
                   {claim.damaged_vehicle_repair_shop && <div className="detail-item"><span className="label">ورشة التصليح</span><span className="value">{claim.damaged_vehicle_repair_shop}</span></div>}
-                  {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{color:'#ef4444'}}>{Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                  {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>}
                 </div>
               )}
               {claim.damaged_body_type === 'شخص' && (
                 <div className="details-grid">
                   {claim.damaged_person_name && <div className="detail-item"><span className="label">اسم المتضرر</span><span className="value">{claim.damaged_person_name}</span></div>}
-                  {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{color:'#ef4444'}}>{Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                  {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>}
                 </div>
               )}
               {claim.damaged_body_type === 'مبنى' && (
                 <div className="details-grid">
-                  {claim.damaged_building_description && <div className="detail-item" style={{gridColumn:'span 2'}}><span className="label">وصف المبنى</span><span className="value">{claim.damaged_building_description}</span></div>}
-                  {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{color:'#ef4444'}}>{Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                  {claim.damaged_building_description && <div className="detail-item" style={{ gridColumn: 'span 2' }}><span className="label">وصف المبنى</span><span className="value">{claim.damaged_building_description}</span></div>}
+                  {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>}
                 </div>
               )}
               {/* Damage photos */}
               {(() => {
                 const photos = claim.damaged_body_type === 'سيارة' ? claim.damaged_vehicle_photos
                   : claim.damaged_body_type === 'شخص' ? claim.damaged_person_photos
-                  : claim.damaged_building_photos;
+                    : claim.damaged_building_photos;
                 const photoArr = Array.isArray(photos) ? photos : [];
                 return photoArr.length > 0 ? (
                   <div className="photos-strip mt-2">
                     {photoArr.map((p: string, i: number) => (
                       <a key={i} href={`${BACKEND_URL}/storage/${p}`} target="_blank" rel="noreferrer">
-                        <img src={`${BACKEND_URL}/storage/${p}`} alt={`ضرر ${i+1}`} className="damage-thumb" />
+                        <img src={`${BACKEND_URL}/storage/${p}`} alt={`ضرر ${i + 1}`} className="damage-thumb" />
                       </a>
                     ))}
                   </div>
@@ -753,7 +753,7 @@ export default function ViewClaim() {
           {claim.victim_insurance_company && (
             <section className="dashboard-card">
               <div className="card-header">
-                <i className="fa-solid fa-shield-halved" style={{color:'#7c3aed'}}></i>
+                <i className="fa-solid fa-shield-halved" style={{ color: '#7c3aed' }}></i>
                 <h3>بيانات وثيقة تأمين المتضرر</h3>
               </div>
               <div className="details-grid three-cols">
@@ -775,15 +775,15 @@ export default function ViewClaim() {
           {claim.assessor_name && (
             <section className="dashboard-card">
               <div className="card-header">
-                <i className="fa-solid fa-calculator" style={{color:'#059669'}}></i>
+                <i className="fa-solid fa-calculator" style={{ color: '#059669' }}></i>
                 <h3>تقرير مقدر الأضرار</h3>
               </div>
               <div className="details-grid three-cols">
                 {claim.assessor_name && <div className="detail-item"><span className="label">اسم المقدر</span><span className="value">{claim.assessor_name}</span></div>}
                 {claim.assessor_phone && <div className="detail-item"><span className="label">رقم الهاتف</span><span className="value">{claim.assessor_phone}</span></div>}
                 {claim.assessor_date && <div className="detail-item"><span className="label">تاريخ التقييم</span><span className="value">{claim.assessor_date}</span></div>}
-                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (دينار)</span><span className="value fw-bold" style={{color:'#059669'}}>{Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>}
-                {claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{color:'#059669'}}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
+                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (دينار)</span><span className="value fw-bold" style={{ color: '#059669' }}>{Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>}
+                {claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{ color: '#059669' }}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
               </div>
               {claim.assessor_report_photo && (
                 <a href={`${BACKEND_URL}/storage/${claim.assessor_report_photo}`} target="_blank" rel="noreferrer" className="attachment-btn mt-2">
@@ -838,52 +838,52 @@ export default function ViewClaim() {
                         <h4>{t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</h4>
                         <span className="time">{new Date(t.created_at).toLocaleString('ar-EG')}</span>
                       </div>
-                        <div className="item-details-box">
-                          <div className="details-inline">
-                            {t.details && Object.entries(t.details).map(([k, v]: [string, any]) => {
-                              const isFile = typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i));
-                              const label = k === 'case_number' ? 'رقم القضية' : 
-                                            k === 'transfer_date' ? 'تاريخ الإحالة' :
-                                            k === 'prosecution_name' ? 'النيابة' :
-                                            k === 'committee_manager' ? 'مدير اللجنة' :
-                                            k === 'deputy_manager' ? 'نائب المدير' :
-                                            k === 'total_value' ? 'إجمالي القيمة' :
-                                            k === 'manager_report' ? 'تقرير المدير' :
-                                            k === 'report_number' ? 'رقم البلاغ' :
+                      <div className="item-details-box">
+                        <div className="details-inline">
+                          {t.details && Object.entries(t.details).map(([k, v]: [string, any]) => {
+                            const isFile = typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i));
+                            const label = k === 'case_number' ? 'رقم القضية' :
+                              k === 'transfer_date' ? 'تاريخ الإحالة' :
+                                k === 'prosecution_name' ? 'النيابة' :
+                                  k === 'committee_manager' ? 'مدير اللجنة' :
+                                    k === 'deputy_manager' ? 'نائب المدير' :
+                                      k === 'total_value' ? 'إجمالي القيمة' :
+                                        k === 'manager_report' ? 'تقرير المدير' :
+                                          k === 'report_number' ? 'رقم البلاغ' :
                                             k === 'report_date' ? 'تاريخ البلاغ' :
-                                            k === 'police_station' ? 'مركز الشرطة' :
-                                            k === 'book_number' ? 'رقم الكتاب' :
-                                            k === 'financial_value' ? 'القيمة المالية' :
-                                            k === 'recipient_name' ? 'اسم المستلم' :
-                                            k === 'session_date' ? 'تاريخ الجلسة' :
-                                            k === 'court_name' ? 'المحكمة' :
-                                            k === 'appeal_case_number' ? 'رقم الاستئناف' :
-                                            k === 'appeal_date' ? 'تاريخ الاستئناف' :
-                                            k === 'appeal_court' ? 'محكمة الاستئناف' :
-                                            k === 'notes' ? 'ملاحظات' :
-                                            k === 'report_image' ? 'صورة البلاغ' :
-                                            k === 'financial_value_image' ? 'إثبات القيمة' :
-                                            k === 'transfer_image' ? 'صورة الإحالة' :
-                                            k === 'court_file_image' ? 'ملف القضية' :
-                                            k === 'previous_judgment_image' ? 'الحكم السابق' :
-                                            k === 'image' ? 'الصورة المرفقة' :
-                                            k.replace(/_/g, ' ');
-                                            
-                              return (
-                                <div key={k} className="tiny-detail">
-                                  <span className="k">{label}:</span>
-                                  {isFile ? (
-                                    <a href={`${BACKEND_URL}/storage/${v}`} target="_blank" rel="noreferrer" className="attachment-link-inline">
-                                      <i className="fa-solid fa-paperclip"></i> عرض المرفق
-                                    </a>
-                                  ) : (
-                                    <span className="v">{v || '-'}</span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+                                              k === 'police_station' ? 'مركز الشرطة' :
+                                                k === 'book_number' ? 'رقم الكتاب' :
+                                                  k === 'financial_value' ? 'القيمة المالية' :
+                                                    k === 'recipient_name' ? 'اسم المستلم' :
+                                                      k === 'session_date' ? 'تاريخ الجلسة' :
+                                                        k === 'court_name' ? 'المحكمة' :
+                                                          k === 'appeal_case_number' ? 'رقم الاستئناف' :
+                                                            k === 'appeal_date' ? 'تاريخ الاستئناف' :
+                                                              k === 'appeal_court' ? 'محكمة الاستئناف' :
+                                                                k === 'notes' ? 'ملاحظات' :
+                                                                  k === 'report_image' ? 'صورة البلاغ' :
+                                                                    k === 'financial_value_image' ? 'إثبات القيمة' :
+                                                                      k === 'transfer_image' ? 'صورة الإحالة' :
+                                                                        k === 'court_file_image' ? 'ملف القضية' :
+                                                                          k === 'previous_judgment_image' ? 'الحكم السابق' :
+                                                                            k === 'image' ? 'الصورة المرفقة' :
+                                                                              k.replace(/_/g, ' ');
+
+                            return (
+                              <div key={k} className="tiny-detail">
+                                <span className="k">{label}:</span>
+                                {isFile ? (
+                                  <a href={`${BACKEND_URL}/storage/${v}`} target="_blank" rel="noreferrer" className="attachment-link-inline">
+                                    <i className="fa-solid fa-paperclip"></i> عرض المرفق
+                                  </a>
+                                ) : (
+                                  <span className="v">{v || '-'}</span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -896,7 +896,7 @@ export default function ViewClaim() {
 
         {/* Right Column: Sidebar Actions/Reports */}
         <div className="dashboard-side-col">
-          
+
           {/* Reports Card */}
           <section className="dashboard-card side-card">
             <div className="card-header">
