@@ -47,12 +47,13 @@ export default function ViewExpenseDetails() {
         }
       });
       if (!res.ok) throw new Error('Failed to fetch expense');
-      const data = await res.json();
-      if (data.items && typeof data.items === 'string') {
-        try { data.items = JSON.parse(data.items); }
-        catch { data.items = []; }
+      const json = await res.json();
+      const expenseData = json.data;
+      if (expenseData.items && typeof expenseData.items === 'string') {
+        try { expenseData.items = JSON.parse(expenseData.items); }
+        catch { expenseData.items = []; }
       }
-      setExpense(data);
+      setExpense(expenseData);
     } catch (error: any) {
       showToast(`حدث خطأ: ${error.message}`, 'error');
     } finally {
@@ -108,7 +109,7 @@ export default function ViewExpenseDetails() {
           </div>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
-              {expense.amount.toLocaleString()} {expense.currency === 'USD' ? '$' : 'د.ل'}
+              {(expense.amount || 0).toLocaleString()} {expense.currency === 'USD' ? '$' : 'د.ل'}
             </div>
             <div style={{ fontSize: '0.8rem', opacity: 0.9, marginTop: '4px' }}>{expense.status}</div>
           </div>
@@ -162,8 +163,8 @@ export default function ViewExpenseDetails() {
                         <td style={{ padding: '11px 12px', border: '1px solid var(--border)', color: 'var(--text)' }}>{item.item_number || '-'}</td>
                         <td style={{ padding: '11px 12px', border: '1px solid var(--border)', color: 'var(--text)' }}>{item.statement}</td>
                         <td style={{ padding: '11px 12px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text)' }}>{item.quantity}</td>
-                        <td style={{ padding: '11px 12px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text)' }}>{item.price.toLocaleString()}</td>
-                        <td style={{ padding: '11px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 'bold', color: 'var(--text)' }}>{item.value.toLocaleString()}</td>
+                        <td style={{ padding: '11px 12px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text)' }}>{(item.price || 0).toLocaleString()}</td>
+                        <td style={{ padding: '11px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 'bold', color: 'var(--text)' }}>{(item.value || 0).toLocaleString()}</td>
                       </tr>
                     )) : (
                       <tr>
@@ -176,7 +177,7 @@ export default function ViewExpenseDetails() {
                       <tr style={{ background: 'rgba(59,130,246,0.1)' }}>
                         <td colSpan={4} style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: 'var(--text)', border: '1px solid var(--border)' }}>الإجمالي:</td>
                         <td style={{ padding: '12px', textAlign: 'center', fontWeight: '900', color: '#3b82f6', fontSize: '1rem', border: '1px solid var(--border)' }}>
-                          {expense.amount.toLocaleString()} {expense.currency === 'USD' ? '$' : 'د.ل'}
+                          {(expense.amount || 0).toLocaleString()} {expense.currency === 'USD' ? '$' : 'د.ل'}
                         </td>
                       </tr>
                     </tfoot>
@@ -204,13 +205,23 @@ export default function ViewExpenseDetails() {
 
             {expense.receipt_image ? (
               <div style={{ textAlign: 'center' }}>
-                <a href={resolveImageUrl(expense.receipt_image)} target="_blank" rel="noreferrer">
-                  <img
-                    src={resolveImageUrl(expense.receipt_image)}
-                    alt="Receipt"
-                    style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', border: '3px solid var(--border)', cursor: 'zoom-in' }}
-                  />
-                </a>
+                {expense.receipt_image.toLowerCase().endsWith('.pdf') ? (
+                  <div style={{ width: '100%', height: '400px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+                    <iframe 
+                      src={resolveImageUrl(expense.receipt_image)} 
+                      style={{ width: '100%', height: '100%', border: 'none' }} 
+                      title="Receipt PDF"
+                    />
+                  </div>
+                ) : (
+                  <a href={resolveImageUrl(expense.receipt_image)} target="_blank" rel="noreferrer">
+                    <img
+                      src={resolveImageUrl(expense.receipt_image)}
+                      alt="Receipt"
+                      style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', border: '3px solid var(--border)', cursor: 'zoom-in' }}
+                    />
+                  </a>
+                )}
                 <button
                   onClick={() => window.open(resolveImageUrl(expense.receipt_image!), '_blank')}
                   style={{ marginTop: '14px', background: '#014cb1', color: '#fff', border: 'none', padding: '9px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
