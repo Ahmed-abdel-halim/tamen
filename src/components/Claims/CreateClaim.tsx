@@ -420,12 +420,17 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
 
       formData.append('reports_count', reports.length.toString());
       reports.forEach((report, index) => {
-        formData.append(`reports_${index}_report_type`, report.report_type);
-        formData.append(`reports_${index}_other_report_type`, report.other_report_type || '');
-        formData.append(`reports_${index}_report_date`, report.report_date);
-        formData.append(`reports_${index}_preparer_name`, report.preparer_name);
-        formData.append(`reports_${index}_report_number`, report.report_number);
-        if (report.file) formData.append(`reports_${index}_report_image`, report.file);
+        if (report.report_type) formData.append(`reports_${index}_report_type`, report.report_type);
+        if (report.other_report_type) formData.append(`reports_${index}_other_report_type`, report.other_report_type);
+        if (report.report_date) formData.append(`reports_${index}_report_date`, report.report_date);
+        if (report.preparer_name) formData.append(`reports_${index}_preparer_name`, report.preparer_name);
+        if (report.report_number) formData.append(`reports_${index}_report_number`, report.report_number);
+        if (report.file) {
+          formData.append(`reports_${index}_report_image`, report.file);
+        } else if (report.report_image) {
+          // Send existing image path to preserve it
+          formData.append(`reports_${index}_existing_image`, report.report_image);
+        }
       });
 
       const url = claim ? `${API_BASE_URL}/claims/${claim.id}?_method=PUT` : `${API_BASE_URL}/claims`;
