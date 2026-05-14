@@ -862,12 +862,14 @@ export default function EditResidentInsurance() {
           issue_fees: 10.000,
           supervision_fees: 1.050,
           total: total,
+          whatsapp_number: formData.main_passenger_whatsapp_number,
           passengers: [
             {
               is_main_passenger: true,
               name_ar: formData.main_passenger_name_ar,
               name_en: formData.main_passenger_name_en,
               phone: formData.main_passenger_phone || null,
+              whatsapp_number: formData.main_passenger_whatsapp_number,
               passport_number: formData.main_passenger_passport_number || null,
               address: formData.main_passenger_address || null,
               birth_date: formData.main_passenger_birth_date || null,

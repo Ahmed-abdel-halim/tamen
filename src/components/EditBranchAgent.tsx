@@ -128,10 +128,26 @@ export default function EditBranchAgent() {
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
   const [nationalIdPhoto, setNationalIdPhoto] = useState<File | null>(null);
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
+  const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
+  const [clearanceCertificate, setClearanceCertificate] = useState<File | null>(null);
+  const [nonBankruptcyCertificate, setNonBankruptcyCertificate] = useState<File | null>(null);
+  const [experienceCertificate, setExperienceCertificate] = useState<File | null>(null);
+  const [nonEmploymentCertificate, setNonEmploymentCertificate] = useState<File | null>(null);
+  const [tbHealthCertificate, setTbHealthCertificate] = useState<File | null>(null);
+  const [academicQualification, setAcademicQualification] = useState<File | null>(null);
+  const [activityLicense, setActivityLicense] = useState<File | null>(null);
   const [existingPersonalPhoto, setExistingPersonalPhoto] = useState<string | null>(null);
   const [existingIdentityPhoto, setExistingIdentityPhoto] = useState<string | null>(null);
   const [existingNationalIdPhoto, setExistingNationalIdPhoto] = useState<string | null>(null);
   const [existingContractPhoto, setExistingContractPhoto] = useState<string | null>(null);
+  const [existingPassportPhoto, setExistingPassportPhoto] = useState<string | null>(null);
+  const [existingClearanceCertificate, setExistingClearanceCertificate] = useState<string | null>(null);
+  const [existingNonBankruptcyCertificate, setExistingNonBankruptcyCertificate] = useState<string | null>(null);
+  const [existingExperienceCertificate, setExistingExperienceCertificate] = useState<string | null>(null);
+  const [existingNonEmploymentCertificate, setExistingNonEmploymentCertificate] = useState<string | null>(null);
+  const [existingTbHealthCertificate, setExistingTbHealthCertificate] = useState<string | null>(null);
+  const [existingAcademicQualification, setExistingAcademicQualification] = useState<string | null>(null);
+  const [existingActivityLicense, setExistingActivityLicense] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -140,6 +156,14 @@ export default function EditBranchAgent() {
   const identityPhotoRef = useRef<HTMLInputElement>(null);
   const nationalIdPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
+  const passportPhotoRef = useRef<HTMLInputElement>(null);
+  const clearanceCertificateRef = useRef<HTMLInputElement>(null);
+  const nonBankruptcyCertificateRef = useRef<HTMLInputElement>(null);
+  const experienceCertificateRef = useRef<HTMLInputElement>(null);
+  const nonEmploymentCertificateRef = useRef<HTMLInputElement>(null);
+  const tbHealthCertificateRef = useRef<HTMLInputElement>(null);
+  const academicQualificationRef = useRef<HTMLInputElement>(null);
+  const activityLicenseRef = useRef<HTMLInputElement>(null);
 
   // حساب مدة العقد تلقائياً
   const calculateContractDuration = (startDate: string, endDate: string) => {
@@ -248,6 +272,14 @@ export default function EditBranchAgent() {
       setExistingIdentityPhoto(data.identity_photo || null);
       setExistingNationalIdPhoto(data.national_id_photo || null);
       setExistingContractPhoto(data.contract_photo || null);
+      setExistingPassportPhoto(data.passport_photo || null);
+      setExistingClearanceCertificate(data.clearance_certificate || null);
+      setExistingNonBankruptcyCertificate(data.non_bankruptcy_certificate || null);
+      setExistingExperienceCertificate(data.experience_certificate || null);
+      setExistingNonEmploymentCertificate(data.non_employment_certificate || null);
+      setExistingTbHealthCertificate(data.tb_health_certificate || null);
+      setExistingAcademicQualification(data.academic_qualification || null);
+      setExistingActivityLicense(data.activity_license || null);
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء جلب البيانات', 'error');
     } finally {
@@ -360,6 +392,14 @@ export default function EditBranchAgent() {
       if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
       if (nationalIdPhoto) formDataToSend.append('national_id_photo', nationalIdPhoto);
       if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
+      if (passportPhoto) formDataToSend.append('passport_photo', passportPhoto);
+      if (clearanceCertificate) formDataToSend.append('clearance_certificate', clearanceCertificate);
+      if (nonBankruptcyCertificate) formDataToSend.append('non_bankruptcy_certificate', nonBankruptcyCertificate);
+      if (experienceCertificate) formDataToSend.append('experience_certificate', experienceCertificate);
+      if (nonEmploymentCertificate) formDataToSend.append('non_employment_certificate', nonEmploymentCertificate);
+      if (tbHealthCertificate) formDataToSend.append('tb_health_certificate', tbHealthCertificate);
+      if (academicQualification) formDataToSend.append('academic_qualification', academicQualification);
+      if (activityLicense) formDataToSend.append('activity_license', activityLicense);
       formDataToSend.append('username', formData.username);
       if (formData.password) formDataToSend.append('password', formData.password);
       if (formData.notes) formDataToSend.append('notes', formData.notes);
@@ -678,131 +718,70 @@ export default function EditBranchAgent() {
 
 
 
-            {/* رفع الصور */}
-            <div className="form-grid">
-              <div className="form-group">
-                <label>صورة شخصية</label>
-                {existingPersonalPhoto && !personalPhoto && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <img
-                      src={`${BACKEND_URL}/storage/${existingPersonalPhoto}`}
-                      alt="صورة شخصية حالية"
-                      style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
-                    />
-                  </div>
-                )}
-                <input
-                  ref={personalPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPersonalPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => personalPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {personalPhoto ? personalPhoto.name : 'اختر صورة شخصية جديدة'}
-                </button>
-              </div>
-              <div className="form-group">
-                <label>صورة إثبات الهوية</label>
-                {existingIdentityPhoto && !identityPhoto && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <img
-                      src={`${BACKEND_URL}/storage/${existingIdentityPhoto}`}
-                      alt="صورة إثبات الهوية حالية"
-                      style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
-                    />
-                  </div>
-                )}
-                <input
-                  ref={identityPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setIdentityPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => identityPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {identityPhoto ? identityPhoto.name : 'اختر صورة إثبات الهوية جديدة'}
-                </button>
-              </div>
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>صورة الرقم الوطني</label>
-                {existingNationalIdPhoto && !nationalIdPhoto && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <img
-                      src={`${BACKEND_URL}/storage/${existingNationalIdPhoto}`}
-                      alt="صورة الرقم الوطني الحالية"
-                      style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
-                    />
-                  </div>
-                )}
-                <input
-                  ref={nationalIdPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setNationalIdPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => nationalIdPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {nationalIdPhoto ? nationalIdPhoto.name : 'اختر صورة الرقم الوطني جديدة'}
-                </button>
-              </div>
-
-              <div className="form-group">
-                <label>صورة العقد (غير إجباري)</label>
-                {existingContractPhoto && !contractPhoto && (
-                  <div style={{ marginBottom: '10px' }}>
-                    {existingContractPhoto.endsWith('.pdf') ? (
-                      <a
-                        href={`${BACKEND_URL}/storage/${existingContractPhoto}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: 'inline-block', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
-                      >
-                        <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', color: '#ef4444' }}></i>
-                        <div>عرض PDF الحالي</div>
-                      </a>
-                    ) : (
-                      <img
-                        src={`${BACKEND_URL}/storage/${existingContractPhoto}`}
-                        alt="صورة العقد الحالية"
-                        style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
-                      />
+            {/* رفع المستندات والأوراق الثبوتية */}
+            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                <i className="fa-solid fa-paperclip" style={{ marginLeft: '8px', color: '#2563eb' }}></i>
+                المستندات والأوراق الثبوتية للوكيل
+              </h3>
+              <div className="form-grid">
+                {[
+                  { ref: personalPhotoRef, newFile: personalPhoto, setter: setPersonalPhoto, existing: existingPersonalPhoto, label: 'صورة شخصية' },
+                  { ref: identityPhotoRef, newFile: identityPhoto, setter: setIdentityPhoto, existing: existingIdentityPhoto, label: 'صورة إثبات الهوية' },
+                  { ref: nationalIdPhotoRef, newFile: nationalIdPhoto, setter: setNationalIdPhoto, existing: existingNationalIdPhoto, label: 'صورة الرقم الوطني' },
+                  { ref: contractPhotoRef, newFile: contractPhoto, setter: setContractPhoto, existing: existingContractPhoto, label: 'صورة العقد' },
+                  { ref: passportPhotoRef, newFile: passportPhoto, setter: setPassportPhoto, existing: existingPassportPhoto, label: 'جواز السفر' },
+                  { ref: clearanceCertificateRef, newFile: clearanceCertificate, setter: setClearanceCertificate, existing: existingClearanceCertificate, label: 'شهادة البراءة' },
+                  { ref: nonBankruptcyCertificateRef, newFile: nonBankruptcyCertificate, setter: setNonBankruptcyCertificate, existing: existingNonBankruptcyCertificate, label: 'شهادة عدم الإفلاس' },
+                  { ref: experienceCertificateRef, newFile: experienceCertificate, setter: setExperienceCertificate, existing: existingExperienceCertificate, label: 'شهادة خبرة' },
+                  { ref: nonEmploymentCertificateRef, newFile: nonEmploymentCertificate, setter: setNonEmploymentCertificate, existing: existingNonEmploymentCertificate, label: 'شهادة عدم عمل' },
+                  { ref: tbHealthCertificateRef, newFile: tbHealthCertificate, setter: setTbHealthCertificate, existing: existingTbHealthCertificate, label: 'شهادة صحية الدرن' },
+                  { ref: academicQualificationRef, newFile: academicQualification, setter: setAcademicQualification, existing: existingAcademicQualification, label: 'المؤهل العلمي' },
+                  { ref: activityLicenseRef, newFile: activityLicense, setter: setActivityLicense, existing: existingActivityLicense, label: 'إذن مزاولة نشاط' },
+                ].map((doc, idx) => (
+                  <div key={idx} className="form-group">
+                    <label>{doc.label}</label>
+                    {doc.existing && !doc.newFile && (
+                      <div style={{ marginBottom: '8px' }}>
+                        {doc.existing.match(/\.(pdf|doc|docx)$/i) ? (
+                          <a
+                            href={`${BACKEND_URL}/storage/${doc.existing}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', border: '1px solid #ddd', borderRadius: '8px', color: '#2563eb', fontSize: '0.8rem', textDecoration: 'none' }}
+                          >
+                            <i className="fa-solid fa-file" style={{ color: '#ef4444' }}></i>
+                            عرض الملف الحالي
+                          </a>
+                        ) : (
+                          <img
+                            src={`${BACKEND_URL}/storage/${doc.existing}`}
+                            alt={doc.label}
+                            style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
+                          />
+                        )}
+                      </div>
                     )}
+                    <input
+                      ref={doc.ref}
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={(e) => doc.setter(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => doc.ref.current?.click()}
+                      className={doc.newFile ? 'btn-submit' : 'btn-cancel'}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      <i className={`fa-solid ${doc.newFile ? 'fa-circle-check' : doc.existing ? 'fa-arrows-rotate' : 'fa-upload'}`}></i>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {doc.newFile ? doc.newFile.name : doc.existing ? `تغيير ${doc.label}` : `اختر ${doc.label}`}
+                      </span>
+                    </button>
                   </div>
-                )}
-                <input
-                  ref={contractPhotoRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setContractPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => contractPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {contractPhoto ? contractPhoto.name : 'اختر صورة العقد جديدة'}
-                </button>
+                ))}
               </div>
             </div>
 

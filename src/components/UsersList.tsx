@@ -236,6 +236,11 @@ export default function UsersList() {
     educational_certificate: null,
     health_certificate: null,
     contract_conditions_photo: null,
+    passport_photo: null,
+    clearance_certificate: null,
+    experience_certificate: null,
+    work_commencement_order: null,
+    resignation_letter: null,
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -665,6 +670,11 @@ export default function UsersList() {
       educational_certificate: null,
       health_certificate: null,
       contract_conditions_photo: null,
+      passport_photo: null,
+      clearance_certificate: null,
+      experience_certificate: null,
+      work_commencement_order: null,
+      resignation_letter: null,
     });
     if (showForm?.mode === 'edit' && showForm.user) {
       setFormData({
@@ -1805,17 +1815,23 @@ export default function UsersList() {
                     { key: 'national_id_photo', label: 'رقم القومي (صورة)', icon: 'fa-id-card' },
                     { key: 'identity_proof', label: 'إثبات هوية', icon: 'fa-passport' },
                     { key: 'employment_contract', label: 'عقد عمل', icon: 'fa-file-contract' },
+                    { key: 'passport_photo', label: 'جواز السفر', icon: 'fa-plane-departure' },
+                    { key: 'clearance_certificate', label: 'شهادة البراءة', icon: 'fa-certificate' },
+                    { key: 'experience_certificate', label: 'شهادة خبرة', icon: 'fa-award' },
+                    { key: 'work_commencement_order', label: 'أمر مباشرة العمل', icon: 'fa-file-signature' },
+                    { key: 'resignation_letter', label: 'استقالة / انهاء العقد', icon: 'fa-right-from-bracket' },
                     { key: 'certified_stamp', label: 'ختم معتمد', icon: 'fa-stamp' },
                     { key: 'approved_signature', label: 'توقيع معتمد', icon: 'fa-signature' },
                     { key: 'educational_certificate', label: 'شهادة تعليمية', icon: 'fa-graduation-cap' },
                     { key: 'health_certificate', label: 'شهادة صحية', icon: 'fa-file-medical' },
                     { key: 'contract_conditions_photo', label: 'شروط العقد (صورة)', icon: 'fa-file-lines' },
                   ].map((doc) => (
-                    <label key={doc.key} className={`perm-chk ${pendingFiles[doc.key] ? 'active' : ''}`} style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: '100px', justifyContent: 'center' }}>
+                    <label key={doc.key} className={`perm-chk ${pendingFiles[doc.key] ? 'active' : ''}`} style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: '100px', justifyContent: 'center', position: 'relative' }}>
                       <i className={`fa-solid ${doc.icon}`} style={{ fontSize: '1.5rem', marginBottom: '8px', color: pendingFiles[doc.key] ? '#2563eb' : '#94a3b8' }}></i>
                       <span style={{ fontSize: '0.75rem' }}>{doc.label}</span>
-                      <input type="file" style={{ display: 'none' }} onChange={(e) => setPendingFiles({ ...pendingFiles, [doc.key]: e.target.files?.[0] || null })} />
+                      <input type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={(e) => setPendingFiles({ ...pendingFiles, [doc.key]: e.target.files?.[0] || null })} />
                       {pendingFiles[doc.key] && <div style={{ position: 'absolute', top: '5px', left: '5px', color: '#10b981' }}><i className="fa-solid fa-circle-check"></i></div>}
+                      {pendingFiles[doc.key] && <div style={{ fontSize: '0.6rem', color: '#2563eb', marginTop: '2px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pendingFiles[doc.key]!.name}</div>}
                     </label>
                   ))}
                 </div>

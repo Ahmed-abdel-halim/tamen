@@ -516,6 +516,7 @@ export default function CreateResidentInsurance() {
           issue_fees: 10.000,
           supervision_fees: 1.050,
           total: total,
+          whatsapp_number: formData.main_passenger_whatsapp_number,
           passengers: [
             {
               is_main_passenger: true,

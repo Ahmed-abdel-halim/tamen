@@ -125,6 +125,14 @@ export default function CreateBranchAgent() {
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
   const [nationalIdPhoto, setNationalIdPhoto] = useState<File | null>(null);
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
+  const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
+  const [clearanceCertificate, setClearanceCertificate] = useState<File | null>(null);
+  const [nonBankruptcyCertificate, setNonBankruptcyCertificate] = useState<File | null>(null);
+  const [experienceCertificate, setExperienceCertificate] = useState<File | null>(null);
+  const [nonEmploymentCertificate, setNonEmploymentCertificate] = useState<File | null>(null);
+  const [tbHealthCertificate, setTbHealthCertificate] = useState<File | null>(null);
+  const [academicQualification, setAcademicQualification] = useState<File | null>(null);
+  const [activityLicense, setActivityLicense] = useState<File | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -133,6 +141,14 @@ export default function CreateBranchAgent() {
   const identityPhotoRef = useRef<HTMLInputElement>(null);
   const nationalIdPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
+  const passportPhotoRef = useRef<HTMLInputElement>(null);
+  const clearanceCertificateRef = useRef<HTMLInputElement>(null);
+  const nonBankruptcyCertificateRef = useRef<HTMLInputElement>(null);
+  const experienceCertificateRef = useRef<HTMLInputElement>(null);
+  const nonEmploymentCertificateRef = useRef<HTMLInputElement>(null);
+  const tbHealthCertificateRef = useRef<HTMLInputElement>(null);
+  const academicQualificationRef = useRef<HTMLInputElement>(null);
+  const activityLicenseRef = useRef<HTMLInputElement>(null);
 
   // حساب مدة العقد تلقائياً
   const calculateContractDuration = (startDate: string, endDate: string) => {
@@ -280,6 +296,14 @@ export default function CreateBranchAgent() {
       if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
       if (nationalIdPhoto) formDataToSend.append('national_id_photo', nationalIdPhoto);
       if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
+      if (passportPhoto) formDataToSend.append('passport_photo', passportPhoto);
+      if (clearanceCertificate) formDataToSend.append('clearance_certificate', clearanceCertificate);
+      if (nonBankruptcyCertificate) formDataToSend.append('non_bankruptcy_certificate', nonBankruptcyCertificate);
+      if (experienceCertificate) formDataToSend.append('experience_certificate', experienceCertificate);
+      if (nonEmploymentCertificate) formDataToSend.append('non_employment_certificate', nonEmploymentCertificate);
+      if (tbHealthCertificate) formDataToSend.append('tb_health_certificate', tbHealthCertificate);
+      if (academicQualification) formDataToSend.append('academic_qualification', academicQualification);
+      if (activityLicense) formDataToSend.append('activity_license', activityLicense);
       formDataToSend.append('username', formData.username);
       formDataToSend.append('password', formData.password);
       if (formData.notes) formDataToSend.append('notes', formData.notes);
@@ -564,83 +588,49 @@ export default function CreateBranchAgent() {
             </div>
 
 
-            {/* رفع الصور */}
-            <div className="form-grid">
-              <div className="form-group">
-                <label>صورة شخصية</label>
-                <input
-                  ref={personalPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPersonalPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => personalPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {personalPhoto ? personalPhoto.name : 'اختر صورة شخصية'}
-                </button>
-              </div>
-              <div className="form-group">
-                <label>صورة إثبات الهوية</label>
-                <input
-                  ref={identityPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setIdentityPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => identityPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {identityPhoto ? identityPhoto.name : 'اختر صورة إثبات الهوية'}
-                </button>
-              </div>
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>صورة الرقم الوطني</label>
-                <input
-                  ref={nationalIdPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setNationalIdPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => nationalIdPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {nationalIdPhoto ? nationalIdPhoto.name : 'اختر صورة الرقم الوطني'}
-                </button>
-              </div>
-
-              <div className="form-group">
-                <label>صورة العقد (غير إجباري)</label>
-                <input
-                  ref={contractPhotoRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setContractPhoto(e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => contractPhotoRef.current?.click()}
-                  className="btn-submit"
-                  style={{ width: '100%' }}
-                >
-                  {contractPhoto ? contractPhoto.name : 'اختر صورة العقد'}
-                </button>
+            {/* رفع المستندات والأوراق الثبوتية */}
+            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                <i className="fa-solid fa-paperclip" style={{ marginLeft: '8px', color: '#2563eb' }}></i>
+                المستندات والأوراق الثبوتية للوكيل
+              </h3>
+              <div className="form-grid">
+                {[
+                  { ref: personalPhotoRef, state: personalPhoto, setter: setPersonalPhoto, label: 'صورة شخصية', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: identityPhotoRef, state: identityPhoto, setter: setIdentityPhoto, label: 'صورة إثبات الهوية', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: nationalIdPhotoRef, state: nationalIdPhoto, setter: setNationalIdPhoto, label: 'صورة الرقم الوطني', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: contractPhotoRef, state: contractPhoto, setter: setContractPhoto, label: 'صورة العقد', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: passportPhotoRef, state: passportPhoto, setter: setPassportPhoto, label: 'جواز السفر', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: clearanceCertificateRef, state: clearanceCertificate, setter: setClearanceCertificate, label: 'شهادة البراءة', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: nonBankruptcyCertificateRef, state: nonBankruptcyCertificate, setter: setNonBankruptcyCertificate, label: 'شهادة عدم الإفلاس', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: experienceCertificateRef, state: experienceCertificate, setter: setExperienceCertificate, label: 'شهادة خبرة', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: nonEmploymentCertificateRef, state: nonEmploymentCertificate, setter: setNonEmploymentCertificate, label: 'شهادة عدم عمل', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: tbHealthCertificateRef, state: tbHealthCertificate, setter: setTbHealthCertificate, label: 'شهادة صحية الدرن', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: academicQualificationRef, state: academicQualification, setter: setAcademicQualification, label: 'المؤهل العلمي', accept: 'image/*,.pdf,.doc,.docx' },
+                  { ref: activityLicenseRef, state: activityLicense, setter: setActivityLicense, label: 'إذن مزاولة نشاط', accept: 'image/*,.pdf,.doc,.docx' },
+                ].map((doc, idx) => (
+                  <div key={idx} className="form-group">
+                    <label>{doc.label}</label>
+                    <input
+                      ref={doc.ref}
+                      type="file"
+                      accept={doc.accept}
+                      onChange={(e) => doc.setter(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => doc.ref.current?.click()}
+                      className={doc.state ? 'btn-submit' : 'btn-cancel'}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      <i className={`fa-solid ${doc.state ? 'fa-circle-check' : 'fa-upload'}`}></i>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {doc.state ? doc.state.name : `اختر ${doc.label}`}
+                      </span>
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
