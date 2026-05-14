@@ -43,8 +43,17 @@ type BranchAgent = {
   consumed_custodies?: Array<{ description: string; quantity: number }>;
   fixed_custodies?: Array<{ description: string; quantity: number }>;
   personal_photo?: string;
+  national_id_photo?: string;
   identity_photo?: string;
   contract_photo?: string;
+  passport_photo?: string;
+  clearance_certificate?: string;
+  non_bankruptcy_certificate?: string;
+  experience_certificate?: string;
+  non_employment_certificate?: string;
+  tb_health_certificate?: string;
+  academic_qualification?: string;
+  activity_license?: string;
   user?: { id: number; username: string; name: string };
   notes?: string;
   contract_conditions?: string;
@@ -459,8 +468,17 @@ export default function BranchAgentDetails() {
                   <h4 className="section-title-sm"><i className="fa-solid fa-images"></i> المستندات المرفقة</h4>
                   <div className="documents-grid-layout" style={{ marginTop: '20px' }}>
                     {branchAgent.personal_photo && <DocCard label="الصورة الشخصية" url={branchAgent.personal_photo} />}
+                    {branchAgent.national_id_photo && <DocCard label="رقم القومي (صورة)" url={branchAgent.national_id_photo} />}
                     {branchAgent.identity_photo && <DocCard label="إثبات الهوية" url={branchAgent.identity_photo} />}
                     {branchAgent.contract_photo && <DocCard label="صورة العقد" url={branchAgent.contract_photo} />}
+                    {branchAgent.passport_photo && <DocCard label="جواز السفر" url={branchAgent.passport_photo} />}
+                    {branchAgent.clearance_certificate && <DocCard label="شهادة البراءة" url={branchAgent.clearance_certificate} />}
+                    {branchAgent.non_bankruptcy_certificate && <DocCard label="شهادة عدم إفلاس" url={branchAgent.non_bankruptcy_certificate} />}
+                    {branchAgent.experience_certificate && <DocCard label="شهادة خبرة" url={branchAgent.experience_certificate} />}
+                    {branchAgent.non_employment_certificate && <DocCard label="شهادة عدم ارتباط بعمل" url={branchAgent.non_employment_certificate} />}
+                    {branchAgent.tb_health_certificate && <DocCard label="شهادة صحية (خلو من الدرن)" url={branchAgent.tb_health_certificate} />}
+                    {branchAgent.academic_qualification && <DocCard label="المؤهل العلمي" url={branchAgent.academic_qualification} />}
+                    {branchAgent.activity_license && <DocCard label="رخصة المزاولة" url={branchAgent.activity_license} />}
                   </div>
                 </div>
               </div>

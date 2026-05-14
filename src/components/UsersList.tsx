@@ -48,6 +48,7 @@ type User = {
   working_days_from?: string;
   working_days_to?: string;
   contract_type?: string;
+  contract_duration?: string;
   contract_conditions?: string;
   // Financial Data
   housing_allowance?: number;
@@ -202,6 +203,7 @@ export default function UsersList() {
     working_days_from: '',
     working_days_to: '',
     contract_type: '',
+    contract_duration: '',
     contract_conditions: '',
     housing_allowance: '' as string | number,
     transportation_allowance: '' as string | number,
@@ -711,6 +713,7 @@ export default function UsersList() {
         working_days_from: showForm.user.working_days_from || '',
         working_days_to: showForm.user.working_days_to || '',
         contract_type: showForm.user.contract_type || '',
+        contract_duration: showForm.user.contract_duration || '',
         contract_conditions: showForm.user.contract_conditions || '',
         housing_allowance: showForm.user.housing_allowance || '',
         transportation_allowance: showForm.user.transportation_allowance || '',
@@ -734,6 +737,8 @@ export default function UsersList() {
         eidc_api_key: showForm.user.eidc_api_key || '',
       });
     } else {
+      const nextId = total + 1;
+      const currentYear = new Date().getFullYear();
       setFormData({
         username: '',
         name: '',
@@ -756,8 +761,8 @@ export default function UsersList() {
         personal_phone: '',
         guardian_phone: '',
         address: '',
-        financial_number: '',
-        job_number: '',
+        financial_number: `MLI${nextId}`,
+        job_number: `${nextId}-${currentYear}`,
         bank_name: '',
         bank_branch: '',
         account_number: '',
@@ -767,6 +772,7 @@ export default function UsersList() {
         working_days_from: '',
         working_days_to: '',
         contract_type: '',
+        contract_duration: '',
         contract_conditions: '',
         housing_allowance: '',
         transportation_allowance: '',
@@ -792,6 +798,24 @@ export default function UsersList() {
     }
     setFormErrors({});
   }, [showForm]);
+
+  useEffect(() => {
+    if (formData.start_date && formData.contract_duration) {
+      const start = new Date(formData.start_date);
+      let months = 0;
+      switch (formData.contract_duration) {
+        case 'شهر': months = 1; break;
+        case 'شهرين': months = 2; break;
+        case 'تلات اشهر': months = 3; break;
+        case 'ست اشهر': months = 6; break;
+        case 'عام': months = 12; break;
+      }
+      if (months > 0) {
+        start.setMonth(start.getMonth() + months);
+        setFormData(prev => ({ ...prev, end_date: start.toISOString().split('T')[0] }));
+      }
+    }
+  }, [formData.start_date, formData.contract_duration]);
 
   // إلغاء الفلترة المحلية والاعتماد على بيانات الخادم مباشرة
   const paginatedUsers = users;
@@ -984,6 +1008,7 @@ export default function UsersList() {
         working_days_from: '',
         working_days_to: '',
         contract_type: '',
+        contract_duration: '',
         contract_conditions: '',
         housing_allowance: '',
         transportation_allowance: '',
@@ -1674,19 +1699,32 @@ export default function UsersList() {
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>الرقم الوظيفي</label>
-                    <input type="text" value={formData.job_number} onChange={(e) => setFormData({ ...formData, job_number: e.target.value })} placeholder="الرقم الوظيفي" />
+                    <input type="text" value={formData.job_number} onChange={(e) => setFormData({ ...formData, job_number: e.target.value })} placeholder="مثال 1-2026" />
                   </div>
                   <div className="form-group flex-1">
                     <label>الرقم المالي</label>
-                    <input type="text" value={formData.financial_number} onChange={(e) => setFormData({ ...formData, financial_number: e.target.value })} placeholder="الملف المالي" />
+                    <input type="text" value={formData.financial_number} onChange={(e) => setFormData({ ...formData, financial_number: e.target.value })} placeholder="مثال MLI20" />
                   </div>
                   <div className="form-group flex-1">
                     <label>المسمى الوظيفي</label>
                     <input type="text" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} placeholder="المسمى" />
                   </div>
+                </div>
+                <div className="form-row">
                   <div className="form-group flex-1">
                     <label>تاريخ المباشرة</label>
                     <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label>مدة العقد</label>
+                    <select value={formData.contract_duration} onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })}>
+                      <option value="">تحديد المدة</option>
+                      <option value="شهر">شهر</option>
+                      <option value="شهرين">شهرين</option>
+                      <option value="تلات اشهر">تلات اشهر</option>
+                      <option value="ست اشهر">ست اشهر</option>
+                      <option value="عام">عام</option>
+                    </select>
                   </div>
                   <div className="form-group flex-1">
                     <label>تاريخ انتهاء العمل</label>
@@ -1714,18 +1752,25 @@ export default function UsersList() {
                   </div>
                   <div className="form-group flex-1">
                     <label>نوع العقد</label>
-                    <select value={formData.contract_type} onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })}>
-                      <option value="">اختر النوع</option>
-                      <option value="دوام كامل">دوام كامل</option>
-                      <option value="دوام جزئي">دوام جزئي</option>
-                      <option value="عقد محدد">عقد محدد المدة</option>
-                      <option value="تدريب">تدريب</option>
-                    </select>
+                    <input 
+                      list="contract_types" 
+                      value={formData.contract_type} 
+                      onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })} 
+                      placeholder="اختر أو اكتب نوع العقد" 
+                    />
+                    <datalist id="contract_types">
+                      <option value="مجلس الاداره" />
+                      <option value="مدير عام" />
+                      <option value="مدير فرع" />
+                      <option value="موظف" />
+                      <option value="مندوب" />
+                      <option value="متدرب" />
+                    </datalist>
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>ملاحظات العقد</label>
-                  <textarea value={formData.contract_conditions} onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })} rows={1} placeholder="شروط أو ملاحظات خاصة..."></textarea>
+                  <label>شروط العمل الخاصة بالموظف المتفق عليها</label>
+                  <textarea value={formData.contract_conditions} onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })} rows={3} placeholder="شروط أو ملاحظات خاصة..."></textarea>
                 </div>
               </div>
 
@@ -1820,8 +1865,8 @@ export default function UsersList() {
                     { key: 'experience_certificate', label: 'شهادة خبرة', icon: 'fa-award' },
                     { key: 'work_commencement_order', label: 'أمر مباشرة العمل', icon: 'fa-file-signature' },
                     { key: 'resignation_letter', label: 'استقالة / انهاء العقد', icon: 'fa-right-from-bracket' },
-                    { key: 'certified_stamp', label: 'ختم معتمد', icon: 'fa-stamp' },
-                    { key: 'approved_signature', label: 'توقيع معتمد', icon: 'fa-signature' },
+                    { key: 'certified_stamp', label: 'توقيع شؤون الموظفين', icon: 'fa-stamp' },
+                    { key: 'approved_signature', label: 'توقيع الموظف', icon: 'fa-signature' },
                     { key: 'educational_certificate', label: 'شهادة تعليمية', icon: 'fa-graduation-cap' },
                     { key: 'health_certificate', label: 'شهادة صحية', icon: 'fa-file-medical' },
                     { key: 'contract_conditions_photo', label: 'شروط العقد (صورة)', icon: 'fa-file-lines' },

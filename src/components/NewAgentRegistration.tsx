@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 
@@ -48,19 +48,25 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
     requested_documents: [] as string[],
   });
 
-  const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
-  const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
-  const [nationalIdPhoto, setNationalIdPhoto] = useState<File | null>(null);
-  const [contractPhoto, setContractPhoto] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
+    personal_photo: null,
+    identity_photo: null,
+    national_id_photo: null,
+    contract_photo: null,
+    passport_photo: null,
+    clearance_certificate: null,
+    non_bankruptcy_certificate: null,
+    experience_certificate: null,
+    non_employment_certificate: null,
+    tb_health_certificate: null,
+    academic_qualification: null,
+    activity_license: null,
+  });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isCustomCity, setIsCustomCity] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const personalPhotoRef = useRef<HTMLInputElement>(null);
-  const identityPhotoRef = useRef<HTMLInputElement>(null);
-  const nationalIdPhotoRef = useRef<HTMLInputElement>(null);
-  const contractPhotoRef = useRef<HTMLInputElement>(null);
 
   const calculateContractDuration = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return '';
@@ -151,10 +157,9 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
       if (formData.national_id) formDataToSend.append('national_id', formData.national_id);
       if (formData.identity_number) formDataToSend.append('identity_number', formData.identity_number);
 
-      if (personalPhoto) formDataToSend.append('personal_photo', personalPhoto);
-      if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
-      if (nationalIdPhoto) formDataToSend.append('national_id_photo', nationalIdPhoto);
-      if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
+      Object.entries(pendingFiles).forEach(([key, file]) => {
+        if (file) formDataToSend.append(key, file);
+      });
       
       formDataToSend.append('username', formData.username);
       formDataToSend.append('password', formData.password);
@@ -330,37 +335,29 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
         {/* Uploads */}
         <div className="form-section" style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
             <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>المستندات المطلوبة</h3>
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div className="form-group">
-                    <label>صورة شخصية</label>
-                    <input ref={personalPhotoRef} type="file" accept="image/*" onChange={(e) => setPersonalPhoto(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                    <button type="button" onClick={() => personalPhotoRef.current?.click()} style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #94a3b8', borderRadius: '8px', cursor: 'pointer' }}>
-                    {personalPhoto ? personalPhoto.name : 'اختر صورة شخصية'}
-                    </button>
-                </div>
-                <div className="form-group">
-                    <label>صورة إثبات الهوية</label>
-                    <input ref={identityPhotoRef} type="file" accept="image/*" onChange={(e) => setIdentityPhoto(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                    <button type="button" onClick={() => identityPhotoRef.current?.click()} style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #94a3b8', borderRadius: '8px', cursor: 'pointer' }}>
-                    {identityPhoto ? identityPhoto.name : 'اختر صورة إثبات الهوية'}
-                    </button>
-                </div>
-            </div>
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '15px' }}>
-                <div className="form-group">
-                    <label>صورة الرقم الوطني</label>
-                    <input ref={nationalIdPhotoRef} type="file" accept="image/*" onChange={(e) => setNationalIdPhoto(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                    <button type="button" onClick={() => nationalIdPhotoRef.current?.click()} style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #94a3b8', borderRadius: '8px', cursor: 'pointer' }}>
-                    {nationalIdPhoto ? nationalIdPhoto.name : 'اختر صورة الرقم الوطني'}
-                    </button>
-                </div>
-                <div className="form-group">
-                    <label>صورة العقد المبدئي (إن وجد)</label>
-                    <input ref={contractPhotoRef} type="file" accept="image/*,.pdf" onChange={(e) => setContractPhoto(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                    <button type="button" onClick={() => contractPhotoRef.current?.click()} style={{ width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #94a3b8', borderRadius: '8px', cursor: 'pointer' }}>
-                    {contractPhoto ? contractPhoto.name : 'اختر صورة العقد'}
-                    </button>
-                </div>
+            <div className="permissions-grid-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' }}>
+              {[
+                { key: 'personal_photo', label: 'صورة شخصية', icon: 'fa-user-circle' },
+                { key: 'national_id_photo', label: 'صورة الرقم الوطني', icon: 'fa-id-card' },
+                { key: 'identity_photo', label: 'إثبات الهوية', icon: 'fa-passport' },
+                { key: 'contract_photo', label: 'صورة العقد المبدئي', icon: 'fa-file-contract' },
+                { key: 'passport_photo', label: 'جواز السفر', icon: 'fa-plane-departure' },
+                { key: 'clearance_certificate', label: 'شهادة البراءة', icon: 'fa-certificate' },
+                { key: 'non_bankruptcy_certificate', label: 'شهادة عدم إفلاس', icon: 'fa-file-invoice' },
+                { key: 'experience_certificate', label: 'شهادة خبرة', icon: 'fa-award' },
+                { key: 'non_employment_certificate', label: 'شهادة عدم ارتباط بعمل', icon: 'fa-file-circle-xmark' },
+                { key: 'tb_health_certificate', label: 'شهادة صحية (درن)', icon: 'fa-file-medical' },
+                { key: 'academic_qualification', label: 'المؤهل العلمي', icon: 'fa-graduation-cap' },
+                { key: 'activity_license', label: 'رخصة المزاولة', icon: 'fa-id-badge' },
+              ].map((doc) => (
+                <label key={doc.key} className={`perm-chk ${pendingFiles[doc.key] ? 'active' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: '100px', justifyContent: 'center', position: 'relative', border: '1px dashed #94a3b8', borderRadius: '8px', cursor: 'pointer', padding: '10px' }}>
+                  <i className={`fa-solid ${doc.icon}`} style={{ fontSize: '1.5rem', marginBottom: '8px', color: pendingFiles[doc.key] ? '#10b981' : '#94a3b8' }}></i>
+                  <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '600' }}>{doc.label}</span>
+                  <input type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={(e) => setPendingFiles({ ...pendingFiles, [doc.key]: e.target.files?.[0] || null })} />
+                  {pendingFiles[doc.key] && <div style={{ position: 'absolute', top: '5px', left: '5px', color: '#10b981' }}><i className="fa-solid fa-circle-check"></i></div>}
+                  {pendingFiles[doc.key] && <div style={{ fontSize: '0.6rem', color: '#10b981', marginTop: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pendingFiles[doc.key]!.name}</div>}
+                </label>
+              ))}
             </div>
         </div>
 
