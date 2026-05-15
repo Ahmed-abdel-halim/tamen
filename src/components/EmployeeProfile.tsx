@@ -76,6 +76,7 @@ type EmployeeRequest = {
   reason: string;
   created_at: string;
   admin_notes?: string;
+  details?: any;
 };
 
 function resolvePublicUrl(path: string | null | undefined): string {
@@ -119,7 +120,9 @@ export default function EmployeeProfile() {
   const [newRequest, setNewRequest] = useState({
     type: 'leave_daily' as any,
     with_salary: true,
+    with_salary: true,
     reason: '',
+    details: {} as any,
   });
 
   useEffect(() => {
@@ -195,7 +198,7 @@ export default function EmployeeProfile() {
       
       showToast("تم تقديم الطلب بنجاح", 'success');
       setShowRequestModal(false);
-      setNewRequest({ type: 'leave_daily', with_salary: true, reason: '' });
+      setNewRequest({ type: 'leave_daily', with_salary: true, reason: '', details: {} });
       fetchRequests();
     } catch (error: any) {
       showToast(error.message, 'error');
@@ -254,6 +257,183 @@ export default function EmployeeProfile() {
         </head>
         <body onload="window.print(); window.onafterprint = () => window.close();">
           <img src="${resolvePublicUrl(url)}" />
+        </body>
+      </html>
+    `);
+    w.document.close();
+  };
+
+  const printResignationLetter = (req: EmployeeRequest) => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    
+    const signatureImg = user?.approved_signature_url ? `<img src="${resolvePublicUrl(user.approved_signature_url)}" />` : '<p>لا يوجد توقيع</p>';
+    const stampImg = user?.certified_stamp_url ? `<img src="${resolvePublicUrl(user.certified_stamp_url)}" />` : '<p>لا يوجد ختم</p>';
+    const lastDay = req.details?.last_working_day ? new Date(req.details.last_working_day).toLocaleDateString('ar-LY') : 'غير محدد';
+    const requestDate = new Date(req.created_at).toLocaleDateString('ar-LY');
+
+    w.document.write(`
+      <html dir="rtl" lang="ar">
+        <head>
+          <title>نموذج استقالة - ${user?.name}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+          <style>
+            @page { size: A4 portrait; margin: 15mm; }
+            body { 
+              font-family: 'Cairo', sans-serif; 
+              margin: 0; 
+              padding: 0;
+              color: #1e293b; 
+              background: #fff;
+              font-size: 15px;
+            }
+            .page-container {
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 40px;
+              box-sizing: border-box;
+            }
+            .header { 
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #0f172a; 
+              padding-bottom: 15px; 
+              margin-bottom: 30px; 
+            }
+            .header .company-logo img {
+              height: 70px;
+              object-fit: contain;
+            }
+            .header .header-text {
+              text-align: left;
+            }
+            .header .header-text h1 { 
+              font-size: 22px; 
+              margin: 0 0 5px 0; 
+              color: #0f172a; 
+            }
+            .header .header-text p {
+              margin: 0;
+              font-size: 13px;
+              color: #475569;
+            }
+            .content { 
+              line-height: 1.8; 
+              margin-bottom: 20px; 
+            }
+            .meta-info {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 20px;
+              font-size: 15px;
+              font-weight: 600;
+            }
+            .content p { margin: 10px 0; font-size: 16px; text-align: justify; }
+            .reason-box {
+              padding: 15px; 
+              background: #f8fafc; 
+              border-radius: 8px; 
+              border: 1px solid #cbd5e1;
+              font-size: 15px;
+              line-height: 1.6;
+            }
+            .footer { 
+              display: flex; 
+              justify-content: space-between; 
+              margin-top: 40px; 
+              align-items: flex-end; 
+              page-break-inside: avoid;
+            }
+            .signature-box { 
+              text-align: center; 
+              width: 30%;
+            }
+            .signature-box h4 { 
+              margin-bottom: 10px; 
+              font-size: 15px; 
+              color: #0f172a; 
+              border-bottom: 1px solid #cbd5e1; 
+              padding-bottom: 5px; 
+            }
+            .signature-box img { 
+              max-width: 130px; 
+              max-height: 80px; 
+              object-fit: contain; 
+            }
+            .print-btn { 
+              position: fixed; 
+              top: 20px; 
+              left: 20px; 
+              padding: 10px 20px; 
+              background: #3b82f6; 
+              color: white; 
+              border: none; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-family: inherit; 
+              font-weight: bold;
+              box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+              z-index: 1000;
+            }
+            @media print { 
+              .print-btn { display: none; } 
+              body { background: none; }
+              .page-container { margin: 0; padding: 0; max-width: 100%; box-shadow: none; height: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          <button class="print-btn" onclick="window.print()">🖨️ طباعة النموذج</button>
+          <div class="page-container">
+            <div class="header">
+              <div class="company-logo">
+                <img src="${window.location.origin}/img/logo.png" alt="شعار الشركة" onerror="this.src='${window.location.origin}/img/official_logo.PNG'" />
+              </div>
+              <div class="header-text">
+                <h1>نموذج استقالة من العمل</h1>
+                <p>إدارة الموارد البشرية والشؤون الإدارية</p>
+              </div>
+            </div>
+            
+            <div class="meta-info">
+              <div><strong>التاريخ:</strong> ${requestDate}</div>
+              <div><strong>مقدم الطلب:</strong> ${user?.name || 'موظف'}</div>
+            </div>
+
+            <div class="content">
+              <p><strong>السيد / المدير العام المحترم،</strong></p>
+              <p><strong>السادة / إدارة الموارد البشرية،</strong></p>
+              <p>تحية طيبة وبعد،،،</p>
+              
+              <p>أتقدم لسيادتكم بطلب استقالتي من العمل في الشركة، وذلك انطلاقاً من رغبتي الشخصية وبناءً على الأسباب التالية:</p>
+              
+              <div class="reason-box">
+                ${req.reason || 'أسباب شخصية وخاصة'}
+              </div>
+              
+              <p>وأرجو التفضل بقبول استقالتي مع العلم بأن آخر يوم عمل مقترح لي هو <strong>(${lastDay})</strong>، متعهداً بإنهاء وتسليم ما بعهدتي من مهام وأعمال خلال فترة الإشعار المتفق عليها.</p>
+              
+              <p>ولا يسعني في هذا المقام إلا أن أتقدم بخالص الشكر والتقدير لشركتكم الموقرة ولجميع الزملاء على الدعم المستمر والخبرة القيمة التي اكتسبتها خلال فترة عملي معكم، متمنياً للشركة دوام التقدم والازدهار.</p>
+              
+              <p style="margin-top: 30px;"><strong>وتفضلوا بقبول فائق الاحترام والتقدير،،،</strong></p>
+            </div>
+
+            <div class="footer">
+              <div class="signature-box">
+                <h4>الختم الإلكتروني</h4>
+                ${stampImg}
+              </div>
+              <div class="signature-box">
+                <h4>التوقيع الإلكتروني</h4>
+                ${signatureImg}
+              </div>
+              <div class="signature-box">
+                <h4>توقيع مقدم الطلب</h4>
+                <p style="font-weight: bold; font-size: 18px; margin-top: 20px;">${user?.name}</p>
+              </div>
+            </div>
+          </div>
         </body>
       </html>
     `);
@@ -462,6 +642,11 @@ export default function EmployeeProfile() {
                           <p className="request-reason">{req.reason || 'بدون تفاصيل'}</p>
                           <div className="request-footer">
                             <div className="request-date">بتاريخ: {new Date(req.created_at).toLocaleString('ar-LY', { dateStyle: 'medium' })}</div>
+                            {req.type === 'termination' && (
+                              <button onClick={() => printResignationLetter(req)} className="btn-outline-sm" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
+                                <i className="fa-solid fa-print"></i> طباعة الاستقالة
+                              </button>
+                            )}
                             {isAdmin && req.status === 'pending' && (
                               <div className="request-actions">
                                 <button onClick={() => handleUpdateRequestStatus(req.id, 'approved')} className="btn-approve" title="موافقة"><i className="fa-solid fa-check"></i> موافقة</button>
@@ -502,6 +687,17 @@ export default function EmployeeProfile() {
                   <option value="other">أخرى</option>
                 </select>
               </div>
+              {newRequest.type === 'termination' && (
+                <div className="input-group">
+                  <label>آخر يوم عمل مقترح</label>
+                  <input 
+                    type="date" 
+                    value={newRequest.details?.last_working_day || ''} 
+                    onChange={(e) => setNewRequest({...newRequest, details: { ...newRequest.details, last_working_day: e.target.value }})}
+                    required
+                  />
+                </div>
+              )}
               <div className="checkbox-row">
                 <input type="checkbox" id="withSalary" checked={newRequest.with_salary} onChange={(e) => setNewRequest({...newRequest, with_salary: e.target.checked})} />
                 <label htmlFor="withSalary">هل الطلب مدفوع وبخصم من الرصيد؟</label>
