@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8000/api';
+import { API_BASE_URL as API_BASE } from '../config/api';
 
 type MatchStatus = 'exact' | 'fuzzy' | 'not_found';
 type RowAction   = 'link' | 'create_agent' | 'skip' | 'review';
