@@ -113,6 +113,7 @@ import RentalVouchersList from './components/RentalVouchersList';
 import RentalVoucherDetails from './components/RentalVoucherDetails';
 import CreateRentalVoucher from './components/CreateRentalVoucher';
 import EditRentalVoucher from './components/EditRentalVoucher';
+import ExcelImportPage from './components/ExcelImportPage';
 
 
 
@@ -288,6 +289,7 @@ const menuSections: SidebarSection[] = [
     title: 'القائمة الرئيسية',
     items: [
       { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
+      { label: 'استيراد Excel', icon: 'fa-solid fa-file-excel', to: '/excel-import' },
       {
         label: 'إدارة الوثائق', icon: 'fa-solid fa-folder-open', children: [
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
@@ -1035,6 +1037,7 @@ export default function App() {
                 />
                 <Routes>
                   <Route path="/company-documents" element={isAdmin ? <CompanyDocuments /> : <Navigate to="/dashboard" />} />
+                  <Route path="/excel-import" element={isAdmin ? <ExcelImportPage /> : <Navigate to="/dashboard" />} />
                   <Route path="/dashboard" element={<DashboardPanels />} />
 
                   <Route path="/profile" element={<ProfilePage />} />

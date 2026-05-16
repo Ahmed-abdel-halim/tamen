@@ -120,7 +120,6 @@ export default function EmployeeProfile() {
   const [newRequest, setNewRequest] = useState({
     type: 'leave_daily' as any,
     with_salary: true,
-    with_salary: true,
     reason: '',
     details: {} as any,
   });
