@@ -289,7 +289,7 @@ const menuSections: SidebarSection[] = [
     title: 'القائمة الرئيسية',
     items: [
       { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
-      { label: 'استيراد Excel', icon: 'fa-solid fa-file-excel', to: '/excel-import' },
+      // { label: 'استيراد Excel', icon: 'fa-solid fa-file-excel', to: '/excel-import' },
       {
         label: 'إدارة الوثائق', icon: 'fa-solid fa-folder-open', children: [
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
