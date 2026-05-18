@@ -586,6 +586,8 @@ textarea,
   .sidebar {
     position: fixed;
     left: -280px;
+    right: auto;
+    inset-inline-start: auto; /* Clear desktop logical positioning on mobile */
     /* Hide sidebar off-screen by default on mobile */
     transition: left 0.3s ease;
   }
@@ -614,13 +616,16 @@ textarea,
   display: flex;
   flex-direction: column;
   gap: 32px;
-  border-left: 1px solid var(--border);
+  border-inline-end: 1px solid var(--border);
   box-shadow: none !important;
-  position: sticky;
+  position: fixed;
   top: 0;
+  inset-inline-start: 0;
+  width: 280px;
   height: 100vh;
   overflow-y: auto;
   z-index: 1000;
+  box-sizing: border-box;
 }
 
 /* Styled Scrollbar for Sidebar */
