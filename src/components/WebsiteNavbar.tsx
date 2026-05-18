@@ -16,11 +16,30 @@ export default function WebsiteNavbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const applyLanguageToDocument = (lang: 'ar' | 'en') => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.style.direction = lang === 'ar' ? 'rtl' : 'ltr';
+  };
+
+  useEffect(() => {
+    applyLanguageToDocument(language);
+  }, [language]);
+
+  const toggleLanguage = () => {
+    const newLang = language === 'ar' ? 'en' : 'ar';
+    setLanguage(newLang);
+    localStorage.setItem('siteLang', newLang);
+    applyLanguageToDocument(newLang);
+    window.dispatchEvent(new CustomEvent('siteLanguageChanged', { detail: newLang }));
+  };
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -40,8 +59,10 @@ export default function WebsiteNavbar() {
           branches: 'الوكلاء والفروع',
           insurances: 'التأمينات',
           contact: 'اتصل بنا',
-          logoTitle: 'المدار الليبـي للتأمين',
+          logoTitle: 'المدار الليبي للتأمين',
           logoSubtitle: 'Al Madar Libyan Insurance',
+          login: 'تسجيل الدخول',
+          langToggle: 'English'
         }
       : {
           home: 'Home',
@@ -52,6 +73,8 @@ export default function WebsiteNavbar() {
           contact: 'Contact Us',
           logoTitle: 'Al Madar Libyan Insurance',
           logoSubtitle: 'Insurance Services',
+          login: 'Login',
+          langToggle: 'العربية'
         };
   }, [language]);
 
@@ -71,7 +94,7 @@ export default function WebsiteNavbar() {
             <div className="logo-icon">
               <img src={resolveImageUrl('/img/logo3.png')} alt="المدار الليبي للتأمين" />
             </div>
-            <div className="logo-text">
+            <div className="logo-text" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
               <span className="logo-title">{t.logoTitle}</span>
               <span className="logo-subtitle">{t.logoSubtitle}</span>
             </div>
@@ -141,6 +164,20 @@ export default function WebsiteNavbar() {
               </Link>
             </li>
           </ul>
+
+          <div className="navbar-actions">
+            <button 
+              className="navbar-lang-toggle"
+              onClick={toggleLanguage}
+              aria-label="Toggle language"
+            >
+              <i className="fas fa-globe"></i>
+              <span>{t.langToggle}</span>
+            </button>
+            <Link to="/login" className="navbar-login-btn">
+              {t.login}
+            </Link>
+          </div>
         </div>
       </nav>
       <WhatsAppFloating />

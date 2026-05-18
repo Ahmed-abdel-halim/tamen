@@ -153,7 +153,7 @@ export default function BranchesAgentsPage() {
   }, [filterType, searchQuery]);
 
   return (
-    <div className="website-layout">
+    <div className="website-layout new-design">
       <WebsiteTopBar />
       <WebsiteNavbar />
       

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import WebsiteNavbar from './WebsiteNavbar';
 import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
@@ -52,6 +53,7 @@ export default function AboutUs() {
           ],
           statsTitle: 'إحصائياتنا',
           stats: ['عميل راضٍ', 'وكيل وفروع', 'أنواع تأمين', 'خدمة عملاء'],
+          discoverMore: 'اكتشف خدماتنا',
         }
       : {
           heroTitle: 'About Us',
@@ -76,112 +78,179 @@ export default function AboutUs() {
           ],
           statsTitle: 'Our Stats',
           stats: ['Satisfied Clients', 'Agents & Branches', 'Insurance Types', 'Customer Support'],
+          discoverMore: 'Discover Our Services',
         };
   }, [language]);
 
+  const getValueIcon = (title: string) => {
+    const lower = title.toLowerCase();
+    if (lower.includes('شفاف') || lower.includes('transpa')) return 'far fa-eye';
+    if (lower.includes('جودة') || lower.includes('quality')) return 'far fa-star';
+    if (lower.includes('موثوق') || lower.includes('reliab')) return 'far fa-handshake';
+    return 'far fa-lightbulb';
+  };
+
   return (
-    <div className="website-layout">
+    <div className="website-layout new-design">
       <WebsiteTopBar />
       <WebsiteNavbar />
       
-      <section className="about-hero">
-        <div className="container">
-          <div className="about-hero-content">
-            <h1>{t.heroTitle}</h1>
-            <p className="about-hero-subtitle">{t.heroSubtitle}</p>
-            <p className="about-hero-description">
-              {t.heroDesc}
+      {/* Redesigned Premium Hero Section */}
+      <section className="about-hero-new">
+        <div className="about-hero-bg">
+          <img src="/new/قبل الفوتر 2.png" alt="Skyscraper Cityscape" />
+          <div className="about-hero-overlay"></div>
+        </div>
+        
+        <div className="about-hero-content-new">
+          <h2 className="about-hero-title-green">{t.heroTitle}</h2>
+          <h1 className="about-hero-title-white">{t.heroSubtitle}</h1>
+          <p className="about-hero-desc-new">
+            {language === 'ar' ? (
+              <>
+                شركة تأمين رائدة في ليبيا، نقدم حلولاً تأمينية
+                <br />
+                شاملة ومبتكرة لحماية مستقبلك وممتلكاتك
+              </>
+            ) : (
+              t.heroDesc
+            )}
+          </p>
+        </div>
+      </section>
+
+      {/* Floating Statistics Strip Section */}
+      <div className="about-stats-container">
+        <div className="about-stats-floating">
+          {/* Stat 1: Clients */}
+          <div className="about-stat-item-new">
+            <div className="about-stat-icon-box">
+              <i className="far fa-user"></i>
+            </div>
+            <div className="about-stat-content-new">
+              <span className="about-stat-number-new">+1000</span>
+              <span className="about-stat-label-new">{t.stats[0]}</span>
+            </div>
+          </div>
+
+          {/* Stat 2: Branches */}
+          <div className="about-stat-item-new">
+            <div className="about-stat-icon-box">
+              <i className="far fa-building"></i>
+            </div>
+            <div className="about-stat-content-new">
+              <span className="about-stat-number-new">+50</span>
+              <span className="about-stat-label-new">{t.stats[1]}</span>
+            </div>
+          </div>
+
+          {/* Stat 3: Insurance Types */}
+          <div className="about-stat-item-new">
+            <div className="about-stat-icon-box">
+              <i className="far fa-check-circle"></i>
+            </div>
+            <div className="about-stat-content-new">
+              <span className="about-stat-number-new">+8</span>
+              <span className="about-stat-label-new">{t.stats[2]}</span>
+            </div>
+          </div>
+
+          {/* Stat 4: Support */}
+          <div className="about-stat-item-new">
+            <div className="about-stat-icon-box">
+              <i className="far fa-clock"></i>
+            </div>
+            <div className="about-stat-content-new">
+              <span className="about-stat-number-new">24/7</span>
+              <span className="about-stat-label-new">{t.stats[3]}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="about-sections-wrapper">
+        {/* Redesigned Vision & Mission Info Blocks Section */}
+        <section className="info-blocks-section" style={{ padding: '40px 0 60px 0' }}>
+          <div className="container">
+            {/* Vision Row: Text Left, Image Right (Reverse in RTL) */}
+            <div className="info-block-row reverse">
+              <div className="info-block-text">
+                <h2 className="about-block-title">{t.vision}</h2>
+                <p style={{ color: '#014c93', fontSize: '20px', lineHeight: '1.8', marginBottom: '30px' }}>
+                  {t.visionDesc}
+                </p>
+                <Link to="/insurances" className="info-block-btn">
+                  {t.discoverMore}
+                  {language === 'ar' ? <i className="fas fa-arrow-left"></i> : <i className="fas fa-arrow-right"></i>}
+                </Link>
+              </div>
+              <div className="info-block-img">
+                <div className="img-wrapper" style={{ backgroundImage: 'url(/new/first.png)' }}></div>
+              </div>
+            </div>
+
+            {/* Mission Row: Image Left, Text Right (Standard in RTL) */}
+            <div className="info-block-row">
+              <div className="info-block-text">
+                <h2 className="about-block-title">{t.mission}</h2>
+                <p style={{ color: '#014c93', fontSize: '20px', lineHeight: '1.8', marginBottom: '30px' }}>
+                  {t.missionDesc}
+                </p>
+                <Link to="/insurances" className="info-block-btn">
+                  {t.discoverMore}
+                  {language === 'ar' ? <i className="fas fa-arrow-left"></i> : <i className="fas fa-arrow-right"></i>}
+                </Link>
+              </div>
+              <div className="info-block-img">
+                <div className="img-wrapper" style={{ backgroundImage: 'url(/new/secnd.png)' }}></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Redesigned Core Values Card Grid Section */}
+        <section className="about-values-section">
+          <div className="container">
+            <div className="about-values-card-container">
+              <h2 className="section-title-new text-white text-center" style={{ marginBottom: '50px' }}>
+                {t.valuesTitle}
+              </h2>
+              
+              <div className="about-values-grid">
+                {t.values.map((val, idx) => (
+                  <div className="about-value-card" key={`val-new-${idx}`}>
+                    <div className="about-value-icon-box">
+                      <i className={getValueIcon(val.title)}></i>
+                    </div>
+                    <h4>{val.title}</h4>
+                    <p>{val.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Redesigned Wide Bottom Belief Section */}
+        <section className="about-bottom-banner">
+          <div className="container">
+            <h2 className="about-bottom-title">{language === 'ar' ? 'نحن نؤمن بحماية ما يهمك' : 'We Believe in Protecting What Matters to You'}</h2>
+            <p className="about-bottom-desc">
+              {language === 'ar' ? (
+                <>
+                  منذ تأسيسنا، كنا ملتزمين بتقديم أفضل خدمات التأمين لعملائنا في جميع أنحاء
+                  <br />
+                  ليبيا. نحن نؤمن بأن كل عميل يستحق الحماية الكاملة والخدمة المتميزة، ولهذا
+                  <br />
+                  نعمل بلا كلل لتوفير حلول تأمينية تلبي احتياجاتك وتتجاوز توقعاتك.
+                </>
+              ) : (
+                t.introDesc
+              )}
             </p>
           </div>
-        </div>
-      </section>
-
-      <section className="about-intro">
-        <div className="container">
-          <div className="about-intro-content">
-            <h2>{t.introTitle}</h2>
-            <p>{t.introDesc}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="about-vision-mission">
-        <div className="container">
-          <div className="vision-mission-grid">
-            <div className="vision-mission-card">
-              <div className="card-icon-wrapper">
-                <i className="fas fa-eye"></i>
-              </div>
-              <h3>{t.vision}</h3>
-              <p>{t.visionDesc}</p>
-            </div>
-
-            <div className="vision-mission-card">
-              <div className="card-icon-wrapper">
-                <i className="fas fa-bullseye"></i>
-              </div>
-              <h3>{t.mission}</h3>
-              <p>{t.missionDesc}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="about-values">
-        <div className="container">
-          <h2 className="section-title">{t.valuesTitle}</h2>
-          <div className="values-grid">
-            {t.values.map((val, idx) => {
-              const icons = ['fas fa-shield-alt', 'fas fa-award', 'fas fa-handshake', 'fas fa-lightbulb'];
-              return (
-                <div className="value-card" key={`value-${idx}`}>
-                  <div className="value-icon">
-                    <i className={icons[idx] || 'fas fa-check'}></i>
-                  </div>
-                  <h4>{val.title}</h4>
-                  <p>{val.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="about-stats">
-        <div className="container">
-          <h2 className="section-title">{t.statsTitle}</h2>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-users"></i>
-              </div>
-              <div className="stat-number">1000+</div>
-              <div className="stat-label">{t.stats[0]}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-building"></i>
-              </div>
-              <div className="stat-number">50+</div>
-              <div className="stat-label">{t.stats[1]}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-shield-alt"></i>
-              </div>
-              <div className="stat-number">10+</div>
-              <div className="stat-label">{t.stats[2]}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-clock"></i>
-              </div>
-              <div className="stat-number">24/7</div>
-              <div className="stat-label">{t.stats[3]}</div>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <Footer />
     </div>

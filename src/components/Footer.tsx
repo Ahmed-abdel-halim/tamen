@@ -86,33 +86,6 @@ export default function Footer() {
   return (
     <footer className="website-footer">
       <div className="container">
-        {/* Newsletter Section */}
-        <div className="footer-newsletter">
-          <div className="newsletter-content">
-            <h3>{t.newsletterTitle}</h3>
-            <p>{t.newsletterDesc}</p>
-            <form 
-              className="newsletter-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                // Handle newsletter subscription
-                alert(language === 'ar' ? 'شكراً لك! تم الاشتراك في النشرة الإخبارية بنجاح.' : 'Thank you! You have subscribed successfully.');
-              }}
-            >
-              <input 
-                type="email" 
-                placeholder={t.emailPlaceholder} 
-                className="newsletter-input"
-                required
-              />
-              <button type="submit" className="newsletter-button">
-                <span>{t.subscribe}</span>
-                <i className="fas fa-arrow-left"></i>
-              </button>
-            </form>
-          </div>
-        </div>
-
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">

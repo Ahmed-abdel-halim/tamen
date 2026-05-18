@@ -330,11 +330,14 @@ body {
 /* Hide global scrollbar */
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  display: none;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 html,
 body {
+  overflow-x: hidden;
   -ms-overflow-style: none;
   /* IE and Edge */
   scrollbar-width: none;
@@ -9506,6 +9509,7 @@ tbody tr:last-child td {
 
 /* Website Top Bar */
 .website-top-bar {
+  display: none !important;
   position: fixed;
   top: 0;
   left: 0;
@@ -12368,7 +12372,7 @@ tbody tr:last-child td {
 
 /* Footer */
 .website-footer {
-  background: linear-gradient(180deg, #014cb1 0%, #003173 30%, #003173 60%, #003173 100%);
+  background: #003173; /* Deep premium navy blue matching Why Us section */
   color: white;
   padding: 6rem 0 2rem;
   margin-top: auto;
@@ -13656,4 +13660,1324 @@ tbody tr:last-child td {
 
 .relative {
   position: relative !important;
+}
+
+/* ============================================
+   New Website Design Styles
+   ============================================ */
+
+.website-layout.new-design {
+  background: #ffffff;
+  font-family: 'Cairo', sans-serif;
+}
+
+/* Floating Navbar */
+.website-navbar {
+  position: absolute !important;
+  top: 30px !important;
+  left: 50% !important;
+  right: auto !important;
+  margin: 0 !important;
+  transform: translateX(-50%) !important;
+  width: 90% !important;
+  max-width: 1400px !important;
+  background: #ffffff !important;
+  border-radius: 60px !important;
+  padding: 8px 30px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.website-navbar.scrolled {
+  position: fixed !important;
+  top: 15px !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15) !important;
+}
+
+.navbar-container {
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.navbar-logo .logo-icon {
+  height: 55px !important;
+}
+
+.navbar-logo .logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.navbar-logo .logo-title {
+  color: #014cb1 !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.navbar-logo .logo-subtitle {
+  color: #014cb1 !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.7px !important;
+  margin-top: -4px !important;
+  text-align: justify;
+  text-align-last: justify;
+  width: 100%;
+}
+
+.navbar-menu {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navbar-menu li a {
+  color: #014cb1 !important;
+  font-weight: 700 !important;
+  font-size: 17px !important;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.navbar-menu li a:hover,
+.navbar-menu li a.active {
+  color: #139625 !important;
+  background: transparent !important;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.navbar-lang-toggle {
+  background: transparent;
+  border: none;
+  color: #014cb1;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 16px;
+  padding: 0;
+}
+
+.navbar-lang-toggle i {
+  font-size: 18px;
+}
+
+.navbar-login-btn {
+  background: #139625;
+  color: #ffffff !important;
+  padding: 10px 35px;
+  border-radius: 40px;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.navbar-login-btn:hover {
+  background: #0f7a1e;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(19, 150, 37, 0.3);
+}
+
+/* Hero Banner New */
+.hero-banner-new {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 700px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 100px;
+  /* Space for navbar */
+  clip-path: ellipse(150% 100% at 50% 0%); /* Creates a beautiful, premium curved arch bottom */
+  
+  /* Fix Chrome clip-path subpixel border anti-aliasing artifact */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: clip-path;
+}
+
+.hero-bg-container {
+  position: absolute;
+  top: -10px;
+  left: -2%;
+  right: -2%;
+  bottom: -10px;
+  width: 104%;
+  height: calc(100% + 20px);
+  z-index: 1;
+}
+
+.hero-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+[dir="rtl"] .hero-overlay {
+  background: linear-gradient(to left,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.75) 25%,
+      rgba(255, 255, 255, 0.25) 45%,
+      rgba(255, 255, 255, 0) 55%);
+}
+
+[dir="ltr"] .hero-overlay {
+  background: linear-gradient(to right,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.75) 25%,
+      rgba(255, 255, 255, 0.25) 45%,
+      rgba(255, 255, 255, 0) 55%);
+}
+
+.hero-content-container {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  justify-content: flex-start;
+  /* Because it's RTL, flex-start means right side */
+}
+
+.hero-text-content {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  max-width: 800px;
+  backdrop-filter: none;
+  text-align: right;
+}
+
+.hero-main-title {
+  color: #003173;
+  font-size: 55px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  line-height: 1.1;
+  text-shadow: 2px 2px 10px rgba(255, 255, 255, 0.5);
+  /* subtle glow to ensure readability */
+  white-space: nowrap;
+}
+
+.hero-main-subtitle {
+  color: #003173;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.6;
+  margin-bottom: 40px;
+  text-shadow: 1px 1px 5px rgba(255, 255, 255, 0.5);
+  max-width: 650px;
+  width: 100%;
+}
+
+[dir="rtl"] .hero-main-subtitle {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+[dir="ltr"] .hero-main-subtitle {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+@media (max-width: 768px) {
+  .hero-br {
+    display: none;
+  }
+}
+
+
+.hero-join-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #139625;
+  color: #fff !important;
+  padding: 15px 40px;
+  border-radius: 40px;
+  font-weight: 800;
+  font-size: 22px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(19, 150, 37, 0.3);
+}
+
+.hero-join-btn:hover {
+  background: #0f7a1e;
+  transform: translateY(-3px);
+  box-shadow: 0 15px 25px rgba(19, 150, 37, 0.4);
+}
+
+/* Why Us Section */
+.why-us-section {
+  padding: 60px 0 80px 0; /* Beautiful spacious separation from the banner */
+  background: #f8fafc; /* Unified soft gray background */
+  position: relative;
+}
+
+.why-us-card {
+  background: #003173; /* Deep navy blue background */
+  border-radius: 30px; /* Curved corners */
+  padding: 60px 40px; /* Spacing inside the card */
+  box-shadow: 0 20px 50px rgba(0, 49, 115, 0.15); /* Sleek shadow */
+  max-width: 100%; /* Align with the global container width */
+  margin: 0 auto; /* Completely removes overlap and centers it naturally */
+  position: relative;
+  z-index: 10;
+}
+
+.section-header-centered {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.section-title-new {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 0px; /* Reduced margin to bring subtitle closer */
+}
+
+.section-subtitle-new {
+  font-size: 18px;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-top: -1px; /* Pull it up closer to the title */
+}
+
+.features-grid-new {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card-new {
+  background: #ffffff; /* White card */
+  border-radius: 20px; /* Curved corners */
+  padding: 35px 25px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.feature-card-new:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon-new {
+  width: 60px;
+  height: 60px;
+  background: #003173; /* Solid dark blue background */
+  color: #ffffff; /* White icon */
+  border-radius: 12px; /* Smooth rounded corners */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin: 0 auto 20px;
+  transition: all 0.3s ease;
+}
+
+.feature-card-new:hover .feature-icon-new {
+  background: #33b349; /* Turns green on card hover for dynamic interaction! */
+}
+
+.feature-card-new h3 {
+  color: #003173; /* Navy blue title */
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.feature-card-new p {
+  color: #003173; /* Navy blue color */
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  opacity: 0.85;
+}
+
+/* Clients Section */
+.clients-section {
+  padding: 60px 0;
+  background: #f8fafc; /* Unified soft gray background */
+}
+
+.clients-title,
+.about-title {
+  color: #139625;
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 0px; /* Reduced to bring subtitle closer */
+}
+
+.clients-subtitle,
+.about-subtitle {
+  color: #014cb1;
+  font-weight: 600;
+  margin-top: -1px; /* Pull it up closer to the title */
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+/* Elegant blue lines on both sides of the titles stretching to container margins */
+.services-section-new .section-title-new,
+.clients-title,
+.about-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 25px;
+  width: 100%;
+}
+
+.services-section-new .section-title-new::before,
+.services-section-new .section-title-new::after,
+.clients-title::before,
+.clients-title::after,
+.about-title::before,
+.about-title::after {
+  content: "";
+  height: 2px;
+  background-color: #014cb1; /* Premium brand blue */
+  flex: 1; /* Automatically stretches to align with container borders */
+  display: inline-block;
+  border-radius: 2px;
+}
+
+.clients-logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 60px;
+  background: #eff6ff; /* Ice-blue background matching the first picture */
+  padding: 25px 30px;
+  margin-top: 30px;
+  margin-bottom: 10px;
+  
+  /* Constrain within the container width */
+  width: 100%;
+  border-radius: 20px;
+  box-sizing: border-box;
+}
+
+/* Premium Dynamic Infinite Slider Styles */
+.clients-slider-container {
+  overflow: hidden;
+  background: #eff6ff; /* Ice-blue background matching the design */
+  padding: 25px 30px;
+  margin-top: 30px;
+  margin-bottom: 10px;
+  direction: ltr !important; /* Force LTR context to ensure consistent direction and flawless infinite scroll */
+  
+  /* Constrain within the container width */
+  width: 100%;
+  border-radius: 20px; /* Sleek rounded border matching global design system */
+  box-sizing: border-box;
+}
+
+.clients-slider-track {
+  display: flex;
+  width: max-content;
+  gap: 60px;
+  /* Scroll infinitely. */
+  animation: scroll-slider 30s linear infinite;
+}
+
+.clients-slider-track:hover {
+  animation-play-state: paused;
+}
+
+.client-logo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0.85;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.client-logo-item:hover {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+
+.client-logo-img {
+  width: 90px;
+  height: 90px;
+  border-radius: 12px; /* Smooth rounded square corners */
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease;
+}
+
+.client-logo-item:hover .client-logo-img {
+  transform: scale(1.15) rotate(3deg);
+  border-color: #139625;
+}
+
+.client-logo-name {
+  color: #014cb1;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.3px;
+  transition: color 0.3s ease;
+  white-space: nowrap;
+}
+
+.client-logo-item:hover .client-logo-name {
+  color: #139625;
+}
+
+@keyframes scroll-slider {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    /* Translate leftwards by half the duplicated width */
+    transform: translateX(calc(-50% - 30px));
+  }
+}
+
+/* Info Blocks Section */
+.info-blocks-section {
+  padding: 80px 0 30px 0; /* Reduced bottom padding */
+  background: #f8fafc; /* Unified soft gray background */
+}
+
+.info-block-row {
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  margin-bottom: 80px;
+}
+
+.info-block-row:last-child {
+  margin-bottom: 0; /* Removes bottom margin on the last row */
+}
+
+.info-block-row.reverse {
+  flex-direction: row-reverse;
+}
+
+.info-block-text {
+  flex: 1;
+}
+
+.info-block-text p {
+  color: #014c93; /* Darker navy blue color */
+  font-size: 26px;
+  font-weight: 500; /* Sleeker, slightly thinner font weight */
+  line-height: 1.8;
+  margin-bottom: 30px;
+}
+
+.info-block-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  color: #139625 !important;
+  border: 2px solid #139625;
+  padding: 10px 25px;
+  border-radius: 30px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.info-block-btn:hover {
+  background: #139625;
+  color: #fff !important;
+}
+
+.info-block-img {
+  flex: 1;
+}
+
+.info-block-img .img-wrapper {
+  width: 100%;
+  padding-bottom: 60%;
+  background-size: cover;
+  background-position: center;
+  border-radius: 20px;
+}
+
+/* Services Section New */
+.services-section-new {
+  padding: 30px 0 80px 0; /* Reduced top padding to bring sections together */
+  background: #f8fafc;
+}
+
+.green-text {
+  color: #139625 !important;
+}
+
+.blue-text {
+  color: #014cb1 !important;
+}
+
+.services-grid-new {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Exactly 4 cards per row on desktop! */
+  gap: 20px;
+  max-width: 100%; /* Expands to full container width for perfect alignment with the sections above */
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .services-grid-new {
+    grid-template-columns: repeat(2, 1fr); /* 2 cards per row on tablets */
+  }
+}
+
+@media (max-width: 576px) {
+  .services-grid-new {
+    grid-template-columns: 1fr; /* 1 card per row on mobile */
+  }
+}
+
+.service-card-new {
+  background-size: cover;
+  background-position: center;
+  border-radius: 15px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #fff;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 260px;
+}
+
+.service-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 49, 115, 0.82); /* Heavy, rich 82% brand navy blue overlay to match the first picture */
+  transition: background 0.3s ease;
+  z-index: 1;
+}
+
+.service-card-new:hover .service-card-overlay {
+  background: rgba(19, 150, 37, 0.82); /* Heavy, rich 82% brand green overlay on hover/touch */
+}
+
+.service-card-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.service-icon-new {
+  width: 60px;
+  height: 60px;
+  background: #139625; /* Solid brand green background */
+  color: #ffffff; /* White icon inside green box */
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 20px;
+  transition: all 0.3s ease;
+}
+
+.service-card-new:hover .service-icon-new {
+  background: #ffffff; /* Icon box turns white on hover */
+  color: #139625; /* Icon itself turns brand green */
+}
+
+.service-card-new h3 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: #ffffff;
+  text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.85); /* Ensures absolute legibility over background images */
+}
+
+.service-card-new p {
+  font-size: 14px;
+  opacity: 0.95;
+  line-height: 1.6;
+  margin: 0;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.85); /* Ensures absolute legibility over background images */
+}
+
+/* Help Banner Section */
+.help-banner-section {
+  padding: 60px 0;
+  background: #f8fafc;
+}
+
+.help-banner-card {
+  display: flex;
+  min-height: 440px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+}
+
+.help-banner-img {
+  flex: 1 1 50%;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Physically push the Figma white border outside the rounded container boundaries to crop it 100% on desktop only */
+@media (min-width: 769px) {
+  [dir="rtl"] .help-banner-img {
+    margin-left: -20px;
+    width: calc(50% + 20px);
+  }
+
+  [dir="ltr"] .help-banner-img {
+    margin-right: -20px;
+    width: calc(50% + 20px);
+  }
+}
+
+.help-banner-text {
+  flex: 1 1 50%;
+  width: 50%;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.help-banner-text::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 49, 115, 0.78); /* Heavy, rich brand navy blue overlay to match top cards */
+  z-index: -1;
+}
+
+.help-banner-text h2 {
+  font-size: 36px;
+  font-weight: 900;
+  margin-bottom: 15px;
+}
+
+.help-banner-text p {
+  font-size: 18px;
+  opacity: 0.95;
+  margin-bottom: 30px;
+}
+
+.contact-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.contact-info-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.contact-info-item i {
+  color: #33b349;
+  font-size: 24px;
+}
+
+@media (max-width: 768px) {
+  .hero-text-content {
+    padding: 20px;
+    margin-top: 50px;
+  }
+
+  .hero-main-title {
+    font-size: 28px;
+  }
+
+  .why-us-card {
+    padding: 40px 20px !important;
+  }
+
+  .clients-title,
+  .about-title,
+  .section-title-new {
+    font-size: 24px !important;
+  }
+
+  .clients-subtitle,
+  .about-subtitle,
+  .section-subtitle-new {
+    font-size: 14px !important;
+    margin-bottom: 25px !important;
+  }
+
+  .info-blocks-section {
+    padding: 40px 15px 20px 15px !important;
+  }
+
+  .info-block-row,
+  .info-block-row.reverse {
+    flex-direction: column-reverse;
+    gap: 30px !important;
+    margin-bottom: 50px !important;
+  }
+
+  .info-block-text,
+  .info-block-img {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .info-block-text p {
+    font-size: 18px !important;
+    line-height: 1.6 !important;
+    margin-bottom: 20px !important;
+    text-align: center;
+  }
+
+  .info-block-btn {
+    display: flex !important;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .help-banner-card {
+    flex-direction: column;
+  }
+
+  .help-banner-img {
+    min-height: 300px;
+    width: 100%;
+    flex: none;
+  }
+
+  .help-banner-text {
+    width: 100%;
+    flex: none;
+    padding: 45px 25px;
+  }
+
+  .help-banner-text h2 {
+    font-size: 28px !important;
+    text-align: center;
+  }
+
+  .help-banner-text p {
+    font-size: 15px !important;
+    text-align: center;
+  }
+
+  .website-navbar {
+    width: 95% !important;
+    padding: 10px !important;
+  }
+
+  .navbar-actions {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: block !important;
+  }
+}
+
+/* Force global page wrapper and body background to unified premium soft gray */
+body,
+.website-layout.new-design {
+  background-color: #f8fafc !important;
+}
+
+/* ==========================================
+   PREMIUM ABOUT US PAGE STYLES (MATCHING IMAGES)
+   ========================================== */
+
+/* 1. About Hero Section */
+.about-hero-new {
+  position: relative;
+  height: 560px; /* Increased height to match Figma for spacious vertical room */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible; /* To allow floating stats to overflow beautifully */
+  z-index: 5;
+  clip-path: ellipse(150% 100% at 50% 0%);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: clip-path;
+}
+
+.about-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.about-hero-bg img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+}
+
+.about-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 49, 115, 0.86) !important; /* Extremely deep dark blue overlay to ensure superb readability */
+  z-index: 2; /* Sits directly on top of the image */
+}
+
+.about-hero-content-new {
+  position: relative;
+  z-index: 10; /* Completely above the background overlay and image */
+  text-align: center;
+  color: #ffffff;
+  padding: 0 20px;
+  margin-top: 80px !important; /* Pushed down even further to give magnificent headroom! */
+}
+
+.about-hero-title-green {
+  font-size: 38px !important; /* Increased font-size to stand out beautifully */
+  font-weight: 700 !important; /* Reduced font weight for a sleeker look */
+  color: #10b981 !important; /* Figma bright emerald/green color */
+  margin-bottom: 15px !important;
+  letter-spacing: 1px;
+}
+
+.about-hero-title-white {
+  font-size: 46px !important; /* Reduced font-size to be sleeker and more elegant */
+  font-weight: 700 !important; /* Reduced font weight from 900 to 700 for a much cleaner, elegant look! */
+  color: #ffffff !important;
+  margin-bottom: 25px !important;
+  line-height: 1.2 !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.about-hero-desc-new {
+  font-size: 22px !important;
+  font-weight: 500 !important; /* Reduced font weight to 500 for excellent clean readability! */
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 2. Floating Statistics Strip */
+.about-stats-container {
+  max-width: 1440px !important; /* Stretch horizontally to match Navbar and screen width beautifully! */
+  width: 55% !important; /* Ensure perfect responsiveness and edge margins */
+  margin: 0 auto;
+  padding: 0 15px;
+  position: relative;
+  z-index: 20;
+}
+
+.about-stats-floating {
+  background: #139625; /* Sleek Brand Green */
+  border-radius: 16px !important; /* Reduced border radius as requested for a sharper, cleaner look matching Figma */
+  padding: 16px 40px; /* Reduced vertical padding for a sleeker, thinner profile matching Figma */
+  box-shadow: 0 20px 40px rgba(0, 49, 115, 0.16);
+  margin-top: -65px; /* Floats exactly half-way over the bottom curved arc */
+  display: flex;
+  justify-content: space-around; /* Distribute items beautifully across the extended width */
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.about-stat-item-new {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.about-stat-content-new {
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  align-items: flex-start; /* Align number and label perfectly on their right edge under RTL */
+  text-align: right; /* Explicitly align mixed English/Arabic text to the right for clean alignment */
+}
+
+.about-stat-number-new {
+  font-size: 22px !important; /* Reduced font size to match Figma exactly */
+  font-weight: 700 !important; /* Sleeker font weight */
+  line-height: 1.1;
+}
+
+.about-stat-label-new {
+  font-size: 13px !important; /* Reduced font size to match Figma exactly */
+  font-weight: 500 !important; /* Sleeker, lighter font weight */
+  opacity: 0.95;
+  white-space: nowrap; /* Prevent wrapping, keeping it on a single line! */
+}
+
+.about-stat-icon-box {
+  width: 44px; /* Reduced size for a more delicate and balanced proportions */
+  height: 44px;
+  background: #003173; /* Rich Navy Blue */
+  border-radius: 10px; /* Sleeker border radius */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 18px; /* Balanced icon size */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* 3. Vision & Mission spacing */
+.about-sections-wrapper {
+  background: #f8fafc;
+  padding-top: 100px; /* Creates breathing room for floating stats */
+}
+
+/* 4. Core Values Section */
+.about-values-section {
+  padding: 60px 0 80px 0;
+  background: #f8fafc;
+}
+
+.about-values-card-container {
+  background: #003173; /* Deep navy blue background matching home card */
+  border-radius: 30px;
+  padding: 60px 40px;
+  box-shadow: 0 20px 50px rgba(0, 49, 115, 0.15);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.about-values-card-container h2.section-title-new {
+  display: block !important;
+  color: #ffffff !important;
+  font-size: 36px !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  margin-bottom: 50px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.about-values-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.about-value-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 35px 25px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.about-value-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+}
+
+.about-value-icon-box {
+  width: 54px;
+  height: 54px;
+  background: #139625 !important; /* Rich Green box matching Figma */
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff !important; /* Pure White icon */
+  font-size: 22px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.about-value-card:hover .about-value-icon-box {
+  background: #003173 !important; /* Interactive rich navy color on hover */
+  color: #ffffff !important;
+}
+
+.about-value-card h4 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #003173; /* Brand navy blue */
+  margin-bottom: 12px;
+}
+
+.about-value-card p {
+  font-size: 14px;
+  color: #014c93 !important; /* Elegant brand blue instead of gray for superb legibility and beauty */
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 5. Bottom Banner */
+.about-bottom-banner {
+  padding: 80px 0 100px 0;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.about-bottom-title {
+  font-size: 30px !important; /* Slightly reduced for premium, elegant scale */
+  font-weight: 800 !important; /* Cleaner and sleeker thickness */
+  color: #003173;
+  margin-bottom: 25px;
+}
+
+.about-bottom-desc {
+  font-size: 20px;
+  color: #014c93;
+  font-weight: 500;
+  max-width: 950px;
+  margin: 0 auto;
+  line-height: 1.8;
+  padding: 0 20px;
+}
+
+/* 6. Responsive Queries for About Us Page */
+@media (max-width: 768px) {
+  .about-hero-new {
+    height: 480px !important; /* Increased height to 480px to provide plenty of breathing room on mobile */
+  }
+
+  .about-hero-content-new {
+    margin-top: 50px !important; /* Adjusted margin-top on mobile to prevent overlapping with floating stats! */
+  }
+
+  .about-hero-title-green {
+    font-size: 26px !important; /* Balanced font size for mobile screens */
+    margin-bottom: 10px !important;
+  }
+
+  .about-hero-title-white {
+    font-size: 32px !important; /* Scaled down white title for perfect mobile alignment */
+    margin-bottom: 15px !important;
+  }
+
+  .about-hero-desc-new {
+    font-size: 14px !important; /* Clean readable description size for mobile devices */
+    line-height: 1.6 !important;
+  }
+
+  .about-stats-container {
+    width: 92% !important; /* Make stats container stretch wider on mobile screens instead of 55%! */
+  }
+
+  .about-stats-floating {
+    margin-top: -50px;
+    padding: 16px 24px !important; /* Balanced vertical and wide horizontal padding */
+    border-radius: 16px !important; /* Keep the elegant sharper border radius on mobile too */
+    display: flex !important; /* Use flexbox to force items into a single neat row! */
+    flex-direction: row !important;
+    justify-content: space-around !important; /* Distribute items beautifully along the row */
+    align-items: center !important;
+    flex-wrap: nowrap !important; /* Strictly prevent wrapping, forcing a single elegant row! */
+    gap: 12px !important;
+  }
+
+  .about-stat-item-new {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    justify-content: center !important;
+  }
+
+  .about-stat-number-new {
+    font-size: 18px !important; /* Perfectly scaled number size for a single row */
+    font-weight: 700 !important;
+    line-height: 1.1 !important;
+  }
+
+  .about-stat-label-new {
+    font-size: 11px !important; /* Perfectly scaled label size for a single row */
+    white-space: nowrap !important;
+  }
+
+  .about-stat-icon-box {
+    width: 34px !important; /* Compact icon container */
+    height: 34px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  .about-sections-wrapper {
+    padding-top: 80px !important; /* Reduced since single-row stats take up much less height! */
+  }
+
+  .about-values-card-container {
+    padding: 40px 20px !important;
+  }
+
+  .about-values-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* Force exactly 2 cards per row on tablets and mobile! */
+    gap: 20px !important;
+  }
+}
+
+/* Extra compact size scaling for ultra-narrow mobile screens (under 480px) to guarantee a flawless single-row layout! */
+@media (max-width: 480px) {
+  .about-stats-floating {
+    padding: 12px 10px !important; /* Thinner padding for small viewports */
+    gap: 6px !important;
+  }
+
+  .about-stat-item-new {
+    gap: 5px !important;
+  }
+
+  .about-stat-number-new {
+    font-size: 13px !important; /* Slightly smaller text sizes */
+  }
+
+  .about-stat-label-new {
+    font-size: 9px !important;
+  }
+
+  .about-stat-icon-box {
+    width: 24px !important; /* Very neat and compact icon size */
+    height: 24px !important;
+    font-size: 9px !important;
+    border-radius: 6px !important;
+  }
+
+  .about-sections-wrapper {
+    padding-top: 65px !important;
+  }
+
+  .about-values-card-container {
+    padding: 30px 15px !important;
+  }
+
+  .about-values-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* Force exactly 2 cards per row on narrow screens! */
+    gap: 15px !important;
+  }
+
+  .about-bottom-title {
+    font-size: 26px !important;
+  }
+
+  .about-bottom-desc {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+  }
+}
+
+.about-block-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: #003173;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .about-block-title {
+    font-size: 24px !important;
+    text-align: center;
+  }
+}
+
+/* secondary pages hero padding adjustments under new design */
+.website-layout.new-design .insurances-hero,
+.website-layout.new-design .management-hero,
+.website-layout.new-design .contact-hero,
+.website-layout.new-design .branches-hero {
+  padding-top: 150px !important;
+}
+
+@media (max-width: 768px) {
+  .website-layout.new-design .insurances-hero,
+  .website-layout.new-design .management-hero,
+  .website-layout.new-design .contact-hero,
+  .website-layout.new-design .branches-hero {
+    padding-top: 110px !important;
+  }
 }

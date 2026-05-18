@@ -22,6 +22,25 @@ export default function InsurancesPage() {
     return () => window.removeEventListener('siteLanguageChanged', handler as EventListener);
   }, []);
 
+  // Smooth scroll to hash on load or hash change
+  useEffect(() => {
+    const scrollToHash = () => {
+      if (window.location.hash) {
+        const id = window.location.hash.slice(1);
+        const element = document.getElementById(id);
+        if (element) {
+          setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+        }
+      }
+    };
+
+    scrollToHash();
+    window.addEventListener('hashchange', scrollToHash);
+    return () => window.removeEventListener('hashchange', scrollToHash);
+  }, []);
+
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -277,7 +296,7 @@ This document covers death and permanent disability or partial permanent or temp
   const insuranceTypes = t.insuranceTypes;
 
   return (
-    <div className="website-layout">
+    <div className="website-layout new-design">
       <WebsiteTopBar />
       <WebsiteNavbar />
       
@@ -304,7 +323,7 @@ This document covers death and permanent disability or partial permanent or temp
 
           <div className="insurances-grid">
             {insuranceTypes.map((insurance) => (
-              <div key={insurance.id} className="insurance-card">
+              <div key={insurance.id} id={`insurance-${insurance.id}`} className="insurance-card">
                 <div className="insurance-card-inner">
                   <div className="insurance-icon-wrapper">
                     <div className="insurance-icon" style={{ backgroundColor: insurance.color + '20', color: insurance.color }}>
