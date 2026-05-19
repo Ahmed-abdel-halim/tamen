@@ -114,6 +114,7 @@ import RentalVoucherDetails from './components/RentalVoucherDetails';
 import CreateRentalVoucher from './components/CreateRentalVoucher';
 import EditRentalVoucher from './components/EditRentalVoucher';
 import ExcelImportPage from './components/ExcelImportPage';
+import TreasuryAndBanksPage from './components/TreasuryAndBanksPage';
 
 
 
@@ -348,6 +349,7 @@ const menuSections: SidebarSection[] = [
   {
     title: 'الشؤون المالية',
     items: [
+      { label: 'المصارف والخزنة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' },
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -461,6 +463,7 @@ const createMenuSections = (
       { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
       { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
       { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
+      { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
     ],
     'الشؤون الفنية': [
       { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
@@ -510,6 +513,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
     '/reports/rental-vouchers',
+    '/reports/treasury-banks',
   ];
   const adminOrder: string[] = [
     '/branches-agents', 
@@ -742,7 +746,8 @@ const createMenuSections = (
       i.to === '/reports/financial-statistics' ||
       i.to === '/reports/outstanding-debts' ||
       i.to === '/reports/employee-salaries' ||
-      i.to === '/reports/financial-archive'
+      i.to === '/reports/financial-archive' ||
+      i.to === '/reports/treasury-banks'
     );
 
     // العناصر التي لا تنتمي لأي مجموعة (ستظهر كعناصر أساسية في الشؤون المالية)
@@ -1126,6 +1131,8 @@ export default function App() {
                   <Route path="/cargo-insurance" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CargoInsuranceList /></AuthorizedRoute>} />
                   <Route path="/cargo-insurance/create" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CreateCargoInsurance /></AuthorizedRoute>} />
 
+                  {/* المصارف والخزنة */}
+                  <Route path="/reports/treasury-banks" element={<TreasuryAndBanksPage />} />
                   {/* تقارير */}
                   <Route path="/reports/financial-statistics" element={<FinancialStatistics />} />
                   <Route path="/reports/revenue" element={<RevenueManagement />} />

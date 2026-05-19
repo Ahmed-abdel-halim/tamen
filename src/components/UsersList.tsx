@@ -803,13 +803,15 @@ export default function UsersList() {
     if (formData.start_date && formData.contract_duration) {
       const start = new Date(formData.start_date);
       let months = 0;
-      switch (formData.contract_duration) {
-        case 'شهر': months = 1; break;
-        case 'شهرين': months = 2; break;
-        case 'تلات اشهر': months = 3; break;
-        case 'ست اشهر': months = 6; break;
-        case 'عام': months = 12; break;
-      }
+      const duration = formData.contract_duration.trim();
+      if (duration === 'شهر') months = 1;
+      else if (duration === 'شهرين') months = 2;
+      else if (duration === 'تلات اشهر' || duration === 'ثلاثة أشهر' || duration === '3 أشهر') months = 3;
+      else if (duration === 'ست اشهر' || duration === 'ستة أشهر' || duration === '6 أشهر') months = 6;
+      else if (duration === 'عام' || duration === 'سنة' || duration === 'سنة واحدة' || duration === '12 شهر') months = 12;
+      else if (duration === 'سنتين' || duration === '2 سنة' || duration === '24 شهر') months = 24;
+      else if (duration === 'تلات سنوات' || duration === 'ثلاث سنوات' || duration === '3 سنوات') months = 36;
+      
       if (months > 0) {
         start.setMonth(start.getMonth() + months);
         setFormData(prev => ({ ...prev, end_date: start.toISOString().split('T')[0] }));
@@ -1698,12 +1700,26 @@ export default function UsersList() {
                 <h4 className="section-title-premium"><i className="fa-solid fa-briefcase"></i> البيانات الوظيفية والمصرفية</h4>
                 <div className="form-row">
                   <div className="form-group flex-1">
-                    <label>الرقم الوظيفي</label>
-                    <input type="text" value={formData.job_number} onChange={(e) => setFormData({ ...formData, job_number: e.target.value })} placeholder="مثال 1-2026" />
+                    <label>الرقم الوظيفي (تلقائي)</label>
+                    <input 
+                      type="text" 
+                      value={formData.job_number} 
+                      onChange={(e) => setFormData({ ...formData, job_number: e.target.value })} 
+                      placeholder="تلقائي" 
+                      readOnly
+                      style={{ backgroundColor: '#e2e8f0', cursor: 'not-allowed', color: '#475569', fontWeight: 'bold' }}
+                    />
                   </div>
                   <div className="form-group flex-1">
-                    <label>الرقم المالي</label>
-                    <input type="text" value={formData.financial_number} onChange={(e) => setFormData({ ...formData, financial_number: e.target.value })} placeholder="مثال MLI20" />
+                    <label>الرقم المالي (تلقائي)</label>
+                    <input 
+                      type="text" 
+                      value={formData.financial_number} 
+                      onChange={(e) => setFormData({ ...formData, financial_number: e.target.value })} 
+                      placeholder="تلقائي" 
+                      readOnly
+                      style={{ backgroundColor: '#e2e8f0', cursor: 'not-allowed', color: '#475569', fontWeight: 'bold' }}
+                    />
                   </div>
                   <div className="form-group flex-1">
                     <label>المسمى الوظيفي</label>
@@ -1717,14 +1733,22 @@ export default function UsersList() {
                   </div>
                   <div className="form-group flex-1">
                     <label>مدة العقد</label>
-                    <select value={formData.contract_duration} onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })}>
-                      <option value="">تحديد المدة</option>
-                      <option value="شهر">شهر</option>
-                      <option value="شهرين">شهرين</option>
-                      <option value="تلات اشهر">تلات اشهر</option>
-                      <option value="ست اشهر">ست اشهر</option>
-                      <option value="عام">عام</option>
-                    </select>
+                    <input 
+                      list="contract_durations" 
+                      value={formData.contract_duration} 
+                      onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })} 
+                      placeholder="اختر أو اكتب مدة العقد" 
+                    />
+                    <datalist id="contract_durations">
+                      <option value="شهر" />
+                      <option value="شهرين" />
+                      <option value="تلات اشهر" />
+                      <option value="ست اشهر" />
+                      <option value="عام" />
+                      <option value="سنتين" />
+                      <option value="تلات سنوات" />
+                      <option value="غير محدد" />
+                    </datalist>
                   </div>
                   <div className="form-group flex-1">
                     <label>تاريخ انتهاء العمل</label>

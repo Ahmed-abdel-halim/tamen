@@ -73,6 +73,8 @@ export default function InventoryManagement() {
   const [custodyFilterRecipientType, setCustodyFilterRecipientType] = useState<'all' | 'agent' | 'employee'>('all');
   const [custodyFilterRecipient, setCustodyFilterRecipient] = useState('');
   const [custodyFilterItem, setCustodyFilterItem] = useState('');
+  const [custodyFilterFromDate, setCustodyFilterFromDate] = useState('');
+  const [custodyFilterToDate, setCustodyFilterToDate] = useState('');
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [movementsLoading, setMovementsLoading] = useState(false);
   const [movementFilterType, setMovementFilterType] = useState<'all' | 'issue' | 'return' | 'loss' | 'damage'>('all');
@@ -598,6 +600,13 @@ export default function InventoryManagement() {
     const itemQuery = custodyFilterItem.trim().toLowerCase();
     const recipientQuery = custodyFilterRecipient.trim().toLowerCase();
 
+    // Date filtering based on assigned_at
+    const rowDate = main.assigned_at ? new Date(main.assigned_at.replace(' ', 'T')) : null;
+    const fromDate = custodyFilterFromDate ? new Date(`${custodyFilterFromDate}T00:00:00`) : null;
+    const toDate = custodyFilterToDate ? new Date(`${custodyFilterToDate}T23:59:59`) : null;
+    const matchesFrom = !fromDate || (rowDate && rowDate >= fromDate);
+    const matchesTo = !toDate || (rowDate && rowDate <= toDate);
+
     const matchesType = custodyFilterType === 'all' || groupType === custodyFilterType;
     const matchesStatus =
       custodyFilterStatus === 'all' ||
@@ -606,7 +615,7 @@ export default function InventoryManagement() {
     const matchesRecipientType = custodyFilterRecipientType === 'all' || main.recipient_type === custodyFilterRecipientType;
     const matchesRecipient = !recipientQuery || recipientName.includes(recipientQuery);
     const matchesItem = !itemQuery || itemNames.includes(itemQuery);
-    return matchesType && matchesStatus && matchesRecipientType && matchesRecipient && matchesItem;
+    return matchesType && matchesStatus && matchesRecipientType && matchesRecipient && matchesItem && matchesFrom && matchesTo;
   });
   const filteredMovements = movements.filter((row) => {
     const rowDate = row.created_at ? new Date(row.created_at) : null;
@@ -780,6 +789,269 @@ export default function InventoryManagement() {
     }
   };
 
+  const handlePrintFixedCustodyReport = () => {
+    const fixedCustodies = filteredCustodyGroups
+      .flat()
+      .filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
+
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const printWindow = window.open('', '', 'width=1100,height=850');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة (Pop-ups) للطباعة', 'error');
+      return;
+    }
+
+    let grandTotalValue = 0;
+    let grandTotalNet = 0;
+
+    const rows = fixedCustodies.map((c, index) => {
+      const price = getItemPrice(c.item) || 0;
+      const totalValue = price * c.quantity;
+      const depreciationRate = 0.20; 
+      const netValue = totalValue * (1 - depreciationRate);
+
+      grandTotalValue += totalValue;
+      grandTotalNet += netValue;
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td style="text-align: right;">${c.item.name}</td>
+          <td>مخزون ثابت</td>
+          <td>${getCategoryName(c.item.category)}</td>
+          <td>${c.item.unit || 'قطعة'}</td>
+          <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
+          <td>${c.quantity}</td>
+          <td>${price.toLocaleString()} د.ل</td>
+          <td>${totalValue.toLocaleString()} د.ل</td>
+          <td>20%</td>
+          <td>${netValue.toLocaleString()} د.ل</td>
+          <td style="text-align: right;">${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const fromDateStr = custodyFilterFromDate ? custodyFilterFromDate.replace(/-/g, '/') : '2024/01/01';
+    const toDateStr = custodyFilterToDate ? custodyFilterToDate.replace(/-/g, '/') : new Date().toLocaleDateString('zh-Hans-CN');
+
+    const html = `
+      <html dir="rtl">
+      <head>
+        <title>تقرير العهد والأصول الثابتة</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 10px; color: #000; background-color: #fff; }
+          .report-container { border: 2px solid #000; padding: 15px; margin: 0 auto; max-width: 1100px; box-sizing: border-box; }
+          .report-header { display: flex; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; justify-content: space-between; align-items: stretch; }
+          .header-side { width: 25%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 13px; font-weight: bold; box-sizing: border-box; }
+          .header-center { width: 48%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; }
+          .header-center h1 { margin: 0; font-size: 24px; font-weight: 800; color: #000; }
+          .header-center h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: 700; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 5px; }
+          .logo-box { display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
+          .logo-box img { max-height: 55px; width: auto; margin-bottom: 4px; }
+          table.report-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; margin-top: 10px; }
+          table.report-table th, table.report-table td { border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }
+          table.report-table th { background-color: #e2e8f0; font-weight: 700; }
+          .total-row { background-color: #f1f5f9; font-weight: bold !important; }
+          .footer-note { font-size: 11px; color: #475569; text-align: left; margin-top: 10px; }
+          @media print { 
+            @page { margin: 10mm; size: A4 landscape; } 
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+            .report-container { border: 2px solid #000 !important; }
+          }
+        </style>
+      </head>
+      <body onload="setTimeout(() => window.print(), 500);">
+        <div class="report-container">
+          <div class="report-header">
+            <div class="header-side" style="text-align: right;">
+              <div style="display: flex; justify-content: space-between;">
+                <span>من:</span>
+                <span>${fromDateStr}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                <span>الى:</span>
+                <span>${toDateStr}</span>
+              </div>
+            </div>
+            
+            <div class="header-center">
+              <h1>المدار الليبي للتأمين</h1>
+              <h2>تقرير العهد الثابتة</h2>
+            </div>
+            
+            <div class="header-side logo-box">
+              <img src="/img/logo.png" alt="لوجو" onerror="this.src='https://placehold.co/120x50?text=Logo'" />
+              <div style="font-size: 11px; margin-top: 4px;">اسم المستخدم: ${currentUser.name || currentUser.username || 'مرام'}</div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 3%;">م</th>
+                <th style="width: 20%; text-align: right;">اسم الصنف</th>
+                <th style="width: 10%;">نوع المخزون</th>
+                <th style="width: 10%;">التصنيف</th>
+                <th style="width: 7%;">وحدة القياس</th>
+                <th style="width: 7%;">حالة الصنف</th>
+                <th style="width: 5%;">الكمية</th>
+                <th style="width: 8%;">السعر</th>
+                <th style="width: 9%;">القيمة</th>
+                <th style="width: 6%;">نسبة الاستهلاك</th>
+                <th style="width: 9%;">السعر الاجمالي</th>
+                <th style="width: 16%; text-align: right;">ملاحظات</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows : `<tr><td colspan="12" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد ثابتة مطابقة للفلاتر المحددة</td></tr>`}
+              <tr class="total-row">
+                <td colspan="8" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td>${grandTotalValue.toLocaleString()} د.ل</td>
+                <td>—</td>
+                <td>${grandTotalNet.toLocaleString()} د.ل</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer-note">تاريخ الاستخراج: ${new Date().toLocaleString('ar-LY')}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handlePrintConsumedCustodyReport = () => {
+    const consumableCustodies = filteredCustodyGroups
+      .flat()
+      .filter(c => (c.item.inventory_type ?? 'consumable') === 'consumable' && c.status === 'active');
+
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const printWindow = window.open('', '', 'width=1100,height=850');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة (Pop-ups) للطباعة', 'error');
+      return;
+    }
+
+    let grandTotalValue = 0;
+
+    const rows = consumableCustodies.map((c, index) => {
+      const price = getItemPrice(c.item) || 0;
+      const totalValue = price * c.quantity;
+
+      grandTotalValue += totalValue;
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td style="text-align: right;">${c.item.name}</td>
+          <td>مخزون مستهلك</td>
+          <td>${getCategoryName(c.item.category)}</td>
+          <td>${c.item.unit || 'قطعة'}</td>
+          <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
+          <td>${c.quantity}</td>
+          <td>${price.toLocaleString()} د.ل</td>
+          <td>${totalValue.toLocaleString()} د.ل</td>
+          <td>${totalValue.toLocaleString()} د.ل</td>
+          <td style="text-align: right;">${c.notes || '-'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const fromDateStr = custodyFilterFromDate ? custodyFilterFromDate.replace(/-/g, '/') : '2024/01/01';
+    const toDateStr = custodyFilterToDate ? custodyFilterToDate.replace(/-/g, '/') : new Date().toLocaleDateString('zh-Hans-CN');
+
+    const html = `
+      <html dir="rtl">
+      <head>
+        <title>تقرير العهد المستهلكة</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 10px; color: #000; background-color: #fff; }
+          .report-container { border: 2px solid #000; padding: 15px; margin: 0 auto; max-width: 1100px; box-sizing: border-box; }
+          .report-header { display: flex; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; justify-content: space-between; align-items: stretch; }
+          .header-side { width: 25%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 13px; font-weight: bold; box-sizing: border-box; }
+          .header-center { width: 48%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; }
+          .header-center h1 { margin: 0; font-size: 24px; font-weight: 800; color: #000; }
+          .header-center h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: 700; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 5px; }
+          .logo-box { display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
+          .logo-box img { max-height: 55px; width: auto; margin-bottom: 4px; }
+          table.report-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; margin-top: 10px; }
+          table.report-table th, table.report-table td { border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }
+          table.report-table th { background-color: #e2e8f0; font-weight: 700; }
+          .total-row { background-color: #f1f5f9; font-weight: bold !important; }
+          .footer-note { font-size: 11px; color: #475569; text-align: left; margin-top: 10px; }
+          @media print { 
+            @page { margin: 10mm; size: A4 landscape; } 
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+            .report-container { border: 2px solid #000 !important; }
+          }
+        </style>
+      </head>
+      <body onload="setTimeout(() => window.print(), 500);">
+        <div class="report-container">
+          <div class="report-header">
+            <div class="header-side" style="text-align: right;">
+              <div style="display: flex; justify-content: space-between;">
+                <span>من:</span>
+                <span>${fromDateStr}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                <span>الى:</span>
+                <span>${toDateStr}</span>
+              </div>
+            </div>
+            
+            <div class="header-center">
+              <h1>المدار الليبي للتأمين</h1>
+              <h2>تقرير العهد المستهلكة</h2>
+            </div>
+            
+            <div class="header-side logo-box">
+              <img src="/img/logo.png" alt="لوجو" onerror="this.src='https://placehold.co/120x50?text=Logo'" />
+              <div style="font-size: 11px; margin-top: 4px;">اسم المستخدم: ${currentUser.name || currentUser.username || 'مرام'}</div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 3%;">م</th>
+                <th style="width: 22%; text-align: right;">اسم الصنف</th>
+                <th style="width: 12%;">نوع المخزون</th>
+                <th style="width: 12%;">التصنيف</th>
+                <th style="width: 8%;">وحدة القياس</th>
+                <th style="width: 8%;">حالة الصنف</th>
+                <th style="width: 5%;">الكمية</th>
+                <th style="width: 8%;">السعر</th>
+                <th style="width: 10%;">القيمة</th>
+                <th style="width: 10%;">السعر الاجمالي</th>
+                <th style="width: 18%; text-align: right;">ملاحظات</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows : `<tr><td colspan="11" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مستهلكة مطابقة للفلاتر المحددة</td></tr>`}
+              <tr class="total-row">
+                <td colspan="8" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td>${grandTotalValue.toLocaleString()} د.ل</td>
+                <td>${grandTotalValue.toLocaleString()} د.ل</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer-note">تاريخ الاستخراج: ${new Date().toLocaleString('ar-LY')}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -868,7 +1140,6 @@ export default function InventoryManagement() {
                       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
                     }
                   }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
                 >
                   <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                   تصدير إكسيل
@@ -1025,6 +1296,24 @@ export default function InventoryManagement() {
                 value={custodyFilterItem}
                 onChange={(e) => setCustodyFilterItem(e.target.value)}
               />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>من:</span>
+                <input
+                  type="date"
+                  value={custodyFilterFromDate}
+                  onChange={(e) => setCustodyFilterFromDate(e.target.value)}
+                  style={{ width: '130px' }}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>إلى:</span>
+                <input
+                  type="date"
+                  value={custodyFilterToDate}
+                  onChange={(e) => setCustodyFilterToDate(e.target.value)}
+                  style={{ width: '130px' }}
+                />
+              </div>
               <button
                 type="button"
                 className="btn-cancel custody-reset-btn"
@@ -1034,6 +1323,8 @@ export default function InventoryManagement() {
                   setCustodyFilterRecipientType('all');
                   setCustodyFilterRecipient('');
                   setCustodyFilterItem('');
+                  setCustodyFilterFromDate('');
+                  setCustodyFilterToDate('');
                 }}
               >
                 تصفير الفلاتر
@@ -1050,20 +1341,37 @@ export default function InventoryManagement() {
               
               <button
                 className="secondary"
-                onClick={handleExportFixedAssetsReport}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
+                onClick={handlePrintFixedCustodyReport}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #014cb1', color: '#014cb1', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#014cb1' }}></i>
+                <i className="fa-solid fa-print"></i>
                 تقرير العهد الثابتة
+              </button>
+ 
+              <button
+                className="secondary"
+                onClick={handlePrintConsumedCustodyReport}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #166534', color: '#166534', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                <i className="fa-solid fa-print"></i>
+                تقرير العهد المستهلكة
+              </button>
+            <button
+                className="secondary"
+                onClick={handleExportFixedAssetsReport}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #014cb1', color: '#014cb1', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                <i className="fa-solid fa-file-excel" style={{ color: '#014cb1' }}></i>
+                تصدير الثابتة Excel
               </button>
 
               <button
                 className="secondary"
                 onClick={handleExportConsumableAssetsReport}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid var(--border)' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #166534', color: '#166534', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                <i className="fa-solid fa-file-lines" style={{ color: '#166534' }}></i>
-                تقرير العهد المستهلكة
+                <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+                تصدير المستهلكة Excel
               </button>
             </div>
             <div className="users-mobile-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: 0 }}>

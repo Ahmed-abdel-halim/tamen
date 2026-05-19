@@ -38,6 +38,7 @@ type User = {
   working_days_from?: string;
   working_days_to?: string;
   contract_type?: string;
+  contract_duration?: string;
   contract_conditions?: string;
   // Financial Data
   housing_allowance?: number;
@@ -544,6 +545,7 @@ export default function EmployeeProfile() {
                   <InfoItem label="ساعات الدوام" value={user.working_hours_from ? `${user.working_hours_from} إلى ${user.working_hours_to}` : '—'} />
                   <InfoItem label="أيام العمل" value={user.working_days_from ? `من ${user.working_days_from} إلى ${user.working_days_to}` : '—'} />
                   <InfoItem label="نوع العقد" value={user.contract_type} />
+                  <InfoItem label="مدة العقد" value={user.contract_duration} />
                   <div className="full-width">
                     <InfoItem label="شروط العقد الخاصة" value={user.contract_conditions} />
                   </div>
