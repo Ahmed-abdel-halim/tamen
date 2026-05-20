@@ -3,6 +3,22 @@ import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from '../utils/excelGenerator';
 
+const formatDateTime = (dateStr?: string) => {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 interface StoreItem {
   id: number;
   name: string;
@@ -459,7 +475,7 @@ export default function InventoryManagement() {
           <img src="/img/logo.png" alt="المدار الليبي للتأمين" class="logo" />
         </div>
 
-        <p><strong>تاريخ وتوقيت الصرف:</strong> ${main.assigned_at}</p>
+        <p><strong>تاريخ وتوقيت الصرف:</strong> ${formatDateTime(main.assigned_at)}</p>
         <p><strong>الرقم المرجعي لتسجيل العهدة:</strong> #${main.id.toString().padStart(5, '0')}</p>
         <p><strong>نوع العهدة:</strong> ${getInventoryTypeName(main.item.inventory_type)}</p>
         <p><strong>الجهة المستلمة:</strong> ${main.recipient.agency_name || main.recipient.name}</p>
@@ -1036,9 +1052,9 @@ export default function InventoryManagement() {
     printWindow.document.close();
   };
 
-  const totalWarehouseQty = items.reduce((acc, item) => acc + (item.stocks?.[0]?.quantity || 0), 0);
-  const activeCustodyCount = custodies.filter(c => c.status === 'active').reduce((acc, c) => acc + c.quantity, 0);
-  const activeFixedCustodyCount = custodies.filter(c => c.status === 'active' && (c.item.inventory_type === 'fixed')).reduce((acc, c) => acc + c.quantity, 0);
+  const totalWarehouseQty = items.reduce((acc, item) => acc + (Number(item.stocks?.[0]?.quantity) || 0), 0);
+  const activeCustodyCount = custodies.filter(c => c.status === 'active').reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
+  const activeFixedCustodyCount = custodies.filter(c => c.status === 'active' && (c.item.inventory_type === 'fixed')).reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
   const lowStockCount = items.filter(item => (item.stocks?.[0]?.quantity || 0) <= item.min_threshold).length;
 
   return (
@@ -1519,7 +1535,7 @@ export default function InventoryManagement() {
                                 {main.recipient_type === 'agent' ? 'وكيل / فرع' : 'موظف عام'}
                               </span>
                             </td>
-                            <td>{main.assigned_at}</td>
+                            <td>{formatDateTime(main.assigned_at)}</td>
                             <td>
                               <span className={`premium-badge ${main.item.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
                                 {getInventoryTypeName(main.item.inventory_type)}
@@ -1614,7 +1630,7 @@ export default function InventoryManagement() {
                         </div>
                         <div className="user-mobile-row">
                           <span className="user-mobile-label">تاريخ الصرف:</span>
-                          <span className="user-mobile-value">{main.assigned_at}</span>
+                          <span className="user-mobile-value">{formatDateTime(main.assigned_at)}</span>
                         </div>
                         <div className="user-mobile-row">
                           <span className="user-mobile-label">حالة العهدة:</span>
