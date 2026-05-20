@@ -183,22 +183,7 @@ export default function BranchesAgentsList() {
       return cond;
     };
 
-    const cleanNotes = (notes?: string) => {
-      if (!notes) return '—';
-      let n = notes.trim();
-      const boilerplates = [
-        /إقرار استلام العهدة والمحافظة عليها وتعهد بإرجاعها في حال طلبها من الشركة أو انتهاء علاقة العمل/g,
-        /إقرار استلام العهدة والمحافظة عليها وتعهد بإرجاعها في حال طلبها من الشركة أو انتهاء فترة العمل لديها/g,
-        /إقرار استلام العهدة والمحافظة عليها وتعهد بإرجاعها/g,
-        /في حال طلبها من الشركة أو انتهاء علاقة العمل/g,
-        /في حال طلبها من الشركة أو انتهاء فترة العمل لديها/g,
-      ];
-      for (const pattern of boilerplates) {
-        n = n.replace(pattern, '');
-      }
-      n = n.trim().replace(/^[-–—:\s]+/, '').trim();
-      return n || '—';
-    };
+
 
     const fixedCustodyHtml = agentFixedCustodies.length > 0
       ? agentFixedCustodies.map(c => {
