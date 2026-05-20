@@ -347,13 +347,58 @@ export default function UsersList() {
       ? (u.authorized_documents || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')
       : '<li>لا توجد صلاحيات محددة</li>';
 
+    const formatPrintDateTime = (dateStr?: string) => {
+      if (!dateStr) return '—';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+      } catch (e) {
+        return dateStr;
+      }
+    };
+
+    const formatCondition = (cond?: string) => {
+      if (!cond) return '—';
+      const c = cond.toLowerCase();
+      if (c === 'new') return 'جديد';
+      if (c === 'used') return 'مستعمل';
+      if (c === 'damaged') return 'تالف';
+      if (c === 'lost') return 'مفقود';
+      return cond;
+    };
+
     const fixedCustodyHtml = userFixedCustodies.length > 0
-      ? userFixedCustodies.map(c => `<tr><td>${escapeHtml(c.item?.name || 'صنف عهدة')}</td><td>${c.quantity}</td></tr>`).join('')
-      : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة ثابتة</td></tr>';
+      ? userFixedCustodies.map(c => {
+          const serial = (c.serial_start || c.serial_end)
+            ? `${c.serial_start || '—'}${c.serial_end ? ` إلى ${c.serial_end}` : ''}`
+            : '—';
+          return `<tr>
+            <td style="text-align: right;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
+            <td>${c.quantity}</td>
+            <td>${escapeHtml(serial)}</td>
+            <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
+            <td>${formatCondition(c.condition)}</td>
+            <td style="text-align: right;">${escapeHtml(c.notes || '—')}</td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding: 12px;">لا توجد عهدة ثابتة نشطة حالياً للموظف</td></tr>';
 
     const consumedCustodyHtml = userConsumedCustodies.length > 0
-      ? userConsumedCustodies.map(c => `<tr><td>${escapeHtml(c.item?.name || 'صنف عهدة')}</td><td>${c.quantity}</td></tr>`).join('')
-      : '<tr><td colspan="2" style="text-align:center;color:#94a3b8">لا توجد عهدة مستهلكة</td></tr>';
+      ? userConsumedCustodies.map(c => {
+          return `<tr>
+            <td style="text-align: right;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
+            <td>${c.quantity}</td>
+            <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
+            <td style="text-align: right;">${escapeHtml(c.notes || '—')}</td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding: 12px;">لا توجد عهدة مستهلكة نشطة حالياً للموظف</td></tr>';
 
     const rows: [string, string][] = [
       ['الاسم بالكامل', escapeHtml(u.name)],
@@ -369,54 +414,78 @@ export default function UsersList() {
       .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
       .join('');
 
+
+    const totalCustodies = userFixedCustodies.length + userConsumedCustodies.length;
+    const isVeryLong = totalCustodies > 10;
+    const isMediumLong = totalCustodies > 5 && totalCustodies <= 10;
+
+    const rowPadding = isVeryLong ? '2px 4px' : isMediumLong ? '4px 6px' : '7px 10px';
+    const fontSize = isVeryLong ? '0.64rem' : isMediumLong ? '0.72rem' : '0.8rem';
+    const sectionMargin = isVeryLong ? '4px 0 2px 0' : isMediumLong ? '8px 0 3px 0' : '15px 0 6px 0';
+    
+    const detailPadding = isVeryLong ? '3px 6px' : isMediumLong ? '5px 8px' : '8px 12px';
+    const detailFontSize = isVeryLong ? '0.74rem' : isMediumLong ? '0.8rem' : '0.9rem';
+    const mainTableWidth = isVeryLong ? '28%' : '35%';
+    
+    const permMarginTop = isVeryLong ? '4px' : isMediumLong ? '8px' : '15px';
+    const permPadding = isVeryLong ? '4px 8px' : isMediumLong ? '6px 10px' : '12px';
+    
+    const photoWidth = isVeryLong ? '85px' : isMediumLong ? '110px' : '130px';
+    const photoHeight = isVeryLong ? '95px' : isMediumLong ? '125px' : '160px';
+    
+    const sigLineMarginTop = isVeryLong ? '10px' : isMediumLong ? '18px' : '30px';
+    const containerPadding = isVeryLong ? '3mm' : isMediumLong ? '5mm' : '8mm';
+    const containerHeight = isVeryLong ? '284mm' : isMediumLong ? '283mm' : '280mm';
+    const containerBorder = isVeryLong ? 'none' : '1px solid #e2e8f0';
+
     w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>استمارة بيانات موظف - ${escapeHtml(u.name)}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-        @page { size: A4; margin: 10mm; }
-        body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.4; background: #fff; }
-        .page-container { border: 1px solid #e2e8f0; padding: 8mm; position: relative; min-height: 250mm; box-sizing: border-box; display: flex; flex-direction: column; }
+        @page { size: A4; margin: 4mm; }
+        body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.25; background: #fff; }
+        .page-container { border: ${containerBorder}; padding: ${containerPadding}; position: relative; height: ${containerHeight}; max-height: ${containerHeight}; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
-        .header-info h1 { margin: 0; color: #1e40af; font-size: 1.6rem; font-weight: 800; }
-        .header-info p { margin: 2px 0 0 0; color: #64748b; font-size: 0.9rem; font-weight: 600; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: ${isVeryLong ? '6px' : '15px'}; border-bottom: 2px solid #1e40af; padding-bottom: ${isVeryLong ? '4px' : '10px'}; }
+        .header-info h1 { margin: 0; color: #1e40af; font-size: ${isVeryLong ? '1.3rem' : '1.6rem'}; font-weight: 800; }
+        .header-info p { margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem; font-weight: 600; }
         
         .header-branding { display: flex; align-items: center; gap: 4px; }
         .brand-text { display: flex; flex-direction: column; align-items: center; line-height: 1.2; white-space: nowrap; margin-right: 0; }
         .brand-text div:first-child { font-size: 13pt; font-weight: 800; margin-bottom: 2px; line-height: 1; color: #139625; font-family: 'Times New Roman', serif; text-align: center; }
         .brand-text div:last-child { font-size: 5.6pt; font-weight: 800; line-height: 1; font-family: 'Times New Roman', serif; text-align: center; letter-spacing: 0; }
-        .header-branding img { height: 50px; width: auto; }
+        .header-branding img { height: ${isVeryLong ? '40px' : '50px'}; width: auto; }
 
         .content-body { display: flex; gap: 20px; }
         .main-data { flex: 1; }
-        .photo-sidebar { width: 140px; text-align: center; }
-        .photo-box { width: 130px; height: 160px; border: 2px solid #f1f5f9; border-radius: 6px; overflow: hidden; background: #f8fafc; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .photo-sidebar { width: ${photoWidth}; text-align: center; }
+        .photo-box { width: ${photoWidth}; height: ${photoHeight}; border: 2px solid #f1f5f9; border-radius: 6px; overflow: hidden; background: #f8fafc; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .photo-box img { width: 100%; height: 100%; object-fit: cover; }
         .photo-box .no-img { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        table th { background: #f1f5f9; color: #475569; text-align: right; padding: 8px 12px; border: 1px solid #e2e8f0; width: 35%; font-weight: 700; font-size: 0.9rem; }
-        table td { padding: 8px 12px; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: 0.9rem; }
+        table th { background: #f1f5f9; color: #475569; text-align: right; padding: ${detailPadding}; border: 1px solid #e2e8f0; width: ${mainTableWidth}; font-weight: 700; font-size: ${detailFontSize}; }
+        table td { padding: ${detailPadding}; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: ${detailFontSize}; }
 
-        .permissions-section { margin-top: 15px; background: #f8fafc; padding: 12px; border-radius: 6px; border-right: 4px solid #1e40af; }
-        .permissions-section h3 { margin: 0 0 8px 0; font-size: 1rem; color: #1e40af; }
+        .permissions-section { margin-top: ${permMarginTop}; background: #f8fafc; padding: ${permPadding}; border-radius: 6px; border-right: 4px solid #1e40af; }
+        .permissions-section h3 { margin: 0 0 8px 0; font-size: ${isVeryLong ? '0.8rem' : '1rem'}; color: #1e40af; }
         .permissions-section ul { margin: 0; padding: 0 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-        .permissions-section li { font-size: 0.8rem; color: #475569; font-weight: 600; list-style: none; }
+        .permissions-section li { font-size: ${isVeryLong ? '0.7rem' : '0.8rem'}; color: #475569; font-weight: 600; list-style: none; }
         .permissions-section li::before { content: "•"; color: #1e40af; margin-left: 5px; }
 
         /* Custody Styles */
-        .section-title { font-size: 0.95rem; color: #1e40af; font-weight: 800; margin: 12px 0 5px 0; display: flex; align-items: center; gap: 5px; }
+        .section-title { font-size: ${isVeryLong ? '0.82rem' : '0.95rem'}; color: #1e40af; font-weight: 800; margin: ${sectionMargin}; display: flex; align-items: center; gap: 5px; }
         .section-title::before { content: ""; width: 4px; height: 15px; background: #1e40af; border-radius: 2px; }
         
-        .custody-tables { display: flex; gap: 15px; margin-top: 5px; }
-        .custody-col { flex: 1; }
-        .custody-table { width: 100%; border-collapse: collapse; }
-        .custody-table th { background: #eff6ff; color: #1e40af; text-align: center; font-size: 0.8rem; padding: 5px; border: 1px solid #e2e8f0; }
-        .custody-table td { font-size: 0.8rem; padding: 5px 8px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; }
+        .custody-tables { display: flex; flex-direction: column; gap: ${isVeryLong ? '8px' : '15px'}; margin-top: 5px; }
+        .custody-col { width: 100%; }
+        .custody-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .custody-table th { background: #eff6ff; color: #1e40af; text-align: center; font-size: ${fontSize}; padding: ${rowPadding}; border: 1px solid #e2e8f0; font-weight: 700; }
+        .custody-table td { font-size: ${fontSize}; padding: ${rowPadding}; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; }
 
-        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-bottom: 10px; }
+        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: ${isVeryLong ? '6px' : '15px'}; margin-bottom: 5px; }
         .sig-block { text-align: center; width: 45%; }
-        .sig-line { border-top: 1px solid #1e293b; margin-top: 30px; padding-top: 5px; font-weight: 700; color: #1e293b; font-size: 0.9rem; }
-        .print-date { position: absolute; bottom: 3mm; left: 8mm; font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
+        .sig-line { border-top: 1px solid #1e293b; margin-top: ${sigLineMarginTop}; padding-top: 5px; font-weight: 700; color: #1e293b; font-size: ${isVeryLong ? '0.8rem' : '0.9rem'}; }
+        .print-date { position: absolute; bottom: 2mm; left: 8mm; font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
       </style></head><body onload="window.print()">
       <div class="page-container">
         <div class="header">
@@ -444,12 +513,34 @@ export default function UsersList() {
 
             <div class="custody-tables">
               <div class="custody-col">
-                <div class="section-title">العهدة الثابتة</div>
-                <table class="custody-table"><thead><tr><th>البيان</th><th>الكمية</th></tr></thead><tbody>${fixedCustodyHtml}</tbody></table>
+                <div class="section-title">العهدة الثابتة (الأصول والمعدات)</div>
+                <table class="custody-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 25%; text-align: right;">البيان (اسم الصنف)</th>
+                      <th style="width: 10%;">الكمية</th>
+                      <th style="width: 20%;">الأرقام التسلسلية</th>
+                      <th style="width: 18%;">تاريخ الصرف</th>
+                      <th style="width: 12%;">حالة الاستلام</th>
+                      <th style="width: 15%; text-align: right;">ملاحظات</th>
+                    </tr>
+                  </thead>
+                  <tbody>${fixedCustodyHtml}</tbody>
+                </table>
               </div>
               <div class="custody-col">
-                <div class="section-title">العهدة المستهلكة</div>
-                <table class="custody-table"><thead><tr><th>البيان</th><th>الكمية</th></tr></thead><tbody>${consumedCustodyHtml}</tbody></table>
+                <div class="section-title">العهدة المستهلكة (المطبوعات والمستلزمات)</div>
+                <table class="custody-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 45%; text-align: right;">البيان (اسم الصنف)</th>
+                      <th style="width: 15%;">الكمية</th>
+                      <th style="width: 20%;">تاريخ الصرف</th>
+                      <th style="width: 20%; text-align: right;">ملاحظات</th>
+                    </tr>
+                  </thead>
+                  <tbody>${consumedCustodyHtml}</tbody>
+                </table>
               </div>
             </div>
           </div>

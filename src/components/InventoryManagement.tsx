@@ -338,12 +338,15 @@ export default function InventoryManagement() {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      if (!res.ok) throw new Error('فشل الحذف');
-      showToast('تم حذف الصنف بنجاح', 'success');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || 'فشل الحذف');
+      }
+      showToast(data.message || 'تم حذف الصنف بنجاح', 'success');
       await fetchData();
     } catch (error) {
       console.error('Error deleting item:', error);
-      showToast('تعذر حذف الصنف، تأكد أنه غير مرتبط بحركات عهدة', 'error');
+      showToast((error as Error).message || 'تعذر حذف الصنف', 'error');
     }
   };
 

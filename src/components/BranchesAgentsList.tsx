@@ -160,45 +160,69 @@ export default function BranchesAgentsList() {
       .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
       .join('');
 
+    const totalCustodies = (ba.fixed_custodies || []).length + (ba.consumed_custodies || []).length;
+    const isVeryLong = totalCustodies > 10;
+    const isMediumLong = totalCustodies > 5 && totalCustodies <= 10;
+
+    const rowPadding = isVeryLong ? '2px 4px' : isMediumLong ? '4px 6px' : '7px 10px';
+    const fontSize = isVeryLong ? '0.64rem' : isMediumLong ? '0.72rem' : '0.8rem';
+    const sectionMargin = isVeryLong ? '4px 0 2px 0' : isMediumLong ? '8px 0 3px 0' : '12px 0 5px 0';
+    
+    const detailPadding = isVeryLong ? '3px 6px' : isMediumLong ? '5px 8px' : '8px 12px';
+    const detailFontSize = isVeryLong ? '0.74rem' : isMediumLong ? '0.8rem' : '0.9rem';
+    const mainTableWidth = isVeryLong ? '28%' : '35%';
+    
+    const permMarginTop = isVeryLong ? '4px' : isMediumLong ? '8px' : '12px';
+    const permPadding = isVeryLong ? '4px 8px' : isMediumLong ? '6px 10px' : '10px';
+    
+    const photoWidth = isVeryLong ? '85px' : isMediumLong ? '110px' : '130px';
+    const photoHeight = isVeryLong ? '95px' : isMediumLong ? '120px' : '140px';
+    
+    const sigLineMarginTop = isVeryLong ? '10px' : isMediumLong ? '18px' : '25px';
+    const containerPadding = isVeryLong ? '3mm' : isMediumLong ? '5mm' : '8mm';
+    const containerHeight = isVeryLong ? '284mm' : isMediumLong ? '283mm' : '280mm';
+    const containerBorder = isVeryLong ? 'none' : '1px solid #e2e8f0';
+
     w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>بيانات وكيل - ${escapeHtml(ba.agency_name)}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-        @page { size: A4; margin: 10mm; }
-        body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.4; background: #fff; }
-        .page-container { border: 1px solid #e2e8f0; padding: 8mm; position: relative; min-height: 275mm; box-sizing: border-box; display: flex; flex-direction: column; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #1e40af; padding-bottom: 12px; }
-        .header-info h1 { margin: 0; color: #1e40af; font-size: 1.7rem; font-weight: 800; }
+        @page { size: A4; margin: 4mm; }
+        body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.25; background: #fff; }
+        .page-container { border: ${containerBorder}; padding: ${containerPadding}; position: relative; height: ${containerHeight}; max-height: ${containerHeight}; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: ${isVeryLong ? '6px' : '20px'}; border-bottom: 3px solid #1e40af; padding-bottom: ${isVeryLong ? '4px' : '12px'}; }
+        .header-info h1 { margin: 0; color: #1e40af; font-size: ${isVeryLong ? '1.3rem' : '1.7rem'}; font-weight: 800; }
         .header-branding { display: flex; align-items: center; gap: 4px; }
         .brand-text { display: flex; flex-direction: column; align-items: center; line-height: 1.2; white-space: nowrap; margin-right: 0; }
         .brand-text div:first-child { font-size: 13pt; font-weight: 800; margin-bottom: 2px; line-height: 1; color: #139625; font-family: 'Times New Roman', serif; text-align: center; }
         .brand-text div:last-child { font-size: 5.6pt; font-weight: 800; line-height: 1; font-family: 'Times New Roman', serif; text-align: center; letter-spacing: 0; }
-        .header-branding img { height: 50px; width: auto; }
+        .header-branding img { height: ${isVeryLong ? '40px' : '50px'}; width: auto; }
         .content-body { display: flex; gap: 15px; }
         .main-data { flex: 1; }
-        .photo-sidebar { width: 130px; text-align: center; }
-        .photo-box { width: 120px; height: 140px; border: 2px solid #f1f5f9; border-radius: 6px; overflow: hidden; background: #f8fafc; margin-bottom: 5px; }
+        .photo-sidebar { width: ${photoWidth}; text-align: center; }
+        .photo-box { width: ${photoWidth}; height: ${photoHeight}; border: 2px solid #f1f5f9; border-radius: 6px; overflow: hidden; background: #f8fafc; margin-bottom: 5px; }
         .photo-box img { width: 100%; height: 100%; object-fit: cover; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        table th { background: #f1f5f9; color: #475569; text-align: right; padding: 8px 12px; border: 1px solid #e2e8f0; width: 35%; font-weight: 700; font-size: 0.9rem; }
-        table td { padding: 8px 12px; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: 0.9rem; }
+        table th { background: #f1f5f9; color: #475569; text-align: right; padding: ${detailPadding}; border: 1px solid #e2e8f0; width: ${mainTableWidth}; font-weight: 700; font-size: ${detailFontSize}; }
+        table td { padding: ${detailPadding}; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: ${detailFontSize}; }
         
-        .section-title { font-size: 0.95rem; color: #1e40af; font-weight: 800; margin: 12px 0 5px 0; display: flex; align-items: center; gap: 5px; }
+        .section-title { font-size: ${isVeryLong ? '0.82rem' : '0.95rem'}; color: #1e40af; font-weight: 800; margin: ${sectionMargin}; display: flex; align-items: center; gap: 5px; }
         .section-title::before { content: ""; width: 4px; height: 15px; background: #1e40af; border-radius: 2px; }
         
-        .permissions-box { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .permissions-box { margin-top: ${permMarginTop}; background: #f8fafc; padding: ${permPadding}; border-radius: 6px; border: 1px solid #e2e8f0; }
         .permissions-box ul { margin: 0; padding: 0 15px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-        .permissions-box li { font-size: 0.8rem; color: #475569; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 5px; }
+        .permissions-box li { font-size: ${isVeryLong ? '0.7rem' : '0.8rem'}; color: #475569; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 5px; }
         .permissions-box li::before { content: "•"; color: #1e40af; }
         
-        .custody-tables { display: flex; gap: 15px; margin-top: 5px; }
-        .custody-col { flex: 1; }
-        .custody-table th { background: #eff6ff; color: #1e40af; text-align: center; font-size: 0.8rem; padding: 5px; }
-        .custody-table td { font-size: 0.8rem; padding: 5px 8px; text-align: center; }
+        .custody-tables { display: flex; flex-direction: column; gap: ${isVeryLong ? '8px' : '15px'}; margin-top: 5px; }
+        .custody-col { width: 100%; }
+        .custody-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .custody-table th { background: #eff6ff; color: #1e40af; text-align: center; font-size: ${fontSize}; padding: ${rowPadding}; border: 1px solid #e2e8f0; font-weight: 700; }
+        .custody-table td { font-size: ${fontSize}; padding: ${rowPadding}; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; }
 
-        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: ${isVeryLong ? '6px' : '15px'}; }
         .sig-block { text-align: center; width: 45%; }
-        .sig-line { border-top: 1px solid #1e293b; margin-top: 25px; padding-top: 5px; font-weight: 700; font-size: 0.9rem; }
-        .print-date { position: absolute; bottom: 3mm; left: 8mm; font-size: 0.65rem; color: #94a3b8; }
+        .sig-line { border-top: 1px solid #1e293b; margin-top: ${sigLineMarginTop}; padding-top: 5px; font-weight: 700; font-size: ${isVeryLong ? '0.8rem' : '0.9rem'}; }
+        .print-date { position: absolute; bottom: 2mm; left: 8mm; font-size: 0.65rem; color: #94a3b8; }
       </style></head><body onload="window.print()">
       <div class="page-container">
         <div class="header">
@@ -214,12 +238,28 @@ export default function BranchesAgentsList() {
             
             <div class="custody-tables">
               <div class="custody-col">
-                <div class="section-title">العهدة الثابتة</div>
-                <table class="custody-table"><thead><tr><th>البيان</th><th>الكمية</th></tr></thead><tbody>${fixedCustodyHtml}</tbody></table>
+                <div class="section-title">العهدة الثابتة (الأصول والمعدات)</div>
+                <table class="custody-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 80%; text-align: right;">البيان (الوصف)</th>
+                      <th style="width: 20%;">الكمية</th>
+                    </tr>
+                  </thead>
+                  <tbody>${fixedCustodyHtml}</tbody>
+                </table>
               </div>
               <div class="custody-col">
-                <div class="section-title">العهدة المستهلكة</div>
-                <table class="custody-table"><thead><tr><th>البيان</th><th>الكمية</th></tr></thead><tbody>${consumedCustodyHtml}</tbody></table>
+                <div class="section-title">العهدة المستهلكة (المطبوعات والمستلزمات)</div>
+                <table class="custody-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 80%; text-align: right;">البيان (الوصف)</th>
+                      <th style="width: 20%;">الكمية</th>
+                    </tr>
+                  </thead>
+                  <tbody>${consumedCustodyHtml}</tbody>
+                </table>
               </div>
             </div>
           </div>
