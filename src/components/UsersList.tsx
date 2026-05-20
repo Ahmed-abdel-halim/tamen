@@ -375,30 +375,78 @@ export default function UsersList() {
 
 
 
-    const fixedCustodyHtml = userFixedCustodies.length > 0
-      ? userFixedCustodies.map(c => {
-          const serial = (c.serial_start || c.serial_end)
-            ? `${c.serial_start || '—'}${c.serial_end ? ` إلى ${c.serial_end}` : ''}`
-            : '—';
-          return `<tr>
-            <td style="text-align: right; border-right: none;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
-            <td>${c.quantity}</td>
-            <td>${escapeHtml(serial)}</td>
-            <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
-            <td>${formatCondition(c.condition)}</td>
-          </tr>`;
-        }).join('')
-      : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding: 12px;background:#ffffff !important;">لا توجد عهدة ثابتة نشطة حالياً للموظف</td></tr>';
+    const renderFixedRows = (items: any[]) => items.map(c => {
+      const serial = (c.serial_start || c.serial_end)
+        ? `${c.serial_start || '—'}${c.serial_end ? ` إلى ${c.serial_end}` : ''}`
+        : '—';
+      return `<tr>
+        <td style="text-align: right; border-right: none;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
+        <td>${c.quantity}</td>
+        <td>${escapeHtml(serial)}</td>
+        <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
+        <td>${formatCondition(c.condition)}</td>
+      </tr>`;
+    }).join('');
 
-    const consumedCustodyHtml = userConsumedCustodies.length > 0
-      ? userConsumedCustodies.map(c => {
-          return `<tr>
-            <td style="text-align: right; border-right: none;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
-            <td>${c.quantity}</td>
-            <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
-          </tr>`;
-        }).join('')
-      : '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding: 12px;background:#ffffff !important;">لا توجد عهدة مستهلكة نشطة حالياً للموظف</td></tr>';
+    const renderConsumedRows = (items: any[]) => items.map(c => {
+      return `<tr>
+        <td style="text-align: right; border-right: none;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
+        <td>${c.quantity}</td>
+        <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
+      </tr>`;
+    }).join('');
+
+    const buildFixedTable = (items: any[], title: string) => `
+      <div class="section-title">${title}</div>
+      <table class="custody-table">
+        <thead>
+          <tr>
+            <th style="width: 35%; text-align: right;">البيان (اسم الصنف)</th>
+            <th style="width: 10%;">الكمية</th>
+            <th style="width: 20%;">الأرقام التسلسلية</th>
+            <th style="width: 20%;">تاريخ الصرف</th>
+            <th style="width: 15%;">حالة الاستلام</th>
+          </tr>
+        </thead>
+        <tbody>${items.length > 0 ? renderFixedRows(items) : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding: 12px;background:#ffffff !important;">لا توجد عهدة ثابتة نشطة حالياً</td></tr>'}</tbody>
+      </table>
+    `;
+
+    const buildConsumedTable = (items: any[], title: string) => `
+      <div class="section-title">${title}</div>
+      <table class="custody-table">
+        <thead>
+          <tr>
+            <th style="width: 50%; text-align: right;">البيان (اسم الصنف)</th>
+            <th style="width: 15%;">الكمية</th>
+            <th style="width: 35%;">تاريخ الصرف</th>
+          </tr>
+        </thead>
+        <tbody>${items.length > 0 ? renderConsumedRows(items) : '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding: 12px;background:#ffffff !important;">لا توجد عهدة مستهلكة نشطة حالياً</td></tr>'}</tbody>
+      </table>
+    `;
+
+    let col1Html = '';
+    let col2Html = '';
+
+    if (userFixedCustodies.length >= 10 && userConsumedCustodies.length <= 5) {
+      const half = Math.ceil(userFixedCustodies.length / 2);
+      const f1 = userFixedCustodies.slice(0, half);
+      const f2 = userFixedCustodies.slice(half);
+      col1Html = buildFixedTable(f1, 'العهدة الثابتة (الأصول والمعدات) - 1');
+      col2Html = buildFixedTable(f2, 'العهدة الثابتة (الأصول والمعدات) - 2') + 
+                 (userConsumedCustodies.length > 0 ? buildConsumedTable(userConsumedCustodies, 'العهدة المستهلكة (المطبوعات والمستلزمات)') : '');
+    } else if (userConsumedCustodies.length >= 10 && userFixedCustodies.length <= 5) {
+      const half = Math.ceil(userConsumedCustodies.length / 2);
+      const c1 = userConsumedCustodies.slice(0, half);
+      const c2 = userConsumedCustodies.slice(half);
+      col1Html = buildConsumedTable(c1, 'العهدة المستهلكة (المطبوعات والمستلزمات) - 1');
+      col2Html = buildConsumedTable(c2, 'العهدة المستهلكة (المطبوعات والمستلزمات) - 2') + 
+                 (userFixedCustodies.length > 0 ? buildFixedTable(userFixedCustodies, 'العهدة الثابتة (الأصول والمعدات)') : '');
+    } else {
+      col1Html = buildFixedTable(userFixedCustodies, 'العهدة الثابتة (الأصول والمعدات)');
+      col2Html = buildConsumedTable(userConsumedCustodies, 'العهدة المستهلكة (المطبوعات والمستلزمات)');
+    }
 
     const detailsGridHtml = `
       <div class="detail-item"><span class="detail-label">الاسم بالكامل</span><span class="detail-value highlighted">${escapeHtml(u.name)}</span></div>
@@ -701,33 +749,11 @@ export default function UsersList() {
             </div>
 
             <div class="custody-tables">
-              <div class="custody-col">
-                <div class="section-title">العهدة الثابتة (الأصول والمعدات)</div>
-                <table class="custody-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 35%; text-align: right;">البيان (اسم الصنف)</th>
-                      <th style="width: 10%;">الكمية</th>
-                      <th style="width: 20%;">الأرقام التسلسلية</th>
-                      <th style="width: 20%;">تاريخ الصرف</th>
-                      <th style="width: 15%;">حالة الاستلام</th>
-                    </tr>
-                  </thead>
-                  <tbody>${fixedCustodyHtml}</tbody>
-                </table>
+              <div class="custody-col" style="display: flex; flex-direction: column; gap: 10px;">
+                ${col1Html}
               </div>
-              <div class="custody-col">
-                <div class="section-title">العهدة المستهلكة (المطبوعات والمستلزمات)</div>
-                <table class="custody-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 50%; text-align: right;">البيان (اسم الصنف)</th>
-                      <th style="width: 15%;">الكمية</th>
-                      <th style="width: 35%;">تاريخ الصرف</th>
-                    </tr>
-                  </thead>
-                  <tbody>${consumedCustodyHtml}</tbody>
-                </table>
+              <div class="custody-col" style="display: flex; flex-direction: column; gap: 10px;">
+                ${col2Html}
               </div>
             </div>
 
