@@ -653,21 +653,7 @@ export default function InventoryManagement() {
     return Number.isFinite(parsed) ? parsed : null;
   };
 
-  // Custom inline styles to fit gracefully with the dark/light theme logic using variables
-  const tabBtnStyle = (isActive: boolean) => ({
-    padding: '12px 24px',
-    backgroundColor: isActive ? 'var(--accent)' : 'var(--input-bg)',
-    color: isActive ? '#fff' : 'var(--text)',
-    border: `1px solid var(--border)`,
-    borderRadius: '12px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  });
-  
+
   const handleExportFixedAssetsReport = async () => {
     const fixedCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1020,23 +1006,21 @@ export default function InventoryManagement() {
             <thead>
               <tr>
                 <th style="width: 3%;">م</th>
-                <th style="width: 22%; text-align: right;">اسم الصنف</th>
+                <th style="width: 25%; text-align: right;">اسم الصنف</th>
                 <th style="width: 12%;">نوع المخزون</th>
                 <th style="width: 12%;">التصنيف</th>
-                <th style="width: 8%;">وحدة القياس</th>
-                <th style="width: 8%;">حالة الصنف</th>
-                <th style="width: 5%;">الكمية</th>
-                <th style="width: 8%;">السعر</th>
-                <th style="width: 10%;">القيمة</th>
+                <th style="width: 10%;">وحدة القياس</th>
+                <th style="width: 10%;">حالة الصنف</th>
+                <th style="width: 8%;">الكمية</th>
+                <th style="width: 10%;">السعر الفردي</th>
                 <th style="width: 10%;">السعر الاجمالي</th>
-                <th style="width: 18%; text-align: right;">ملاحظات</th>
+                <th style="width: 20%; text-align: right;">ملاحظات</th>
               </tr>
             </thead>
             <tbody>
-              ${rows.length ? rows : `<tr><td colspan="11" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مستهلكة مطابقة للفلاتر المحددة</td></tr>`}
+              ${rows.length ? rows : `<tr><td colspan="10" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مستهلكة مطابقة للفلاتر المحددة</td></tr>`}
               <tr class="total-row">
                 <td colspan="8" style="text-align: left; padding-left: 20px;">المجموع العام</td>
-                <td>${grandTotalValue.toLocaleString()} د.ل</td>
                 <td>${grandTotalValue.toLocaleString()} د.ل</td>
                 <td></td>
               </tr>
@@ -1052,329 +1036,543 @@ export default function InventoryManagement() {
     printWindow.document.close();
   };
 
+  const totalWarehouseQty = items.reduce((acc, item) => acc + (item.stocks?.[0]?.quantity || 0), 0);
+  const activeCustodyCount = custodies.filter(c => c.status === 'active').reduce((acc, c) => acc + c.quantity, 0);
+  const activeFixedCustodyCount = custodies.filter(c => c.status === 'active' && (c.item.inventory_type === 'fixed')).reduce((acc, c) => acc + c.quantity, 0);
+  const lowStockCount = items.filter(item => (item.stocks?.[0]?.quantity || 0) <= item.min_threshold).length;
+
   return (
     <section className="users-management">
-      <div className="users-breadcrumb">
-        <span>الشؤون المالية / إدارة المخازن والعهدة المالية</span>
-      </div>
+      <div className="inventory-dashboard-wrapper">
+        <div className="users-breadcrumb">
+          <span>الشؤون المالية / إدارة المخازن والعهدة المالية</span>
+        </div>
 
-      <div className="users-card" style={{ marginBottom: '24px', padding: '16px' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button style={tabBtnStyle(activeTab === 'store')} onClick={() => setActiveTab('store')}>
-            <i className="fa-solid fa-box"></i> المخزن الرئيسي
-          </button>
-          <button style={tabBtnStyle(activeTab === 'custody')} onClick={() => setActiveTab('custody')}>
-            <i className="fa-solid fa-user-check"></i> العهد الحالية
-          </button>
-          <button style={tabBtnStyle(activeTab === 'assign')} onClick={() => setActiveTab('assign')}>
-            <i className="fa-solid fa-arrow-up-right-from-square"></i> صرف عهدة
-          </button>
-          <button style={tabBtnStyle(activeTab === 'log')} onClick={() => setActiveTab('log')}>
-            <i className="fa-solid fa-clock-rotate-left"></i> سجل الحركات
-          </button>
+        {/* Premium KPI Stats Cards Grid */}
+        <div className="premium-stats-grid">
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-total">
+              <i className="fa-solid fa-warehouse"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{totalWarehouseQty.toLocaleString()}</div>
+              <div className="premium-stat-label">إجمالي المخزون بالمخزن</div>
+            </div>
+          </div>
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-fixed">
+              <i className="fa-solid fa-couch"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{activeFixedCustodyCount.toLocaleString()}</div>
+              <div className="premium-stat-label">عهد الأصول الثابتة النشطة</div>
+            </div>
+          </div>
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-consumable">
+              <i className="fa-solid fa-box-open"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{activeCustodyCount.toLocaleString()}</div>
+              <div className="premium-stat-label">إجمالي العهد النشطة المصروفة</div>
+            </div>
+          </div>
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-alert">
+              <i className="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{lowStockCount.toLocaleString()}</div>
+              <div className="premium-stat-label">أصناف تحت حد الطلب</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Premium Tab Switcher Container */}
+        <div className="premium-tabs-container">
+          <div className="premium-tabs-nav">
+            <button className={`premium-tab-btn ${activeTab === 'store' ? 'active' : ''}`} onClick={() => setActiveTab('store')}>
+              <i className="fa-solid fa-box"></i> المخزن الرئيسي
+            </button>
+            <button className={`premium-tab-btn ${activeTab === 'custody' ? 'active' : ''}`} onClick={() => setActiveTab('custody')}>
+              <i className="fa-solid fa-user-check"></i> العهد الحالية
+            </button>
+            <button className={`premium-tab-btn ${activeTab === 'assign' ? 'active' : ''}`} onClick={() => setActiveTab('assign')}>
+              <i className="fa-solid fa-arrow-up-right-from-square"></i> صرف عهدة
+            </button>
+            <button className={`premium-tab-btn ${activeTab === 'log' ? 'active' : ''}`} onClick={() => setActiveTab('log')}>
+              <i className="fa-solid fa-clock-rotate-left"></i> سجل الحركات
+            </button>
+          </div>
           <button 
-            style={{...tabBtnStyle(false), marginRight: 'auto', backgroundColor: 'transparent', borderColor: 'transparent', color: 'var(--accent)'}} 
+            className="premium-tab-btn" 
+            style={{ backgroundColor: 'transparent', color: 'var(--accent-cyan)', border: 'none', cursor: 'pointer' }} 
             onClick={fetchData}
             title="تحديث البيانات"
           >
-            <i className={`fa-solid fa-arrows-rotate ${loading ? 'fa-spin' : ''}`}></i> تحديث
+            <i className={`fa-solid fa-arrows-rotate ${loading ? 'fa-spin' : ''}`}></i> تحديث البيانات
           </button>
         </div>
-      </div>
 
-      <div className="users-card">
+        {/* Tab Contents */}
         {activeTab === 'store' && (
-          <>
-            <div className="users-header">
-              <div className="users-search-bar">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Premium Filter Bar */}
+            <div className="premium-filter-bar">
+              <div className="premium-filter-group filter-span-2">
+                <label><i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--accent-cyan)' }}></i> بحث عن صنف</label>
                 <input 
                   type="text" 
-                  placeholder="بحث عن صنف في المخزن..." 
+                  placeholder="بحث باسم الصنف..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="users-search-input"
+                  className="premium-filter-input"
                 />
-                <button className="users-search-btn" type="button">
-                  <i className="fa-solid fa-magnifying-glass"></i>
-                </button>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  className="secondary" 
-                  onClick={async () => {
-                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                    try {
-                      const columns = [
-                        { header: '#', key: 'index', width: 8 },
-                        { header: 'الصنف', key: 'name', width: 35 },
-                        { header: 'النوع', key: 'type', width: 20 },
-                        { header: 'التصنيف', key: 'category', width: 20 },
-                        { header: 'السعر', key: 'price', width: 15 },
-                        { header: 'الكمية', key: 'quantity', width: 12 },
-                        { header: 'الوحدة', key: 'unit', width: 12 },
-                        { header: 'الموقع', key: 'location', width: 20 },
-                      ];
-
-                      const data = filteredItems.map((item, index) => ({
-                        index: index + 1,
-                        name: item.name,
-                        type: getInventoryTypeName(item.inventory_type),
-                        category: getCategoryName(item.category),
-                        price: getItemPrice(item) ? item.price + ' د.ل' : '-',
-                        quantity: item.stocks?.[0]?.quantity || 0,
-                        unit: item.unit,
-                        location: item.stocks?.[0]?.warehouse_location || '-',
-                      }));
-
-                      await generatePremiumExcel({
-                        title: 'شركة المدار الليبي للتأمين - تقرير المخزن الرئيسي',
-                        subtitle: `إجمالي الأصناف: ${filteredItems.length} - تاريخ التصدير: ${new Date().toLocaleDateString('ar-LY')}`,
-                        columns,
-                        data,
-                        fileName: 'المخزن_الرئيسي',
-                        qrData: `المخزن الرئيسي - شركة المدار الليبي\nعدد الأصناف: ${filteredItems.length}\nبواسطة: ${currentUser.name || 'النظام'}`
-                      });
-
-                      showToast('تم تصدير تقرير المخزن بنجاح', 'success');
-                    } catch (error) {
-                      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
-                    }
-                  }}
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i> نوع المخزون</label>
+                <select 
+                  value={filterInventoryType} 
+                  onChange={(e) => setFilterInventoryType(e.target.value as 'all' | 'fixed' | 'consumable')}
+                  className="premium-filter-select"
                 >
-                  <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
-                  تصدير إكسيل
-                </button>
-                <button 
-                  className="primary add-user-btn" 
-                  onClick={openAddItemModal}
-                >
-                  <i className="fa-solid fa-plus"></i> إضافة صنف 
-                </button>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>نوع المخزون</label>
-                <select value={filterInventoryType} onChange={(e) => setFilterInventoryType(e.target.value as 'all' | 'fixed' | 'consumable')}>
                   <option value="all">الكل</option>
                   <option value="fixed">مخزون ثابت</option>
                   <option value="consumable">مخزون مستهلك</option>
                 </select>
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>التصنيف</label>
-                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-tags" style={{ color: 'var(--accent-cyan)' }}></i> التصنيف</label>
+                <select 
+                  value={filterCategory} 
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="premium-filter-select"
+                >
                   <option value="all">كل التصنيفات</option>
                   {categoryOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>حالة الكمية</label>
-                <select value={filterQuantityStatus} onChange={(e) => setFilterQuantityStatus(e.target.value as 'all' | 'low' | 'available' | 'out')}>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-circle-exclamation" style={{ color: 'var(--accent-cyan)' }}></i> حالة الكمية</label>
+                <select 
+                  value={filterQuantityStatus} 
+                  onChange={(e) => setFilterQuantityStatus(e.target.value as 'all' | 'low' | 'available' | 'out')}
+                  className="premium-filter-select"
+                >
                   <option value="all">الكل</option>
                   <option value="available">متوفر</option>
                   <option value="low">قرب النفاد</option>
                   <option value="out">نافد</option>
                 </select>
               </div>
+              
+              <div className="premium-filter-actions-row">
+                <button 
+                  type="button" 
+                  className="premium-reset-btn" 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterInventoryType('all');
+                    setFilterCategory('all');
+                    setFilterQuantityStatus('all');
+                  }}
+                >
+                  <i className="fa-solid fa-arrows-rotate"></i> تصفير الفلاتر
+                </button>
+                
+                <div className="premium-action-buttons-group">
+                  <button 
+                    type="button"
+                    className="premium-excel-btn" 
+                    onClick={async () => {
+                      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                      try {
+                        const columns = [
+                          { header: '#', key: 'index', width: 8 },
+                          { header: 'الصنف', key: 'name', width: 35 },
+                          { header: 'النوع', key: 'type', width: 20 },
+                          { header: 'التصنيف', key: 'category', width: 20 },
+                          { header: 'السعر', key: 'price', width: 15 },
+                          { header: 'الكمية', key: 'quantity', width: 12 },
+                          { header: 'الوحدة', key: 'unit', width: 12 },
+                          { header: 'الموقع', key: 'location', width: 20 },
+                        ];
+
+                        const data = filteredItems.map((item, index) => ({
+                          index: index + 1,
+                          name: item.name,
+                          type: getInventoryTypeName(item.inventory_type),
+                          category: getCategoryName(item.category),
+                          price: getItemPrice(item) ? item.price + ' د.ل' : '-',
+                          quantity: item.stocks?.[0]?.quantity || 0,
+                          unit: item.unit,
+                          location: item.stocks?.[0]?.warehouse_location || '-',
+                        }));
+
+                        await generatePremiumExcel({
+                          title: 'شركة المدار الليبي للتأمين - تقرير المخزن الرئيسي',
+                          subtitle: `إجمالي الأصناف: ${filteredItems.length} - تاريخ التصدير: ${new Date().toLocaleDateString('ar-LY')}`,
+                          columns,
+                          data,
+                          fileName: 'المخزن_الرئيسي',
+                          qrData: `المخزن الرئيسي - شركة المدار الليبي\nعدد الأصناف: ${filteredItems.length}\nبواسطة: ${currentUser.name || 'النظام'}`
+                        });
+
+                        showToast('تم تصدير تقرير المخزن بنجاح', 'success');
+                      } catch (error) {
+                        showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+                      }
+                    }}
+                  >
+                    <i className="fa-solid fa-file-excel"></i> تصدير Excel
+                  </button>
+                  <button 
+                    type="button"
+                    className="premium-primary-btn" 
+                    onClick={openAddItemModal}
+                  >
+                    <i className="fa-solid fa-plus"></i> إضافة صنف
+                  </button>
+                </div>
+              </div>
             </div>
 
+            {/* Store Table */}
             {loading ? (
               <p style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>جار التحميل...</p>
             ) : (
-              <div className="users-table-wrapper">
-                <table className="users-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>الصنف</th>
-                      <th>نوع المخزون</th>
-                      <th>التصنيف</th>
-                      <th>سعر الصنف</th>
-                      <th>الكمية المتوفرة</th>
-                      <th>الوحدة</th>
-                      <th>موقع التخزين</th>
-                      <th>الإجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems.length === 0 ? (
+              <div className="premium-card-table-wrapper">
+                <div className="premium-table-header-row">
+                  <h3 className="premium-table-title">
+                    <i className="fa-solid fa-boxes-stacked" style={{ color: 'var(--accent-cyan)' }}></i>
+                    قائمة جرد وموجودات المخزن الرئيسي ({filteredItems.length} صنف)
+                  </h3>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="premium-table">
+                    <thead>
                       <tr>
-                        <td colSpan={9} className="empty-table-cell" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
-                          <i className="fa-solid fa-box-open" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
-                          لا توجد أصناف في المخزن تناسب بحثك
-                        </td>
+                        <th style={{ width: '5%' }}>#</th>
+                        <th style={{ width: '25%' }}>الصنف</th>
+                        <th style={{ width: '12%' }}>نوع المخزون</th>
+                        <th style={{ width: '15%' }}>التصنيف</th>
+                        <th style={{ width: '12%' }}>سعر الصنف</th>
+                        <th style={{ width: '10%' }}>الكمية المتوفرة</th>
+                        <th style={{ width: '8%' }}>الوحدة</th>
+                        <th style={{ width: '15%' }}>موقع التخزين</th>
+                        <th style={{ width: '10%' }}>الإجراءات</th>
                       </tr>
-                    ) : (
-                      filteredItems.map((item, index) => (
-                        <tr key={item.id}>
-                          <td>{index + 1}</td>
-                          <td style={{ fontWeight: 'bold' }}>{item.name}</td>
-                          <td>{getInventoryTypeName(item.inventory_type)}</td>
-                          <td>{getCategoryName(item.category)}</td>
-                          <td>
-                            {getItemPrice(item) !== null ? (
-                              <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
-                                {Number(getItemPrice(item)).toLocaleString()} د.ل
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--muted)' }}>-</span>
-                            )}
-                          </td>
-                          <td>
-                            <span style={{ 
-                              padding: '4px 12px', 
-                              borderRadius: '20px', 
-                              backgroundColor: (item.stocks?.[0]?.quantity || 0) <= item.min_threshold ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                              color: (item.stocks?.[0]?.quantity || 0) <= item.min_threshold ? '#ef4444' : '#22c55e',
-                              fontWeight: 'bold'
-                            }}>
-                              {item.stocks?.[0]?.quantity || 0}
-                            </span>
-                          </td>
-                          <td>{item.unit}</td>
-                          <td>{item.stocks?.[0]?.warehouse_location || '-'}</td>
-                          <td>
-                            <div className="action-buttons">
-                              <button
-                                className="action-btn edit"
-                                onClick={() => openEditItemModal(item)}
-                                title="تعديل الصنف"
-                                aria-label="تعديل الصنف"
-                              >
-                                <i className="fa-solid fa-pen-to-square"></i>
-                              </button>
-                              <button
-                                className="action-btn delete"
-                                onClick={() => handleDeleteItem(item)}
-                                title="حذف الصنف"
-                                aria-label="حذف الصنف"
-                              >
-                                <i className="fa-solid fa-trash"></i>
-                              </button>
-                            </div>
+                    </thead>
+                    <tbody>
+                      {filteredItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                            <i className="fa-solid fa-box-open" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
+                            لا توجد أصناف في المخزن تناسب بحثك
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredItems.map((item, index) => {
+                          const qty = item.stocks?.[0]?.quantity || 0;
+                          const isLow = qty <= item.min_threshold;
+                          return (
+                            <tr key={item.id}>
+                              <td>{index + 1}</td>
+                              <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{item.name}</td>
+                              <td>
+                                <span className={`premium-badge ${item.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
+                                  {item.inventory_type === 'fixed' ? 'مخزون ثابت' : 'مخزون مستهلك'}
+                                </span>
+                              </td>
+                              <td>{getCategoryName(item.category)}</td>
+                              <td>
+                                {getItemPrice(item) !== null ? (
+                                  <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                                    {Number(getItemPrice(item)).toLocaleString()} د.ل
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--muted)' }}>-</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`premium-badge ${isLow ? (qty === 0 ? 'badge-danger' : 'badge-warning') : 'badge-success'}`}>
+                                  {qty} {isLow ? (qty === 0 ? '(نافد)' : '(منخفض)') : ''}
+                                </span>
+                              </td>
+                              <td>{item.unit}</td>
+                              <td>{item.stocks?.[0]?.warehouse_location || '-'}</td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    className="action-btn edit"
+                                    onClick={() => openEditItemModal(item)}
+                                    title="تعديل الصنف"
+                                    aria-label="تعديل الصنف"
+                                    style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                  >
+                                    <i className="fa-solid fa-pen-to-square"></i>
+                                  </button>
+                                  <button
+                                    className="action-btn delete"
+                                    onClick={() => handleDeleteItem(item)}
+                                    title="حذف الصنف"
+                                    aria-label="حذف الصنف"
+                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                  >
+                                    <i className="fa-solid fa-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {activeTab === 'custody' && (
-          <div style={{ padding: '20px' }}>
-            <div className="custody-filters-panel">
-              <select value={custodyFilterType} onChange={(e) => setCustodyFilterType(e.target.value as 'all' | 'fixed' | 'consumable')}>
-                <option value="all">كل أنواع العهد</option>
-                <option value="fixed">مخزون ثابت</option>
-                <option value="consumable">مخزون مستهلك</option>
-              </select>
-              <select value={custodyFilterStatus} onChange={(e) => setCustodyFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}>
-                <option value="all">كل الحالات</option>
-                <option value="active">نشطة</option>
-                <option value="inactive">غير نشطة</option>
-              </select>
-              <select value={custodyFilterRecipientType} onChange={(e) => setCustodyFilterRecipientType(e.target.value as 'all' | 'agent' | 'employee')}>
-                <option value="all">كل أنواع المستلمين</option>
-                <option value="agent">وكيل / فرع</option>
-                <option value="employee">موظف عام</option>
-              </select>
-              <input
-                type="text"
-                placeholder="بحث باسم المستلم..."
-                value={custodyFilterRecipient}
-                onChange={(e) => setCustodyFilterRecipient(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="بحث باسم الصنف داخل العهدة..."
-                value={custodyFilterItem}
-                onChange={(e) => setCustodyFilterItem(e.target.value)}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>من:</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Premium Filter Bar */}
+            <div className="premium-filter-bar" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i> نوع العهدة</label>
+                <select 
+                  value={custodyFilterType} 
+                  onChange={(e) => setCustodyFilterType(e.target.value as 'all' | 'fixed' | 'consumable')}
+                  className="premium-filter-select"
+                >
+                  <option value="all">كل الأنواع</option>
+                  <option value="fixed">مخزون ثابت</option>
+                  <option value="consumable">مخزون مستهلك</option>
+                </select>
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-toggle-on" style={{ color: 'var(--accent-cyan)' }}></i> الحالة</label>
+                <select 
+                  value={custodyFilterStatus} 
+                  onChange={(e) => setCustodyFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+                  className="premium-filter-select"
+                >
+                  <option value="all">كل الحالات</option>
+                  <option value="active">نشطة</option>
+                  <option value="inactive">غير نشطة</option>
+                </select>
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-user-tag" style={{ color: 'var(--accent-cyan)' }}></i> تصنيف المستلم</label>
+                <select 
+                  value={custodyFilterRecipientType} 
+                  onChange={(e) => setCustodyFilterRecipientType(e.target.value as 'all' | 'agent' | 'employee')}
+                  className="premium-filter-select"
+                >
+                  <option value="all">كل المستلمين</option>
+                  <option value="agent">وكيل / فرع</option>
+                  <option value="employee">موظف عام</option>
+                </select>
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-user" style={{ color: 'var(--accent-cyan)' }}></i> اسم المستلم</label>
+                <input
+                  type="text"
+                  placeholder="بحث باسم المستلم..."
+                  value={custodyFilterRecipient}
+                  onChange={(e) => setCustodyFilterRecipient(e.target.value)}
+                  className="premium-filter-input"
+                />
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-box" style={{ color: 'var(--accent-cyan)' }}></i> الصنف داخل العهدة</label>
+                <input
+                  type="text"
+                  placeholder="اسم الصنف..."
+                  value={custodyFilterItem}
+                  onChange={(e) => setCustodyFilterItem(e.target.value)}
+                  className="premium-filter-input"
+                />
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-calendar" style={{ color: 'var(--accent-cyan)' }}></i> من</label>
                 <input
                   type="date"
                   value={custodyFilterFromDate}
                   onChange={(e) => setCustodyFilterFromDate(e.target.value)}
-                  style={{ width: '130px' }}
+                  className="premium-filter-input"
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>إلى:</span>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-calendar" style={{ color: 'var(--accent-cyan)' }}></i> إلى</label>
                 <input
                   type="date"
                   value={custodyFilterToDate}
                   onChange={(e) => setCustodyFilterToDate(e.target.value)}
-                  style={{ width: '130px' }}
+                  className="premium-filter-input"
                 />
               </div>
-              <button
-                type="button"
-                className="btn-cancel custody-reset-btn"
-                onClick={() => {
-                  setCustodyFilterType('all');
-                  setCustodyFilterStatus('all');
-                  setCustodyFilterRecipientType('all');
-                  setCustodyFilterRecipient('');
-                  setCustodyFilterItem('');
-                  setCustodyFilterFromDate('');
-                  setCustodyFilterToDate('');
-                }}
-              >
-                تصفير الفلاتر
-              </button>
-              <button
-                className="btn-submit custody-print-btn"
-                onClick={() => handlePrintAllCustodyReceipts(filteredCustodyGroups.flat())}
-                disabled={filteredCustodyGroups.length === 0}
-                style={{backgroundColor: 'var(--accent)'}}
-              >
-                <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
-                إيصالات التسليم
-              </button>
               
-              <button
-                className="secondary"
-                onClick={handlePrintFixedCustodyReport}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #014cb1', color: '#014cb1', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                <i className="fa-solid fa-print"></i>
-                تقرير العهد الثابتة
-              </button>
- 
-              <button
-                className="secondary"
-                onClick={handlePrintConsumedCustodyReport}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #166534', color: '#166534', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                <i className="fa-solid fa-print"></i>
-                تقرير العهد المستهلكة
-              </button>
-            <button
-                className="secondary"
-                onClick={handleExportFixedAssetsReport}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #014cb1', color: '#014cb1', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                <i className="fa-solid fa-file-excel" style={{ color: '#014cb1' }}></i>
-                تصدير الثابتة Excel
-              </button>
-
-              <button
-                className="secondary"
-                onClick={handleExportConsumableAssetsReport}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', borderRadius: '10px', border: '1px solid #166534', color: '#166534', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
-                تصدير المستهلكة Excel
-              </button>
+              <div className="premium-filter-actions-row">
+                <button
+                  type="button"
+                  className="premium-reset-btn"
+                  onClick={() => {
+                    setCustodyFilterType('all');
+                    setCustodyFilterStatus('all');
+                    setCustodyFilterRecipientType('all');
+                    setCustodyFilterRecipient('');
+                    setCustodyFilterItem('');
+                    setCustodyFilterFromDate('');
+                    setCustodyFilterToDate('');
+                  }}
+                >
+                  <i className="fa-solid fa-arrows-rotate"></i> تصفير الفلاتر
+                </button>
+                
+                <div className="premium-action-buttons-group">
+                  <button
+                    type="button"
+                    className="premium-primary-btn"
+                    onClick={() => handlePrintAllCustodyReceipts(filteredCustodyGroups.flat())}
+                    disabled={filteredCustodyGroups.length === 0}
+                  >
+                    <i className="fa-solid fa-print"></i> إيصالات التسليم
+                  </button>
+                  <button
+                    type="button"
+                    className="premium-secondary-btn"
+                    onClick={handlePrintFixedCustodyReport}
+                  >
+                    <i className="fa-solid fa-print"></i> تقرير العهد الثابتة
+                  </button>
+                  <button
+                    type="button"
+                    className="premium-excel-btn"
+                    onClick={handlePrintConsumedCustodyReport}
+                  >
+                    <i className="fa-solid fa-print"></i> تقرير العهد المستهلكة
+                  </button>
+                  <button
+                    type="button"
+                    className="premium-secondary-btn"
+                    onClick={handleExportFixedAssetsReport}
+                  >
+                    <i className="fa-solid fa-file-excel"></i> تصدير الثابتة Excel
+                  </button>
+                  <button
+                    type="button"
+                    className="premium-excel-btn"
+                    onClick={handleExportConsumableAssetsReport}
+                  >
+                    <i className="fa-solid fa-file-excel"></i> تصدير المستهلكة Excel
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="users-mobile-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: 0 }}>
+
+            {/* Desktop Table View */}
+            <div className="premium-card-table-wrapper desktop-only">
+              <div className="premium-table-header-row">
+                <h3 className="premium-table-title">
+                  <i className="fa-solid fa-receipt" style={{ color: 'var(--accent-cyan)' }}></i>
+                  بيان وإيصالات العهد المالية المصروفة للمستلمين ({filteredCustodyGroups.length} حركة عهدة)
+                </h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="premium-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '5%' }}>#</th>
+                      <th style={{ width: '18%' }}>المستلم (الجهة)</th>
+                      <th style={{ width: '12%' }}>نوع المستلم</th>
+                      <th style={{ width: '12%' }}>تاريخ الصرف</th>
+                      <th style={{ width: '12%' }}>نوع العهدة</th>
+                      <th style={{ width: '23%' }}>الأصناف والكميات المصروفة</th>
+                      <th style={{ width: '10%' }}>حالة العهدة</th>
+                      <th style={{ width: '8%' }}>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustodyGroups.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                          <i className="fa-solid fa-user-check" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
+                          لا توجد عهد مطابقة للفلاتر الحالية
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCustodyGroups.map((group, index) => {
+                        const main = group[0];
+                        const isActive = group.some((item) => item.status === 'active');
+                        return (
+                          <tr key={getBatchKey(main)}>
+                            <td>{index + 1}</td>
+                            <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                              {main.recipient.agency_name || main.recipient.name}
+                            </td>
+                            <td>
+                              <span className={`premium-badge ${main.recipient_type === 'agent' ? 'badge-info' : 'badge-purple'}`}>
+                                {main.recipient_type === 'agent' ? 'وكيل / فرع' : 'موظف عام'}
+                              </span>
+                            </td>
+                            <td>{main.assigned_at}</td>
+                            <td>
+                              <span className={`premium-badge ${main.item.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
+                                {getInventoryTypeName(main.item.inventory_type)}
+                              </span>
+                            </td>
+                            <td>
+                              <ul style={{ margin: 0, paddingInlineStart: '16px', listStyleType: 'square' }}>
+                                {group.map((entry) => (
+                                  <li key={entry.id} style={{ fontSize: '0.85rem', marginBottom: '2px' }}>
+                                    {entry.item.name} - <span style={{ fontWeight: 'bold' }}>{entry.quantity}</span> {entry.item.unit}
+                                    {(entry.serial_start || entry.serial_end) ? ` (S/N: ${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                            <td>
+                              <span className={`premium-badge ${isActive ? 'badge-success' : 'badge-danger'}`}>
+                                {isActive ? 'نشطة' : 'غير نشطة'}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  className="action-btn edit"
+                                  onClick={() => handlePrintCustodyReceipt(main)}
+                                  title="طباعة إيصال التسليم"
+                                  style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1.1rem' }}
+                                >
+                                  <i className="fa-solid fa-print"></i>
+                                </button>
+                                {isActive && (
+                                  <button
+                                    className="action-btn delete"
+                                    onClick={() => handleReturnCustodyGroup(group)}
+                                    title="تسجيل استرجاع العهدة"
+                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem' }}
+                                  >
+                                    <i className="fa-solid fa-arrow-rotate-left"></i>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="users-mobile-cards mobile-only" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: 0 }}>
               {filteredCustodyGroups.length === 0 ? (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
                   <i className="fa-solid fa-user-check" style={{ fontSize: '3rem', opacity: 0.3, marginBottom: '15px', display: 'block' }}></i>
@@ -1385,111 +1583,113 @@ export default function InventoryManagement() {
                   const main = group[0];
                   const isActive = group.some((item) => item.status === 'active');
                   return (
-                  <div key={getBatchKey(main)} className="user-mobile-card" style={{ position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', backgroundColor: isActive ? '#3b82f6' : 'var(--muted)' }}></div>
-                    <div className="user-mobile-header">
-                      <div>
-                        <h4 className="user-mobile-title">{getInventoryTypeName(main.item.inventory_type)}</h4>
-                        <span className="user-mobile-number" style={{ color: 'var(--accent)' }}>
-                          <i className="fa-solid fa-user" style={{ marginLeft: '5px' }}></i>
-                          {main.recipient.agency_name || main.recipient.name}
-                        </span>
+                    <div key={getBatchKey(main)} className="user-mobile-card" style={{ position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', backgroundColor: isActive ? '#3b82f6' : 'var(--muted)' }}></div>
+                      <div className="user-mobile-header">
+                        <div>
+                          <h4 className="user-mobile-title">{getInventoryTypeName(main.item.inventory_type)}</h4>
+                          <span className="user-mobile-number" style={{ color: 'var(--accent)' }}>
+                            <i className="fa-solid fa-user" style={{ marginLeft: '5px' }}></i>
+                            {main.recipient.agency_name || main.recipient.name}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="user-mobile-body">
-                      <div className="user-mobile-row">
-                        <span className="user-mobile-label">عدد الأصناف:</span>
-                        <span className="user-mobile-value" style={{ fontWeight: 'bold' }}>{group.length}</span>
-                      </div>
-                      <div className="user-mobile-row">
-                        <span className="user-mobile-label">الأصناف المسلمة:</span>
-<span className="user-mobile-value" style={{ display: 'block', width: '100%' }}>
-                          <ul style={{ margin: '6px 0 0 0', paddingInlineStart: '16px' }}>
-                            {group.map((entry) => (
-                              <li key={entry.id} style={{ marginBottom: '4px' }}>
-                                {entry.item.name} - {entry.quantity} {entry.item.unit}
-                                {(entry.serial_start || entry.serial_end) ? ` (${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
-                              </li>
-                            ))}
-                          </ul>
-                        </span>
-                      </div>
-                      <div className="user-mobile-row">
-                        <span className="user-mobile-label">تاريخ الصرف:</span>
-                        <span className="user-mobile-value">{main.assigned_at}</span>
-                      </div>
-                      <div className="user-mobile-row">
-                        <span className="user-mobile-label">حالة العهدة:</span>
-                        <span className="user-mobile-value">{isActive ? 'نشطة' : 'غير نشطة'}</span>
-                      </div>
-                      
-                      <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                        <button
-                          className="btn-submit"
-                          style={{ width: '100%', backgroundColor: 'transparent', color: '#10b981', border: '1px solid currentColor', borderRadius: '8px' }}
-                          onClick={() => handlePrintCustodyReceipt(main)}
-                        >
-                          <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
-                          طباعة إيصال التسليم
-                        </button>
-
-                        {isActive && (
+                      <div className="user-mobile-body">
+                        <div className="user-mobile-row">
+                          <span className="user-mobile-label">عدد الأصناف:</span>
+                          <span className="user-mobile-value" style={{ fontWeight: 'bold' }}>{group.length}</span>
+                        </div>
+                        <div className="user-mobile-row">
+                          <span className="user-mobile-label">الأصناف المسلمة:</span>
+                          <span className="user-mobile-value" style={{ display: 'block', width: '100%' }}>
+                            <ul style={{ margin: '6px 0 0 0', paddingInlineStart: '16px' }}>
+                              {group.map((entry) => (
+                                <li key={entry.id} style={{ marginBottom: '4px' }}>
+                                  {entry.item.name} - {entry.quantity} {entry.item.unit}
+                                  {(entry.serial_start || entry.serial_end) ? ` (${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
+                                </li>
+                              ))}
+                            </ul>
+                          </span>
+                        </div>
+                        <div className="user-mobile-row">
+                          <span className="user-mobile-label">تاريخ الصرف:</span>
+                          <span className="user-mobile-value">{main.assigned_at}</span>
+                        </div>
+                        <div className="user-mobile-row">
+                          <span className="user-mobile-label">حالة العهدة:</span>
+                          <span className="user-mobile-value">{isActive ? 'نشطة' : 'غير نشطة'}</span>
+                        </div>
+                        
+                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', flexDirection: 'column' }}>
                           <button
                             className="btn-submit"
-                            style={{ width: '100%', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid currentColor', borderRadius: '8px' }}
-                            onClick={() => handleReturnCustodyGroup(group)}
+                            style={{ width: '100%', backgroundColor: 'transparent', color: '#10b981', border: '1px solid currentColor', borderRadius: '8px' }}
+                            onClick={() => handlePrintCustodyReceipt(main)}
                           >
-                            <i className="fa-solid fa-arrow-turn-down" style={{ marginLeft: '8px' }}></i>
-                            تسجيل استرجاع العهدة
+                            <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
+                            طباعة إيصال التسليم
                           </button>
-                        )}
+
+                          {isActive && (
+                            <button
+                              className="btn-submit"
+                              style={{ width: '100%', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid currentColor', borderRadius: '8px' }}
+                              onClick={() => handleReturnCustodyGroup(group)}
+                            >
+                              <i className="fa-solid fa-arrow-turn-down" style={{ marginLeft: '8px' }}></i>
+                              تسجيل استرجاع العهدة
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )})
+                  );
+                })
               )}
             </div>
           </div>
         )}
 
         {activeTab === 'assign' && (
-          <div style={{ padding: '30px', maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ width: '100%' }}>
             <div className="form-card" style={{ 
               backgroundColor: 'var(--card-bg)', 
-              borderRadius: '20px', 
-              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-              padding: '35px',
-              border: '1px solid var(--border)'
+              borderRadius: '16px', 
+              boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+              padding: '24px',
+              border: '1px solid var(--border)',
+              width: '100%'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '35px', borderBottom: '2px solid var(--border)', paddingBottom: '20px' }}>
-                <h3 style={{ margin: 0, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.5rem' }}>
-                  <i className="fa-solid fa-file-signature" style={{ color: 'var(--accent)', fontSize: '1.8rem' }}></i>
-                  إصدار نموذج صرف عهدة جديد
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                <h3 style={{ margin: 0, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.25rem', fontWeight: '800' }}>
+                  <i className="fa-solid fa-file-signature" style={{ color: 'var(--accent-cyan)', fontSize: '1.4rem' }}></i>
+                  إصدار وإسناد نموذج صرف عهدة جديدة
                 </h3>
-                <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent)', padding: '6px 15px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  رقم الحركة: {Date.now().toString().slice(-6)}
+                <span className="premium-badge badge-info" style={{ padding: '6px 16px', borderRadius: '30px' }}>
+                  رقم الحركة التلقائي: #{Date.now().toString().slice(-6)}
                 </span>
               </div>
               
               <form onSubmit={handleAssignCustody} className="user-form">
                 {/* 1. Global Type Selection */}
-                <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: 'var(--bg-light)', borderRadius: '15px', border: '1px dashed var(--accent)' }}>
-                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', color: 'var(--accent)' }}>
-                    <i className="fa-solid fa-layer-group" style={{ marginLeft: '8px' }}></i>
-                    نوع الصنف المصروف حالياً
+                <div style={{ marginBottom: '20px', padding: '12px 18px', backgroundColor: 'var(--hover-bg)', borderRadius: '12px', border: '1px dashed var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
+                  <label style={{ margin: 0, fontWeight: 'bold', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}>
+                    <i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i>
+                    نوع المخزون المصروف حالياً:
                   </label>
-                  <div style={{ display: 'flex', gap: '15px' }}>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <label style={{ 
-                      flex: 1, 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '10px', 
-                      padding: '12px 20px', 
-                      borderRadius: '12px', 
-                      border: `2px solid ${assignInventoryType === 'fixed' ? 'var(--accent)' : 'var(--border)'}`,
-                      backgroundColor: assignInventoryType === 'fixed' ? 'rgba(59, 130, 246, 0.05)' : 'var(--card-bg)',
+                      gap: '8px', 
+                      padding: '8px 16px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${assignInventoryType === 'fixed' ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                      backgroundColor: assignInventoryType === 'fixed' ? 'var(--card-bg)' : 'transparent',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      margin: 0
                     }}>
                       <input 
                         type="radio" 
@@ -1501,19 +1701,19 @@ export default function InventoryManagement() {
                           setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
                         }}
                       />
-                      <span style={{ fontWeight: assignInventoryType === 'fixed' ? 'bold' : 'normal' }}>مخزون ثابت (أجهزة، أثاث)</span>
+                      <span style={{ fontWeight: assignInventoryType === 'fixed' ? 'bold' : 'normal', fontSize: '0.9rem', color: 'var(--text)' }}>مخزون ثابت (أجهزة، أثاث، سيارات)</span>
                     </label>
                     <label style={{ 
-                      flex: 1, 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '10px', 
-                      padding: '12px 20px', 
-                      borderRadius: '12px', 
-                      border: `2px solid ${assignInventoryType === 'consumable' ? 'var(--accent)' : 'var(--border)'}`,
-                      backgroundColor: assignInventoryType === 'consumable' ? 'rgba(59, 130, 246, 0.05)' : 'var(--card-bg)',
+                      gap: '8px', 
+                      padding: '8px 16px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${assignInventoryType === 'consumable' ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                      backgroundColor: assignInventoryType === 'consumable' ? 'var(--card-bg)' : 'transparent',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      margin: 0
                     }}>
                       <input 
                         type="radio" 
@@ -1525,357 +1725,343 @@ export default function InventoryManagement() {
                           setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
                         }}
                       />
-                      <span style={{ fontWeight: assignInventoryType === 'consumable' ? 'bold' : 'normal' }}>مخزون مستهلك (قرطاسية، مطبوعات)</span>
+                      <span style={{ fontWeight: assignInventoryType === 'consumable' ? 'bold' : 'normal', fontSize: '0.9rem', color: 'var(--text)' }}>مخزون مستهلك (قرطاسية، مطبوعات، دفاتر)</span>
                     </label>
                   </div>
                 </div>
 
-                {/* 2. Items List */}
-                <div style={{ marginBottom: '35px' }}>
-                  <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                    الأصناف المراد صرفها للمستلم
-                  </label>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {assignmentItems.map((row, index) => (
-                      <div key={`assign-row-${index}`} className="assignment-item-card" style={{ 
-                        border: '1px solid var(--border)', 
-                        borderRadius: '15px', 
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
-                        backgroundColor: 'var(--card-bg)'
-                      }}>
-                        <div style={{ 
-                          backgroundColor: 'var(--bg-light)', 
-                          padding: '10px 20px', 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center',
-                          borderBottom: '1px solid var(--border)'
+                {/* 2. Recipient Section (Compact Horizontal Grid) */}
+                <div className="recipient-horizontal-grid">
+                  <div className="form-group">
+                    <label><i className="fa-solid fa-user-tag" style={{ color: 'var(--accent-cyan)' }}></i> تصنيف الجهة المستلمة <span className="required">*</span></label>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setAssignment({...assignment, recipient_type: 'agent', recipient_id: ''});
+                          setRecipientSearch('');
+                        }}
+                        style={{ 
+                          flex: 1, 
+                          padding: '6px 12px', 
+                          borderRadius: '8px', 
+                          border: '1px solid var(--border)',
+                          backgroundColor: assignment.recipient_type === 'agent' ? 'var(--accent-cyan)' : 'var(--input-bg)',
+                          color: assignment.recipient_type === 'agent' ? '#fff' : 'var(--text)',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          fontSize: '0.85rem',
+                          height: '42px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        وكيل / فرع
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setAssignment({...assignment, recipient_type: 'employee', recipient_id: ''});
+                          setRecipientSearch('');
+                        }}
+                        style={{ 
+                          flex: 1, 
+                          padding: '6px 12px', 
+                          borderRadius: '8px', 
+                          border: '1px solid var(--border)',
+                          backgroundColor: assignment.recipient_type === 'employee' ? 'var(--accent-cyan)' : 'var(--input-bg)',
+                          color: assignment.recipient_type === 'employee' ? '#fff' : 'var(--text)',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          fontSize: '0.85rem',
+                          height: '42px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        موظف عام
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ position: 'relative' }} ref={recipientDropdownRef}>
+                    <label><i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--accent-cyan)' }}></i> بحث واختيار المستلم الفعلي <span className="required">*</span></label>
+                    <div className="searchable-select-container" style={{ position: 'relative', marginTop: '6px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="ابحث عن الاسم..." 
+                        value={recipientSearch}
+                        onChange={(e) => {
+                          setRecipientSearch(e.target.value);
+                          setShowRecipientDropdown(true);
+                        }}
+                        onFocus={() => setShowRecipientDropdown(true)}
+                        className="premium-filter-input"
+                        style={{ paddingLeft: '35px', height: '42px' }}
+                      />
+                      <i 
+                        className={`fa-solid ${showRecipientDropdown ? 'fa-chevron-up' : 'fa-chevron-down'}`} 
+                        style={{ 
+                          position: 'absolute', 
+                          left: '12px', 
+                          top: '50%', 
+                          transform: 'translateY(-50%)', 
+                          color: 'var(--muted)',
+                          pointerEvents: 'none'
+                        }}
+                      ></i>
+
+                      {showRecipientDropdown && (
+                        <div className="searchable-dropdown" style={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          left: 0,
+                          zIndex: 1000,
+                          backgroundColor: 'var(--card-bg)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '8px',
+                          boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          marginTop: '4px'
                         }}>
-                          <span style={{ fontWeight: 'bold', color: 'var(--text)', fontSize: '0.9rem' }}>
-                            <i className="fa-solid fa-box-open" style={{ marginLeft: '8px', color: 'var(--accent)' }}></i>
-                            صنف رقم {index + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeAssignmentItemRow(index)}
-                            disabled={assignmentItems.length === 1}
-                            style={{ 
-                              background: 'none', 
-                              border: 'none', 
-                              color: '#ef4444', 
-                              cursor: 'pointer',
-                              padding: '5px',
-                              opacity: assignmentItems.length === 1 ? 0.3 : 1
-                            }}
-                            title="حذف هذا الصنف"
-                          >
-                            <i className="fa-solid fa-trash-can"></i>
-                          </button>
+                          {assignment.recipient_type === 'agent' ? (
+                            agents
+                              .filter(a => 
+                                (a.agency_name || '').toLowerCase().includes(recipientSearch.toLowerCase()) || 
+                                (a.agent_name || '').toLowerCase().includes(recipientSearch.toLowerCase())
+                              )
+                              .map(a => (
+                                <div 
+                                  key={a.id} 
+                                  className="dropdown-item"
+                                  onClick={() => {
+                                    setAssignment({...assignment, recipient_id: a.id.toString()});
+                                    setRecipientSearch(a.agency_name || a.agent_name);
+                                    setShowRecipientDropdown(false);
+                                  }}
+                                  style={{ 
+                                    padding: '10px 15px', 
+                                    cursor: 'pointer', 
+                                    borderBottom: '1px solid var(--border)',
+                                    backgroundColor: assignment.recipient_id === a.id.toString() ? 'var(--hover-bg)' : 'transparent',
+                                    fontSize: '0.85rem'
+                                  }}
+                                >
+                                  <i className="fa-solid fa-building-user" style={{ marginLeft: '10px', color: 'var(--muted)' }}></i>
+                                  {a.agency_name || a.agent_name}
+                                </div>
+                              ))
+                          ) : (
+                            employees
+                              .filter(e => (e.name || '').toLowerCase().includes(recipientSearch.toLowerCase()))
+                              .map(e => (
+                                <div 
+                                  key={e.id} 
+                                  className="dropdown-item"
+                                  onClick={() => {
+                                    setAssignment({...assignment, recipient_id: e.id.toString()});
+                                    setRecipientSearch(e.name);
+                                    setShowRecipientDropdown(false);
+                                  }}
+                                  style={{ 
+                                    padding: '10px 15px', 
+                                    cursor: 'pointer', 
+                                    borderBottom: '1px solid var(--border)',
+                                    backgroundColor: assignment.recipient_id === e.id.toString() ? 'var(--hover-bg)' : 'transparent',
+                                    fontSize: '0.85rem'
+                                  }}
+                                >
+                                  <i className="fa-solid fa-user-tie" style={{ marginLeft: '10px', color: 'var(--muted)' }}></i>
+                                  {e.name}
+                                </div>
+                              ))
+                          )}
+                          {((assignment.recipient_type === 'agent' && agents.filter(a => (a.agency_name || '').toLowerCase().includes(recipientSearch.toLowerCase()) || (a.agent_name || '').toLowerCase().includes(recipientSearch.toLowerCase())).length === 0) ||
+                            (assignment.recipient_type === 'employee' && employees.filter(e => (e.name || '').toLowerCase().includes(recipientSearch.toLowerCase())).length === 0)) && (
+                            <div style={{ padding: '15px', textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                              لا توجد نتائج مطابقة لبحثك
+                            </div>
+                          )}
                         </div>
-                        
-                        <div style={{ padding: '20px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>اختر الصنف من المخازن <span className="required">*</span></label>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label><i className="fa-solid fa-comment-dots" style={{ color: 'var(--accent-cyan)' }}></i> ملاحظات الصرف العامة (على الإيصال)</label>
+                    <input 
+                      type="text"
+                      placeholder="ملاحظات عامة متعلقة بالتسليم..."
+                      className="premium-filter-input"
+                      style={{ marginTop: '6px', height: '42px' }}
+                      value={assignment.notes}
+                      onChange={(e) => setAssignment({...assignment, notes: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Items List (Compact Horizontal Table Format) */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <label style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem', color: 'var(--text)' }}>
+                      الأصناف والكميات المراد صرفها في هذه العهدة:
+                    </label>
+                  </div>
+                  
+                  <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card-bg)' }}>
+                    <table className="compact-form-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '4%', textAlign: 'center' }}>#</th>
+                          <th style={{ width: '28%' }}>الصنف المصروف <span className="required">*</span></th>
+                          <th style={{ width: '10%' }}>الكمية</th>
+                          <th style={{ width: '10%' }}>حالة الصنف</th>
+                          <th style={{ width: '14%' }}>السيريال (من)</th>
+                          <th style={{ width: '14%' }}>السيريال (إلى)</th>
+                          <th style={{ width: '16%' }}>ملاحظات الصنف</th>
+                          <th style={{ width: '4%', textAlign: 'center' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignmentItems.map((row, index) => (
+                          <tr key={`assign-row-${index}`}>
+                            <td style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--text)' }}>{index + 1}</td>
+                            <td>
                               <select
                                 required
                                 value={row.item_id}
                                 onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
-                                style={{ width: '100%' }}
+                                className="premium-filter-select"
+                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
                               >
-                                <option value="">اختر الصنف...</option>
+                                <option value="">اختر صنفاً...</option>
                                 {assignableItems.map(i => (
                                   <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
-                                    {i.name} (المتوفر حالياً: {i.stocks?.[0]?.quantity || 0})
+                                    {i.name} (المتوفر: {i.stocks?.[0]?.quantity || 0})
                                   </option>
                                 ))}
                               </select>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>الكمية</label>
+                            </td>
+                            <td>
                               <input
                                 type="number"
                                 min="1"
                                 required
                                 value={row.quantity}
                                 onChange={(e) => updateAssignmentItemRow(index, 'quantity', parseInt(e.target.value || '1'))}
-                                style={{ textAlign: 'center' }}
+                                className="premium-filter-input"
+                                style={{ height: '36px', textAlign: 'center', fontSize: '0.85rem', width: '100%' }}
                               />
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>حالة الصنف</label>
+                            </td>
+                            <td>
                               <select
                                 value={row.condition}
                                 onChange={(e) => updateAssignmentItemRow(index, 'condition', e.target.value)}
+                                className="premium-filter-select"
+                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
                               >
                                 <option value="new">جديد</option>
                                 <option value="used">مستعمل</option>
                               </select>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>السيريال الأول</label>
+                            </td>
+                            <td>
                               <input
                                 type="text"
                                 dir="ltr"
                                 placeholder="اختياري"
                                 value={row.serial_start}
                                 onChange={(e) => updateAssignmentItemRow(index, 'serial_start', e.target.value)}
+                                className="premium-filter-input"
+                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
                               />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>السيريال الأخير</label>
+                            </td>
+                            <td>
                               <input
                                 type="text"
                                 dir="ltr"
                                 placeholder="اختياري"
                                 value={row.serial_end}
                                 onChange={(e) => updateAssignmentItemRow(index, 'serial_end', e.target.value)}
+                                className="premium-filter-input"
+                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
                               />
-                            </div>
-                          </div>
-
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>ملاحظات خاصة بهذا الصنف</label>
-                            <textarea
-                              rows={1}
-                              placeholder="مثال: رقم الموديل، حالة استثنائية..."
-                              style={{ minHeight: '45px', fontSize: '0.9rem' }}
-                              value={row.notes}
-                              onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                placeholder="مثال: موديل/موقع..."
+                                value={row.notes}
+                                onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
+                                className="premium-filter-input"
+                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => removeAssignmentItemRow(index)}
+                                disabled={assignmentItems.length === 1}
+                                style={{ 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  color: '#ef4444', 
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  opacity: assignmentItems.length === 1 ? 0.3 : 1,
+                                  fontSize: '1rem'
+                                }}
+                                title="حذف السطر"
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
                     <button 
                       type="button" 
-                      className="btn-submit" 
                       onClick={addAssignmentItemRow} 
                       style={{ 
-                        width: 'fit-content', 
                         backgroundColor: 'transparent', 
-                        color: 'var(--accent)', 
-                        border: '2px dashed var(--accent)',
-                        padding: '12px 25px',
-                        alignSelf: 'center',
-                        marginTop: '10px'
+                        color: 'var(--accent-cyan)', 
+                        border: '2px dashed var(--accent-cyan)',
+                        padding: '6px 24px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '0.85rem',
+                        transition: 'all 0.2s'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(6, 182, 212, 0.05)'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <i className="fa-solid fa-plus-circle" style={{ marginLeft: '10px' }}></i>
-                      إضافة صنف إضافي لهذه العهدة
+                      <i className="fa-solid fa-plus-circle" style={{ marginLeft: '8px' }}></i>
+                      إضافة صنف إضافي لنموذج الصرف الحالي
                     </button>
                   </div>
                 </div>
 
-                {/* 3. Recipient Section */}
-                <div style={{ 
-                  backgroundColor: 'rgba(15, 23, 42, 0.02)', 
-                  padding: '25px', 
-                  borderRadius: '15px', 
-                  marginBottom: '35px',
-                  border: '1px solid var(--border)'
-                }}>
-                  <h4 style={{ marginTop: 0, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <i className="fa-solid fa-user-tag" style={{ color: 'var(--accent)' }}></i>
-                    بيانات المستلم (الجهة المسؤولة)
-                  </h4>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
-                    <div className="form-group">
-                      <label>تصنيف المستلم <span className="required">*</span></label>
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            setAssignment({...assignment, recipient_type: 'agent', recipient_id: ''});
-                            setRecipientSearch('');
-                          }}
-                          style={{ 
-                            flex: 1, 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: '1px solid var(--border)',
-                            backgroundColor: assignment.recipient_type === 'agent' ? 'var(--accent)' : 'var(--card-bg)',
-                            color: assignment.recipient_type === 'agent' ? '#fff' : 'var(--text)',
-                            cursor: 'pointer',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          وكيل / فرع
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            setAssignment({...assignment, recipient_type: 'employee', recipient_id: ''});
-                            setRecipientSearch('');
-                          }}
-                          style={{ 
-                            flex: 1, 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: '1px solid var(--border)',
-                            backgroundColor: assignment.recipient_type === 'employee' ? 'var(--accent)' : 'var(--card-bg)',
-                            color: assignment.recipient_type === 'employee' ? '#fff' : 'var(--text)',
-                            cursor: 'pointer',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          موظف عام
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="form-group" style={{ position: 'relative' }} ref={recipientDropdownRef}>
-                      <label>بحث واختيار المستلم <span className="required">*</span></label>
-                      <div className="searchable-select-container" style={{ position: 'relative' }}>
-                        <input 
-                          type="text" 
-                          placeholder="ابحث عن الاسم هنا..." 
-                          value={recipientSearch}
-                          onChange={(e) => {
-                            setRecipientSearch(e.target.value);
-                            setShowRecipientDropdown(true);
-                          }}
-                          onFocus={() => setShowRecipientDropdown(true)}
-                          className="form-control"
-                          style={{ 
-                            width: '100%', 
-                            padding: '12px 15px', 
-                            borderRadius: '8px', 
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--card-bg)',
-                            color: 'var(--text)',
-                            paddingLeft: '35px'
-                          }}
-                        />
-                        <i 
-                          className={`fa-solid ${showRecipientDropdown ? 'fa-chevron-up' : 'fa-chevron-down'}`} 
-                          style={{ 
-                            position: 'absolute', 
-                            left: '12px', 
-                            top: '50%', 
-                            transform: 'translateY(-50%)', 
-                            color: 'var(--muted)',
-                            pointerEvents: 'none'
-                          }}
-                        ></i>
-
-                        {showRecipientDropdown && (
-                          <div className="searchable-dropdown" style={{
-                            position: 'absolute',
-                            top: '100%',
-                            right: 0,
-                            left: 0,
-                            zIndex: 1000,
-                            backgroundColor: 'var(--card-bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                            maxHeight: '250px',
-                            overflowY: 'auto',
-                            marginTop: '8px'
-                          }}>
-                            {assignment.recipient_type === 'agent' ? (
-                              agents
-                                .filter(a => 
-                                  (a.agency_name || '').toLowerCase().includes(recipientSearch.toLowerCase()) || 
-                                  (a.agent_name || '').toLowerCase().includes(recipientSearch.toLowerCase())
-                                )
-                                .map(a => (
-                                  <div 
-                                    key={a.id} 
-                                    className="dropdown-item"
-                                    onClick={() => {
-                                      setAssignment({...assignment, recipient_id: a.id.toString()});
-                                      setRecipientSearch(a.agency_name || a.agent_name);
-                                      setShowRecipientDropdown(false);
-                                    }}
-                                    style={{ 
-                                      padding: '12px 20px', 
-                                      cursor: 'pointer', 
-                                      borderBottom: '1px solid var(--border)',
-                                      backgroundColor: assignment.recipient_id === a.id.toString() ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                      fontSize: '0.95rem'
-                                    }}
-                                  >
-                                    <i className="fa-solid fa-building-user" style={{ marginLeft: '10px', color: 'var(--muted)', fontSize: '0.8rem' }}></i>
-                                    {a.agency_name || a.agent_name}
-                                  </div>
-                                ))
-                            ) : (
-                              employees
-                                .filter(e => (e.name || '').toLowerCase().includes(recipientSearch.toLowerCase()))
-                                .map(e => (
-                                  <div 
-                                    key={e.id} 
-                                    className="dropdown-item"
-                                    onClick={() => {
-                                      setAssignment({...assignment, recipient_id: e.id.toString()});
-                                      setRecipientSearch(e.name);
-                                      setShowRecipientDropdown(false);
-                                    }}
-                                    style={{ 
-                                      padding: '12px 20px', 
-                                      cursor: 'pointer', 
-                                      borderBottom: '1px solid var(--border)',
-                                      backgroundColor: assignment.recipient_id === e.id.toString() ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                      fontSize: '0.95rem'
-                                    }}
-                                  >
-                                    <i className="fa-solid fa-user-tie" style={{ marginLeft: '10px', color: 'var(--muted)', fontSize: '0.8rem' }}></i>
-                                    {e.name}
-                                  </div>
-                                ))
-                            )}
-                            {((assignment.recipient_type === 'agent' && agents.filter(a => (a.agency_name || '').toLowerCase().includes(recipientSearch.toLowerCase()) || (a.agent_name || '').toLowerCase().includes(recipientSearch.toLowerCase())).length === 0) ||
-                              (assignment.recipient_type === 'employee' && employees.filter(e => (e.name || '').toLowerCase().includes(recipientSearch.toLowerCase())).length === 0)) && (
-                              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic' }}>
-                                لا توجد نتائج مطابقة لبحثك
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>ملاحظات عامة على نموذج الصرف (تظهر في الإيصال)</label>
-                  <textarea 
-                    rows={2}
-                    placeholder="ضع أي تفاصيل إضافية متعلقة بالتسليم ككل..."
-                    style={{ borderRadius: '12px' }}
-                    value={assignment.notes}
-                    onChange={(e) => setAssignment({...assignment, notes: e.target.value})}
-                  ></textarea>
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', marginTop: '40px', paddingTop: '25px', borderTop: '2px solid var(--border)' }}>
+                <div style={{ display: 'flex', gap: '15px', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid var(--border)' }}>
                   <button 
                     type="button" 
                     className="btn-cancel" 
                     onClick={() => setActiveTab('store')}
-                    style={{ flex: 1, padding: '15px', borderRadius: '12px', fontSize: '1.1rem' }}
+                    style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', fontSize: '0.95rem', height: '42px', cursor: 'pointer' }}
                   >
-                    إلغاء والعودة
+                    إلغاء والعودة للمخزن
                   </button>
                   <button 
                     type="submit" 
                     className="btn-submit" 
                     disabled={submitting}
-                    style={{ flex: 2, padding: '15px', borderRadius: '12px', fontSize: '1.1rem', boxShadow: '0 5px 15px rgba(59, 130, 246, 0.3)' }}
+                    style={{ flex: 2, padding: '10px 20px', borderRadius: '8px', fontSize: '0.95rem', height: '42px', boxShadow: '0 3px 10px rgba(6, 182, 212, 0.15)', cursor: 'pointer', backgroundColor: 'var(--accent-cyan)' }}
                   >
                     <i className="fa-solid fa-check-double" style={{ marginLeft: '10px' }}></i> 
-                    {submitting ? 'جاري تسجيل الحركة...' : 'اعتماد وصرف العهدة الآن'}
+                    {submitting ? 'جاري تسجيل الحركة...' : 'اعتماد وصرف العهدة وإصدار الإيصال'}
                   </button>
                 </div>
               </form>
@@ -1884,37 +2070,76 @@ export default function InventoryManagement() {
         )}
 
         {activeTab === 'log' && (
-          <div style={{ padding: '20px' }}>
-            <div className="custody-filters-panel">
-              <select value={movementFilterType} onChange={(e) => setMovementFilterType(e.target.value as 'all' | 'issue' | 'return' | 'loss' | 'damage')}>
-                <option value="all">كل أنواع الحركات</option>
-                <option value="issue">صرف عهدة</option>
-                <option value="return">استرجاع عهدة</option>
-                <option value="loss">فقد</option>
-                <option value="damage">تلف</option>
-              </select>
-              <select value={movementFilterRecipientType} onChange={(e) => setMovementFilterRecipientType(e.target.value as 'all' | 'agent' | 'employee')}>
-                <option value="all">كل أنواع المستلمين</option>
-                <option value="agent">وكيل / فرع</option>
-                <option value="employee">موظف عام</option>
-              </select>
-              <input type="date" value={movementFilterFromDate} onChange={(e) => setMovementFilterFromDate(e.target.value)} />
-              <input type="date" value={movementFilterToDate} onChange={(e) => setMovementFilterToDate(e.target.value)} />
-              <input
-                type="text"
-                placeholder="بحث باسم الصنف..."
-                value={movementFilterItem}
-                onChange={(e) => setMovementFilterItem(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="بحث باسم المستلم..."
-                value={movementFilterRecipient}
-                onChange={(e) => setMovementFilterRecipient(e.target.value)}
-              />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+            {/* Premium Filter Bar */}
+            <div className="premium-filter-bar" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i> نوع الحركة</label>
+                <select 
+                  value={movementFilterType} 
+                  onChange={(e) => setMovementFilterType(e.target.value as 'all' | 'issue' | 'return' | 'loss' | 'damage')}
+                  className="premium-filter-select"
+                >
+                  <option value="all">كل الحركات</option>
+                  <option value="issue">صرف عهدة</option>
+                  <option value="return">استرجاع عهدة</option>
+                  <option value="loss">فقد</option>
+                  <option value="damage">تلف</option>
+                </select>
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-user-tag" style={{ color: 'var(--accent-cyan)' }}></i> نوع المستلم</label>
+                <select 
+                  value={movementFilterRecipientType} 
+                  onChange={(e) => setMovementFilterRecipientType(e.target.value as 'all' | 'agent' | 'employee')}
+                  className="premium-filter-select"
+                >
+                  <option value="all">كل المستلمين</option>
+                  <option value="agent">وكيل / فرع</option>
+                  <option value="employee">موظف عام</option>
+                </select>
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-calendar" style={{ color: 'var(--accent-cyan)' }}></i> من</label>
+                <input 
+                  type="date" 
+                  value={movementFilterFromDate} 
+                  onChange={(e) => setMovementFilterFromDate(e.target.value)} 
+                  className="premium-filter-input"
+                />
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-calendar" style={{ color: 'var(--accent-cyan)' }}></i> إلى</label>
+                <input 
+                  type="date" 
+                  value={movementFilterToDate} 
+                  onChange={(e) => setMovementFilterToDate(e.target.value)} 
+                  className="premium-filter-input"
+                />
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-box" style={{ color: 'var(--accent-cyan)' }}></i> اسم الصنف</label>
+                <input
+                  type="text"
+                  placeholder="بحث باسم الصنف..."
+                  value={movementFilterItem}
+                  onChange={(e) => setMovementFilterItem(e.target.value)}
+                  className="premium-filter-input"
+                />
+              </div>
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-user" style={{ color: 'var(--accent-cyan)' }}></i> اسم المستلم</label>
+                <input
+                  type="text"
+                  placeholder="بحث باسم المستلم..."
+                  value={movementFilterRecipient}
+                  onChange={(e) => setMovementFilterRecipient(e.target.value)}
+                  className="premium-filter-input"
+                />
+              </div>
               <button
                 type="button"
-                className="btn-cancel custody-reset-btn"
+                className="premium-reset-btn"
                 onClick={() => {
                   setMovementFilterType('all');
                   setMovementFilterRecipientType('all');
@@ -1924,55 +2149,77 @@ export default function InventoryManagement() {
                   setMovementFilterRecipient('');
                 }}
               >
-                تصفير الفلاتر
+                <i className="fa-solid fa-arrows-rotate"></i> تصفير
               </button>
             </div>
 
-            <div className="table-wrapper" style={{ marginTop: '10px' }}>
-              <table className="users-table">
-                <thead>
-                  <tr>
-                    <th>التاريخ</th>
-                    <th>نوع الحركة</th>
-                    <th>الصنف</th>
-                    <th>نوع المخزون</th>
-                    <th>الكمية</th>
-                    <th>المستلم</th>
-                    <th>نوع المستلم</th>
-                    <th>تمت بواسطة</th>
-                    <th>ملاحظات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movementsLoading ? (
+            <div className="premium-card-table-wrapper">
+              <div className="premium-table-header-row">
+                <h3 className="premium-table-title">
+                  <i className="fa-solid fa-clock-rotate-left" style={{ color: 'var(--accent-cyan)' }}></i>
+                  سجل العمليات وحركات المخزون والعهدة التاريخية ({filteredMovements.length} حركة)
+                </h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="premium-table">
+                  <thead>
                     <tr>
-                      <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>جاري تحميل سجل الحركات...</td>
+                      <th style={{ width: '12%' }}>التاريخ</th>
+                      <th style={{ width: '12%' }}>نوع الحركة</th>
+                      <th style={{ width: '18%' }}>الصنف</th>
+                      <th style={{ width: '12%' }}>نوع المخزون</th>
+                      <th style={{ width: '8%' }}>الكمية</th>
+                      <th style={{ width: '14%' }}>المستلم</th>
+                      <th style={{ width: '10%' }}>نوع المستلم</th>
+                      <th style={{ width: '10%' }}>تمت بواسطة</th>
+                      <th style={{ width: '14%' }}>ملاحظات</th>
                     </tr>
-                  ) : filteredMovements.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>لا توجد حركات مطابقة للفلاتر</td>
-                    </tr>
-                  ) : (
-                    filteredMovements.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.created_at ? new Date(row.created_at).toLocaleString('en-GB') : '-'}</td>
-                        <td>{getMovementTypeName(row.type)}</td>
-                        <td>{row.item?.name || '-'}</td>
-                        <td>{getInventoryTypeName(row.item?.inventory_type)}</td>
-                        <td>{row.quantity}</td>
-                        <td>{row.recipient?.name || '-'}</td>
-                        <td>{getRecipientTypeName(row.recipient?.type || 'employee')}</td>
-                        <td>{row.processor?.name || '-'}</td>
-                        <td>{row.notes || '-'}</td>
+                  </thead>
+                  <tbody>
+                    {movementsLoading ? (
+                      <tr>
+                        <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>جاري تحميل سجل الحركات...</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : filteredMovements.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>لا توجد حركات مطابقة للفلاتر</td>
+                      </tr>
+                    ) : (
+                      filteredMovements.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.created_at ? new Date(row.created_at).toLocaleString('en-GB') : '-'}</td>
+                          <td>
+                            <span className={`premium-badge ${
+                              row.type === 'issue' ? 'badge-info' : 
+                              row.type === 'return' ? 'badge-success' : 
+                              row.type === 'loss' ? 'badge-danger' : 'badge-warning'
+                            }`}>
+                              {getMovementTypeName(row.type)}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{row.item?.name || '-'}</td>
+                          <td>
+                            <span className={`premium-badge ${row.item?.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
+                              {getInventoryTypeName(row.item?.inventory_type)}
+                            </span>
+                          </td>
+                          <td>{row.quantity}</td>
+                          <td>{row.recipient?.name || '-'}</td>
+                          <td>{getRecipientTypeName(row.recipient?.type || 'employee')}</td>
+                          <td>{row.processor?.name || '-'}</td>
+                          <td>{row.notes || '-'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
       </div>
+
+
 
       {/* Modals Implementation */}
 

@@ -15000,3 +15000,519 @@ body,
     gap: 20px;
   }
 }
+
+/* ==========================================
+   Premium Inventory & Custody Dashboard Styles
+   ========================================== */
+
+/* 1. Core Container Adjustments */
+.inventory-dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 2. KPI Stats Grid & Premium Cards */
+.premium-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .premium-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 576px) {
+  .premium-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.premium-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+}
+
+.premium-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border-color: var(--accent-cyan);
+}
+
+.premium-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.premium-stat-card:hover::before {
+  opacity: 1;
+}
+
+.premium-stat-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: all 0.3s;
+}
+
+.premium-stat-card:hover .premium-stat-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Custom Gradient colors for KPI Icons */
+.kpi-total { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.kpi-fixed { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+.kpi-consumable { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.kpi-alert { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+.premium-stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.premium-stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  font-family: 'Cairo', sans-serif;
+}
+
+.premium-stat-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* 3. Modern Pill Tab Switcher */
+.premium-tabs-container {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.01);
+}
+
+.premium-tabs-nav {
+  display: flex;
+  background: var(--input-bg);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.premium-tab-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+  font-family: 'Cairo', sans-serif;
+}
+
+.premium-tab-btn:hover {
+  color: var(--text);
+  background: rgba(0,0,0,0.02);
+}
+
+.premium-tab-btn.active {
+  background: var(--accent-cyan);
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px var(--accent-shadow);
+}
+
+/* 4. Sleek Interactive Filter Panels */
+.premium-filter-bar {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: flex-end;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+}
+
+.premium-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.premium-filter-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.premium-filter-input {
+  width: 100%;
+  height: 42px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: 'Cairo', sans-serif;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.premium-filter-select {
+  width: 100%;
+  height: 42px;
+  padding: 8px 12px 8px 36px; /* 36px left padding to keep text clear of custom chevron in RTL */
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--input-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: 'Cairo', sans-serif;
+  outline: none;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306b6d4' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  background-size: 14px;
+  direction: rtl;
+}
+
+.premium-filter-input:focus, .premium-filter-select:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px var(--accent-shadow);
+}
+
+.premium-reset-btn {
+  height: 42px;
+  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  font-family: 'Cairo', sans-serif;
+}
+
+.premium-reset-btn:hover {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.15);
+}
+
+/* 5. Enterprise-grade Tables */
+.premium-card-table-wrapper {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+  width: 100%;
+}
+
+.premium-table-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.premium-table-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.premium-table th {
+  background: var(--table-header);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 12px 18px;
+  text-align: right;
+  border-bottom: 2px solid var(--border);
+}
+
+.premium-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.premium-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.premium-table tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.premium-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Beautiful custom status badges */
+.premium-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.badge-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.badge-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.badge-info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.badge-purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+
+/* 6. Compact Form Table for Custody Line Items */
+.compact-form-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 15px;
+}
+
+.compact-form-table th {
+  background: var(--table-header);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.compact-form-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.compact-form-table tr:hover {
+  background: var(--hover-bg);
+}
+
+/* 7. Recipient Horizontal Settings Grid */
+.recipient-horizontal-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.5fr) 2fr;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.01);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+  .recipient-horizontal-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.recipient-horizontal-grid .form-group {
+  margin-bottom: 0 !important;
+}
+
+/* Theme adaptation for searchable select */
+[data-theme='dark'] .searchable-dropdown {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border) !important;
+}
+[data-theme='dark'] .dropdown-item:hover {
+  background-color: var(--hover-bg) !important;
+}
+
+/* 8. Responsive Helper Utilities */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* 9. Premium Filter Actions Layout and Button Styling */
+.filter-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 991px) {
+  .filter-span-2 {
+    grid-column: auto;
+  }
+}
+
+.premium-filter-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+  grid-column: 1 / -1;
+}
+
+.premium-action-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.premium-excel-btn {
+  height: 42px;
+  padding: 0 20px;
+  background: rgba(22, 101, 52, 0.08);
+  color: #166534;
+  border: 1px solid #166534;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Cairo', sans-serif;
+  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.premium-excel-btn:hover {
+  background: #166534;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(22, 101, 52, 0.15);
+}
+
+.premium-primary-btn {
+  height: 42px;
+  padding: 0 20px;
+  background: var(--accent-cyan);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Cairo', sans-serif;
+  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.premium-primary-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+}
+
+.premium-secondary-btn {
+  height: 42px;
+  padding: 0 20px;
+  background: rgba(1, 76, 177, 0.08);
+  color: #014cb1;
+  border: 1px solid #014cb1;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Cairo', sans-serif;
+  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.premium-secondary-btn:hover {
+  background: #014cb1;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(1, 76, 177, 0.15);
+}

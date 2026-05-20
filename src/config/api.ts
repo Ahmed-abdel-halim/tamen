@@ -78,7 +78,7 @@ export const resolveImageUrl = (path: string | null | undefined): string => {
   }
 
   // 5. Handle known storage directories missing the storage/ prefix
-  const storageDirs = ['expense_receipts', 'union_receipts', 'public', 'uploads', 'documents'];
+  const storageDirs = ['expense_receipts', 'union_receipts', 'public', 'uploads', 'documents', 'treasury_vouchers', 'bank_vouchers', 'pos_reports'];
   for (const dir of storageDirs) {
     if (cleanPath.startsWith(dir)) {
       const actualPath = cleanPath.startsWith('public') 

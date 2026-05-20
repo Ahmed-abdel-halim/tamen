@@ -107,15 +107,17 @@ export default function EmployeeProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'personal' | 'job' | 'financial' | 'documents' | 'requests'>(() => {
+  const [activeTab, setActiveTab] = useState<'personal' | 'job' | 'financial' | 'documents' | 'requests' | 'custody'>(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab && ['personal', 'job', 'financial', 'documents', 'requests'].includes(tab)) {
+    if (tab && ['personal', 'job', 'financial', 'documents', 'requests', 'custody'].includes(tab)) {
       return tab as any;
     }
     return 'personal';
   });
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
+  const [fixedCustodies, setFixedCustodies] = useState<any[]>([]);
+  const [consumedCustodies, setConsumedCustodies] = useState<any[]>([]);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [newRequest, setNewRequest] = useState({
@@ -128,11 +130,12 @@ export default function EmployeeProfile() {
   useEffect(() => {
     fetchUser();
     fetchRequests();
+    fetchCustodyData();
     
     // Update active tab if URL parameter changes
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab && ['personal', 'job', 'financial', 'documents', 'requests'].includes(tab)) {
+    if (tab && ['personal', 'job', 'financial', 'documents', 'requests', 'custody'].includes(tab)) {
       setActiveTab(tab as any);
     }
   }, [id, window.location.search]);
@@ -170,6 +173,19 @@ export default function EmployeeProfile() {
         setRequests(Array.isArray(data) ? data : []);
       }
     } catch (error) {}
+  };
+
+  const fetchCustodyData = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${id}&recipient_type=employee`);
+      if (res.ok) {
+        const allCustody: any[] = await res.json();
+        setFixedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active'));
+        setConsumedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'consumable' || c.inventory_type === 'consumable') && c.status === 'active'));
+      }
+    } catch (e) {
+      console.error("Failed to fetch user custody", e);
+    }
   };
 
   const handleCreateRequest = async (e: React.FormEvent) => {
@@ -490,6 +506,7 @@ export default function EmployeeProfile() {
               { id: 'job', label: 'البيانات الوظيفية', icon: 'fa-briefcase' },
               { id: 'financial', label: 'البيانات المالية', icon: 'fa-money-bill-wave' },
               { id: 'documents', label: 'الأوراق والمستندات', icon: 'fa-file-invoice' },
+              { id: 'custody', label: 'العهدة والعهد', icon: 'fa-boxes-stacked' },
               { id: 'requests', label: 'طلبات الموظف', icon: 'fa-envelope-open-text' },
             ].map((tab) => (
               <button
@@ -598,6 +615,74 @@ export default function EmployeeProfile() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'custody' && (
+              <div className="tab-pane">
+                <h3 className="tab-title">سجل العهد والمستندات</h3>
+                
+                <div style={{ marginBottom: '40px' }}>
+                  <h4 className="section-title-sm"><i className="fa-solid fa-boxes-stacked" style={{ color: '#3b82f6' }}></i> العهدة الثابتة</h4>
+                  <div className="premium-table-container">
+                    <table className="premium-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '60px' }}>#</th>
+                          <th>البيان والوصف</th>
+                          <th style={{ width: '120px' }}>الكمية</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fixedCustodies.length > 0 ? (
+                          fixedCustodies.map((item, idx) => (
+                            <tr key={item.id || idx}>
+                              <td>{idx + 1}</td>
+                              <td>{item.item?.name || item.item_name}</td>
+                              <td><span className="perm-badge-blue">{item.quantity}</span></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} style={{ padding: '20px', color: '#6b7280', textAlign: 'center' }}>لا توجد عهد ثابتة مسجلة</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="section-divider"></div>
+
+                <div>
+                  <h4 className="section-title-sm"><i className="fa-solid fa-box-open" style={{ color: '#ef4444' }}></i> العهدة المستهلكة</h4>
+                  <div className="premium-table-container">
+                    <table className="premium-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '60px' }}>#</th>
+                          <th>البيان والوصف</th>
+                          <th style={{ width: '120px' }}>الكمية</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {consumedCustodies.length > 0 ? (
+                          consumedCustodies.map((item, idx) => (
+                            <tr key={item.id || idx}>
+                              <td>{idx + 1}</td>
+                              <td>{item.item?.name || item.item_name}</td>
+                              <td><span className="perm-badge-blue" style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' }}>{item.quantity}</span></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} style={{ padding: '20px', color: '#6b7280', textAlign: 'center' }}>لا توجد عهد مستهلكة مسجلة</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

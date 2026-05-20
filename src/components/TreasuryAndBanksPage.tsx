@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
+import { generatePremiumExcel } from '../utils/excelGenerator';
 
 interface BranchAgent {
   id: number;
   agency_name: string;
   agent_name: string;
   code: string;
+  phone?: string;
 }
 
 interface TreasuryTransaction {
@@ -21,6 +23,7 @@ interface TreasuryTransaction {
   branch_agent_id?: number;
   expense_destination?: string;
   payment_source?: string;
+  supplier_phone?: string;
   notes?: string;
   created_at?: string;
 }
@@ -69,6 +72,7 @@ interface BankTransaction {
   payment_method?: string;
   voucher_image?: string;
   payer_name?: string;
+  payer_phone?: string;
 }
 
 const BANKS = ['مصرف الجمهورية', 'مصرف الوحدة', 'مصرف التجارة والتنمية', 'المصرف الإسلامي الليبي', 'مصرف صحارى', 'مصرف الأمان', 'المصرف التجاري الوطني'];
@@ -86,6 +90,53 @@ const BANK_TRANSACTION_TYPES = [
 export default function TreasuryAndBanksPage() {
   const [activeTab, setActiveTab] = useState<'treasury' | 'banks' | 'pos'>('banks');
   const [agents, setAgents] = useState<BranchAgent[]>([]);
+
+  const getAuthHeaders = () => {
+    const headers: Record<string, string> = {
+      'Accept': 'application/json'
+    };
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u && u.id) {
+          headers['X-User-Id'] = String(u.id);
+        }
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
+  // State & Helper for custom confirmation modal
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const customConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   // Image Preview Modal
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -119,7 +170,8 @@ export default function TreasuryAndBanksPage() {
     type: 'income',
     amount: '',
     description: '',
-    source: '',
+    supplier_phone: '',
+    source: 'المدار الليبي',
     reference_number: '',
     branch_agent_id: '',
     expense_destination: '',
@@ -127,6 +179,8 @@ export default function TreasuryAndBanksPage() {
     notes: '',
     voucher_image: null as File | null
   });
+  const [treasuryAgentSearch, setTreasuryAgentSearch] = useState('غير مرتبط بوكيل');
+  const [showTreasuryAgentDropdown, setShowTreasuryAgentDropdown] = useState(false);
 
   // -------------------------------------------------------------
   // 2. Bank State (المصارف)
@@ -135,19 +189,38 @@ export default function TreasuryAndBanksPage() {
   const [activeBankFilter, setActiveBankFilter] = useState('all');
   const [bankSearch, setBankSearch] = useState('');
   const [showBankModal, setShowBankModal] = useState(false);
+  
+  // Dynamic settings lists
+  const [dbBanks, setDbBanks] = useState<{id: number, name: string}[]>([]);
+  const [dbTypes, setDbTypes] = useState<{id: number, name: string}[]>([]);
+  
+  // Settings Modals
+  const [showBankSettingsModal, setShowBankSettingsModal] = useState(false);
+  const [showTypeSettingsModal, setShowTypeSettingsModal] = useState(false);
+  const [newBankName, setNewBankName] = useState('');
+  const [newTypeName, setNewTypeName] = useState('');
+
+  // Mode for the bank transaction modal (deposit or withdrawal)
+  const [bankModalType, setBankModalType] = useState<'deposit' | 'withdrawal'>('deposit');
+
+  // Searchable agent dropdown states
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+
   const [bankFormData, setBankFormData] = useState({
     transaction_date: new Date().toISOString().split('T')[0],
     reference_number: '',
-    bank_name: BANKS[0],
+    bank_name: '',
     account_number: '',
     amount: '',
     type: 'deposit',
     notes: '',
-    transaction_type: 'bank_transfer',
+    transaction_type: '',
     source_bank: '',
     destination_bank: '',
     branch_agent_id: '',
     payer_name: '',
+    payer_phone: '',
     voucher_image: null as File | null
   });
 
@@ -168,6 +241,7 @@ export default function TreasuryAndBanksPage() {
     is_reconciled: 'all'
   });
   const [showMachineModal, setShowMachineModal] = useState(false);
+  const [editingMachineId, setEditingMachineId] = useState<number | null>(null);
   const [showPosTxnModal, setShowPosTxnModal] = useState(false);
   const [machineFormData, setMachineFormData] = useState({
     machine_name: '',
@@ -195,7 +269,129 @@ export default function TreasuryAndBanksPage() {
     fetchTreasuryData();
     fetchBankData();
     fetchPosData();
+    fetchBankSettings();
   }, []);
+
+  const fetchBankSettings = async () => {
+    try {
+      const resBanks = await fetch(`${API_BASE_URL}/bank-settings/banks`);
+      if (resBanks.ok) {
+        const banksData = await resBanks.json();
+        setDbBanks(banksData);
+      }
+      const resTypes = await fetch(`${API_BASE_URL}/bank-settings/transaction-types`);
+      if (resTypes.ok) {
+        const typesData = await resTypes.json();
+        setDbTypes(typesData);
+      }
+    } catch (e) {
+      console.error('Error fetching bank settings:', e);
+    }
+  };
+
+  const handleAddBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBankName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/bank-settings/banks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newBankName })
+      });
+      if (res.ok) {
+        showToast('تم إضافة المصرف بنجاح', 'success');
+        setNewBankName('');
+        fetchBankSettings();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'خطأ في إضافة المصرف', 'error');
+      }
+    } catch (e) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
+  const handleDeleteBank = async (id: number) => {
+    customConfirm('تأكيد حذف المصرف', 'هل أنت متأكد من حذف هذا المصرف؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/bank-settings/banks/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم حذف المصرف بنجاح', 'success');
+          fetchBankSettings();
+        } else {
+          showToast('فشل حذف المصرف', 'error');
+        }
+      } catch (e) {
+        showToast('خطأ في الاتصال بالخادم', 'error');
+      }
+    });
+  };
+
+  const handleAddType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTypeName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/bank-settings/transaction-types`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTypeName })
+      });
+      if (res.ok) {
+        showToast('تم إضافة طريقة التحصيل بنجاح', 'success');
+        setNewTypeName('');
+        fetchBankSettings();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'خطأ في الإضافة', 'error');
+      }
+    } catch (e) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
+  const handleDeleteType = async (id: number) => {
+    customConfirm('تأكيد حذف طريقة التحصيل', 'هل أنت متأكد من حذف طريقة التحصيل هذه؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/bank-settings/transaction-types/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم الحذف بنجاح', 'success');
+          fetchBankSettings();
+        } else {
+          showToast('فشل الحذف', 'error');
+        }
+      } catch (e) {
+        showToast('خطأ في الاتصال بالخادم', 'error');
+      }
+    });
+  };
+
+  const openBankModal = (type: 'deposit' | 'withdrawal') => {
+    setBankModalType(type);
+    setBankFormData({
+      transaction_date: new Date().toISOString().split('T')[0],
+      reference_number: '',
+      bank_name: dbBanks.length > 0 ? dbBanks[0].name : '',
+      account_number: '',
+      amount: '',
+      type: type,
+      notes: '',
+      transaction_type: dbTypes.length > 0 ? dbTypes[0].name : '',
+      source_bank: '',
+      destination_bank: '',
+      branch_agent_id: '',
+      payer_name: '',
+      payer_phone: '',
+      voucher_image: null
+    });
+    setAgentSearchQuery('غير مرتبط بوكيل');
+    setShowBankModal(true);
+  };
 
   const fetchAgents = async () => {
     try {
@@ -262,7 +458,8 @@ export default function TreasuryAndBanksPage() {
           type: 'income',
           amount: '',
           description: '',
-          source: '',
+          supplier_phone: '',
+          source: 'المدار الليبي',
           reference_number: '',
           branch_agent_id: '',
           expense_destination: '',
@@ -270,6 +467,7 @@ export default function TreasuryAndBanksPage() {
           notes: '',
           voucher_image: null
         });
+        setTreasuryAgentSearch('غير مرتبط بوكيل');
         fetchTreasuryData();
       } else {
         const data = await res.json();
@@ -281,18 +479,20 @@ export default function TreasuryAndBanksPage() {
   };
 
   const handleDeleteTreasuryTxn = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه المعاملة؟')) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/treasury/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        showToast('تم حذف الحركة بنجاح', 'success');
-        fetchTreasuryData();
+    customConfirm('تأكيد حذف المعاملة', 'هل أنت متأكد من حذف هذه المعاملة؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/treasury/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم حذف الحركة بنجاح', 'success');
+          fetchTreasuryData();
+        }
+      } catch (e) {
+        showToast('فشل حذف الحركة', 'error');
       }
-    } catch (e) {
-      showToast('فشل حذف الحركة', 'error');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -319,6 +519,8 @@ export default function TreasuryAndBanksPage() {
     Object.entries(bankFormData).forEach(([key, val]) => {
       if (key === 'voucher_image' && val) {
         formData.append('voucher_image', val as File);
+      } else if (key === 'type') {
+        formData.append('type', bankModalType);
       } else if (val !== null && val !== undefined) {
         formData.append(key, String(val));
       }
@@ -335,18 +537,20 @@ export default function TreasuryAndBanksPage() {
         setBankFormData({
           transaction_date: new Date().toISOString().split('T')[0],
           reference_number: '',
-          bank_name: BANKS[0],
+          bank_name: dbBanks.length > 0 ? dbBanks[0].name : '',
           account_number: '',
           amount: '',
           type: 'deposit',
           notes: '',
-          transaction_type: 'bank_transfer',
+          transaction_type: dbTypes.length > 0 ? dbTypes[0].name : '',
           source_bank: '',
           destination_bank: '',
           branch_agent_id: '',
           payer_name: '',
+          payer_phone: '',
           voucher_image: null
         });
+        setAgentSearchQuery('غير مرتبط بوكيل');
         fetchBankData();
       } else {
         const errData = await res.json();
@@ -372,18 +576,20 @@ export default function TreasuryAndBanksPage() {
   };
 
   const handleDeleteBankTxn = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه المعاملة البنكية؟')) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/bank-transactions/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        showToast('تم حذف المعاملة البنكية', 'success');
-        fetchBankData();
+    customConfirm('تأكيد حذف المعاملة البنكية', 'هل أنت متأكد من حذف هذه المعاملة البنكية؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/bank-transactions/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم حذف المعاملة البنكية', 'success');
+          fetchBankData();
+        }
+      } catch (e) {
+        showToast('فشل حذف المعاملة', 'error');
       }
-    } catch (e) {
-      showToast('فشل حذف المعاملة', 'error');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -424,14 +630,19 @@ export default function TreasuryAndBanksPage() {
   const handleSaveMachine = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE_URL}/pos-machines`, {
-        method: 'POST',
+      const url = editingMachineId
+        ? `${API_BASE_URL}/pos-machines/${editingMachineId}`
+        : `${API_BASE_URL}/pos-machines`;
+      const method = editingMachineId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(machineFormData)
       });
       if (res.ok) {
-        showToast('تم إضافة ماكينة POS بنجاح', 'success');
+        showToast(editingMachineId ? 'تم تحديث بيانات الماكينة بنجاح' : 'تم إضافة ماكينة POS بنجاح', 'success');
         setShowMachineModal(false);
+        setEditingMachineId(null);
         setMachineFormData({
           machine_name: '',
           machine_serial: '',
@@ -443,7 +654,7 @@ export default function TreasuryAndBanksPage() {
         fetchPosData();
       }
     } catch (e) {
-      showToast('فشل إضافة الماكينة', 'error');
+      showToast('فشل حفظ بيانات الماكينة', 'error');
     }
   };
 
@@ -462,18 +673,20 @@ export default function TreasuryAndBanksPage() {
   };
 
   const handleDeleteMachine = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف ماكينة POS هذه نهائياً؟')) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/pos-machines/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        showToast('تم حذف الماكينة بنجاح', 'success');
-        fetchPosData();
+    customConfirm('تأكيد حذف ماكينة POS', 'هل أنت متأكد من حذف ماكينة POS هذه نهائياً؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/pos-machines/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم حذف الماكينة بنجاح', 'success');
+          fetchPosData();
+        }
+      } catch (e) {
+        showToast('فشل حذف الماكينة', 'error');
       }
-    } catch (e) {
-      showToast('فشل حذف الماكينة', 'error');
-    }
+    });
   };
 
   const handleSavePosTransaction = async (e: React.FormEvent) => {
@@ -529,18 +742,20 @@ export default function TreasuryAndBanksPage() {
   };
 
   const handleDeletePosTxn = async (id: number) => {
-    if (!window.confirm('هل أنت متأكد من حذف معاملة تسوية POS هذه؟')) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/pos-transactions/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        showToast('تم حذف الحركة بنجاح', 'success');
-        fetchPosData();
+    customConfirm('تأكيد حذف معاملة POS', 'هل أنت متأكد من حذف معاملة تسوية POS هذه؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/pos-transactions/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم حذف الحركة بنجاح', 'success');
+          fetchPosData();
+        }
+      } catch (e) {
+        showToast('فشل حذف الحركة', 'error');
       }
-    } catch (e) {
-      showToast('فشل حذف الحركة', 'error');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -552,6 +767,7 @@ export default function TreasuryAndBanksPage() {
       const matchesSearch = !bankSearch || 
         (t.reference_number && t.reference_number.toLowerCase().includes(bankSearch.toLowerCase())) ||
         (t.payer_name && t.payer_name.toLowerCase().includes(bankSearch.toLowerCase())) ||
+        (t.payer_phone && t.payer_phone.toLowerCase().includes(bankSearch.toLowerCase())) ||
         (t.notes && t.notes.toLowerCase().includes(bankSearch.toLowerCase())) ||
         (t.agent_name && t.agent_name.toLowerCase().includes(bankSearch.toLowerCase()));
       return matchesBank && matchesSearch;
@@ -560,30 +776,301 @@ export default function TreasuryAndBanksPage() {
 
   const bankBalances = useMemo(() => {
     const balances: Record<string, number> = {};
-    BANKS.forEach(b => { balances[b] = 0; });
+    dbBanks.forEach(b => { balances[b.name] = 0; });
 
     bankTxns.forEach(t => {
-      if (balances[t.bank_name] !== undefined) {
-        const amt = parseFloat(t.amount.toString()) || 0;
-        if (t.type === 'deposit') {
-          balances[t.bank_name] += amt;
-        } else {
-          balances[t.bank_name] -= amt;
-        }
+      // Ensure we initialize dynamic banks if they appear in transaction but not in dbBanks
+      if (balances[t.bank_name] === undefined) {
+        balances[t.bank_name] = 0;
+      }
+      const amt = parseFloat(t.amount.toString()) || 0;
+      if (t.type === 'deposit') {
+        balances[t.bank_name] += amt;
+      } else {
+        balances[t.bank_name] -= amt;
       }
     });
     return balances;
-  }, [bankTxns]);
+  }, [bankTxns, dbBanks]);
+
+  // -------------------------------------------------------------
+  // WhatsApp Sharing Functions
+  // -------------------------------------------------------------
+  const handleWhatsAppBankShare = (txn: BankTransaction) => {
+    const agent = agents.find(a => a.id === txn.branch_agent_id || a.agency_name === txn.agent_name);
+    const targetPhone = txn.payer_phone || agent?.phone || '';
+    
+    const message = `*شركة المدار الليبي للتأمين* 🏢%0A` +
+      `*إشعار إيداع مصرفي جديد*%0A%0A` +
+      `👤 *المرسل / المودع:* ${txn.payer_name || '—'}%0A` +
+      `📞 *رقم الهاتف:* ${txn.payer_phone || '—'}%0A` +
+      `💰 *المبلغ المودع:* ${parseFloat(txn.amount.toString()).toLocaleString()} د.ل%0A` +
+      `🏦 *المصرف:* ${txn.bank_name}%0A` +
+      `📅 *التاريخ:* ${txn.transaction_date}%0A` +
+      `📌 *رقم المرجع:* ${txn.reference_number || '—'}%0A` +
+      `🏢 *الوكيل المرتبط:* ${txn.agent_name || 'غير مرتبط'}%0A%0A` +
+      `تم إيداع القيمة بنجاح في حساب الشركة. شكراً لتعاملكم معنا. ✨`;
+
+    let cleanPhone = targetPhone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('09')) {
+      cleanPhone = '218' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('9')) {
+      cleanPhone = '218' + cleanPhone;
+    }
+
+    if (!cleanPhone) {
+      showToast('لا يوجد رقم هاتف للوكيل أو المودع لإرسال الرسالة', 'error');
+      return;
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleWhatsAppTreasuryShare = (txn: TreasuryTransaction) => {
+    const agent = agents.find(a => a.id === txn.branch_agent_id);
+    const targetPhone = txn.supplier_phone || agent?.phone || '';
+    
+    const message = `*شركة المدار الليبي للتأمين* 🏢%0A` +
+      `*إشعار حركة خزينة (قبض نقدي)*%0A%0A` +
+      `👤 *المورد / الجهة الدافعة:* ${txn.description || '—'}%0A` +
+      `📞 *رقم الهاتف:* ${txn.supplier_phone || '—'}%0A` +
+      `💰 *المبلغ:* ${parseFloat(txn.amount.toString()).toLocaleString()} د.ل%0A` +
+      `🏦 *المستفيد:* المدار الليبي%0A` +
+      `📅 *التاريخ:* ${txn.transaction_date}%0A` +
+      `📌 *رقم الإيصال:* ${txn.reference_number || '—'}%0A` +
+      `🏢 *الوكيل المرتبط:* ${agent?.agency_name || 'غير مرتبط'}%0A%0A` +
+      `تم قبض المبلغ نقداً وإيداعه بالخزينة. شكراً لكم. ✨`;
+
+    let cleanPhone = targetPhone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('09')) {
+      cleanPhone = '218' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('9')) {
+      cleanPhone = '218' + cleanPhone;
+    }
+
+    if (!cleanPhone) {
+      showToast('لا يوجد رقم هاتف للمورد أو الوكيل لإرسال الرسالة', 'error');
+      return;
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   // -------------------------------------------------------------
   // Print operational vouchers
   // -------------------------------------------------------------
+  const handlePrintBankVoucher = (txn: BankTransaction) => {
+    const printWindow = window.open('', '', 'width=900,height=750');
+    if (!printWindow) return;
+
+    const qrContent = `مستند إيداع مصرفي رقم: ${txn.id}\nالمصرف: ${txn.bank_name}\nالمبلغ: ${txn.amount} د.ل\nالمودع: ${txn.payer_name || '—'}\nالتاريخ: ${txn.transaction_date}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrContent)}`;
+    const logoUrl = `${window.location.origin}/img/logo.png`;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>إيصال إيداع مصرفي #${txn.id}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          body { font-family: 'Cairo', sans-serif; margin: 30px; padding: 0; color: #1e293b; background: #fff; }
+          .voucher-card { border: 2px solid #000; padding: 25px; border-radius: 12px; position: relative; }
+          .header-box { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+          .header-box h1 { margin: 0; font-size: 22px; color: #1e3a8a; }
+          .voucher-title { text-align: center; font-size: 24px; font-weight: 900; margin: 20px 0; text-decoration: underline; }
+          .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          .details-table td { padding: 12px; border: 1px solid #e2e8f0; font-size: 14px; }
+          .details-table td.label { font-weight: bold; background: #f8fafc; width: 25%; }
+          .signature-section { display: flex; justify-content: space-between; margin-top: 50px; }
+          .sig-box { text-align: center; width: 30%; border-top: 1px dashed #000; padding-top: 10px; font-weight: bold; font-size: 13px; }
+          .footer-note { font-size: 10px; color: #64748b; text-align: center; margin-top: 40px; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="voucher-card">
+          <div class="header-box">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <img src="${logoUrl}" alt="Logo" style="height: 70px; width: auto;" />
+              <div>
+                <h1 style="margin: 0; font-size: 20px; color: #1e3a8a;">شركة المدار الليبي للتأمين</h1>
+                <p style="margin: 5px 0 0 0; font-size: 12px; color: #475569;">إدارة الشؤون المالية والحسابات</p>
+              </div>
+            </div>
+            <img src="${qrUrl}" alt="QR" />
+          </div>
+          <div class="voucher-title">إيصال تأكيد إيداع مصرفي</div>
+          <table class="details-table">
+            <tr>
+              <td class="label">رقم الحركة:</td>
+              <td>${txn.id}</td>
+              <td class="label">تاريخ التوريد:</td>
+              <td>${txn.transaction_date}</td>
+            </tr>
+            <tr>
+              <td class="label">قيمة الإيداع:</td>
+              <td style="font-size: 18px; font-weight: 900; color: #16a34a">${txn.amount.toLocaleString()} د.ل</td>
+              <td class="label">طريقة التحصيل:</td>
+              <td>${txn.payment_method || 'حوالة مصرفية / إيداع'}</td>
+            </tr>
+            <tr>
+              <td class="label">المصرف المودع لديه:</td>
+              <td>${txn.bank_name}</td>
+              <td class="label">رقم المرجع / الإيصال:</td>
+              <td><code>${txn.reference_number || '—'}</code></td>
+            </tr>
+            <tr>
+              <td class="label">المودع / المحول:</td>
+              <td>${txn.payer_name || '—'}</td>
+              <td class="label">رقم هاتف المودع:</td>
+              <td>${txn.payer_phone || '—'}</td>
+            </tr>
+            <tr>
+              <td class="label">الوكيل المرتبط:</td>
+              <td colspan="3">${txn.agent_name || 'غير مرتبط بوكيل مباشر'}</td>
+            </tr>
+            <tr>
+              <td class="label">ملاحظات:</td>
+              <td colspan="3">${txn.notes || '—'}</td>
+            </tr>
+          </table>
+          <div class="signature-section">
+            <div class="sig-box">توقيع المودع</div>
+            <div class="sig-box">أمين الحزينة / الحسابات</div>
+            <div class="sig-box">الختم الرسمي</div>
+          </div>
+          <div class="footer-note">شركة المدار الليبي للتأمين - نظام إدارة الأصول والحسابات الموحد</div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleExportBankExcel = async () => {
+    try {
+      const columns = [
+        { header: 'تاريخ المعاملة', key: 'transaction_date', width: 15 },
+        { header: 'المصرف المودع لديه', key: 'bank_name', width: 25 },
+        { header: 'نوع الحركة', key: 'type', width: 15 },
+        { header: 'القيمة', key: 'amount', width: 15 },
+        { header: 'رقم الإيصال / المرجع', key: 'reference_number', width: 20 },
+        { header: 'المودع / المحول', key: 'payer_name', width: 25 },
+        { header: 'رقم هاتف المودع', key: 'payer_phone', width: 20 },
+        { header: 'الوكيل المرتبط', key: 'agent_name', width: 25 },
+        { header: 'ملاحظات', key: 'notes', width: 35 },
+      ];
+
+      const data = bankTxns.map(t => ({
+        transaction_date: t.transaction_date,
+        bank_name: t.bank_name,
+        type: t.type === 'deposit' ? 'إيداع' : 'سحب',
+        amount: `${parseFloat(t.amount.toString()).toLocaleString()} د.ل`,
+        reference_number: t.reference_number || '—',
+        payer_name: t.payer_name || '—',
+        payer_phone: t.payer_phone || '—',
+        agent_name: t.agent_name || '—',
+        notes: t.notes || '—',
+      }));
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - سجل المعاملات المصرفية الموحد',
+        subtitle: `عدد الحركات: ${bankTxns.length} - التاريخ: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'المعاملات_المصرفية',
+      });
+      showToast('تم تصدير تقرير المعاملات المصرفية بنجاح', 'success');
+    } catch (e) {
+      showToast('فشل تصدير التقرير', 'error');
+    }
+  };
+
+  const handleExportTreasuryExcel = async () => {
+    try {
+      const columns = [
+        { header: 'تاريخ المعاملة', key: 'transaction_date', width: 15 },
+        { header: 'نوع الحركة', key: 'type', width: 15 },
+        { header: 'القيمة', key: 'amount', width: 15 },
+        { header: 'اسم المورد / الجهة الدافعة', key: 'description', width: 30 },
+        { header: 'رقم هاتف المورد', key: 'supplier_phone', width: 20 },
+        { header: 'المستفيد', key: 'source', width: 25 },
+        { header: 'رقم الإيصال / المرجع', key: 'reference_number', width: 20 },
+        { header: 'الوكيل المرتبط', key: 'agent_name', width: 25 },
+        { header: 'ملاحظات', key: 'notes', width: 35 },
+      ];
+
+      const data = treasuryTxns.map(t => {
+        const agent = agents.find(a => a.id === t.branch_agent_id);
+        return {
+          transaction_date: t.transaction_date,
+          type: t.type === 'income' ? 'مقبوضات / إيراد' : 'مصروفات / دفع',
+          amount: `${parseFloat(t.amount.toString()).toLocaleString()} د.ل`,
+          description: t.description || '—',
+          supplier_phone: t.supplier_phone || '—',
+          source: t.source || 'المدار الليبي',
+          reference_number: t.reference_number || '—',
+          agent_name: agent ? `${agent.agency_name} (${agent.code})` : '—',
+          notes: t.notes || '—',
+        };
+      });
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - كشف حركة الخزينة الموحد (مقبوضات)',
+        subtitle: `عدد الحركات: ${treasuryTxns.length} - التاريخ: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'كشف_الخزينة',
+      });
+      showToast('تم تصدير كشف الخزينة بنجاح', 'success');
+    } catch (e) {
+      showToast('فشل تصدير التقرير', 'error');
+    }
+  };
+
+  const handleExportPosExcel = async () => {
+    try {
+      const columns = [
+        { header: 'تاريخ التسوية', key: 'transaction_date', width: 15 },
+        { header: 'الماكينة', key: 'machine_name', width: 25 },
+        { header: 'المصرف المضيف', key: 'bank_name', width: 25 },
+        { header: 'المبلغ الإجمالي', key: 'amount', width: 15 },
+        { header: 'عدد العمليات', key: 'transactions_count', width: 15 },
+        { header: 'حالة المطابقة', key: 'is_reconciled', width: 25 },
+        { header: 'ملاحظات', key: 'notes', width: 35 },
+      ];
+
+      const data = posTxns.map(t => ({
+        transaction_date: t.transaction_date,
+        machine_name: t.machine?.machine_name || 'ماكينة محذوفة',
+        bank_name: t.machine?.bank_name || '—',
+        amount: `${parseFloat(t.amount.toString()).toLocaleString()} د.ل`,
+        transactions_count: t.transactions_count,
+        is_reconciled: t.is_reconciled ? 'مطابقة مع كشف المصرف' : 'معلقة وغير مطابقة',
+        notes: t.notes || '—',
+      }));
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - كشف تسوية أرصدة مبيعات نقاط البيع POS',
+        subtitle: `عدد الحركات: ${posTxns.length} - التاريخ: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'تسوية_أرصدة_POS',
+      });
+      showToast('تم تصدير تقرير تسويات POS بنجاح', 'success');
+    } catch (e) {
+      showToast('فشل تصدير التقرير', 'error');
+    }
+  };
+
   const handlePrintTreasuryVoucher = (txn: TreasuryTransaction) => {
     const printWindow = window.open('', '', 'width=900,height=750');
     if (!printWindow) return;
 
     const qrContent = `مستند خزينة رقم: ${txn.id}\nالنوع: ${txn.type === 'income' ? 'مقبوضات' : 'مصروفات'}\nالمبلغ: ${txn.amount} د.ل\nالبيان: ${txn.description}\nالتاريخ: ${txn.transaction_date}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrContent)}`;
+    const logoUrl = `${window.location.origin}/img/logo.png`;
 
     printWindow.document.write(`
       <html dir="rtl">
@@ -607,9 +1094,12 @@ export default function TreasuryAndBanksPage() {
       <body onload="window.print(); window.close();">
         <div class="voucher-card">
           <div class="header-box">
-            <div>
-              <h1>شركة المدار الليبي للتأمين</h1>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #475569;">إدارة الشؤون المالية والحسابات</p>
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <img src="${logoUrl}" alt="Logo" style="height: 70px; width: auto;" />
+              <div>
+                <h1 style="margin: 0; font-size: 20px; color: #1e3a8a;">شركة المدار الليبي للتأمين</h1>
+                <p style="margin: 5px 0 0 0; font-size: 12px; color: #475569;">إدارة الشؤون المالية والحسابات</p>
+              </div>
             </div>
             <img src="${qrUrl}" alt="QR" />
           </div>
@@ -680,19 +1170,39 @@ export default function TreasuryAndBanksPage() {
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
           {activeTab === 'treasury' && (
-            <button className="primary" onClick={() => setShowTreasuryModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
-              <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
-              إضافة حركة كاش (خزينة)
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="secondary" onClick={handleExportTreasuryExcel} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+                تصدير إكسيل
+              </button>
+              <button className="primary" onClick={() => setShowTreasuryModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
+                <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
+                إضافة حركة كاش (خزينة)
+              </button>
+            </div>
           )}
           {activeTab === 'banks' && (
-            <button className="primary" onClick={() => setShowBankModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
-              <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
-              إضافة معاملة بنكية
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="secondary" onClick={handleExportBankExcel} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+                تصدير إكسيل
+              </button>
+              <button className="primary" onClick={() => openBankModal('deposit')} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#10b981' }}>
+                <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
+                إضافة إيداع بنكي (+)
+              </button>
+              <button className="primary" onClick={() => openBankModal('withdrawal')} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#ef4444' }}>
+                <i className="fa-solid fa-minus" style={{ marginLeft: '8px' }}></i>
+                إضافة سحب/مصروف بنكي (-)
+              </button>
+            </div>
           )}
           {activeTab === 'pos' && (
             <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="secondary" onClick={handleExportPosExcel} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+                تصدير إكسيل
+              </button>
               <button className="primary" onClick={() => setShowMachineModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#475569' }}>
                 <i className="fa-solid fa-laptop-code" style={{ marginLeft: '8px' }}></i>
                 تعريف ماكينة POS
@@ -775,45 +1285,76 @@ export default function TreasuryAndBanksPage() {
       {activeTab === 'banks' && (
         <>
           {/* Quick Bank Balances Widgets */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--text)' }}>
+              أرصدة الحسابات البنكية المتاحة
+            </span>
+            <button 
+              onClick={() => setShowBankSettingsModal(true)}
+              style={{
+                background: 'rgba(1, 76, 177, 0.08)',
+                color: '#014cb1',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <i className="fa-solid fa-gears"></i>
+              تهيئة وإدارة المصارف
+            </button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-            {BANKS.map((bank, index) => {
-              const bal = bankBalances[bank] || 0;
-              return (
-                <div 
-                  key={bank}
-                  onClick={() => setActiveBankFilter(activeBankFilter === bank ? 'all' : bank)}
-                  style={{ 
-                    background: 'var(--panel)', 
-                    padding: '18px', 
-                    borderRadius: '16px', 
-                    border: activeBankFilter === bank ? '2px solid #014cb1' : '1px solid var(--border)',
-                    cursor: 'pointer', 
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: activeBankFilter === bank ? '0 10px 20px -5px rgba(1, 76, 177, 0.15)' : 'none',
-                    transform: activeBankFilter === bank ? 'translateY(-4px)' : 'none'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                    <div style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '8px', 
-                      background: `hsl(${(index * 55) % 360}, 75%, 95%)`,
-                      color: `hsl(${(index * 55) % 360}, 70%, 40%)`,
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center'
-                    }}>
-                      <i className="fa-solid fa-landmark"></i>
+            {dbBanks.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', background: 'var(--panel)', borderRadius: '12px', border: '1px dashed var(--border)', color: 'var(--muted)' }}>
+                لا توجد مصارف مضافة حالياً. اضغط على "تهيئة وإدارة المصارف" للبدء.
+              </div>
+            ) : (
+              dbBanks.map((bankObj, index) => {
+                const bank = bankObj.name;
+                const bal = bankBalances[bank] || 0;
+                return (
+                  <div 
+                    key={bankObj.id}
+                    onClick={() => setActiveBankFilter(activeBankFilter === bank ? 'all' : bank)}
+                    style={{ 
+                      background: 'var(--panel)', 
+                      padding: '18px', 
+                      borderRadius: '16px', 
+                      border: activeBankFilter === bank ? '2px solid #014cb1' : '1px solid var(--border)',
+                      cursor: 'pointer', 
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: activeBankFilter === bank ? '0 10px 20px -5px rgba(1, 76, 177, 0.15)' : 'none',
+                      transform: activeBankFilter === bank ? 'translateY(-4px)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '8px', 
+                        background: `hsl(${(index * 55) % 360}, 75%, 95%)`,
+                        color: `hsl(${(index * 55) % 360}, 70%, 40%)`,
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center'
+                      }}>
+                        <i className="fa-solid fa-landmark"></i>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)' }}>{bank}</span>
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)' }}>{bank}</span>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: bal >= 0 ? '#10b981' : '#ef4444' }}>
+                      {bal.toLocaleString()} د.ل
+                    </div>
                   </div>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: bal >= 0 ? '#10b981' : '#ef4444' }}>
-                    {bal.toLocaleString()} د.ل
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Filters Bar */}
@@ -885,10 +1426,20 @@ export default function TreasuryAndBanksPage() {
                         fontSize: '12px',
                         fontWeight: '800'
                       }}>
-                        {BANK_TRANSACTION_TYPES.find(t => t.id === txn.transaction_type)?.name || 'حوالة مصرفية'}
+                        {BANK_TRANSACTION_TYPES.find(t => t.id === txn.transaction_type)?.name || txn.transaction_type || 'حوالة مصرفية'}
                       </span>
                     </td>
-                    <td>{txn.payer_name || '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontWeight: 'bold' }}>{txn.payer_name || '—'}</span>
+                        {txn.payer_phone && (
+                          <span style={{ fontSize: '11px', color: 'var(--muted)', direction: 'ltr', textAlign: 'right' }}>
+                            <i className="fa-solid fa-phone" style={{ marginLeft: '4px', fontSize: '9px' }}></i>
+                            {txn.payer_phone}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td>{txn.agent_name || '—'}</td>
                     <td>
                       {txn.voucher_image ? (
@@ -933,6 +1484,22 @@ export default function TreasuryAndBanksPage() {
                           title={txn.reconciled ? 'إلغاء التأكيد' : 'تأكيد مطابقة الحساب'}
                         >
                           <i className={`fa-solid ${txn.reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
+                        </button>
+                        <button 
+                          onClick={() => handlePrintBankVoucher(txn)}
+                          className="action-btn"
+                          style={{ background: '#6366f1', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                          title="طباعة إيصال الإيداع المصرفي"
+                        >
+                          <i className="fa-solid fa-print"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleWhatsAppBankShare(txn)}
+                          className="action-btn"
+                          style={{ background: '#25d366', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                          title="إرسال إشعار الإيداع للوكيل عبر الواتساب"
+                        >
+                          <i className="fa-brands fa-whatsapp"></i>
                         </button>
                         <button 
                           onClick={() => handleDeleteBankTxn(txn.id)}
@@ -1009,7 +1576,9 @@ export default function TreasuryAndBanksPage() {
                     color: 'var(--text)',
                     paddingRight: '12px',
                     paddingLeft: '32px',
-                    fontSize: '14px',
+                    paddingTop: '0px',
+                    paddingBottom: '0px',
+                    fontSize: '13px',
                     fontWeight: '700',
                     fontFamily: "'Cairo', 'Segoe UI', sans-serif",
                     direction: 'rtl',
@@ -1075,8 +1644,9 @@ export default function TreasuryAndBanksPage() {
                   <th>تاريخ المعاملة</th>
                   <th>نوع الحركة</th>
                   <th>القيمة</th>
-                  <th>البيان التفصيلي</th>
-                  <th>المصدر / المستفيد</th>
+                  <th>اسم المورد</th>
+                  <th>رقم هاتف المورد</th>
+                  <th>المستفيد</th>
                   <th>رقم الإيصال</th>
                   <th>صورة السند</th>
                   <th>الإجراء</th>
@@ -1084,9 +1654,9 @@ export default function TreasuryAndBanksPage() {
               </thead>
               <tbody>
                 {treasuryLoading ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>جاري تحميل كشف الخزينة...</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px' }}>جاري تحميل كشف الخزينة...</td></tr>
                 ) : treasuryTxns.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: 'var(--muted)' }}>سجل الخزينة فارغ أو لا توجد حركات تطابق معايير البحث.</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: 'var(--muted)' }}>سجل الخزينة فارغ أو لا توجد حركات تطابق معايير البحث.</td></tr>
                 ) : treasuryTxns.map(txn => (
                   <tr key={txn.id}>
                     <td style={{ fontWeight: 'bold' }}>{txn.transaction_date}</td>
@@ -1106,6 +1676,7 @@ export default function TreasuryAndBanksPage() {
                       {parseFloat(txn.amount.toString()).toLocaleString()} د.ل
                     </td>
                     <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{txn.description}</td>
+                    <td style={{ direction: 'ltr', textAlign: 'right' }}>{txn.supplier_phone || '—'}</td>
                     <td>{txn.source || '—'}</td>
                     <td><code style={{ background: 'var(--border)', padding: '2px 6px', borderRadius: '4px' }}>{txn.reference_number || '—'}</code></td>
                     <td>
@@ -1139,6 +1710,14 @@ export default function TreasuryAndBanksPage() {
                           title="طباعة إيصال الصرف/القبض"
                         >
                           <i className="fa-solid fa-print"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleWhatsAppTreasuryShare(txn)}
+                          className="action-btn"
+                          style={{ background: '#25d366', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                          title="إرسال إشعار المقبوضات عبر الواتساب"
+                        >
+                          <i className="fa-brands fa-whatsapp"></i>
                         </button>
                         <button 
                           onClick={() => handleDeleteTreasuryTxn(txn.id)}
@@ -1203,55 +1782,70 @@ export default function TreasuryAndBanksPage() {
                 <i className="fa-solid fa-laptop-code" style={{ color: '#014cb1' }}></i>
                 قائمة ماكينات POS المعتمدة ({posMachines.length})
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: '12px', flexWrap: 'wrap' }}>
                 {posMachines.map(mac => (
                   <div key={mac.id} style={{ 
                     background: 'var(--panel)', 
-                    padding: '15px', 
+                    padding: '15px 18px', 
                     borderRadius: '12px', 
                     border: '1px solid var(--border)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '18px',
+                    flex: '1 1 auto',
+                    minWidth: '320px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text)' }}>{mac.machine_name}</span>
-                      <span style={{ 
-                        padding: '2px 8px', 
-                        borderRadius: '10px', 
-                        fontSize: '10px', 
-                        fontWeight: 'bold',
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                      <div style={{
+                        width: '40px', height: '40px', borderRadius: '10px',
                         background: mac.is_active ? '#dcfce7' : '#f3f4f6',
-                        color: mac.is_active ? '#166534' : '#4b5563'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0
                       }}>
-                        {mac.is_active ? 'نشطة' : 'معطلة'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>
-                      <i className="fa-solid fa-barcode" style={{ marginLeft: '6px' }}></i>
-                      السيريال: {mac.machine_serial || 'غير متوفر'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>
-                      <i className="fa-solid fa-bank" style={{ marginLeft: '6px' }}></i>
-                      المصرف: {mac.bank_name}
-                    </div>
-                    {mac.merchant_id && (
-                      <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '5px' }}>
-                        <i className="fa-solid fa-id-card" style={{ marginLeft: '6px' }}></i>
-                        معرف التاجر: {mac.merchant_id}
+                        <i className="fa-solid fa-credit-card" style={{ color: mac.is_active ? '#166534' : '#9ca3af', fontSize: '16px' }}></i>
                       </div>
-                    )}
-                    {mac.location && (
-                      <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '10px' }}>
-                        <i className="fa-solid fa-location-dot" style={{ marginLeft: '6px' }}></i>
-                        الموقع: {mac.location}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text)' }}>{mac.machine_name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                          {mac.bank_name} {mac.machine_serial ? `• S/N: ${mac.machine_serial}` : ''}
+                        </div>
+                        {mac.location && <div style={{ fontSize: '10px', color: 'var(--muted)' }}><i className="fa-solid fa-location-dot" style={{ marginLeft: '4px' }}></i>{mac.location}</div>}
                       </div>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
+                    </div>
+                    <span style={{ 
+                      padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 'bold',
+                      background: mac.is_active ? '#dcfce7' : '#f3f4f6',
+                      color: mac.is_active ? '#166534' : '#4b5563',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {mac.is_active ? 'نشطة' : 'معطلة'}
+                    </span>
+                    <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+                      <button 
+                        onClick={() => {
+                          setEditingMachineId(mac.id);
+                          setMachineFormData({
+                            machine_name: mac.machine_name,
+                            machine_serial: mac.machine_serial || '',
+                            bank_name: mac.bank_name,
+                            merchant_id: mac.merchant_id || '',
+                            location: mac.location || '',
+                            notes: mac.notes || ''
+                          });
+                          setShowMachineModal(true);
+                        }}
+                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}
+                        title="تعديل بيانات الماكينة"
+                      >
+                        <i className="fa-solid fa-pen"></i>
+                      </button>
                       <button 
                         onClick={() => handleToggleMachineActive(mac.id)}
-                        className="secondary" 
-                        style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold' }}
+                        style={{ background: mac.is_active ? '#fef2f2' : '#e8f5e9', border: `1px solid ${mac.is_active ? '#fecaca' : '#bbf7d0'}`, color: mac.is_active ? '#991b1b' : '#166534', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}
+                        title={mac.is_active ? 'تعطيل' : 'تفعيل'}
                       >
-                        {mac.is_active ? 'تعطيل الماكينة' : 'تفعيل الماكينة'}
+                        <i className={`fa-solid ${mac.is_active ? 'fa-pause' : 'fa-play'}`}></i>
                       </button>
                       <button 
                         onClick={() => handleDeleteMachine(mac.id)}
@@ -1289,6 +1883,8 @@ export default function TreasuryAndBanksPage() {
                         color: 'var(--text)',
                         paddingRight: '12px',
                         paddingLeft: '32px',
+                        paddingTop: '0px',
+                        paddingBottom: '0px',
                         fontSize: '13px',
                         fontWeight: '700',
                         fontFamily: "'Cairo', 'Segoe UI', sans-serif",
@@ -1316,6 +1912,8 @@ export default function TreasuryAndBanksPage() {
                         color: 'var(--text)',
                         paddingRight: '12px',
                         paddingLeft: '32px',
+                        paddingTop: '0px',
+                        paddingBottom: '0px',
                         fontSize: '13px',
                         fontWeight: '700',
                         fontFamily: "'Cairo', 'Segoe UI', sans-serif",
@@ -1436,7 +2034,7 @@ export default function TreasuryAndBanksPage() {
         <div className="modal-overlay" onClick={() => setShowTreasuryModal(false)}>
           <div className="modal-content dark-modal" style={{ maxWidth: '1200px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>إضافة حركة نقدية جديدة في الخزينة (كاش)</h3>
+              <h3>إضافة حركة نقدية جديدة في الخزينة (مقبوضات)</h3>
               <button onClick={() => setShowTreasuryModal(false)} className="close-btn">&times;</button>
             </div>
             <form onSubmit={handleSaveTreasuryTxn} style={{ padding: '24px' }}>
@@ -1452,30 +2050,24 @@ export default function TreasuryAndBanksPage() {
                 </div>
                 <div className="form-group">
                   <label>نوع الحركة</label>
-                  <select 
-                    value={treasuryFormData.type} 
-                    onChange={e => setTreasuryFormData({ ...treasuryFormData, type: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      height: '42px', 
-                      borderRadius: '10px', 
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      paddingRight: '12px',
-                      paddingLeft: '32px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      fontFamily: "'Cairo', 'Segoe UI', sans-serif",
-                      direction: 'rtl',
-                      textAlign: 'right',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="income">مقبوضات / إيراد (+)</option>
-                    <option value="expense">مصروفات / دفع (-)</option>
-                  </select>
+                  <div style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border)',
+                    background: '#e8f5e9',
+                    color: '#2e7d32',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: '900',
+                    fontFamily: "'Cairo', 'Segoe UI', sans-serif",
+                  }}>
+                    <i className="fa-solid fa-arrow-down" style={{ marginLeft: '6px' }}></i>
+                    مقبوضات فقط
+                  </div>
+                  <input type="hidden" value="income" />
                 </div>
                 <div className="form-group">
                   <label>القيمة المالية (د.ل)</label>
@@ -1497,68 +2089,125 @@ export default function TreasuryAndBanksPage() {
                     onChange={e => setTreasuryFormData({ ...treasuryFormData, reference_number: e.target.value })} 
                   />
                 </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label>البيان التفصيلي / الغرض من الحركة</label>
+                <div className="form-group">
+                  <label>اسم المورد</label>
                   <input 
                     type="text" 
                     required 
-                    placeholder="اكتب بياناً واضحاً ومفصلاً هنا..."
+                    placeholder="اسم المورد أو الجهة الدافعة بالكامل"
                     value={treasuryFormData.description} 
                     onChange={e => setTreasuryFormData({ ...treasuryFormData, description: e.target.value })} 
                   />
                 </div>
                 <div className="form-group">
-                  <label>المصدر / المستفيد</label>
+                  <label>رقم هاتف المورد</label>
                   <input 
                     type="text" 
-                    placeholder="مثال: شركة المدار / اسم الوكيل المودع"
-                    value={treasuryFormData.source} 
-                    onChange={e => setTreasuryFormData({ ...treasuryFormData, source: e.target.value })} 
+                    placeholder="مثال: 091XXXXXXX"
+                    value={treasuryFormData.supplier_phone} 
+                    onChange={e => setTreasuryFormData({ ...treasuryFormData, supplier_phone: e.target.value })} 
                   />
                 </div>
                 <div className="form-group">
+                  <label>المستفيد</label>
+                  <div style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border)',
+                    background: 'rgba(1, 76, 177, 0.06)',
+                    color: '#014cb1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: '900',
+                    fontFamily: "'Cairo', 'Segoe UI', sans-serif",
+                  }}>
+                    <i className="fa-solid fa-building" style={{ marginLeft: '6px' }}></i>
+                    المدار الليبي
+                  </div>
+                </div>
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label>ربط بالفرع أو الوكيل (اختياري)</label>
-                  <select 
-                    value={treasuryFormData.branch_agent_id} 
-                    onChange={e => setTreasuryFormData({ ...treasuryFormData, branch_agent_id: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      height: '42px', 
-                      borderRadius: '10px', 
+                  <input
+                    type="text"
+                    placeholder="ابحث عن وكيل أو فرع..."
+                    value={treasuryAgentSearch}
+                    onFocus={() => {
+                      setShowTreasuryAgentDropdown(true);
+                      if (treasuryAgentSearch === 'غير مرتبط بوكيل') setTreasuryAgentSearch('');
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowTreasuryAgentDropdown(false), 200);
+                      if (!treasuryFormData.branch_agent_id) setTreasuryAgentSearch('غير مرتبط بوكيل');
+                    }}
+                    onChange={e => setTreasuryAgentSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
                       border: '1px solid var(--border)',
                       background: 'var(--input-bg)',
                       color: 'var(--text)',
                       paddingRight: '12px',
-                      paddingLeft: '32px',
-                      fontSize: '14px',
+                      paddingLeft: '12px',
+                      fontSize: '13px',
                       fontWeight: '700',
                       fontFamily: "'Cairo', 'Segoe UI', sans-serif",
                       direction: 'rtl',
                       textAlign: 'right',
                       outline: 'none',
-                      cursor: 'pointer'
                     }}
-                  >
-                    <option value="">لا يوجد ارتباط مباشر</option>
-                    {agents.map(a => <option key={a.id} value={a.id}>{a.agency_name} ({a.code})</option>)}
-                  </select>
+                  />
+                  {showTreasuryAgentDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      background: 'var(--panel)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '10px',
+                      zIndex: 999,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    }}>
+                      <div
+                        style={{ padding: '10px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', borderBottom: '1px solid var(--border)' }}
+                        onMouseDown={() => {
+                          setTreasuryFormData({ ...treasuryFormData, branch_agent_id: '' });
+                          setTreasuryAgentSearch('غير مرتبط بوكيل');
+                          setShowTreasuryAgentDropdown(false);
+                        }}
+                      >
+                        غير مرتبط بوكيل
+                      </div>
+                      {agents
+                        .filter(a => !treasuryAgentSearch || a.agency_name.includes(treasuryAgentSearch) || (a.code && a.code.includes(treasuryAgentSearch)))
+                        .map(a => (
+                          <div
+                            key={a.id}
+                            style={{ padding: '10px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', borderBottom: '1px solid var(--border)' }}
+                            onMouseDown={() => {
+                              setTreasuryFormData({ ...treasuryFormData, branch_agent_id: String(a.id) });
+                              setTreasuryAgentSearch(`${a.agency_name} (${a.code})`);
+                              setShowTreasuryAgentDropdown(false);
+                            }}
+                          >
+                            {a.agency_name} ({a.code})
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
-                {treasuryFormData.type === 'expense' && (
-                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>جهة الصرف (أين صرف المبلغ كأصل أو مادة مستهلكة)</label>
-                    <input 
-                      type="text" 
-                      placeholder="مثال: شراء أجهزة إلكترونية ثابتة للمكتب / قرطاسية ومواد تنظيف"
-                      value={treasuryFormData.expense_destination} 
-                      onChange={e => setTreasuryFormData({ ...treasuryFormData, expense_destination: e.target.value })} 
-                    />
-                  </div>
-                )}
-                <div className="form-group" style={{ gridColumn: treasuryFormData.type === 'expense' ? 'span 2' : 'span 4' }}>
-                  <label>تحميل صورة السند / المرفق الورقي</label>
+                <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                  <label>تحميل صورة السند / المرفق الورقي (أو التقاط صورة بالكاميرا)</label>
                   <input 
                     type="file" 
                     accept="image/*,application/pdf"
+                    capture="environment"
                     onChange={e => setTreasuryFormData({ ...treasuryFormData, voucher_image: e.target.files ? e.target.files[0] : null })} 
                     style={{ padding: '8px' }}
                   />
@@ -1587,7 +2236,7 @@ export default function TreasuryAndBanksPage() {
         <div className="modal-overlay" onClick={() => setShowBankModal(false)}>
           <div className="modal-content dark-modal" style={{ maxWidth: '1200px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>إضافة معاملة أو إيداع بنكي جديد (التحصيلات)</h3>
+              <h3>{bankModalType === 'deposit' ? 'إضافة إيداع بنكي جديد (التحصيلات)' : 'إضافة سحب/مصروف بنكي جديد'}</h3>
               <button onClick={() => setShowBankModal(false)} className="close-btn">&times;</button>
             </div>
             <form onSubmit={handleSaveBankTxn} style={{ padding: '24px' }}>
@@ -1612,29 +2261,53 @@ export default function TreasuryAndBanksPage() {
                 </div>
                 <div className="form-group">
                   <label>المصرف المستلم</label>
-                  <select 
-                    value={bankFormData.bank_name} 
-                    onChange={e => setBankFormData({ ...bankFormData, bank_name: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      height: '42px', 
-                      borderRadius: '10px', 
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      paddingRight: '12px',
-                      paddingLeft: '32px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      fontFamily: "'Cairo', 'Segoe UI', sans-serif",
-                      direction: 'rtl',
-                      textAlign: 'right',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select 
+                      value={bankFormData.bank_name} 
+                      onChange={e => setBankFormData({ ...bankFormData, bank_name: e.target.value })}
+                      style={{ 
+                        flex: 1, 
+                        height: '42px', 
+                        borderRadius: '10px', 
+                        border: '1px solid var(--border)',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text)',
+                        paddingRight: '12px',
+                        paddingLeft: '32px',
+                        paddingTop: '0px',
+                        paddingBottom: '0px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        fontFamily: "'Cairo', 'Segoe UI', sans-serif",
+                        direction: 'rtl',
+                        textAlign: 'right',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {dbBanks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowBankSettingsModal(true)}
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--panel)',
+                        color: '#014cb1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                      title="إضافة أو حذف مصرف"
+                    >
+                      <i className="fa-solid fa-plus-minus"></i>
+                    </button>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>رقم الحساب الجاري للمصرف المستلم</label>
@@ -1646,30 +2319,54 @@ export default function TreasuryAndBanksPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>طريقة ونوع التحصيل (الـ 7 طرق المعتمدة)</label>
-                  <select 
-                    value={bankFormData.transaction_type} 
-                    onChange={e => setBankFormData({ ...bankFormData, transaction_type: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      height: '42px', 
-                      borderRadius: '10px', 
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      paddingRight: '12px',
-                      paddingLeft: '32px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      fontFamily: "'Cairo', 'Segoe UI', sans-serif",
-                      direction: 'rtl',
-                      textAlign: 'right',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {BANK_TRANSACTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
+                  <label>طريقة ونوع التحصيل</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select 
+                      value={bankFormData.transaction_type} 
+                      onChange={e => setBankFormData({ ...bankFormData, transaction_type: e.target.value })}
+                      style={{ 
+                        flex: 1, 
+                        height: '42px', 
+                        borderRadius: '10px', 
+                        border: '1px solid var(--border)',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text)',
+                        paddingRight: '12px',
+                        paddingLeft: '32px',
+                        paddingTop: '0px',
+                        paddingBottom: '0px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        fontFamily: "'Cairo', 'Segoe UI', sans-serif",
+                        direction: 'rtl',
+                        textAlign: 'right',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {dbTypes.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowTypeSettingsModal(true)}
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--panel)',
+                        color: '#014cb1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                      title="إضافة أو حذف طريقة"
+                    >
+                      <i className="fa-solid fa-plus-minus"></i>
+                    </button>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>القيمة المالية (د.ل)</label>
@@ -1683,34 +2380,7 @@ export default function TreasuryAndBanksPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>نوع الحركة</label>
-                  <select 
-                    value={bankFormData.type} 
-                    onChange={e => setBankFormData({ ...bankFormData, type: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      height: '42px', 
-                      borderRadius: '10px', 
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      paddingRight: '12px',
-                      paddingLeft: '32px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      fontFamily: "'Cairo', 'Segoe UI', sans-serif",
-                      direction: 'rtl',
-                      textAlign: 'right',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="deposit">إيداع / تحصيل مباشر (+)</option>
-                    <option value="withdrawal">سحب / خصم (-)</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>اسم المودع أو المحول بالكامل</label>
+                  <label>{bankModalType === 'deposit' ? 'اسم المودع أو المحول بالكامل' : 'اسم المستلم بالكامل'}</label>
                   <input 
                     type="text" 
                     placeholder="مثال: أحمد عبد الحليم"
@@ -1719,19 +2389,81 @@ export default function TreasuryAndBanksPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>المصرف المرسل منه (اختياري)</label>
+                  <label>{bankModalType === 'deposit' ? 'رقم هاتف المودع' : 'رقم هاتف المستلم'}</label>
                   <input 
                     type="text" 
-                    placeholder="مثال: مصرف التجارة والتنمية"
-                    value={bankFormData.source_bank} 
-                    onChange={e => setBankFormData({ ...bankFormData, source_bank: e.target.value })} 
+                    placeholder="مثال: 091XXXXXXX"
+                    value={bankFormData.payer_phone} 
+                    onChange={e => setBankFormData({ ...bankFormData, payer_phone: e.target.value })} 
                   />
                 </div>
                 <div className="form-group">
+                  <label>المصرف المرسل منه (اختياري)</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select 
+                      value={bankFormData.source_bank} 
+                      onChange={e => setBankFormData({ ...bankFormData, source_bank: e.target.value })}
+                      style={{ 
+                        flex: 1, 
+                        height: '42px', 
+                        borderRadius: '10px', 
+                        border: '1px solid var(--border)',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text)',
+                        paddingRight: '12px',
+                        paddingLeft: '32px',
+                        paddingTop: '0px',
+                        paddingBottom: '0px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        fontFamily: "'Cairo', 'Segoe UI', sans-serif",
+                        direction: 'rtl',
+                        textAlign: 'right',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">اختر المصرف المرسل منه...</option>
+                      {dbBanks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowBankSettingsModal(true)}
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--panel)',
+                        color: '#014cb1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                      title="إضافة أو حذف مصرف"
+                    >
+                      <i className="fa-solid fa-plus-minus"></i>
+                    </button>
+                  </div>
+                </div>
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label>ربط الحوالة بالوكيل/الفرع</label>
-                  <select 
-                    value={bankFormData.branch_agent_id} 
-                    onChange={e => setBankFormData({ ...bankFormData, branch_agent_id: e.target.value })}
+                  <input 
+                    type="text" 
+                    placeholder="ابحث عن وكيل..."
+                    value={agentSearchQuery}
+                    onChange={e => {
+                      setAgentSearchQuery(e.target.value);
+                      setShowAgentDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (agentSearchQuery === 'غير مرتبط بوكيل') {
+                        setAgentSearchQuery('');
+                      }
+                      setShowAgentDropdown(true);
+                    }}
                     style={{ 
                       width: '100%', 
                       height: '42px', 
@@ -1740,19 +2472,78 @@ export default function TreasuryAndBanksPage() {
                       background: 'var(--input-bg)',
                       color: 'var(--text)',
                       paddingRight: '12px',
-                      paddingLeft: '32px',
+                      paddingLeft: '12px',
                       fontSize: '14px',
-                      fontWeight: '700',
-                      fontFamily: "'Cairo', 'Segoe UI', sans-serif",
-                      direction: 'rtl',
-                      textAlign: 'right',
                       outline: 'none',
-                      cursor: 'pointer'
+                      textAlign: 'right'
                     }}
-                  >
-                    <option value="">غير مرتبط بوكيل</option>
-                    {agents.map(a => <option key={a.id} value={a.id}>{a.agency_name} ({a.code})</option>)}
-                  </select>
+                  />
+                  {showAgentDropdown && (
+                    <>
+                      <div 
+                        style={{ position: 'fixed', inset: 0, zIndex: 999 }} 
+                        onClick={() => {
+                          setShowAgentDropdown(false);
+                          if (!bankFormData.branch_agent_id) {
+                            setAgentSearchQuery('غير مرتبط بوكيل');
+                          } else {
+                            const selectedAgent = agents.find(a => String(a.id) === bankFormData.branch_agent_id);
+                            if (selectedAgent) {
+                              setAgentSearchQuery(`${selectedAgent.agency_name} (${selectedAgent.code})`);
+                            } else {
+                              setAgentSearchQuery('غير مرتبط بوكيل');
+                            }
+                          }
+                        }} 
+                      />
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: '100%', 
+                        left: 0, 
+                        right: 0, 
+                        background: 'var(--panel)', 
+                        border: '1px solid var(--border)', 
+                        borderRadius: '8px', 
+                        maxHeight: '200px', 
+                        overflowY: 'auto', 
+                        zIndex: 1000,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}>
+                        <div 
+                          onClick={() => {
+                            setBankFormData({ ...bankFormData, branch_agent_id: '' });
+                            setAgentSearchQuery('غير مرتبط بوكيل');
+                            setShowAgentDropdown(false);
+                          }}
+                          style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: 'var(--input-bg)', fontWeight: 'bold' }}
+                        >
+                          غير مرتبط بوكيل
+                        </div>
+                        {agents
+                          .filter(a => {
+                            if (!agentSearchQuery || agentSearchQuery === 'غير مرتبط بوكيل') return true;
+                            return (
+                              a.agency_name.toLowerCase().includes(agentSearchQuery.toLowerCase()) ||
+                              a.code.toLowerCase().includes(agentSearchQuery.toLowerCase())
+                            );
+                          })
+                          .map(a => (
+                            <div 
+                              key={a.id}
+                              onClick={() => {
+                                setBankFormData({ ...bankFormData, branch_agent_id: String(a.id) });
+                                setAgentSearchQuery(`${a.agency_name} (${a.code})`);
+                                setShowAgentDropdown(false);
+                              }}
+                              style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                            >
+                              {a.agency_name} ({a.code})
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label>تحميل إيصال المرفق أو الحوالة</label>
@@ -1787,8 +2578,8 @@ export default function TreasuryAndBanksPage() {
         <div className="modal-overlay" onClick={() => setShowMachineModal(false)}>
           <div className="modal-content dark-modal" style={{ maxWidth: '900px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>تعريف ماكينة نقاط بيع جديدة (POS)</h3>
-              <button onClick={() => setShowMachineModal(false)} className="close-btn">&times;</button>
+              <h3>{editingMachineId ? 'تعديل بيانات ماكينة POS' : 'تعريف ماكينة نقاط بيع جديدة (POS)'}</h3>
+              <button onClick={() => { setShowMachineModal(false); setEditingMachineId(null); }} className="close-btn">&times;</button>
             </div>
             <form onSubmit={handleSaveMachine} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -1825,7 +2616,9 @@ export default function TreasuryAndBanksPage() {
                       color: 'var(--text)',
                       paddingRight: '12px',
                       paddingLeft: '32px',
-                      fontSize: '14px',
+                      paddingTop: '0px',
+                      paddingBottom: '0px',
+                      fontSize: '13px',
                       fontWeight: '700',
                       fontFamily: "'Cairo', 'Segoe UI', sans-serif",
                       direction: 'rtl',
@@ -1865,8 +2658,8 @@ export default function TreasuryAndBanksPage() {
                 </div>
               </div>
               <div className="form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setShowMachineModal(false)} className="secondary" style={{ padding: '8px 16px' }}>إلغاء</button>
-                <button type="submit" className="primary" style={{ padding: '8px 24px' }}>حفظ وتعريف الماكينة</button>
+                <button type="button" onClick={() => { setShowMachineModal(false); setEditingMachineId(null); }} className="secondary" style={{ padding: '8px 16px' }}>إلغاء</button>
+                <button type="submit" className="primary" style={{ padding: '8px 24px' }}>{editingMachineId ? 'حفظ التعديلات' : 'حفظ وتعريف الماكينة'}</button>
               </div>
             </form>
           </div>
@@ -1898,7 +2691,9 @@ export default function TreasuryAndBanksPage() {
                       color: 'var(--text)',
                       paddingRight: '12px',
                       paddingLeft: '32px',
-                      fontSize: '14px',
+                      paddingTop: '0px',
+                      paddingBottom: '0px',
+                      fontSize: '13px',
                       fontWeight: '700',
                       fontFamily: "'Cairo', 'Segoe UI', sans-serif",
                       direction: 'rtl',
@@ -2002,15 +2797,187 @@ export default function TreasuryAndBanksPage() {
                 &times;
               </button>
             </div>
-            <img 
-              src={previewImage} 
-              alt="سند ورقة الحوالة البنكية / إيصال الخزينة" 
-              style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }} 
-              onError={() => {
-                showToast('خطأ في تحميل ملف المعاينة، قد لا يكون الملف صورة أو المسار غير صحيح', 'error');
-                setPreviewImage(null);
-              }}
-            />
+            {previewImage.toLowerCase().includes('.pdf') ? (
+              <iframe 
+                src={previewImage} 
+                title="معاينة ملف PDF"
+                style={{ width: '100%', height: '80vh', borderRadius: '12px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', backgroundColor: '#fff' }}
+              />
+            ) : (
+              <img 
+                src={previewImage} 
+                alt="سند ورقة الحوالة البنكية / إيصال الخزينة" 
+                style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }} 
+                onError={() => {
+                  showToast('خطأ في تحميل ملف المعاينة، قد لا يكون الملف صورة أو المسار غير صحيح', 'error');
+                  setPreviewImage(null);
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: BANK SETTINGS MODAL */}
+      {showBankSettingsModal && (
+        <div className="modal-overlay" onClick={() => setShowBankSettingsModal(false)}>
+          <div className="modal-content dark-modal" style={{ maxWidth: '600px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>إدارة المصارف المتاحة</h3>
+              <button onClick={() => setShowBankSettingsModal(false)} className="close-btn">&times;</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={handleAddBank} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <input 
+                  type="text" 
+                  placeholder="اسم المصرف الجديد..." 
+                  required
+                  value={newBankName}
+                  onChange={e => setNewBankName(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    height: '42px', 
+                    borderRadius: '10px', 
+                    padding: '0 12px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text)'
+                  }}
+                />
+                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', padding: '0 20px', fontWeight: 'bold' }}>
+                  إضافة مصرف
+                </button>
+              </form>
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px' }}>
+                {dbBanks.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لا توجد مصارف مضافة حالياً.</div>
+                ) : (
+                  dbBanks.map(b => (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{b.name}</span>
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteBank(b.id)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px' }}
+                        title="حذف"
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 7: COLLECTION TYPE SETTINGS MODAL */}
+      {showTypeSettingsModal && (
+        <div className="modal-overlay" onClick={() => setShowTypeSettingsModal(false)}>
+          <div className="modal-content dark-modal" style={{ maxWidth: '600px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>إدارة طرق ونوع التحصيل</h3>
+              <button onClick={() => setShowTypeSettingsModal(false)} className="close-btn">&times;</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={handleAddType} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <input 
+                  type="text" 
+                  placeholder="اسم طريقة التحصيل الجديدة..." 
+                  required
+                  value={newTypeName}
+                  onChange={e => setNewTypeName(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    height: '42px', 
+                    borderRadius: '10px', 
+                    padding: '0 12px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text)'
+                  }}
+                />
+                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', padding: '0 20px', fontWeight: 'bold' }}>
+                  إضافة الطريقة
+                </button>
+              </form>
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px' }}>
+                {dbTypes.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لا توجد طرق تحصيل مضافة حالياً.</div>
+                ) : (
+                  dbTypes.map(t => (
+                    <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{t.name}</span>
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteType(t.id)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px' }}
+                        title="حذف"
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* CUSTOM CONFIRMATION DIALOG MODAL */}
+      {confirmConfig.isOpen && (
+        <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}>
+          <div className="modal-content dark-modal" style={{ maxWidth: '400px', background: 'var(--panel)', padding: '25px', borderRadius: '15px', border: '1px solid var(--border)', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '48px', color: '#ef4444', marginBottom: '15px' }}>
+              <i className="fa-solid fa-circle-exclamation"></i>
+            </div>
+            <h3 style={{ fontSize: '20px', color: 'var(--text)', marginBottom: '10px', fontFamily: 'Cairo' }}>{confirmConfig.title}</h3>
+            <p style={{ color: 'var(--muted)', fontSize: '15px', marginBottom: '25px', lineHeight: '1.6', fontFamily: 'Cairo' }}>{confirmConfig.message}</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                type="button" 
+                onClick={confirmConfig.onConfirm} 
+                style={{ 
+                  background: '#ef4444', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  padding: '10px 24px', 
+                  fontSize: '14px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer',
+                  fontFamily: 'Cairo',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseOut={e => e.currentTarget.style.opacity = '1'}
+              >
+                تأكيد الحذف
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))} 
+                style={{ 
+                  background: 'var(--border)', 
+                  color: 'var(--text)', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  padding: '10px 24px', 
+                  fontSize: '14px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer',
+                  fontFamily: 'Cairo',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseOut={e => e.currentTarget.style.opacity = '1'}
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         </div>
       )}
