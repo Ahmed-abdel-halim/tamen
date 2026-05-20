@@ -373,47 +373,57 @@ export default function UsersList() {
       return cond;
     };
 
+    const cleanNotes = (notes?: string) => {
+      if (!notes) return '—';
+      let n = notes.trim();
+      const boilerplates = [
+        /إقرار استلام العهدة والمحافظة عليها وتعهد بإرجاعها في حال طلبها من الشركة أو انتهاء علاقة العمل/g,
+        /إقرار استلام العهدة والمحافظة عليها وتعهد بإرجاعها في حال طلبها من الشركة أو انتهاء فترة العمل لديها/g,
+        /إقرار استلام العهدة والمحافظة عليها وتعهد بإرجاعها/g,
+        /في حال طلبها من الشركة أو انتهاء علاقة العمل/g,
+        /في حال طلبها من الشركة أو انتهاء فترة العمل لديها/g,
+      ];
+      for (const pattern of boilerplates) {
+        n = n.replace(pattern, '');
+      }
+      n = n.trim().replace(/^[-–—:\s]+/, '').trim();
+      return n || '—';
+    };
+
     const fixedCustodyHtml = userFixedCustodies.length > 0
       ? userFixedCustodies.map(c => {
           const serial = (c.serial_start || c.serial_end)
             ? `${c.serial_start || '—'}${c.serial_end ? ` إلى ${c.serial_end}` : ''}`
             : '—';
           return `<tr>
-            <td style="text-align: right;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
+            <td style="text-align: right; border-right: none;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
             <td>${c.quantity}</td>
             <td>${escapeHtml(serial)}</td>
             <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
             <td>${formatCondition(c.condition)}</td>
-            <td style="text-align: right;">${escapeHtml(c.notes || '—')}</td>
           </tr>`;
         }).join('')
-      : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding: 12px;">لا توجد عهدة ثابتة نشطة حالياً للموظف</td></tr>';
+      : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding: 12px;background:#ffffff !important;">لا توجد عهدة ثابتة نشطة حالياً للموظف</td></tr>';
 
     const consumedCustodyHtml = userConsumedCustodies.length > 0
       ? userConsumedCustodies.map(c => {
           return `<tr>
-            <td style="text-align: right;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
+            <td style="text-align: right; border-right: none;">${escapeHtml(c.item?.name || 'صنف عهدة')}</td>
             <td>${c.quantity}</td>
             <td>${formatPrintDateTime(c.assigned_at || c.created_at)}</td>
-            <td style="text-align: right;">${escapeHtml(c.notes || '—')}</td>
           </tr>`;
         }).join('')
-      : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding: 12px;">لا توجد عهدة مستهلكة نشطة حالياً للموظف</td></tr>';
+      : '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding: 12px;background:#ffffff !important;">لا توجد عهدة مستهلكة نشطة حالياً للموظف</td></tr>';
 
-    const rows: [string, string][] = [
-      ['الاسم بالكامل', escapeHtml(u.name)],
-      ['اسم المستخدم', escapeHtml(u.username)],
-      ['البريد الإلكتروني', escapeHtml(u.email || '—')],
-      ['المعرف الشخصي', escapeHtml(employeeCardNumber(u))],
-      ['المسمى الوظيفي', escapeHtml((u.job_title || '').trim() || '—')],
-      ['نوع الحساب', escapeHtml(u.user_type || '—')],
-      ['الراتب الشهري', u.salary != null ? `${Number(u.salary).toLocaleString('ar-LY')} دينار ليبي` : '—'],
-    ];
-
-    const tableRows = rows
-      .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
-      .join('');
-
+    const detailsGridHtml = `
+      <div class="detail-item"><span class="detail-label">الاسم بالكامل</span><span class="detail-value highlighted">${escapeHtml(u.name)}</span></div>
+      <div class="detail-item"><span class="detail-label">المعرف الشخصي</span><span class="detail-value">${escapeHtml(employeeCardNumber(u))}</span></div>
+      <div class="detail-item"><span class="detail-label">اسم المستخدم</span><span class="detail-value">${escapeHtml(u.username)}</span></div>
+      <div class="detail-item"><span class="detail-label">المسمى الوظيفي</span><span class="detail-value">${escapeHtml((u.job_title || '').trim() || '—')}</span></div>
+      <div class="detail-item"><span class="detail-label">البريد الإلكتروني</span><span class="detail-value">${escapeHtml(u.email || '—')}</span></div>
+      <div class="detail-item"><span class="detail-label">نوع الحساب</span><span class="detail-value">${escapeHtml(u.user_type || '—')}</span></div>
+      <div class="detail-item full-width"><span class="detail-label">الراتب الشهري</span><span class="detail-value currency">${u.salary != null ? `${Number(u.salary).toLocaleString('ar-LY')} دينار ليبي` : '—'}</span></div>
+    `;
 
     const totalCustodies = userFixedCustodies.length + userConsumedCustodies.length;
     const isVeryLong = totalCustodies > 10;
@@ -425,68 +435,252 @@ export default function UsersList() {
     
     const detailPadding = isVeryLong ? '3px 6px' : isMediumLong ? '5px 8px' : '8px 12px';
     const detailFontSize = isVeryLong ? '0.74rem' : isMediumLong ? '0.8rem' : '0.9rem';
-    const mainTableWidth = isVeryLong ? '28%' : '35%';
     
     const permMarginTop = isVeryLong ? '4px' : isMediumLong ? '8px' : '15px';
     const permPadding = isVeryLong ? '4px 8px' : isMediumLong ? '6px 10px' : '12px';
     
-    const photoWidth = isVeryLong ? '85px' : isMediumLong ? '110px' : '130px';
-    const photoHeight = isVeryLong ? '95px' : isMediumLong ? '125px' : '160px';
+    const photoWidth = isVeryLong ? '75px' : isMediumLong ? '95px' : '110px';
+    const photoHeight = isVeryLong ? '85px' : isMediumLong ? '110px' : '130px';
     
     const sigLineMarginTop = isVeryLong ? '10px' : isMediumLong ? '18px' : '30px';
     const containerPadding = isVeryLong ? '3mm' : isMediumLong ? '5mm' : '8mm';
     const containerHeight = isVeryLong ? '284mm' : isMediumLong ? '283mm' : '280mm';
-    const containerBorder = isVeryLong ? 'none' : '1px solid #e2e8f0';
+    const containerBorder = isVeryLong ? 'none' : '1px solid #cbd5e1';
 
-    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/><title>استمارة بيانات موظف - ${escapeHtml(u.name)}</title>
+    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/>
+      <title>استمارة بيانات موظف - ${escapeHtml(u.name)}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          box-sizing: border-box;
+        }
         @page { size: A4; margin: 4mm; }
-        body { font-family: 'Cairo', sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.25; background: #fff; }
-        .page-container { border: ${containerBorder}; padding: ${containerPadding}; position: relative; height: ${containerHeight}; max-height: ${containerHeight}; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+        body { 
+          font-family: 'Cairo', system-ui, -apple-system, sans-serif !important; 
+          color: #0f172a; 
+          margin: 0; 
+          padding: 0; 
+          line-height: 1.25; 
+          background: #ffffff;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        .page-container { border: ${containerBorder}; padding: ${containerPadding}; position: relative; height: ${containerHeight}; max-height: ${containerHeight}; display: flex; flex-direction: column; overflow: hidden; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: ${isVeryLong ? '6px' : '15px'}; border-bottom: 2px solid #1e40af; padding-bottom: ${isVeryLong ? '4px' : '10px'}; }
-        .header-info h1 { margin: 0; color: #1e40af; font-size: ${isVeryLong ? '1.3rem' : '1.6rem'}; font-weight: 800; }
-        .header-info p { margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem; font-weight: 600; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: ${isVeryLong ? '4px' : '10px'}; border-bottom: 3px double #1e40af; padding-bottom: ${isVeryLong ? '3px' : '8px'}; }
+        .header-info h1 { margin: 0; color: #1e40af; font-size: ${isVeryLong ? '1.25rem' : '1.5rem'}; font-weight: 800; letter-spacing: -0.5px; }
+        .header-info p { margin: 1px 0 0 0; color: #64748b; font-size: 0.8rem; font-weight: 600; }
         
-        .header-branding { display: flex; align-items: center; gap: 4px; }
+        .header-branding { display: flex; align-items: center; gap: 6px; }
         .brand-text { display: flex; flex-direction: column; align-items: center; line-height: 1.2; white-space: nowrap; margin-right: 0; }
         .brand-text div:first-child { font-size: 13pt; font-weight: 800; margin-bottom: 2px; line-height: 1; color: #139625; font-family: 'Times New Roman', serif; text-align: center; }
         .brand-text div:last-child { font-size: 5.6pt; font-weight: 800; line-height: 1; font-family: 'Times New Roman', serif; text-align: center; letter-spacing: 0; }
-        .header-branding img { height: ${isVeryLong ? '40px' : '50px'}; width: auto; }
+        .header-branding img { height: ${isVeryLong ? '35px' : '48px'}; width: auto; }
 
-        .content-body { display: flex; gap: 20px; }
-        .main-data { flex: 1; }
-        .photo-sidebar { width: ${photoWidth}; text-align: center; }
-        .photo-box { width: ${photoWidth}; height: ${photoHeight}; border: 2px solid #f1f5f9; border-radius: 6px; overflow: hidden; background: #f8fafc; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
-        .photo-box .no-img { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        table th { background: #f1f5f9; color: #475569; text-align: right; padding: ${detailPadding}; border: 1px solid #e2e8f0; width: ${mainTableWidth}; font-weight: 700; font-size: ${detailFontSize}; }
-        table td { padding: ${detailPadding}; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 600; font-size: ${detailFontSize}; }
-
-        .permissions-section { margin-top: ${permMarginTop}; background: #f8fafc; padding: ${permPadding}; border-radius: 6px; border-right: 4px solid #1e40af; }
-        .permissions-section h3 { margin: 0 0 8px 0; font-size: ${isVeryLong ? '0.8rem' : '1rem'}; color: #1e40af; }
-        .permissions-section ul { margin: 0; padding: 0 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-        .permissions-section li { font-size: ${isVeryLong ? '0.7rem' : '0.8rem'}; color: #475569; font-weight: 600; list-style: none; }
-        .permissions-section li::before { content: "•"; color: #1e40af; margin-left: 5px; }
-
-        /* Custody Styles */
-        .section-title { font-size: ${isVeryLong ? '0.82rem' : '0.95rem'}; color: #1e40af; font-weight: 800; margin: ${sectionMargin}; display: flex; align-items: center; gap: 5px; }
-        .section-title::before { content: ""; width: 4px; height: 15px; background: #1e40af; border-radius: 2px; }
+        .content-body { display: flex; flex-direction: column; gap: 2px; }
+        .main-data { width: 100%; }
         
-        .custody-tables { display: flex; flex-direction: column; gap: ${isVeryLong ? '8px' : '15px'}; margin-top: 5px; }
-        .custody-col { width: 100%; }
-        .custody-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        .custody-table th { background: #eff6ff; color: #1e40af; text-align: center; font-size: ${fontSize}; padding: ${rowPadding}; border: 1px solid #e2e8f0; font-weight: 700; }
-        .custody-table td { font-size: ${fontSize}; padding: ${rowPadding}; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; }
+        /* Modern Profile Card */
+        .profile-card {
+          display: flex;
+          gap: 15px;
+          background: #f8fafc !important;
+          border: 1px solid #cbd5e1;
+          border-radius: 12px;
+          padding: ${isVeryLong ? '6px' : '12px'};
+          margin-bottom: ${isVeryLong ? '4px' : '8px'};
+          align-items: center;
+        }
+        .photo-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+        .photo-box {
+          width: ${photoWidth};
+          height: ${photoHeight};
+          border: 3px solid #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #ffffff !important;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
+        }
+        .photo-box img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .photo-box .no-img {
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #94a3b8;
+          font-size: 0.7rem;
+        }
+        .photo-label {
+          font-size: 0.68rem;
+          font-weight: 800;
+          color: #64748b;
+        }
+        .details-grid {
+          flex: 1;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: ${isVeryLong ? '4px 8px' : '6px 12px'};
+        }
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+          background: #ffffff !important;
+          padding: ${detailPadding};
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .detail-item.full-width {
+          grid-column: span 2;
+          background: #f0fdf4 !important;
+          border: 1px solid #bbf7d0;
+        }
+        .detail-label {
+          font-size: calc(${detailFontSize} - 0.12rem);
+          color: #64748b;
+          font-weight: 700;
+          margin-bottom: 2px;
+        }
+        .detail-value {
+          font-size: ${detailFontSize};
+          color: #0f172a;
+          font-weight: 800;
+          text-align: right;
+        }
+        .detail-value.highlighted {
+          color: #1e40af;
+        }
+        .detail-item.full-width .detail-label {
+          color: #15803d;
+        }
+        .detail-item.full-width .detail-value {
+          color: #16a34a;
+        }
 
-        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: ${isVeryLong ? '6px' : '15px'}; margin-bottom: 5px; }
+        /* Permissions Card */
+        .permissions-section {
+          margin-top: ${permMarginTop};
+          background: #eff6ff !important;
+          padding: ${permPadding};
+          border-radius: 12px;
+          border: 1px solid #bfdbfe;
+        }
+        .permissions-section h3 {
+          margin: 0 0 6px 0;
+          font-size: ${isVeryLong ? '0.78rem' : '0.9rem'};
+          color: #1e40af;
+          font-weight: 800;
+        }
+        .permissions-section ul {
+          margin: 0;
+          padding: 0;
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 4px;
+          list-style: none;
+        }
+        .permissions-section li {
+          font-size: ${isVeryLong ? '0.64rem' : '0.76rem'};
+          color: #1e3a8a;
+          font-weight: 600;
+          background: #ffffff !important;
+          padding: 3px 8px;
+          border-radius: 6px;
+          border: 1px solid #dbeafe;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: flex;
+          align-items: center;
+        }
+        .permissions-section li::before {
+          content: "✓";
+          color: #16a34a;
+          margin-left: 6px;
+          font-weight: 800;
+        }
+
+        /* Custody Section & Tables */
+        .section-title { font-size: ${isVeryLong ? '0.78rem' : '0.9rem'}; color: #1e40af; font-weight: 800; margin: ${sectionMargin}; display: flex; align-items: center; gap: 5px; }
+        .section-title::before { content: ""; width: 4px; height: 14px; background: #1e40af; border-radius: 2px; }
+        
+        .custody-tables { display: grid; grid-template-columns: 1fr 1fr; gap: ${isVeryLong ? '8px' : '15px'}; margin-top: 2px; align-items: start; }
+        .custody-col { width: 100%; overflow: hidden; }
+        .custody-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          margin-top: 3px;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid #cbd5e1;
+        }
+        .custody-table th {
+          background: #1e40af !important;
+          color: #ffffff !important;
+          text-align: center;
+          font-size: ${fontSize};
+          padding: ${rowPadding};
+          font-weight: 700;
+          border-bottom: 2px solid #1e3a8a;
+        }
+        .custody-table td {
+          font-size: ${fontSize};
+          padding: ${rowPadding};
+          text-align: center;
+          border-bottom: 1px solid #cbd5e1;
+          border-left: 1px solid #cbd5e1;
+          color: #0f172a;
+          font-weight: 600;
+          background: #ffffff !important;
+        }
+        .custody-table tr:last-child td {
+          border-bottom: none;
+        }
+        .custody-table td:last-child {
+          border-left: none;
+        }
+        .custody-table tr:nth-child(even) td {
+          background: #f8fafc !important;
+        }
+
+        .undertaking-box {
+          margin-top: ${isVeryLong ? '4px' : '10px'};
+          background: #f8fafc !important;
+          border: 1px dashed #cbd5e1;
+          border-radius: 8px;
+          padding: ${isVeryLong ? '4px 8px' : '8px 12px'};
+          font-size: ${isVeryLong ? '0.62rem' : '0.72rem'};
+          color: #475569;
+          line-height: 1.4;
+          text-align: justify;
+        }
+        .undertaking-box p {
+          margin: 0;
+        }
+        .undertaking-box strong {
+          color: #1e40af;
+        }
+
+        .footer { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: ${isVeryLong ? '4px' : '10px'}; margin-bottom: 2px; }
         .sig-block { text-align: center; width: 45%; }
-        .sig-line { border-top: 1px solid #1e293b; margin-top: ${sigLineMarginTop}; padding-top: 5px; font-weight: 700; color: #1e293b; font-size: ${isVeryLong ? '0.8rem' : '0.9rem'}; }
+        .sig-line { border-top: 1px solid #475569; margin-top: ${sigLineMarginTop}; padding-top: 4px; font-weight: 700; color: #334155; font-size: ${isVeryLong ? '0.72rem' : '0.82rem'}; }
         .print-date { position: absolute; bottom: 2mm; left: 8mm; font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
-      </style></head><body onload="window.print()">
+      </style></head>
+      <body>
       <div class="page-container">
         <div class="header">
           <div class="header-info">
@@ -504,7 +698,17 @@ export default function UsersList() {
 
         <div class="content-body">
           <div class="main-data">
-            <table>${tableRows}</table>
+            <div class="profile-card">
+              <div class="photo-container">
+                <div class="photo-box">
+                  ${photoSrc ? `<img src="${escapeHtml(photoSrc)}" alt="" />` : `<div class="no-img">لا توجد صورة</div>`}
+                </div>
+                <div class="photo-label">الصورة الشخصية</div>
+              </div>
+              <div class="details-grid">
+                ${detailsGridHtml}
+              </div>
+            </div>
             
             <div class="permissions-section">
               <h3>الصلاحيات والأذونات الممنوحة:</h3>
@@ -517,12 +721,11 @@ export default function UsersList() {
                 <table class="custody-table">
                   <thead>
                     <tr>
-                      <th style="width: 25%; text-align: right;">البيان (اسم الصنف)</th>
+                      <th style="width: 35%; text-align: right;">البيان (اسم الصنف)</th>
                       <th style="width: 10%;">الكمية</th>
                       <th style="width: 20%;">الأرقام التسلسلية</th>
-                      <th style="width: 18%;">تاريخ الصرف</th>
-                      <th style="width: 12%;">حالة الاستلام</th>
-                      <th style="width: 15%; text-align: right;">ملاحظات</th>
+                      <th style="width: 20%;">تاريخ الصرف</th>
+                      <th style="width: 15%;">حالة الاستلام</th>
                     </tr>
                   </thead>
                   <tbody>${fixedCustodyHtml}</tbody>
@@ -533,23 +736,19 @@ export default function UsersList() {
                 <table class="custody-table">
                   <thead>
                     <tr>
-                      <th style="width: 45%; text-align: right;">البيان (اسم الصنف)</th>
+                      <th style="width: 50%; text-align: right;">البيان (اسم الصنف)</th>
                       <th style="width: 15%;">الكمية</th>
-                      <th style="width: 20%;">تاريخ الصرف</th>
-                      <th style="width: 20%; text-align: right;">ملاحظات</th>
+                      <th style="width: 35%;">تاريخ الصرف</th>
                     </tr>
                   </thead>
                   <tbody>${consumedCustodyHtml}</tbody>
                 </table>
               </div>
             </div>
-          </div>
-          
-          <div class="photo-sidebar">
-            <div class="photo-box">
-              ${photoSrc ? `<img src="${escapeHtml(photoSrc)}" alt="" />` : `<div class="no-img">لا توجد صورة</div>`}
+
+            <div class="undertaking-box">
+              <p><strong>تعهد وإقرار استلام عهدة:</strong> أقر أنا الموظف الموقع أدناه بأنني قد تسلمت المواد والأصول الموضحة في الجداول أعلاه، وهي في حالة ممتازة وصالحة للاستعمال، وأتعهد بالمحافظة عليها واستعمالها في أغراض العمل المخصصة لها، كما أتعهد بإعادتها كاملة وبحالة جيدة للشركة فور طلبها أو عند انتهاء علاقتي التعاقدية معها لأي سبب كان.</p>
             </div>
-            <p style="font-size: 0.8rem; font-weight: 700; color: #64748b;">الصورة الشخصية</p>
           </div>
         </div>
 
@@ -564,6 +763,19 @@ export default function UsersList() {
         
         <div class="print-date">تاريخ الطباعة: ${printDate}</div>
       </div>
+      
+      <script>
+        // Wait for all fonts to finish loading before showing the print dialog
+        if (document.fonts) {
+          document.fonts.ready.then(function() {
+            setTimeout(function() { window.print(); }, 350);
+          });
+        } else {
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 350);
+          };
+        }
+      </script>
       </body></html>`);
     w.document.close();
   };
