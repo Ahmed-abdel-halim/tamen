@@ -66,6 +66,7 @@ interface BankTransaction {
   notes?: string;
   transaction_type?: string;
   source_bank?: string;
+  source_account_number?: string;
   destination_bank?: string;
   agent_name?: string;
   branch_agent_id?: number;
@@ -191,21 +192,32 @@ export default function TreasuryAndBanksPage() {
   const [showBankModal, setShowBankModal] = useState(false);
   
   // Dynamic settings lists
-  const [dbBanks, setDbBanks] = useState<{id: number, name: string}[]>([]);
+  const [dbBanks, setDbBanks] = useState<{id: number, name: string, account_number?: string}[]>([]);
+  const [dbSourceBanks, setDbSourceBanks] = useState<{id: number, name: string, account_number?: string}[]>([]);
   const [dbTypes, setDbTypes] = useState<{id: number, name: string}[]>([]);
   
   // Settings Modals
   const [showBankSettingsModal, setShowBankSettingsModal] = useState(false);
+  const [showSourceBankSettingsModal, setShowSourceBankSettingsModal] = useState(false);
   const [showTypeSettingsModal, setShowTypeSettingsModal] = useState(false);
   const [newBankName, setNewBankName] = useState('');
+  const [newBankAccountNumber, setNewBankAccountNumber] = useState('');
+  const [newSourceBankName, setNewSourceBankName] = useState('');
+  const [newSourceBankAccountNumber, setNewSourceBankAccountNumber] = useState('');
   const [newTypeName, setNewTypeName] = useState('');
 
   // Mode for the bank transaction modal (deposit or withdrawal)
   const [bankModalType, setBankModalType] = useState<'deposit' | 'withdrawal'>('deposit');
 
-  // Searchable agent dropdown states
-  const [agentSearchQuery, setAgentSearchQuery] = useState('');
-  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+  // State variables for inline bank editing
+  const [editingBankId, setEditingBankId] = useState<number | null>(null);
+  const [editingBankName, setEditingBankName] = useState('');
+  const [editingBankAccountNumber, setEditingBankAccountNumber] = useState('');
+  const [editingBankTxnId, setEditingBankTxnId] = useState<number | null>(null);
+
+  const [editingSourceBankId, setEditingSourceBankId] = useState<number | null>(null);
+  const [editingSourceBankName, setEditingSourceBankName] = useState('');
+  const [editingSourceBankAccountNumber, setEditingSourceBankAccountNumber] = useState('');
 
   const [bankFormData, setBankFormData] = useState({
     transaction_date: new Date().toISOString().split('T')[0],
@@ -217,6 +229,7 @@ export default function TreasuryAndBanksPage() {
     notes: '',
     transaction_type: '',
     source_bank: '',
+    source_account_number: '',
     destination_bank: '',
     branch_agent_id: '',
     payer_name: '',
@@ -279,6 +292,11 @@ export default function TreasuryAndBanksPage() {
         const banksData = await resBanks.json();
         setDbBanks(banksData);
       }
+      const resSourceBanks = await fetch(`${API_BASE_URL}/bank-settings/source-banks`);
+      if (resSourceBanks.ok) {
+        const sourceBanksData = await resSourceBanks.json();
+        setDbSourceBanks(sourceBanksData);
+      }
       const resTypes = await fetch(`${API_BASE_URL}/bank-settings/transaction-types`);
       if (resTypes.ok) {
         const typesData = await resTypes.json();
@@ -296,11 +314,12 @@ export default function TreasuryAndBanksPage() {
       const res = await fetch(`${API_BASE_URL}/bank-settings/banks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newBankName })
+        body: JSON.stringify({ name: newBankName, account_number: newBankAccountNumber })
       });
       if (res.ok) {
         showToast('تم إضافة المصرف بنجاح', 'success');
         setNewBankName('');
+        setNewBankAccountNumber('');
         fetchBankSettings();
       } else {
         const err = await res.json();
@@ -328,6 +347,90 @@ export default function TreasuryAndBanksPage() {
         showToast('خطأ في الاتصال بالخادم', 'error');
       }
     });
+  };
+
+  const handleUpdateBank = async (id: number) => {
+    if (!editingBankName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/bank-settings/banks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingBankName, account_number: editingBankAccountNumber })
+      });
+      if (res.ok) {
+        showToast('تم تعديل المصرف بنجاح', 'success');
+        setEditingBankId(null);
+        fetchBankSettings();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'خطأ في تعديل المصرف', 'error');
+      }
+    } catch (e) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
+  const handleAddSourceBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSourceBankName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/bank-settings/source-banks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSourceBankName, account_number: newSourceBankAccountNumber })
+      });
+      if (res.ok) {
+        showToast('تم إضافة المصرف المرسل بنجاح', 'success');
+        setNewSourceBankName('');
+        setNewSourceBankAccountNumber('');
+        fetchBankSettings();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'خطأ في إضافة المصرف المرسل', 'error');
+      }
+    } catch (e) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
+  const handleDeleteSourceBank = async (id: number) => {
+    customConfirm('تأكيد حذف المصرف المرسل منه', 'هل أنت متأكد من حذف هذا المصرف المرسل منه؟', async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/bank-settings/source-banks/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast('تم حذف المصرف المرسل بنجاح', 'success');
+          fetchBankSettings();
+        } else {
+          showToast('فشل حذف المصرف المرسل', 'error');
+        }
+      } catch (e) {
+        showToast('خطأ في الاتصال بالخادم', 'error');
+      }
+    });
+  };
+
+  const handleUpdateSourceBank = async (id: number) => {
+    if (!editingSourceBankName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/bank-settings/source-banks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingSourceBankName, account_number: editingSourceBankAccountNumber })
+      });
+      if (res.ok) {
+        showToast('تم تعديل المصرف بنجاح', 'success');
+        setEditingSourceBankId(null);
+        fetchBankSettings();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'خطأ في تعديل المصرف', 'error');
+      }
+    } catch (e) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
   };
 
   const handleAddType = async (e: React.FormEvent) => {
@@ -373,24 +476,54 @@ export default function TreasuryAndBanksPage() {
 
   const openBankModal = (type: 'deposit' | 'withdrawal') => {
     setBankModalType(type);
+    const defaultBank = dbBanks.length > 0 ? dbBanks[0] : null;
     setBankFormData({
       transaction_date: new Date().toISOString().split('T')[0],
       reference_number: '',
-      bank_name: dbBanks.length > 0 ? dbBanks[0].name : '',
-      account_number: '',
+      bank_name: defaultBank ? defaultBank.name : '',
+      account_number: defaultBank ? (defaultBank.account_number || '') : '',
       amount: '',
       type: type,
       notes: '',
       transaction_type: dbTypes.length > 0 ? dbTypes[0].name : '',
       source_bank: '',
+      source_account_number: '',
       destination_bank: '',
       branch_agent_id: '',
       payer_name: '',
       payer_phone: '',
       voucher_image: null
     });
-    setAgentSearchQuery('غير مرتبط بوكيل');
+    setEditingBankTxnId(null);
     setShowBankModal(true);
+  };
+
+  const openEditBankModal = (txn: BankTransaction) => {
+    setEditingBankTxnId(txn.id);
+    setBankModalType(txn.type);
+    setBankFormData({
+      transaction_date: txn.transaction_date ? new Date(txn.transaction_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      reference_number: txn.reference_number || '',
+      bank_name: txn.bank_name || '',
+      account_number: txn.account_number || '',
+      amount: String(txn.amount),
+      type: txn.type,
+      notes: txn.notes || '',
+      transaction_type: txn.transaction_type || '',
+      source_bank: txn.source_bank || '',
+      source_account_number: txn.source_account_number || '',
+      destination_bank: txn.destination_bank || '',
+      branch_agent_id: txn.branch_agent_id ? String(txn.branch_agent_id) : '',
+      payer_name: txn.payer_name || '',
+      payer_phone: txn.payer_phone || '',
+      voucher_image: null
+    });
+    setShowBankModal(true);
+  };
+
+  const handleCloseBankModal = () => {
+    setShowBankModal(false);
+    setEditingBankTxnId(null);
   };
 
   const fetchAgents = async () => {
@@ -515,6 +648,9 @@ export default function TreasuryAndBanksPage() {
 
   const handleSaveBankTxn = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isEdit = editingBankTxnId !== null;
+    const url = isEdit ? `${API_BASE_URL}/bank-transactions/${editingBankTxnId}` : `${API_BASE_URL}/bank-transactions`;
+    
     const formData = new FormData();
     Object.entries(bankFormData).forEach(([key, val]) => {
       if (key === 'voucher_image' && val) {
@@ -526,31 +662,37 @@ export default function TreasuryAndBanksPage() {
       }
     });
 
+    if (isEdit) {
+      formData.append('_method', 'PUT');
+    }
+
     try {
-      const res = await fetch(`${API_BASE_URL}/bank-transactions`, {
+      const res = await fetch(url, {
         method: 'POST',
         body: formData
       });
       if (res.ok) {
-        showToast('تم إضافة الحركة البنكية بنجاح', 'success');
+        showToast(isEdit ? 'تم تعديل الحركة البنكية بنجاح' : 'تم إضافة الحركة البنكية بنجاح', 'success');
         setShowBankModal(false);
+        setEditingBankTxnId(null);
+        const defaultBank = dbBanks.length > 0 ? dbBanks[0] : null;
         setBankFormData({
           transaction_date: new Date().toISOString().split('T')[0],
           reference_number: '',
-          bank_name: dbBanks.length > 0 ? dbBanks[0].name : '',
-          account_number: '',
+          bank_name: defaultBank ? defaultBank.name : '',
+          account_number: defaultBank ? (defaultBank.account_number || '') : '',
           amount: '',
           type: 'deposit',
           notes: '',
           transaction_type: dbTypes.length > 0 ? dbTypes[0].name : '',
           source_bank: '',
+          source_account_number: '',
           destination_bank: '',
           branch_agent_id: '',
           payer_name: '',
           payer_phone: '',
           voucher_image: null
         });
-        setAgentSearchQuery('غير مرتبط بوكيل');
         fetchBankData();
       } else {
         const errData = await res.json();
@@ -926,10 +1068,7 @@ export default function TreasuryAndBanksPage() {
               <td class="label">رقم هاتف المودع:</td>
               <td>${txn.payer_phone || '—'}</td>
             </tr>
-            <tr>
-              <td class="label">الوكيل المرتبط:</td>
-              <td colspan="3">${txn.agent_name || 'غير مرتبط بوكيل مباشر'}</td>
-            </tr>
+
             <tr>
               <td class="label">ملاحظات:</td>
               <td colspan="3">${txn.notes || '—'}</td>
@@ -1393,7 +1532,7 @@ export default function TreasuryAndBanksPage() {
                   <th>رقم المرجع</th>
                   <th>نوع التحصيل (الـ 7 طرق)</th>
                   <th>المودع / المحول</th>
-                  <th>الوكيل المرتبط</th>
+
                   <th>الإيصال</th>
                   <th>الحالة</th>
                   <th>الإجراء</th>
@@ -1401,9 +1540,9 @@ export default function TreasuryAndBanksPage() {
               </thead>
               <tbody>
                 {banksLoading ? (
-                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px' }}>جاري تحميل البيانات البنكية...</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px' }}>جاري تحميل البيانات البنكية...</td></tr>
                 ) : filteredBankTxns.length === 0 ? (
-                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px', color: 'var(--muted)' }}>لا توجد تحصيلات أو معاملات بنكية مسجلة حالياً تطابق الفلاتر.</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: 'var(--muted)' }}>لا توجد تحصيلات أو معاملات بنكية مسجلة حالياً تطابق الفلاتر.</td></tr>
                 ) : filteredBankTxns.map(txn => (
                   <tr key={txn.id}>
                     <td style={{ fontWeight: 'bold' }}>{txn.transaction_date}</td>
@@ -1440,7 +1579,7 @@ export default function TreasuryAndBanksPage() {
                         )}
                       </div>
                     </td>
-                    <td>{txn.agent_name || '—'}</td>
+
                     <td>
                       {txn.voucher_image ? (
                         <button 
@@ -1500,6 +1639,14 @@ export default function TreasuryAndBanksPage() {
                           title="إرسال إشعار الإيداع للوكيل عبر الواتساب"
                         >
                           <i className="fa-brands fa-whatsapp"></i>
+                        </button>
+                        <button 
+                          onClick={() => openEditBankModal(txn)}
+                          className="action-btn"
+                          style={{ background: '#f59e0b', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                          title="تعديل الحركة البنكية"
+                        >
+                          <i className="fa-solid fa-pen"></i>
                         </button>
                         <button 
                           onClick={() => handleDeleteBankTxn(txn.id)}
@@ -2233,11 +2380,15 @@ export default function TreasuryAndBanksPage() {
 
       {/* MODAL 2: ADD BANK TRANSACTION */}
       {showBankModal && (
-        <div className="modal-overlay" onClick={() => setShowBankModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseBankModal}>
           <div className="modal-content dark-modal" style={{ maxWidth: '1200px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{bankModalType === 'deposit' ? 'إضافة إيداع بنكي جديد (التحصيلات)' : 'إضافة سحب/مصروف بنكي جديد'}</h3>
-              <button onClick={() => setShowBankModal(false)} className="close-btn">&times;</button>
+              <h3>
+                {editingBankTxnId !== null
+                  ? 'تعديل المعاملة البنكية'
+                  : (bankModalType === 'deposit' ? 'إضافة إيداع بنكي جديد (التحصيلات)' : 'إضافة سحب/مصروف بنكي جديد')}
+              </h3>
+              <button onClick={handleCloseBankModal} className="close-btn">&times;</button>
             </div>
             <form onSubmit={handleSaveBankTxn} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
@@ -2260,11 +2411,19 @@ export default function TreasuryAndBanksPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>المصرف المستلم</label>
+                  <label>المصرف المرسل منه (اختياري)</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <select 
-                      value={bankFormData.bank_name} 
-                      onChange={e => setBankFormData({ ...bankFormData, bank_name: e.target.value })}
+                      value={bankFormData.source_bank} 
+                      onChange={e => {
+                        const selectedName = e.target.value;
+                        const selectedBank = dbSourceBanks.find(b => b.name === selectedName);
+                        setBankFormData({ 
+                          ...bankFormData, 
+                          source_bank: selectedName,
+                          source_account_number: selectedBank?.account_number || ''
+                        });
+                      }}
                       style={{ 
                         flex: 1, 
                         height: '42px', 
@@ -2285,11 +2444,12 @@ export default function TreasuryAndBanksPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      {dbBanks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                      <option value="">اختر المصرف المرسل منه...</option>
+                      {dbSourceBanks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
                     </select>
                     <button
                       type="button"
-                      onClick={() => setShowBankSettingsModal(true)}
+                      onClick={() => setShowSourceBankSettingsModal(true)}
                       style={{
                         width: '42px',
                         height: '42px',
@@ -2303,19 +2463,19 @@ export default function TreasuryAndBanksPage() {
                         cursor: 'pointer',
                         flexShrink: 0
                       }}
-                      title="إضافة أو حذف مصرف"
+                      title="إضافة أو حذف مصرف مرسل منه"
                     >
                       <i className="fa-solid fa-plus-minus"></i>
                     </button>
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>رقم الحساب الجاري للمصرف المستلم</label>
+                  <label>رقم حساب المصرف المرسل منه</label>
                   <input 
                     type="text" 
                     placeholder="مثال: 120-20494-001"
-                    value={bankFormData.account_number} 
-                    onChange={e => setBankFormData({ ...bankFormData, account_number: e.target.value })} 
+                    value={bankFormData.source_account_number} 
+                    onChange={e => setBankFormData({ ...bankFormData, source_account_number: e.target.value })} 
                   />
                 </div>
                 <div className="form-group">
@@ -2380,29 +2540,19 @@ export default function TreasuryAndBanksPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>{bankModalType === 'deposit' ? 'اسم المودع أو المحول بالكامل' : 'اسم المستلم بالكامل'}</label>
-                  <input 
-                    type="text" 
-                    placeholder="مثال: أحمد عبد الحليم"
-                    value={bankFormData.payer_name} 
-                    onChange={e => setBankFormData({ ...bankFormData, payer_name: e.target.value })} 
-                  />
-                </div>
-                <div className="form-group">
-                  <label>{bankModalType === 'deposit' ? 'رقم هاتف المودع' : 'رقم هاتف المستلم'}</label>
-                  <input 
-                    type="text" 
-                    placeholder="مثال: 091XXXXXXX"
-                    value={bankFormData.payer_phone} 
-                    onChange={e => setBankFormData({ ...bankFormData, payer_phone: e.target.value })} 
-                  />
-                </div>
-                <div className="form-group">
-                  <label>المصرف المرسل منه (اختياري)</label>
+                  <label>المصرف المستلم</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <select 
-                      value={bankFormData.source_bank} 
-                      onChange={e => setBankFormData({ ...bankFormData, source_bank: e.target.value })}
+                      value={bankFormData.bank_name} 
+                      onChange={e => {
+                        const selectedName = e.target.value;
+                        const selectedBank = dbBanks.find(b => b.name === selectedName);
+                        setBankFormData({ 
+                          ...bankFormData, 
+                          bank_name: selectedName,
+                          account_number: selectedBank?.account_number || ''
+                        });
+                      }}
                       style={{ 
                         flex: 1, 
                         height: '42px', 
@@ -2423,7 +2573,6 @@ export default function TreasuryAndBanksPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      <option value="">اختر المصرف المرسل منه...</option>
                       {dbBanks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
                     </select>
                     <button
@@ -2448,102 +2597,32 @@ export default function TreasuryAndBanksPage() {
                     </button>
                   </div>
                 </div>
-                <div className="form-group" style={{ position: 'relative' }}>
-                  <label>ربط الحوالة بالوكيل/الفرع</label>
+                <div className="form-group">
+                  <label>رقم الحساب الجاري للمصرف المستلم</label>
                   <input 
                     type="text" 
-                    placeholder="ابحث عن وكيل..."
-                    value={agentSearchQuery}
-                    onChange={e => {
-                      setAgentSearchQuery(e.target.value);
-                      setShowAgentDropdown(true);
-                    }}
-                    onFocus={() => {
-                      if (agentSearchQuery === 'غير مرتبط بوكيل') {
-                        setAgentSearchQuery('');
-                      }
-                      setShowAgentDropdown(true);
-                    }}
-                    style={{ 
-                      width: '100%', 
-                      height: '42px', 
-                      borderRadius: '10px', 
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      paddingRight: '12px',
-                      paddingLeft: '12px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      textAlign: 'right'
-                    }}
+                    placeholder="مثال: 120-20494-001"
+                    value={bankFormData.account_number} 
+                    onChange={e => setBankFormData({ ...bankFormData, account_number: e.target.value })} 
                   />
-                  {showAgentDropdown && (
-                    <>
-                      <div 
-                        style={{ position: 'fixed', inset: 0, zIndex: 999 }} 
-                        onClick={() => {
-                          setShowAgentDropdown(false);
-                          if (!bankFormData.branch_agent_id) {
-                            setAgentSearchQuery('غير مرتبط بوكيل');
-                          } else {
-                            const selectedAgent = agents.find(a => String(a.id) === bankFormData.branch_agent_id);
-                            if (selectedAgent) {
-                              setAgentSearchQuery(`${selectedAgent.agency_name} (${selectedAgent.code})`);
-                            } else {
-                              setAgentSearchQuery('غير مرتبط بوكيل');
-                            }
-                          }
-                        }} 
-                      />
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: '100%', 
-                        left: 0, 
-                        right: 0, 
-                        background: 'var(--panel)', 
-                        border: '1px solid var(--border)', 
-                        borderRadius: '8px', 
-                        maxHeight: '200px', 
-                        overflowY: 'auto', 
-                        zIndex: 1000,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                      }}>
-                        <div 
-                          onClick={() => {
-                            setBankFormData({ ...bankFormData, branch_agent_id: '' });
-                            setAgentSearchQuery('غير مرتبط بوكيل');
-                            setShowAgentDropdown(false);
-                          }}
-                          style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: 'var(--input-bg)', fontWeight: 'bold' }}
-                        >
-                          غير مرتبط بوكيل
-                        </div>
-                        {agents
-                          .filter(a => {
-                            if (!agentSearchQuery || agentSearchQuery === 'غير مرتبط بوكيل') return true;
-                            return (
-                              a.agency_name.toLowerCase().includes(agentSearchQuery.toLowerCase()) ||
-                              a.code.toLowerCase().includes(agentSearchQuery.toLowerCase())
-                            );
-                          })
-                          .map(a => (
-                            <div 
-                              key={a.id}
-                              onClick={() => {
-                                setBankFormData({ ...bankFormData, branch_agent_id: String(a.id) });
-                                setAgentSearchQuery(`${a.agency_name} (${a.code})`);
-                                setShowAgentDropdown(false);
-                              }}
-                              style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
-                            >
-                              {a.agency_name} ({a.code})
-                            </div>
-                          ))
-                        }
-                      </div>
-                    </>
-                  )}
+                </div>
+                <div className="form-group">
+                  <label>{bankModalType === 'deposit' ? 'اسم المودع أو المحول بالكامل' : 'اسم المستلم بالكامل'}</label>
+                  <input 
+                    type="text" 
+                    placeholder="مثال: أحمد عبد الحليم"
+                    value={bankFormData.payer_name} 
+                    onChange={e => setBankFormData({ ...bankFormData, payer_name: e.target.value })} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{bankModalType === 'deposit' ? 'رقم هاتف المودع' : 'رقم هاتف المستلم'}</label>
+                  <input 
+                    type="text" 
+                    placeholder="مثال: 091XXXXXXX"
+                    value={bankFormData.payer_phone} 
+                    onChange={e => setBankFormData({ ...bankFormData, payer_phone: e.target.value })} 
+                  />
                 </div>
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label>تحميل إيصال المرفق أو الحوالة</label>
@@ -2565,8 +2644,10 @@ export default function TreasuryAndBanksPage() {
                 </div>
               </div>
               <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setShowBankModal(false)} className="secondary" style={{ padding: '10px 20px' }}>إلغاء</button>
-                <button type="submit" className="primary" style={{ padding: '10px 30px' }}>حفظ وإضافة الحركة</button>
+                <button type="button" onClick={handleCloseBankModal} className="secondary" style={{ padding: '10px 20px' }}>إلغاء</button>
+                <button type="submit" className="primary" style={{ padding: '10px 30px' }}>
+                  {editingBankTxnId !== null ? 'حفظ التعديلات' : 'حفظ وإضافة الحركة'}
+                </button>
               </div>
             </form>
           </div>
@@ -2827,25 +2908,42 @@ export default function TreasuryAndBanksPage() {
               <button onClick={() => setShowBankSettingsModal(false)} className="close-btn">&times;</button>
             </div>
             <div style={{ padding: '20px' }}>
-              <form onSubmit={handleAddBank} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                <input 
-                  type="text" 
-                  placeholder="اسم المصرف الجديد..." 
-                  required
-                  value={newBankName}
-                  onChange={e => setNewBankName(e.target.value)}
-                  style={{ 
-                    flex: 1, 
-                    height: '42px', 
-                    borderRadius: '10px', 
-                    padding: '0 12px',
-                    border: '1px solid var(--border)',
-                    background: 'var(--input-bg)',
-                    color: 'var(--text)'
-                  }}
-                />
-                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', padding: '0 20px', fontWeight: 'bold' }}>
-                  إضافة مصرف
+              <form onSubmit={handleAddBank} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="اسم المصرف الجديد..." 
+                    required
+                    value={newBankName}
+                    onChange={e => setNewBankName(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      height: '42px', 
+                      borderRadius: '10px', 
+                      padding: '0 12px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)'
+                    }}
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="رقم الحساب الجاري (اختياري)..." 
+                    value={newBankAccountNumber}
+                    onChange={e => setNewBankAccountNumber(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      height: '42px', 
+                      borderRadius: '10px', 
+                      padding: '0 12px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)'
+                    }}
+                  />
+                </div>
+                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', width: '100%', fontWeight: 'bold' }}>
+                  إضافة مصرف جديد للحسابات
                 </button>
               </form>
               
@@ -2855,15 +2953,199 @@ export default function TreasuryAndBanksPage() {
                 ) : (
                   dbBanks.map(b => (
                     <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{b.name}</span>
-                      <button 
-                        type="button"
-                        onClick={() => handleDeleteBank(b.id)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px' }}
-                        title="حذف"
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
+                      {editingBankId === b.id ? (
+                        <div style={{ display: 'flex', gap: '8px', flex: 1, marginLeft: '10px' }}>
+                          <input 
+                            type="text" 
+                            value={editingBankName} 
+                            onChange={e => setEditingBankName(e.target.value)}
+                            style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            placeholder="اسم المصرف"
+                          />
+                          <input 
+                            type="text" 
+                            value={editingBankAccountNumber} 
+                            onChange={e => setEditingBankAccountNumber(e.target.value)}
+                            style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            placeholder="رقم الحساب الجاري"
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => handleUpdateBank(b.id)} 
+                            style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="حفظ التعديلات"
+                          >
+                            <i className="fa-solid fa-check"></i>
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setEditingBankId(null)} 
+                            style={{ background: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="إلغاء"
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{b.name}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                              {b.account_number ? `رقم الحساب: ${b.account_number}` : 'لا يوجد رقم حساب مضاف'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setEditingBankId(b.id);
+                                setEditingBankName(b.name);
+                                setEditingBankAccountNumber(b.account_number || '');
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '15px' }}
+                              title="تعديل"
+                            >
+                              <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteBank(b.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '15px' }}
+                              title="حذف"
+                            >
+                              <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6.5: SOURCE BANK SETTINGS MODAL */}
+      {showSourceBankSettingsModal && (
+        <div className="modal-overlay" onClick={() => setShowSourceBankSettingsModal(false)}>
+          <div className="modal-content dark-modal" style={{ maxWidth: '600px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>إدارة المصارف المرسل منها (المصادر)</h3>
+              <button onClick={() => setShowSourceBankSettingsModal(false)} className="close-btn">&times;</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={handleAddSourceBank} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="اسم المصرف المرسل الجديد..." 
+                    required
+                    value={newSourceBankName}
+                    onChange={e => setNewSourceBankName(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      height: '42px', 
+                      borderRadius: '10px', 
+                      padding: '0 12px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)'
+                    }}
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="رقم الحساب المرسل (اختياري)..." 
+                    value={newSourceBankAccountNumber}
+                    onChange={e => setNewSourceBankAccountNumber(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      height: '42px', 
+                      borderRadius: '10px', 
+                      padding: '0 12px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)'
+                    }}
+                  />
+                </div>
+                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', width: '100%', fontWeight: 'bold' }}>
+                  إضافة مصرف مرسل جديد
+                </button>
+              </form>
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px' }}>
+                {dbSourceBanks.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لا توجد مصارف مرسلة مضافة حالياً.</div>
+                ) : (
+                  dbSourceBanks.map(b => (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid var(--border)' }}>
+                      {editingSourceBankId === b.id ? (
+                        <div style={{ display: 'flex', gap: '8px', flex: 1, marginLeft: '10px' }}>
+                          <input 
+                            type="text" 
+                            value={editingSourceBankName} 
+                            onChange={e => setEditingSourceBankName(e.target.value)}
+                            style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            placeholder="اسم المصرف المرسل"
+                          />
+                          <input 
+                            type="text" 
+                            value={editingSourceBankAccountNumber} 
+                            onChange={e => setEditingSourceBankAccountNumber(e.target.value)}
+                            style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            placeholder="رقم الحساب المرسل"
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => handleUpdateSourceBank(b.id)} 
+                            style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="حفظ التعديلات"
+                          >
+                            <i className="fa-solid fa-check"></i>
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setEditingSourceBankId(null)} 
+                            style={{ background: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="إلغاء"
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{b.name}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                              {b.account_number ? `رقم الحساب: ${b.account_number}` : 'لا يوجد رقم حساب مضاف'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setEditingSourceBankId(b.id);
+                                setEditingSourceBankName(b.name);
+                                setEditingSourceBankAccountNumber(b.account_number || '');
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '15px' }}
+                              title="تعديل"
+                            >
+                              <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteSourceBank(b.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '15px' }}
+                              title="حذف"
+                            >
+                              <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))
                 )}
