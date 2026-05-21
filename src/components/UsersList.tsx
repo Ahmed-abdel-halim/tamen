@@ -255,6 +255,122 @@ export default function UsersList() {
   const [filterPermission, setFilterPermission] = useState("all");
   const [filterActive, setFilterActive] = useState("1");
 
+  // Contract Types State (default list or loaded from localStorage)
+  const [contractTypes, setContractTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('custom_contract_types');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return ["مجلس الاداره", "مدير عام", "مدير فرع", "موظف", "مندوب", "متدرب", "متعاونين", "لجان"];
+  });
+
+  // Job Titles State (default list or loaded from localStorage)
+  const [jobTitles, setJobTitles] = useState<string[]>(() => {
+    const saved = localStorage.getItem('custom_job_titles');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return ["مدير عام", "محاسب مالي", "موظف موارد بشرية", "مبرمج", "مندوب مبيعات", "مشرف"];
+  });
+
+  const [showContractTypesManager, setShowContractTypesManager] = useState(false);
+  const [newContractTypeInput, setNewContractTypeInput] = useState("");
+  const [editingContractType, setEditingContractType] = useState<string | null>(null);
+  const [editingContractTypeValue, setEditingContractTypeValue] = useState("");
+
+  const [showJobTitlesManager, setShowJobTitlesManager] = useState(false);
+  const [newJobTitleInput, setNewJobTitleInput] = useState("");
+  const [editingJobTitle, setEditingJobTitle] = useState<string | null>(null);
+  const [editingJobTitleValue, setEditingJobTitleValue] = useState("");
+
+  const addContractType = (type: string) => {
+    const val = type.trim();
+    if (!val) return;
+    if (contractTypes.includes(val)) {
+      showToast("هذا النوع موجود بالفعل", "error");
+      return;
+    }
+    const updated = [...contractTypes, val];
+    setContractTypes(updated);
+    localStorage.setItem('custom_contract_types', JSON.stringify(updated));
+    setNewContractTypeInput("");
+    showToast("تمت إضافة نوع العقد بنجاح", "success");
+  };
+
+  const deleteContractType = (val: string) => {
+    const updated = contractTypes.filter(t => t !== val);
+    setContractTypes(updated);
+    localStorage.setItem('custom_contract_types', JSON.stringify(updated));
+    showToast("تم حذف نوع العقد", "success");
+  };
+
+  const updateContractType = (oldVal: string, newVal: string) => {
+    const val = newVal.trim();
+    if (!val) return;
+    if (val === oldVal) {
+      setEditingContractType(null);
+      return;
+    }
+    if (contractTypes.includes(val)) {
+      showToast("هذا النوع موجود بالفعل", "error");
+      return;
+    }
+    const updated = contractTypes.map(t => t === oldVal ? val : t);
+    setContractTypes(updated);
+    localStorage.setItem('custom_contract_types', JSON.stringify(updated));
+    
+    if (formData.contract_type === oldVal) {
+      setFormData(prev => ({ ...prev, contract_type: val }));
+    }
+    
+    setEditingContractType(null);
+    showToast("تم تعديل نوع العقد بنجاح", "success");
+  };
+
+  const addJobTitle = (title: string) => {
+    const val = title.trim();
+    if (!val) return;
+    if (jobTitles.includes(val)) {
+      showToast("هذا المسمى الوظيفي موجود بالفعل", "error");
+      return;
+    }
+    const updated = [...jobTitles, val];
+    setJobTitles(updated);
+    localStorage.setItem('custom_job_titles', JSON.stringify(updated));
+    setNewJobTitleInput("");
+    showToast("تمت إضافة المسمى الوظيفي بنجاح", "success");
+  };
+
+  const deleteJobTitle = (val: string) => {
+    const updated = jobTitles.filter(t => t !== val);
+    setJobTitles(updated);
+    localStorage.setItem('custom_job_titles', JSON.stringify(updated));
+    showToast("تم حذف المسمى الوظيفي", "success");
+  };
+
+  const updateJobTitle = (oldVal: string, newVal: string) => {
+    const val = newVal.trim();
+    if (!val) return;
+    if (val === oldVal) {
+      setEditingJobTitle(null);
+      return;
+    }
+    if (jobTitles.includes(val)) {
+      showToast("هذا المسمى الوظيفي موجود بالفعل", "error");
+      return;
+    }
+    const updated = jobTitles.map(t => t === oldVal ? val : t);
+    setJobTitles(updated);
+    localStorage.setItem('custom_job_titles', JSON.stringify(updated));
+
+    if (formData.job_title === oldVal) {
+      setFormData(prev => ({ ...prev, job_title: val }));
+    }
+
+    setEditingJobTitle(null);
+    showToast("تم تعديل المسمى الوظيفي بنجاح", "success");
+  };
+
   useEffect(() => {
     fetchUsers();
   }, [currentPage, searchQuery, perPage, filterRole, filterJobTitle, filterPermission, filterActive]);
@@ -2037,7 +2153,41 @@ export default function UsersList() {
                   </div>
                   <div className="form-group flex-1">
                     <label>المسمى الوظيفي</label>
-                    <input type="text" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} placeholder="المسمى" />
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input 
+                        type="text" 
+                        list="job_titles_list"
+                        value={formData.job_title} 
+                        onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} 
+                        placeholder="المسمى" 
+                        style={{ flex: 1 }}
+                      />
+                      <datalist id="job_titles_list">
+                        {jobTitles.map((t) => (
+                          <option key={t} value={t} />
+                        ))}
+                      </datalist>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowJobTitlesManager(true)}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--panel)',
+                          color: '#014cb1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                        title="إدارة المسميات الوظيفية"
+                      >
+                        <i className="fa-solid fa-plus-minus"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="form-row">
@@ -2090,20 +2240,40 @@ export default function UsersList() {
                   </div>
                   <div className="form-group flex-1">
                     <label>نوع العقد</label>
-                    <input 
-                      list="contract_types" 
-                      value={formData.contract_type} 
-                      onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })} 
-                      placeholder="اختر أو اكتب نوع العقد" 
-                    />
-                    <datalist id="contract_types">
-                      <option value="مجلس الاداره" />
-                      <option value="مدير عام" />
-                      <option value="مدير فرع" />
-                      <option value="موظف" />
-                      <option value="مندوب" />
-                      <option value="متدرب" />
-                    </datalist>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input 
+                        list="contract_types" 
+                        value={formData.contract_type} 
+                        onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })} 
+                        placeholder="اختر أو اكتب نوع العقد" 
+                        style={{ flex: 1 }}
+                      />
+                      <datalist id="contract_types">
+                        {contractTypes.map((t) => (
+                          <option key={t} value={t} />
+                        ))}
+                      </datalist>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowContractTypesManager(true)}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--panel)',
+                          color: '#014cb1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                        title="إدارة أنواع العقود"
+                      >
+                        <i className="fa-solid fa-plus-minus"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="form-group">
@@ -2302,6 +2472,206 @@ export default function UsersList() {
               >
                 {deleting ? 'جاري الحذف...' : 'حذف'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contract Types Manager Modal */}
+      {showContractTypesManager && (
+        <div className="modal" onClick={(e) => e.target === e.currentTarget && setShowContractTypesManager(false)}>
+          <div className="modal-content user-form-modal" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>إدارة أنواع العقود</h3>
+              <button className="close-btn" onClick={() => setShowContractTypesManager(false)}>&times;</button>
+            </div>
+            <div className="user-form" style={{ padding: '15px 0' }}>
+              <div className="form-group" style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+                <input 
+                  type="text" 
+                  value={newContractTypeInput} 
+                  onChange={(e) => setNewContractTypeInput(e.target.value)} 
+                  placeholder="نوع عقد جديد (مثال: متعاون)" 
+                  style={{ flex: 1 }}
+                />
+                <button 
+                  type="button" 
+                  className="btn-submit" 
+                  onClick={() => addContractType(newContractTypeInput)}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  إضافة
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', background: 'var(--panel)' }}>
+                {contractTypes.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.9rem', margin: '15px 0' }}>لا توجد أنواع عقود مضافة</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {contractTypes.map((type) => (
+                      <li key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                        {editingContractType === type ? (
+                          <div style={{ display: 'flex', gap: '8px', flex: 1, marginLeft: '10px' }}>
+                            <input 
+                              type="text" 
+                              value={editingContractTypeValue} 
+                              onChange={e => setEditingContractTypeValue(e.target.value)}
+                              style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                              placeholder="نوع العقد"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => updateContractType(type, editingContractTypeValue)} 
+                              style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="حفظ التعديلات"
+                            >
+                              <i className="fa-solid fa-check"></i>
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setEditingContractType(null)} 
+                              style={{ background: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="إلغاء"
+                            >
+                              <i className="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span style={{ fontWeight: 'bold' }}>{type}</span>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setEditingContractType(type);
+                                  setEditingContractTypeValue(type);
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '14px' }}
+                                title="تعديل"
+                              >
+                                <i className="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => deleteContractType(type)}
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                title="حذف"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="form-actions" style={{ marginTop: '20px', padding: 0 }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowContractTypesManager(false)}>إغلاق</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Job Titles Manager Modal */}
+      {showJobTitlesManager && (
+        <div className="modal" onClick={(e) => e.target === e.currentTarget && setShowJobTitlesManager(false)}>
+          <div className="modal-content user-form-modal" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>إدارة المسميات الوظيفية</h3>
+              <button className="close-btn" onClick={() => setShowJobTitlesManager(false)}>&times;</button>
+            </div>
+            <div className="user-form" style={{ padding: '15px 0' }}>
+              <div className="form-group" style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+                <input 
+                  type="text" 
+                  value={newJobTitleInput} 
+                  onChange={(e) => setNewJobTitleInput(e.target.value)} 
+                  placeholder="مسمى وظيفي جديد (مثال: مستشار قانوني)" 
+                  style={{ flex: 1 }}
+                />
+                <button 
+                  type="button" 
+                  className="btn-submit" 
+                  onClick={() => addJobTitle(newJobTitleInput)}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  إضافة
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', background: 'var(--panel)' }}>
+                {jobTitles.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.9rem', margin: '15px 0' }}>لا توجد مسميات وظيفية مضافة</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {jobTitles.map((title) => (
+                      <li key={title} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                        {editingJobTitle === title ? (
+                          <div style={{ display: 'flex', gap: '8px', flex: 1, marginLeft: '10px' }}>
+                            <input 
+                              type="text" 
+                              value={editingJobTitleValue} 
+                              onChange={e => setEditingJobTitleValue(e.target.value)}
+                              style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                              placeholder="المسمى الوظيفي"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => updateJobTitle(title, editingJobTitleValue)} 
+                              style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="حفظ التعديلات"
+                            >
+                              <i className="fa-solid fa-check"></i>
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setEditingJobTitle(null)} 
+                              style={{ background: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="إلغاء"
+                            >
+                              <i className="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span style={{ fontWeight: 'bold' }}>{title}</span>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setEditingJobTitle(title);
+                                  setEditingJobTitleValue(title);
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '14px' }}
+                                title="تعديل"
+                              >
+                                <i className="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => deleteJobTitle(title)}
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                title="حذف"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="form-actions" style={{ marginTop: '20px', padding: 0 }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowJobTitlesManager(false)}>إغلاق</button>
+              </div>
             </div>
           </div>
         </div>

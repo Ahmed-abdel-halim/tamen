@@ -13,6 +13,11 @@ type Employee = {
   social_security_percentage?: number | string;
   apply_tax?: boolean;
   apply_social_security?: boolean;
+  housing_allowance?: number | string | null;
+  transportation_allowance?: number | string | null;
+  communication_allowance?: number | string | null;
+  fixed_bonuses?: number | string | null;
+  fixed_fines?: number | string | null;
 };
 
 type Payroll = {
@@ -99,7 +104,7 @@ export default function EmployeeSalaries() {
       };
 
       const [employeesRes, payrollsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/employee-payrolls/employees`, { headers }),
+        fetch(`${API_BASE_URL}/employee-payrolls/employees?year=${year}&month=${month}`, { headers }),
         fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`, { headers }),
       ]);
       const employeesData = await employeesRes.json();
@@ -131,13 +136,13 @@ export default function EmployeeSalaries() {
   const rows = filteredEmployees.map((e) => {
     const p = payrollMap.get(e.id);
     const base = p ? toNum(p.base_salary) : toNum(e.salary);
-    const housing = p ? toNum(p.housing_allowance) : 100;
-    const transport = p ? toNum(p.transportation_allowance) : 100;
-    const communication = p ? toNum(p.communication_allowance) : 100;
+    const housing = p ? toNum(p.housing_allowance) : toNum(e.housing_allowance);
+    const transport = p ? toNum(p.transportation_allowance) : toNum(e.transportation_allowance);
+    const communication = p ? toNum(p.communication_allowance) : toNum(e.communication_allowance);
     const misc = p ? toNum(p.allowance_amount) : 0;
-    const bonus = p ? toNum(p.bonus_amount) : 100;
+    const bonus = p ? toNum(p.bonus_amount) : toNum(e.fixed_bonuses);
     const other = p ? toNum(p.other_additions) : 0;
-    const deduction = p ? toNum(p.deduction_amount) : 75;
+    const deduction = p ? toNum(p.deduction_amount) : toNum(e.fixed_fines);
     const advance = p ? toNum(p.advance_amount) : 0;
     const penalty = p ? toNum(p.penalty_amount) : 0;
 
