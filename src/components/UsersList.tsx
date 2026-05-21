@@ -283,6 +283,19 @@ export default function UsersList() {
   const [editingJobTitle, setEditingJobTitle] = useState<string | null>(null);
   const [editingJobTitleValue, setEditingJobTitleValue] = useState("");
 
+  // Salary Types State
+  const [salaryTypes, setSalaryTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('custom_salary_types');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return ["مرتب شهري", "مقابل الوقت (بالساعة)", "مكافأة سنوية", "نسبة حسب الاتفاق"];
+  });
+  const [showSalaryTypesManager, setShowSalaryTypesManager] = useState(false);
+  const [newSalaryTypeInput, setNewSalaryTypeInput] = useState("");
+  const [editingSalaryType, setEditingSalaryType] = useState<string | null>(null);
+  const [editingSalaryTypeValue, setEditingSalaryTypeValue] = useState("");
+
   const addContractType = (type: string) => {
     const val = type.trim();
     if (!val) return;
@@ -369,6 +382,48 @@ export default function UsersList() {
 
     setEditingJobTitle(null);
     showToast("تم تعديل المسمى الوظيفي بنجاح", "success");
+  };
+
+  const addSalaryType = (type: string) => {
+    const val = type.trim();
+    if (!val) return;
+    if (salaryTypes.includes(val)) {
+      showToast("هذا النوع موجود بالفعل", "error");
+      return;
+    }
+    const updated = [...salaryTypes, val];
+    setSalaryTypes(updated);
+    localStorage.setItem('custom_salary_types', JSON.stringify(updated));
+    setNewSalaryTypeInput("");
+    showToast("تمت إضافة نوع المرتب بنجاح", "success");
+  };
+
+  const deleteSalaryType = (val: string) => {
+    const updated = salaryTypes.filter(t => t !== val);
+    setSalaryTypes(updated);
+    localStorage.setItem('custom_salary_types', JSON.stringify(updated));
+    showToast("تم حذف نوع المرتب", "success");
+  };
+
+  const updateSalaryType = (oldVal: string, newVal: string) => {
+    const val = newVal.trim();
+    if (!val) return;
+    if (val === oldVal) {
+      setEditingSalaryType(null);
+      return;
+    }
+    if (salaryTypes.includes(val)) {
+      showToast("هذا النوع موجود بالفعل", "error");
+      return;
+    }
+    const updated = salaryTypes.map(t => t === oldVal ? val : t);
+    setSalaryTypes(updated);
+    localStorage.setItem('custom_salary_types', JSON.stringify(updated));
+    if (formData.salary_type === oldVal) {
+      setFormData(prev => ({ ...prev, salary_type: val }));
+    }
+    setEditingSalaryType(null);
+    showToast("تم تعديل نوع المرتب بنجاح", "success");
   };
 
   useEffect(() => {
@@ -2288,10 +2343,40 @@ export default function UsersList() {
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label>نوع المرتب</label>
-                    <select value={formData.salary_type} onChange={(e) => setFormData({ ...formData, salary_type: e.target.value })}>
-                      <option value="monthly">مرتب شهري</option>
-                      <option value="hourly">مقابل الوقت (بالساعة)</option>
-                    </select>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        list="salary_types"
+                        value={formData.salary_type}
+                        onChange={(e) => setFormData({ ...formData, salary_type: e.target.value })}
+                        placeholder="اختر أو اكتب نوع المرتب"
+                        style={{ flex: 1 }}
+                      />
+                      <datalist id="salary_types">
+                        {salaryTypes.map((t) => (
+                          <option key={t} value={t} />
+                        ))}
+                      </datalist>
+                      <button
+                        type="button"
+                        onClick={() => setShowSalaryTypesManager(true)}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--panel)',
+                          color: '#014cb1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                        title="إدارة أنواع المرتبات"
+                      >
+                        <i className="fa-solid fa-plus-minus"></i>
+                      </button>
+                    </div>
                   </div>
                   {formData.salary_type === 'monthly' ? (
                     <div className="form-group flex-1">
@@ -2671,6 +2756,107 @@ export default function UsersList() {
 
               <div className="form-actions" style={{ marginTop: '20px', padding: 0 }}>
                 <button type="button" className="btn-cancel" onClick={() => setShowJobTitlesManager(false)}>إغلاق</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Salary Types Manager Modal */}
+      {showSalaryTypesManager && (
+        <div className="modal" onClick={(e) => e.target === e.currentTarget && setShowSalaryTypesManager(false)}>
+          <div className="modal-content user-form-modal" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>إدارة أنواع المرتبات</h3>
+              <button className="close-btn" onClick={() => setShowSalaryTypesManager(false)}>&times;</button>
+            </div>
+            <div className="user-form" style={{ padding: '15px 0' }}>
+              <div className="form-group" style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+                <input
+                  type="text"
+                  value={newSalaryTypeInput}
+                  onChange={(e) => setNewSalaryTypeInput(e.target.value)}
+                  placeholder="نوع مرتب جديد (مثال: مكافأة سنوية)"
+                  style={{ flex: 1 }}
+                  onKeyDown={(e) => e.key === 'Enter' && addSalaryType(newSalaryTypeInput)}
+                />
+                <button
+                  type="button"
+                  className="btn-submit"
+                  onClick={() => addSalaryType(newSalaryTypeInput)}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  إضافة
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', background: 'var(--panel)' }}>
+                {salaryTypes.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.9rem', margin: '15px 0' }}>لا توجد أنواع مرتبات مضافة</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {salaryTypes.map((type) => (
+                      <li key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                        {editingSalaryType === type ? (
+                          <div style={{ display: 'flex', gap: '8px', flex: 1, marginLeft: '10px' }}>
+                            <input
+                              type="text"
+                              value={editingSalaryTypeValue}
+                              onChange={e => setEditingSalaryTypeValue(e.target.value)}
+                              style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                              placeholder="نوع المرتب"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateSalaryType(type, editingSalaryTypeValue)}
+                              style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="حفظ التعديلات"
+                            >
+                              <i className="fa-solid fa-check"></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSalaryType(null)}
+                              style={{ background: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="إلغاء"
+                            >
+                              <i className="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span style={{ fontWeight: 'bold' }}>{type}</span>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingSalaryType(type);
+                                  setEditingSalaryTypeValue(type);
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '14px' }}
+                                title="تعديل"
+                              >
+                                <i className="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteSalaryType(type)}
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                title="حذف"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="form-actions" style={{ marginTop: '20px', padding: 0 }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowSalaryTypesManager(false)}>إغلاق</button>
               </div>
             </div>
           </div>

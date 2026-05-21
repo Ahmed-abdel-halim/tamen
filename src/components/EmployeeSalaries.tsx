@@ -18,6 +18,8 @@ type Employee = {
   communication_allowance?: number | string | null;
   fixed_bonuses?: number | string | null;
   fixed_fines?: number | string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 };
 
 type Payroll = {
@@ -59,6 +61,32 @@ const money = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximum
 const toNum = (v: unknown) => {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
+};
+
+/**
+ * يتحقق إذا كان الموظف نشطاً في الشهر/السنة المحددة:
+ * - start_date يجب أن يكون قبل أو في نفس الشهر المحدد
+ * - end_date إما فارغ (لا يزال موظفاً) أو بعد بداية الشهر المحدد
+ */
+const isEmployeeActiveInPeriod = (emp: Employee, year: number, month: number): boolean => {
+  // بداية الشهر المحدد
+  const periodStart = new Date(year, month - 1, 1);
+  // نهاية الشهر المحدد
+  const periodEnd = new Date(year, month, 0, 23, 59, 59);
+
+  if (emp.start_date) {
+    const startDate = new Date(emp.start_date);
+    // إذا كان تاريخ التعيين بعد نهاية الشهر المحدد، لا يُدرج
+    if (startDate > periodEnd) return false;
+  }
+
+  if (emp.end_date) {
+    const endDate = new Date(emp.end_date);
+    // إذا كان تاريخ انهاء العمل قبل بداية الشهر المحدد، لا يُدرج
+    if (endDate < periodStart) return false;
+  }
+
+  return true;
 };
 
 export default function EmployeeSalaries() {
@@ -130,8 +158,18 @@ export default function EmployeeSalaries() {
 
   const filteredEmployees = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return employees.filter((e) => !q || e.name.toLowerCase().includes(q) || e.username.toLowerCase().includes(q));
-  }, [employees, query]);
+    return employees.filter((e) => {
+      // فلترة بناءً على تاريخ التعيين وانهاء العمل
+      if (!isEmployeeActiveInPeriod(e, year, month)) return false;
+      // فلترة بناءً على البحث
+      return !q || e.name.toLowerCase().includes(q) || e.username.toLowerCase().includes(q);
+    });
+  }, [employees, query, year, month]);
+
+  // الموظفون النشطون فقط لعرضهم في الـ dropdown
+  const activeEmployeesForDropdown = useMemo(() => {
+    return employees.filter((e) => isEmployeeActiveInPeriod(e, year, month));
+  }, [employees, year, month]);
 
   const rows = filteredEmployees.map((e) => {
     const p = payrollMap.get(e.id);
@@ -272,6 +310,7 @@ export default function EmployeeSalaries() {
     try {
       const columns = [
         { header: 'الموظف', key: 'name', width: 30 },
+        { header: 'تاريخ التعيين', key: 'start_date', width: 18 },
         { header: 'الأساسي', key: 'base', width: 15 },
         { header: 'سكن', key: 'housing', width: 12 },
         { header: 'مواصلات', key: 'transport', width: 12 },
@@ -291,6 +330,7 @@ export default function EmployeeSalaries() {
       const data = rows.map((r) => {
         const rowData: any = {
           name: r.e.name,
+          start_date: r.e.start_date ? new Date(r.e.start_date).toLocaleDateString('ar-LY') : '—',
           base: r.base,
           housing: r.housing,
           transport: r.transport,
@@ -317,6 +357,7 @@ export default function EmployeeSalaries() {
       // Summary row
       const summaryRow: any = {
         name: 'الإجمالي الكلي',
+        start_date: '',
         base: '',
         housing: '',
         transport: '',
@@ -391,6 +432,7 @@ export default function EmployeeSalaries() {
         (r) => `
       <tr>
         <td style="font-weight:bold">${r.e.name}</td>
+        <td style="font-size:10px;color:#64748b">${r.e.start_date ? new Date(r.e.start_date).toLocaleDateString('ar-LY') : '—'}</td>
         <td>${money.format(r.base)}</td>
         <td style="color:#10b981">${money.format(r.housing)}</td>
         <td style="color:#10b981">${money.format(r.transport)}</td>
@@ -538,6 +580,7 @@ export default function EmployeeSalaries() {
           <thead>
             <tr>
               <th>الموظف</th>
+              <th>تاريخ التعيين</th>
               <th>الأساسي</th>
               <th>سكن</th>
               <th>مواصلات</th>
@@ -559,8 +602,8 @@ export default function EmployeeSalaries() {
           </tbody>
           <tfoot>
             <tr style="background:#f1f5f9; font-weight:900">
-              <td colspan="1">الإجمالي العام</td>
-              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+              <td colspan="2">الإجمالي العام</td>
+              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
               ${allExtraLabels.map(() => `<td>-</td>`).join('')}
               <td style="color:#10b981; font-size:14px">${money.format(totals.total)} د.ل</td>
               <td colspan="2">موظفين ( ${rows.length} )</td>
@@ -607,7 +650,7 @@ export default function EmployeeSalaries() {
                 onChange={(e) => setQuery(e.target.value)}
               >
                 <option value="">كل الموظفين</option>
-                {employees.map((e) => (
+                {activeEmployeesForDropdown.map((e) => (
                   <option key={e.id} value={e.name}>
                     {e.name}
                   </option>
@@ -685,6 +728,7 @@ export default function EmployeeSalaries() {
             <thead>
               <tr>
                 <th>الموظف</th>
+                <th>تاريخ التعيين</th>
                 <th>الأساسي</th>
                 <th style={{ color: '#10b981' }}>سكن</th>
                 <th style={{ color: '#10b981' }}>مواصلات</th>
@@ -704,12 +748,13 @@ export default function EmployeeSalaries() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={13 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
+                <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={13 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات</td></tr>
+                <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات</td></tr>
               ) : rows.map((r) => (
                 <tr key={r.e.id}>
                   <td style={{ minWidth: '120px' }}>{r.e.name}</td>
+                  <td style={{ fontSize: '12px', color: '#64748b' }}>{r.e.start_date ? new Date(r.e.start_date).toLocaleDateString('ar-LY') : '—'}</td>
                   <td>{money.format(r.base)}</td>
                   <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.housing)}</td>
                   <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.transport)}</td>
