@@ -574,7 +574,7 @@ export default function EmployeeSalaries() {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
           @media print { 
-            @page { margin: 8mm; size: landscape; } 
+            @page { margin: 8mm; } 
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
           body { 
@@ -809,7 +809,7 @@ export default function EmployeeSalaries() {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
           @media print { 
-            @page { margin: 8mm; size: landscape; } 
+            @page { margin: 8mm; } 
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
           body { 
