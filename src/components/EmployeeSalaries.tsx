@@ -46,6 +46,7 @@ type Payroll = {
   extra_fields?: { label: string; amount: number }[] | null;
   paid_at?: string | null;
   notes?: string | null;
+  user?: Employee;
 };
 
 type SalaryHistory = {
@@ -87,6 +88,72 @@ const isEmployeeActiveInPeriod = (emp: Employee, year: number, month: number): b
   }
 
   return true;
+};
+
+const formatDateToDisplay = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+};
+
+const CustomDatePicker = ({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (val: string) => void;
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        id={id}
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          opacity: 0,
+          cursor: 'pointer',
+          zIndex: 2,
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          height: '42px',
+          borderRadius: '10px',
+          border: isFocused ? '1px solid var(--accent)' : '1px solid var(--border)',
+          boxShadow: isFocused ? '0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)' : 'none',
+          background: 'var(--input-bg)',
+          color: 'var(--text)',
+          padding: '0 12px',
+          fontSize: '0.95rem',
+          pointerEvents: 'none',
+          position: 'relative',
+          zIndex: 1,
+          transition: 'all 0.2s ease',
+          direction: 'ltr',
+        }}
+      >
+        <span>{formatDateToDisplay(value)}</span>
+        <i className="fa-regular fa-calendar" style={{ color: 'var(--muted)' }}></i>
+      </div>
+    </div>
+  );
 };
 
 export default function EmployeeSalaries() {
@@ -691,7 +758,7 @@ export default function EmployeeSalaries() {
     const bodyRows = rangeReportPayrolls
       .map(
         (p) => {
-          const empName = p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—';
+          const empName = p.user?.name || (p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—');
           const base = toNum(p.base_salary);
           const housing = toNum(p.housing_allowance);
           const transport = toNum(p.transportation_allowance);
@@ -843,7 +910,7 @@ export default function EmployeeSalaries() {
         </div>
 
         <div class="report-title">
-          <h2>تقرير رواتب الموظفين للفترة من (${rangeFromDate}) إلى (${rangeToDate})</h2>
+          <h2>تقرير رواتب الموظفين للفترة من (${formatDateToDisplay(rangeFromDate)}) إلى (${formatDateToDisplay(rangeToDate)})</h2>
           <p style="margin: 5px 0; font-weight: bold; color: #4a5568;">الموظف: ${employeeName}</p>
         </div>
 
@@ -931,7 +998,7 @@ export default function EmployeeSalaries() {
       ];
 
       const data = rangeReportPayrolls.map((p) => {
-        const empName = p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—';
+        const empName = p.user?.name || (p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—');
         return {
           name: empName,
           period: `${p.month}/${p.year}`,
@@ -982,11 +1049,11 @@ export default function EmployeeSalaries() {
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير رواتب الموظفين بالفترة',
-        subtitle: `الفترة من (${rangeFromDate}) إلى (${rangeToDate}) - الموظف: ${employeeName} - إجمالي الصافي: ${rangeReportTotals.total.toLocaleString()} د.ل`,
+        subtitle: `الفترة من (${formatDateToDisplay(rangeFromDate)}) إلى (${formatDateToDisplay(rangeToDate)}) - الموظف: ${employeeName} - إجمالي الصافي: ${rangeReportTotals.total.toLocaleString()} د.ل`,
         columns,
         data,
         fileName: `تقرير_الرواتب_${rangeFromDate}_إلى_${rangeToDate}`,
-        qrData: `تقرير الرواتب - المدار الليبي\nالفترة: ${rangeFromDate} إلى ${rangeToDate}\nالموظف: ${employeeName}\nالإجمالي: ${rangeReportTotals.total.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `تقرير الرواتب - المدار الليبي\nالفترة: ${formatDateToDisplay(rangeFromDate)} إلى ${formatDateToDisplay(rangeToDate)}\nالموظف: ${employeeName}\nالإجمالي: ${rangeReportTotals.total.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير تقرير الفترة بنجاح', 'success');
@@ -1227,20 +1294,18 @@ export default function EmployeeSalaries() {
                 </div>
                 <div className="ep-field">
                   <label htmlFor="range-from">من تاريخ</label>
-                  <input
+                  <CustomDatePicker
                     id="range-from"
-                    type="date"
                     value={rangeFromDate}
-                    onChange={(e) => setRangeFromDate(e.target.value)}
+                    onChange={setRangeFromDate}
                   />
                 </div>
                 <div className="ep-field">
                   <label htmlFor="range-to">إلى تاريخ</label>
-                  <input
+                  <CustomDatePicker
                     id="range-to"
-                    type="date"
                     value={rangeToDate}
-                    onChange={(e) => setRangeToDate(e.target.value)}
+                    onChange={setRangeToDate}
                   />
                 </div>
               </div>
@@ -1309,7 +1374,7 @@ export default function EmployeeSalaries() {
                   ) : rangeReportPayrolls.length === 0 ? (
                     <tr><td colSpan={17} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات للفترة المحددة</td></tr>
                   ) : rangeReportPayrolls.map((p) => {
-                    const emp = employees.find((e) => e.id === p.user_id);
+                    const emp = p.user || employees.find((e) => e.id === p.user_id);
                     return (
                       <tr key={p.id}>
                         <td style={{ minWidth: '120px' }}>{emp?.name || '—'}</td>
