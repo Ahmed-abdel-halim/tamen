@@ -57,7 +57,13 @@ interface UnionPurchase {
 
 
 
-export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { activeTabOverride?: 'expenses' | 'union' | 'indemnities' }) {
+export default function ExpenseManagement({ 
+  activeTabOverride = 'expenses',
+  hideHeader = false
+}: { 
+  activeTabOverride?: 'expenses' | 'union' | 'indemnities';
+  hideHeader?: boolean;
+}) {
   const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
@@ -642,6 +648,30 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (!hideHeader) return;
+
+    const handleOpenExpenseModalEvent = () => {
+      handleOpenModal();
+    };
+    const handleExportExcelEvent = () => {
+      exportToExcelFunc();
+    };
+    const handlePrintReportEvent = () => {
+      handlePrintReport();
+    };
+
+    window.addEventListener('open-expense-modal', handleOpenExpenseModalEvent);
+    window.addEventListener('export-expense-excel', handleExportExcelEvent);
+    window.addEventListener('print-expense-report', handlePrintReportEvent);
+
+    return () => {
+      window.removeEventListener('open-expense-modal', handleOpenExpenseModalEvent);
+      window.removeEventListener('export-expense-excel', handleExportExcelEvent);
+      window.removeEventListener('print-expense-report', handlePrintReportEvent);
+    };
+  }, [hideHeader, expenses, statistics, filteredExpenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
+
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -1095,7 +1125,8 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
       {/* Expense/Indemnity Tab */}
       {(activeTab === 'expenses' || activeTab === 'indemnities') && (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
-          <div className="users-breadcrumb no-print" style={{
+          {!hideHeader && (
+            <div className="users-breadcrumb no-print" style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '30px',
             background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '16px', marginBottom: '30px', color: '#fff',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', position: 'relative', overflow: 'hidden'
@@ -1126,6 +1157,7 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               </button>
             </div>
           </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
             <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -1465,9 +1497,45 @@ export default function ExpenseManagement({ activeTabOverride = 'expenses' }: { 
               </div>
               <div>
                 <label>الفئة</label>
-                <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
-                  {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
+                  <select 
+                    value={category} 
+                    onChange={e => setCategory(e.target.value)} 
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600 }}
+                  >
+                    {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoryModal(true)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      color: '#014cb1',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '42px',
+                      height: '42px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s'
+                    }}
+                    title="إدارة الفئات (إضافة، تعديل، حذف)"
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'var(--border)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'var(--bg)';
+                    }}
+                  >
+                    + / -
+                  </button>
+                </div>
               </div>
               <>
                 <div>

@@ -102,6 +102,19 @@ export default function EmployeeSalaries() {
   const [status, setStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [historyFor, setHistoryFor] = useState<Employee | null>(null);
   const [history, setHistory] = useState<SalaryHistory[]>([]);
+
+  // States for Range reports
+  const [activeView, setActiveView] = useState<'monthly' | 'range_reports'>('monthly');
+  const [rangeEmployeeId, setRangeEmployeeId] = useState<string>('');
+  const [rangeFromDate, setRangeFromDate] = useState<string>(
+    new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0]
+  );
+  const [rangeToDate, setRangeToDate] = useState<string>(
+    now.toISOString().split('T')[0]
+  );
+  const [rangeReportPayrolls, setRangeReportPayrolls] = useState<Payroll[]>([]);
+  const [rangeReportLoading, setRangeReportLoading] = useState<boolean>(false);
+
   const [payrollForm, setPayrollForm] = useState<null | {
     user_id: number;
     name: string;
@@ -149,6 +162,39 @@ export default function EmployeeSalaries() {
   useEffect(() => {
     loadAll();
   }, [year, month, status]);
+
+  const fetchRangeReport = async () => {
+    setRangeReportLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      const params = new URLSearchParams();
+      if (rangeEmployeeId) params.append('user_id', rangeEmployeeId);
+      if (rangeFromDate) params.append('from_date', rangeFromDate);
+      if (rangeToDate) params.append('to_date', rangeToDate);
+
+      const res = await fetch(`${API_BASE_URL}/employee-payrolls?${params.toString()}`, { headers });
+      if (!res.ok) {
+        throw new Error('فشل تحميل تقرير الفترة');
+      }
+      const data = await res.json();
+      setRangeReportPayrolls(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      showToast(error?.message || 'حدث خطأ أثناء تحميل تقرير الفترة', 'error');
+    } finally {
+      setRangeReportLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'range_reports') {
+      fetchRangeReport();
+    }
+  }, [activeView, rangeEmployeeId, rangeFromDate, rangeToDate]);
 
   const payrollMap = useMemo(() => {
     const map = new Map<number, Payroll>();
@@ -632,158 +678,670 @@ export default function EmployeeSalaries() {
     printWindow.document.close();
   };
 
+  const handleRangeReportPrint = () => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) return;
+
+    let employeeName = 'كل الموظفين';
+    if (rangeEmployeeId) {
+      const emp = employees.find(e => e.id.toString() === rangeEmployeeId);
+      if (emp) employeeName = emp.name;
+    }
+
+    const bodyRows = rangeReportPayrolls
+      .map(
+        (p) => {
+          const empName = p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—';
+          const base = toNum(p.base_salary);
+          const housing = toNum(p.housing_allowance);
+          const transport = toNum(p.transportation_allowance);
+          const communication = toNum(p.communication_allowance);
+          const bonus = toNum(p.bonus_amount);
+          const deduction = toNum(p.deduction_amount);
+          const advance = toNum(p.advance_amount);
+          const penalty = toNum(p.penalty_amount);
+          const tax = toNum(p.tax_amount);
+          const ss = toNum(p.social_security_amount);
+          const net = toNum(p.net_salary);
+
+          return `
+            <tr>
+              <td style="font-weight:bold">${empName}</td>
+              <td>${p.month}/${p.year}</td>
+              <td>${money.format(base)}</td>
+              <td style="color:#10b981">${money.format(housing)}</td>
+              <td style="color:#10b981">${money.format(transport)}</td>
+              <td style="color:#10b981">${money.format(communication)}</td>
+              <td style="color:#10b981">${money.format(bonus)}</td>
+              <td style="color:#ef4444">${money.format(tax)}</td>
+              <td style="color:#ef4444">${money.format(ss)}</td>
+              <td style="color:#ef4444">${money.format(deduction)}</td>
+              <td style="color:#ef4444">${money.format(advance)}</td>
+              <td style="color:#ef4444">${money.format(penalty)}</td>
+              <td style="font-weight:bold; color:#1e293b">${money.format(net)}</td>
+              <td>${p.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
+              <td style="font-size:10px">${p.paid_at ? new Date(p.paid_at).toLocaleDateString('ar-LY') : '—'}</td>
+              <td style="font-size:11px">${p.delivery_method === 'أخرى' ? p.custom_delivery_method || 'أخرى' : (p.delivery_method || '-')}</td>
+            </tr>`;
+        }
+      )
+      .join('');
+
+    const rangeReportTotals = rangeReportPayrolls.reduce(
+      (acc, p) => {
+        acc.total += toNum(p.net_salary);
+        return acc;
+      },
+      { total: 0 }
+    );
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>تقرير مرتبات الموظفين بالفترة - ${rangeFromDate} إلى ${rangeToDate}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { 
+            @page { margin: 8mm; size: landscape; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+          body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 15px; 
+            color: #1e293b;
+            background: #fff;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px double #1a365d;
+          }
+          .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          .header-left {
+            text-align: left;
+            font-size: 13px;
+            color: #1a365d;
+            font-weight: 600;
+          }
+          .header-info h1 { margin: 0; font-size: 22px; color: #1a365d; font-weight: 900; line-height: 1.2; }
+          .header-info p { margin: 2px 0; color: #4a5568; font-size: 14px; }
+          
+          .report-title {
+            text-align: center;
+            margin: 15px 0;
+          }
+          .report-title h2 {
+            font-size: 18px;
+            color: #1a365d;
+            font-weight: 900;
+          }
+
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 25px; 
+            font-size: 10px;
+          }
+          th { 
+            background-color: #f1f5f9; 
+            color: #1e293b; 
+            font-weight: 700; 
+            padding: 10px 4px; 
+            border: 1px solid #1a365d;
+            text-align: center;
+          }
+          td { 
+            padding: 8px 4px; 
+            border: 1px solid #cbd5e1; 
+            text-align: center;
+            vertical-align: middle;
+          }
+          tr:nth-child(even) { background-color: #f8fafc; }
+          
+          .footer {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .signature-box {
+            width: 200px;
+            text-align: center;
+            border-top: 1.5px solid #1a365d;
+            padding-top: 8px;
+            font-weight: 700;
+            color: #1a365d;
+          }
+          .print-date {
+            margin-top: 30px;
+            font-size: 11px;
+            text-align: left;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <div class="header">
+          <div class="header-right">
+            <img src="/img/logo.png" style="height: 85px; width: auto;" alt="Logo" onerror="this.src='/img/official_logo.PNG'">
+            <div class="header-info" style="margin-right: 15px;">
+              <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
+              <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>
+            </div>
+          </div>
+          <div class="header-left">
+            التاريخ: ${new Date().toLocaleDateString('ar-LY')}<br/>
+            الوقت: ${new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+
+        <div class="report-title">
+          <h2>تقرير رواتب الموظفين للفترة من (${rangeFromDate}) إلى (${rangeToDate})</h2>
+          <p style="margin: 5px 0; font-weight: bold; color: #4a5568;">الموظف: ${employeeName}</p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>الموظف</th>
+              <th>الشهر/السنة</th>
+              <th>الأساسي</th>
+              <th>سكن</th>
+              <th>مواصلات</th>
+              <th>اتصالات</th>
+              <th>مكافآت</th>
+              <th>ضرائب</th>
+              <th>ضمان</th>
+              <th>خصومات</th>
+              <th>سلف</th>
+              <th>غرامات</th>
+              <th>الصافي</th>
+              <th>الحالة</th>
+              <th>تاريخ الصرف</th>
+              <th>التسليم</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bodyRows}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f1f5f9; font-weight:900">
+              <td colspan="2">الإجمالي العام</td>
+              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+              <td style="color:#10b981; font-size:13px">${money.format(rangeReportTotals.total)} د.ل</td>
+              <td colspan="3">سجلات الرواتب ( ${rangeReportPayrolls.length} )</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="footer">
+          <div class="signature-box">
+            <p>المحاسب المسؤول</p>
+          </div>
+          <div class="signature-box">
+            <p>مدير الموارد البشرية</p>
+          </div>
+          <div class="signature-box">
+            <p>المدير العام</p>
+          </div>
+        </div>
+
+        <div class="print-date">
+          تم استخراج هذا التقرير بتاريخ: ${new Date().toLocaleString('ar-LY')}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleRangeReportExportExcel = async () => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    let employeeName = 'كل الموظفين';
+    if (rangeEmployeeId) {
+      const emp = employees.find(e => e.id.toString() === rangeEmployeeId);
+      if (emp) employeeName = emp.name;
+    }
+
+    try {
+      const columns = [
+        { header: 'الموظف', key: 'name', width: 30 },
+        { header: 'الشهر/السنة', key: 'period', width: 15 },
+        { header: 'الأساسي', key: 'base', width: 15 },
+        { header: 'سكن', key: 'housing', width: 12 },
+        { header: 'مواصلات', key: 'transport', width: 12 },
+        { header: 'اتصالات', key: 'communication', width: 12 },
+        { header: 'مكافآت', key: 'bonus', width: 12 },
+        { header: 'ضرائب', key: 'tax', width: 12 },
+        { header: 'ضمان', key: 'ss', width: 12 },
+        { header: 'خصومات', key: 'deduction', width: 12 },
+        { header: 'سلف', key: 'advance', width: 12 },
+        { header: 'غرامات', key: 'penalty', width: 12 },
+        { header: 'الصافي', key: 'net', width: 20 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'تاريخ الصرف', key: 'paid_at', width: 18 },
+        { header: 'التسليم', key: 'delivery', width: 20 },
+      ];
+
+      const data = rangeReportPayrolls.map((p) => {
+        const empName = p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—';
+        return {
+          name: empName,
+          period: `${p.month}/${p.year}`,
+          base: toNum(p.base_salary),
+          housing: toNum(p.housing_allowance),
+          transport: toNum(p.transportation_allowance),
+          communication: toNum(p.communication_allowance),
+          bonus: toNum(p.bonus_amount),
+          tax: toNum(p.tax_amount).toFixed(2),
+          ss: toNum(p.social_security_amount).toFixed(2),
+          deduction: toNum(p.deduction_amount),
+          advance: toNum(p.advance_amount),
+          penalty: toNum(p.penalty_amount),
+          net: toNum(p.net_salary).toLocaleString() + ' د.ل',
+          status: p.status === 'paid' ? 'مصروف' : 'غير مصروف',
+          paid_at: p.paid_at ? new Date(p.paid_at).toLocaleDateString('ar-LY') : '—',
+          delivery: p.delivery_method === 'أخرى' ? p.custom_delivery_method || 'أخرى' : (p.delivery_method || '-'),
+        };
+      });
+
+      const rangeReportTotals = rangeReportPayrolls.reduce(
+        (acc, p) => {
+          acc.total += toNum(p.net_salary);
+          return acc;
+        },
+        { total: 0 }
+      );
+
+      const summaryRow: any = {
+        name: 'الإجمالي الكلي',
+        period: '',
+        base: '',
+        housing: '',
+        transport: '',
+        communication: '',
+        bonus: '',
+        tax: '',
+        ss: '',
+        deduction: '',
+        advance: '',
+        penalty: '',
+        net: rangeReportTotals.total.toLocaleString() + ' د.ل',
+        status: `${rangeReportPayrolls.length} سجل رواتب`,
+        paid_at: '',
+        delivery: '',
+      };
+      data.push(summaryRow);
+
+      await generatePremiumExcel({
+        title: 'شركة المدار الليبي للتأمين - تقرير رواتب الموظفين بالفترة',
+        subtitle: `الفترة من (${rangeFromDate}) إلى (${rangeToDate}) - الموظف: ${employeeName} - إجمالي الصافي: ${rangeReportTotals.total.toLocaleString()} د.ل`,
+        columns,
+        data,
+        fileName: `تقرير_الرواتب_${rangeFromDate}_إلى_${rangeToDate}`,
+        qrData: `تقرير الرواتب - المدار الليبي\nالفترة: ${rangeFromDate} إلى ${rangeToDate}\nالموظف: ${employeeName}\nالإجمالي: ${rangeReportTotals.total.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+      });
+
+      showToast('تم تصدير تقرير الفترة بنجاح', 'success');
+    } catch (error) {
+      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    }
+  };
+
   return (
-    <section className="users-management">
+    <section className="users-management animate-fade-in">
       <div className="users-breadcrumb"><span>الشؤون المالية / مرتبات الموظفين</span></div>
-      <div className="users-card" style={{ marginBottom: '16px' }}>
-        <div className="ep-payroll-toolbar">
-          <div className="ep-payroll-toolbar-head">
-            <h2 className="ep-payroll-toolbar-title">الفلاتر والفترة</h2>
-            <p className="ep-payroll-toolbar-hint">اختر الشهر والسنة ثم طبّق البحث أو صدّر الكشف</p>
-          </div>
-          <div className="ep-payroll-fields">
-            <div className="ep-field">
-              <label htmlFor="ep-payroll-search">اختيار موظف</label>
-              <select
-                id="ep-payroll-search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              >
-                <option value="">كل الموظفين</option>
-                {activeEmployeesForDropdown.map((e) => (
-                  <option key={e.id} value={e.name}>
-                    {e.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="ep-field">
-              <label htmlFor="ep-payroll-year">السنة</label>
-              <input
-                id="ep-payroll-year"
-                type="number"
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value || now.getFullYear()))}
-                min={2000}
-                max={2100}
-              />
-            </div>
-            <div className="ep-field">
-              <label htmlFor="ep-payroll-month">الشهر</label>
-              <select id="ep-payroll-month" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    شهر {i + 1}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="ep-field">
-              <label htmlFor="ep-payroll-status">حالة الصرف</label>
-              <select
-                id="ep-payroll-status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'all' | 'paid' | 'unpaid')}
-              >
-                <option value="all">كل الحالات</option>
-                <option value="paid">مصروف</option>
-                <option value="unpaid">غير مصروف</option>
-              </select>
-            </div>
-          </div>
-          <div className="ep-payroll-actions">
-            <button className="btn-submit" type="button" onClick={handleExportCsv}>
-              <i className="fa-solid fa-file-csv"></i>
-              تصدير Excel/CSV
-            </button>
-            <button className="btn-submit" type="button" onClick={handlePrint}>
-              <i className="fa-solid fa-print"></i>
-              طباعة الكشف
-            </button>
-            <button
-              className="btn-submit"
-              type="button"
-              onClick={handleBulkPay}
-              disabled={loading || bulkPaying || employees.length === 0}
-              title="تسجيل صرف المرتب لجميع الموظفين للشهر المحدد"
-            >
-              <i className="fa-solid fa-money-bill-wave"></i>
-              {bulkPaying ? 'جاري الصرف...' : 'صرف الكل للشهر'}
-            </button>
-          </div>
-        </div>
+
+      {/* View Tabs */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+        <button
+          onClick={() => setActiveView('monthly')}
+          className={`tab-btn ${activeView === 'monthly' ? 'active' : ''}`}
+          style={{
+            width: 'auto',
+            padding: '10px 24px',
+            borderRadius: '12px',
+            border: activeView === 'monthly' ? '2px solid #1e40af' : '1px solid #e2e8f0',
+            background: activeView === 'monthly' ? '#eff6ff' : 'white',
+            color: activeView === 'monthly' ? '#1e40af' : '#64748b',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.95rem',
+            boxShadow: activeView === 'monthly' ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          <i className="fa-solid fa-calendar-days" style={{ color: activeView === 'monthly' ? '#1e40af' : '#64748b' }}></i>
+          مسير المرتبات الشهري
+        </button>
+        <button
+          onClick={() => setActiveView('range_reports')}
+          className={`tab-btn ${activeView === 'range_reports' ? 'active' : ''}`}
+          style={{
+            width: 'auto',
+            padding: '10px 24px',
+            borderRadius: '12px',
+            border: activeView === 'range_reports' ? '2px solid #1e40af' : '1px solid #e2e8f0',
+            background: activeView === 'range_reports' ? '#eff6ff' : 'white',
+            color: activeView === 'range_reports' ? '#1e40af' : '#64748b',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.95rem',
+            boxShadow: activeView === 'range_reports' ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          <i className="fa-solid fa-chart-line" style={{ color: activeView === 'range_reports' ? '#1e40af' : '#64748b' }}></i>
+          تقارير الرواتب بالفترات
+        </button>
       </div>
 
-      <div className="users-card" style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))', gap: '12px' }}>
-          <div><strong>عدد الموظفين:</strong> {rows.length}</div>
-          <div><strong>مصروف:</strong> {totals.paid}</div>
-          <div><strong>إجمالي الصافي:</strong> {money.format(totals.total)} د.ل</div>
-        </div>
-      </div>
+      {activeView === 'monthly' ? (
+        <>
+          <div className="users-card" style={{ marginBottom: '16px' }}>
+            <div className="ep-payroll-toolbar">
+              <div className="ep-payroll-toolbar-head">
+                <h2 className="ep-payroll-toolbar-title">الفلاتر والفترة</h2>
+                <p className="ep-payroll-toolbar-hint">اختر الشهر والسنة ثم طبّق البحث أو صدّر الكشف</p>
+              </div>
+              <div className="ep-payroll-fields">
+                <div className="ep-field">
+                  <label htmlFor="ep-payroll-search">اختيار موظف</label>
+                  <select
+                    id="ep-payroll-search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  >
+                    <option value="">كل الموظفين</option>
+                    {activeEmployeesForDropdown.map((e) => (
+                      <option key={e.id} value={e.name}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="ep-payroll-year">السنة</label>
+                  <input
+                    id="ep-payroll-year"
+                    type="number"
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value || now.getFullYear()))}
+                    min={2000}
+                    max={2100}
+                  />
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="ep-payroll-month">الشهر</label>
+                  <select id="ep-payroll-month" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        شهر {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="ep-payroll-status">حالة الصرف</label>
+                  <select
+                    id="ep-payroll-status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as 'all' | 'paid' | 'unpaid')}
+                  >
+                    <option value="all">كل الحالات</option>
+                    <option value="paid">مصروف</option>
+                    <option value="unpaid">غير مصروف</option>
+                  </select>
+                </div>
+              </div>
+              <div className="ep-payroll-actions">
+                <button className="btn-submit" type="button" onClick={handleExportCsv}>
+                  <i className="fa-solid fa-file-csv"></i>
+                  تصدير Excel/CSV
+                </button>
+                <button className="btn-submit" type="button" onClick={handlePrint}>
+                  <i className="fa-solid fa-print"></i>
+                  طباعة الكشف
+                </button>
+                <button
+                  className="btn-submit"
+                  type="button"
+                  onClick={handleBulkPay}
+                  disabled={loading || bulkPaying || employees.length === 0}
+                  title="تسجيل صرف المرتب لجميع الموظفين للشهر المحدد"
+                >
+                  <i className="fa-solid fa-money-bill-wave"></i>
+                  {bulkPaying ? 'جاري الصرف...' : 'صرف الكل للشهر'}
+                </button>
+              </div>
+            </div>
+          </div>
 
-      <div className="users-card">
-        <div className="table-wrapper">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>الموظف</th>
-                <th>تاريخ التعيين</th>
-                <th>الأساسي</th>
-                <th style={{ color: '#10b981' }}>سكن</th>
-                <th style={{ color: '#10b981' }}>مواصلات</th>
-                <th style={{ color: '#10b981' }}>اتصالات</th>
-                <th style={{ color: '#10b981' }}>مكافآت</th>
-                <th style={{ color: '#ef4444' }}>ضرائب</th>
-                <th style={{ color: '#ef4444' }}>ضمان</th>
-                <th style={{ color: '#ef4444' }}>خصومات</th>
-                <th style={{ color: '#ef4444' }}>سلف</th>
-                <th style={{ color: '#ef4444' }}>غرامات</th>
-                {allExtraLabels.map(label => <th key={label}>{label}</th>)}
-                <th>الصافي</th>
-                <th>الحالة</th>
-                <th>التسليم</th>
-                <th>الإجراء</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
-              ) : rows.length === 0 ? (
-                <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات</td></tr>
-              ) : rows.map((r) => (
-                <tr key={r.e.id}>
-                  <td style={{ minWidth: '120px' }}>{r.e.name}</td>
-                  <td style={{ fontSize: '12px', color: '#64748b' }}>{r.e.start_date ? new Date(r.e.start_date).toLocaleDateString('ar-LY') : '—'}</td>
-                  <td>{money.format(r.base)}</td>
-                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.housing)}</td>
-                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.transport)}</td>
-                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.communication)}</td>
-                  <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.bonus)}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.tax_val)}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.ss_val)}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.deduction)}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.advance)}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.penalty)}</td>
-                  {allExtraLabels.map(label => {
-                    const f = r.extra_fields.find(x => x.label === label);
-                    return <td key={label}>{money.format(toNum(f ? f.amount : 0))}</td>;
+          <div className="users-card" style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))', gap: '12px' }}>
+              <div><strong>عدد الموظفين:</strong> {rows.length}</div>
+              <div><strong>مصروف:</strong> {totals.paid}</div>
+              <div><strong>إجمالي الصافي:</strong> {money.format(totals.total)} د.ل</div>
+            </div>
+          </div>
+
+          <div className="users-card">
+            <div className="table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>الموظف</th>
+                    <th>تاريخ التعيين</th>
+                    <th>الأساسي</th>
+                    <th style={{ color: '#10b981' }}>سكن</th>
+                    <th style={{ color: '#10b981' }}>مواصلات</th>
+                    <th style={{ color: '#10b981' }}>اتصالات</th>
+                    <th style={{ color: '#10b981' }}>مكافآت</th>
+                    <th style={{ color: '#ef4444' }}>ضرائب</th>
+                    <th style={{ color: '#ef4444' }}>ضمان</th>
+                    <th style={{ color: '#ef4444' }}>خصومات</th>
+                    <th style={{ color: '#ef4444' }}>سلف</th>
+                    <th style={{ color: '#ef4444' }}>غرامات</th>
+                    {allExtraLabels.map(label => <th key={label}>{label}</th>)}
+                    <th>الصافي</th>
+                    <th>الحالة</th>
+                    <th>التسليم</th>
+                    <th>الإجراء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
+                  ) : rows.length === 0 ? (
+                    <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات</td></tr>
+                  ) : rows.map((r) => (
+                    <tr key={r.e.id}>
+                      <td style={{ minWidth: '120px' }}>{r.e.name}</td>
+                      <td style={{ fontSize: '12px', color: '#64748b' }}>{r.e.start_date ? new Date(r.e.start_date).toLocaleDateString('ar-LY') : '—'}</td>
+                      <td>{money.format(r.base)}</td>
+                      <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.housing)}</td>
+                      <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.transport)}</td>
+                      <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.communication)}</td>
+                      <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.bonus)}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.tax_val)}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.ss_val)}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.deduction)}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.advance)}</td>
+                      <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.penalty)}</td>
+                      {allExtraLabels.map(label => {
+                        const f = r.extra_fields.find(x => x.label === label);
+                        return <td key={label}>{money.format(toNum(f ? f.amount : 0))}</td>;
+                      })}
+                      <td style={{ fontWeight: 800 }}>{money.format(r.net)}</td>
+                      <td>{r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
+                      <td style={{ fontSize: '11px' }}>{r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method : (r.p?.delivery_method || '-')}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="action-btn edit" onClick={() => openPayrollForm(r)} title="تعديل بيان المرتب"><i className="fa-solid fa-pen"></i></button>
+                          <button className="action-btn" onClick={() => openHistory(r.e)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="users-card" style={{ marginBottom: '16px' }}>
+            <div className="ep-payroll-toolbar">
+              <div className="ep-payroll-toolbar-head">
+                <h2 className="ep-payroll-toolbar-title">تقرير الرواتب بالفترة</h2>
+                <p className="ep-payroll-toolbar-hint">استعرض إحصائيات ورواتب الموظفين خلال فترة محددة</p>
+              </div>
+              <div className="ep-payroll-fields">
+                <div className="ep-field">
+                  <label htmlFor="range-employee">الموظف</label>
+                  <select
+                    id="range-employee"
+                    value={rangeEmployeeId}
+                    onChange={(e) => setRangeEmployeeId(e.target.value)}
+                  >
+                    <option value="">كل الموظفين</option>
+                    {employees.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="range-from">من تاريخ</label>
+                  <input
+                    id="range-from"
+                    type="date"
+                    value={rangeFromDate}
+                    onChange={(e) => setRangeFromDate(e.target.value)}
+                  />
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="range-to">إلى تاريخ</label>
+                  <input
+                    id="range-to"
+                    type="date"
+                    value={rangeToDate}
+                    onChange={(e) => setRangeToDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="ep-payroll-actions">
+                <button className="btn-submit" type="button" onClick={handleRangeReportExportExcel}>
+                  <i className="fa-solid fa-file-excel"></i>
+                  تصدير Excel
+                </button>
+                <button className="btn-submit" type="button" onClick={handleRangeReportPrint}>
+                  <i className="fa-solid fa-print"></i>
+                  طباعة التقرير
+                </button>
+                <button className="btn-submit" type="button" onClick={fetchRangeReport} disabled={rangeReportLoading}>
+                  <i className="fa-solid fa-rotate"></i>
+                  {rangeReportLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="users-card" style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))', gap: '12px' }}>
+              <div><strong>عدد سجلات الصرف:</strong> {rangeReportPayrolls.length}</div>
+              <div>
+                <strong>متوسط الرواتب:</strong> {money.format(
+                  rangeReportPayrolls.length > 0
+                    ? (rangeReportPayrolls.reduce((sum, p) => sum + toNum(p.net_salary), 0) / rangeReportPayrolls.length)
+                    : 0
+                )} د.ل
+              </div>
+              <div>
+                <strong>إجمالي الصافي الموزع:</strong> {money.format(
+                  rangeReportPayrolls.reduce((sum, p) => sum + toNum(p.net_salary), 0)
+                )} د.ل
+              </div>
+            </div>
+          </div>
+
+          <div className="users-card">
+            <div className="table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>الموظف</th>
+                    <th>الشهر/السنة</th>
+                    <th>الأساسي</th>
+                    <th style={{ color: '#10b981' }}>سكن</th>
+                    <th style={{ color: '#10b981' }}>مواصلات</th>
+                    <th style={{ color: '#10b981' }}>اتصالات</th>
+                    <th style={{ color: '#10b981' }}>مكافآت</th>
+                    <th style={{ color: '#ef4444' }}>ضرائب</th>
+                    <th style={{ color: '#ef4444' }}>ضمان</th>
+                    <th style={{ color: '#ef4444' }}>خصومات</th>
+                    <th style={{ color: '#ef4444' }}>سلف</th>
+                    <th style={{ color: '#ef4444' }}>غرامات</th>
+                    <th>الصافي</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الصرف</th>
+                    <th>التسليم</th>
+                    <th>الإجراء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rangeReportLoading ? (
+                    <tr><td colSpan={17} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
+                  ) : rangeReportPayrolls.length === 0 ? (
+                    <tr><td colSpan={17} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات للفترة المحددة</td></tr>
+                  ) : rangeReportPayrolls.map((p) => {
+                    const emp = employees.find((e) => e.id === p.user_id);
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ minWidth: '120px' }}>{emp?.name || '—'}</td>
+                        <td>{p.month} / {p.year}</td>
+                        <td>{money.format(toNum(p.base_salary))}</td>
+                        <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.housing_allowance))}</td>
+                        <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.transportation_allowance))}</td>
+                        <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.communication_allowance))}</td>
+                        <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.bonus_amount))}</td>
+                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.tax_amount))}</td>
+                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.social_security_amount))}</td>
+                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.deduction_amount))}</td>
+                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.advance_amount))}</td>
+                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.penalty_amount))}</td>
+                        <td style={{ fontWeight: 800 }}>{money.format(toNum(p.net_salary))}</td>
+                        <td>{p.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
+                        <td style={{ fontSize: '11px' }}>{p.paid_at ? new Date(p.paid_at).toLocaleDateString('ar-LY') : '—'}</td>
+                        <td style={{ fontSize: '11px' }}>{p.delivery_method === 'أخرى' ? p.custom_delivery_method : (p.delivery_method || '-')}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button className="action-btn" onClick={() => emp && openHistory(emp)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
                   })}
-                  <td style={{ fontWeight: 800 }}>{money.format(r.net)}</td>
-                  <td>{r.p?.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
-                  <td style={{ fontSize: '11px' }}>{r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method : (r.p?.delivery_method || '-')}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="action-btn edit" onClick={() => openPayrollForm(r)} title="تعديل بيان المرتب"><i className="fa-solid fa-pen"></i></button>
-                      <button className="action-btn" onClick={() => openHistory(r.e)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {payrollForm && (
         <div className="modal" onClick={(e) => e.target === e.currentTarget && setPayrollForm(null)}>

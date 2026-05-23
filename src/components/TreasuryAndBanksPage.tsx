@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import ExpenseManagement from './ExpenseManagement';
+
 
 interface BranchAgent {
   id: number;
@@ -89,7 +92,20 @@ const BANK_TRANSACTION_TYPES = [
 ];
 
 export default function TreasuryAndBanksPage() {
-  const [activeTab, setActiveTab] = useState<'treasury' | 'banks' | 'pos'>('banks');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const activeTab = useMemo(() => {
+    if (tabParam === 'treasury' || tabParam === 'banks' || tabParam === 'pos' || tabParam === 'expenses') {
+      return tabParam as 'treasury' | 'banks' | 'pos' | 'expenses';
+    }
+    return 'banks';
+  }, [tabParam]);
+
+  const setActiveTab = (newTab: 'treasury' | 'banks' | 'pos' | 'expenses') => {
+    setSearchParams({ tab: newTab });
+  };
+
   const [agents, setAgents] = useState<BranchAgent[]>([]);
 
   const getAuthHeaders = () => {
@@ -1352,6 +1368,22 @@ export default function TreasuryAndBanksPage() {
               </button>
             </div>
           )}
+          {activeTab === 'expenses' && (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="secondary" onClick={() => window.dispatchEvent(new CustomEvent('print-expense-report'))} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-print" style={{ color: '#014cb1' }}></i>
+                طباعة التقرير
+              </button>
+              <button className="secondary" onClick={() => window.dispatchEvent(new CustomEvent('export-expense-excel'))} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
+                تصدير إكسيل
+              </button>
+              <button className="primary" onClick={() => window.dispatchEvent(new CustomEvent('open-expense-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#ef4444' }}>
+                <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
+                إضافة مصروف
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1415,6 +1447,23 @@ export default function TreasuryAndBanksPage() {
         >
           <i className="fa-solid fa-credit-card" style={{ marginLeft: '8px' }}></i>
           نقاط البيع وماكينات POS
+        </button>
+        <button 
+          onClick={() => setActiveTab('expenses')}
+          style={{
+            padding: '10px 24px',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: '800',
+            fontSize: '14px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            background: activeTab === 'expenses' ? 'var(--panel)' : 'transparent',
+            color: activeTab === 'expenses' ? '#014cb1' : 'var(--muted)'
+          }}
+        >
+          <i className="fa-solid fa-money-bill-wave" style={{ marginLeft: '8px' }}></i>
+          المصروفات التشغيلية
         </button>
       </div>
 
@@ -2170,6 +2219,12 @@ export default function TreasuryAndBanksPage() {
             </div>
           </div>
         </>
+      )}
+
+      {activeTab === 'expenses' && (
+        <div style={{ animation: 'fadeIn 0.3s ease', marginTop: '20px' }}>
+          <ExpenseManagement activeTabOverride="expenses" hideHeader={true} />
+        </div>
       )}
 
       {/* ========================================================================= */}
