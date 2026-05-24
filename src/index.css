@@ -1167,11 +1167,11 @@ button.ghost {
 }
 
 .service-card-blue {
-  background: linear-gradient(135deg, #139625 0%, #139625 100%);
+  background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
 }
 
 .service-card-green {
-  background: linear-gradient(135deg, #139625 0%, #d4aa00 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 .service-icon {

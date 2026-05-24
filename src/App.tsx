@@ -37,6 +37,7 @@ import CitiesList from './components/CitiesList';
 import PlatesList from './components/PlatesList';
 import ColorsList from './components/ColorsList';
 import VehicleTypesList from './components/VehicleTypesList';
+import LoyaltySettings from './components/LoyaltySettings';
 import InsuranceDocumentsList from './components/InsuranceDocumentsList';
 import CreateInsuranceDocument from './components/CreateInsuranceDocument';
 import EditInsuranceDocument from './components/EditInsuranceDocument';
@@ -389,6 +390,7 @@ const menuSections: SidebarSection[] = [
           { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
           { label: 'قائمة الألوان', icon: 'fa-solid fa-palette', to: '/colors' },
           { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
+          { label: 'نقاط مكافآت الوكلاء', icon: 'fa-solid fa-award', to: '/settings/loyalty' },
         ]
       },
     ],
@@ -822,6 +824,7 @@ const createMenuSections = (
         title: 'حسابي الشخصي',
         items: [
           { label: 'بيانات الوكالة', icon: 'fa-solid fa-building-user', to: `/branches-agents/${branchAgentId}?tab=agency` },
+          { label: 'المحفظة والنقاط (Loyalty)', icon: 'fa-solid fa-wallet', to: `/branches-agents/${branchAgentId}?tab=wallet` },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests` },
           { label: 'إلغاء الوكالة', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
@@ -1070,6 +1073,8 @@ export default function App() {
                   <Route path="/colors" element={<AuthorizedRoute requiredPath="/colors"><ColorsList /></AuthorizedRoute>} />
                   {/* إدارة أنواع السيارات */}
                   <Route path="/vehicle-types" element={<AuthorizedRoute requiredPath="/vehicle-types"><VehicleTypesList /></AuthorizedRoute>} />
+                  {/* إعدادات نقاط الولاء للوكلاء */}
+                  <Route path="/settings/loyalty" element={isAdmin ? <LoyaltySettings /> : <Navigate to="/dashboard" />} />
                   {/* إدارة وثائق تأمين السيارات */}
                   <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument /></AuthorizedRoute>} />

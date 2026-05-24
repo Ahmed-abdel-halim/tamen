@@ -100,7 +100,7 @@ export default function BranchAgentDetails() {
   const [branchAgent, setBranchAgent] = useState<BranchAgent | null>(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'agency' | 'contact' | 'custody' | 'permissions' | 'requests' | 'doc_requests'>(() => {
+  const [activeTab, setActiveTab] = useState<'agency' | 'wallet' | 'contact' | 'custody' | 'permissions' | 'requests' | 'doc_requests'>(() => {
     const params = new URLSearchParams(location.search);
     return (params.get('tab') as any) || 'agency';
   });
@@ -138,6 +138,240 @@ export default function BranchAgentDetails() {
     description: ''
   });
   const [custodiesList, setCustodiesList] = useState<any[]>([]);
+
+  // Wallet and Loyalty states
+  const [walletDetails, setWalletDetails] = useState<{
+    points_balance: number;
+    wallet_balance: number;
+    referral_code: string;
+    referred_by_id: number | null;
+    referrals_count: number;
+    total_earned_referral_cash: number;
+  } | null>(null);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [walletWithdrawals, setWalletWithdrawals] = useState<any[]>([]);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [loadingWallet, setLoadingWallet] = useState(false);
+  const [walletTxType, setWalletTxType] = useState<'all' | 'points' | 'cash'>('all');
+  
+  // Redeem Points Modal states
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState('');
+  const [submittingRedeem, setSubmittingRedeem] = useState(false);
+
+  // Points Help Modal states
+  const [showPointsHelp, setShowPointsHelp] = useState(false);
+  const [pointsRules, setPointsRules] = useState<any[]>([]);
+
+  // Request Withdrawal Modal states
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawMethod, setWithdrawMethod] = useState('نقدي من الإدارة');
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
+
+  // Admin Adjust Wallet states
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustPoints, setAdjustPoints] = useState('');
+  const [adjustCash, setAdjustCash] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [submittingAdjust, setSubmittingAdjust] = useState(false);
+
+  // Admin Process Withdrawal Request states
+  const [showWithdrawStatusModal, setShowWithdrawStatusModal] = useState(false);
+  const [selectedWithdrawRequest, setSelectedWithdrawRequest] = useState<any | null>(null);
+  const [withdrawStatus, setWithdrawStatus] = useState<'approved' | 'rejected'>('approved');
+  const [withdrawAdminNotes, setWithdrawAdminNotes] = useState('');
+  const [submittingWithdrawStatus, setSubmittingWithdrawStatus] = useState(false);
+
+  const fetchWalletData = async () => {
+    if (!id) return;
+    setLoadingWallet(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      const [detailsRes, txRes, withdrawalsRes, referralsRes, rulesRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/agent-wallet/${id}`, { headers }),
+        fetch(`${API_BASE_URL}/agent-wallet/${id}/transactions?type=${walletTxType}`, { headers }),
+        fetch(`${API_BASE_URL}/agent-wallet/${id}/withdrawals`, { headers }),
+        fetch(`${API_BASE_URL}/agent-wallet/${id}/referrals`, { headers }),
+        fetch(`${API_BASE_URL}/agent-wallet/settings/loyalty`, { headers }),
+      ]);
+
+      if (detailsRes.ok) setWalletDetails(await detailsRes.json());
+      if (txRes.ok) setWalletTransactions(await txRes.json());
+      if (withdrawalsRes.ok) setWalletWithdrawals(await withdrawalsRes.json());
+      if (referralsRes.ok) setReferrals(await referralsRes.json());
+      if (rulesRes.ok) setPointsRules(await rulesRes.json());
+    } catch (e) {
+      console.error("Failed to fetch wallet details", e);
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id && activeTab === 'wallet') {
+      fetchWalletData();
+    }
+  }, [id, activeTab, walletTxType]);
+
+  const handleRedeemPoints = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pointsToRedeem || isNaN(Number(pointsToRedeem)) || Number(pointsToRedeem) < 1000) {
+      showToast("يرجى إدخال 1000 نقطة كحد أدنى للاستبدال", "error");
+      return;
+    }
+    setSubmittingRedeem(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-wallet/redeem`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          branch_agent_id: id,
+          points_to_redeem: parseInt(pointsToRedeem),
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        setShowRedeemModal(false);
+        setPointsToRedeem('');
+        fetchWalletData();
+      } else {
+        showToast(data.message || "فشلت عملية الاستبدال", "error");
+      }
+    } catch (e) {
+      showToast("حدث خطأ أثناء الاتصال بالخادم", "error");
+    } finally {
+      setSubmittingRedeem(false);
+    }
+  };
+
+  const handleRequestWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawAmount || isNaN(Number(withdrawAmount)) || Number(withdrawAmount) <= 0) {
+      showToast("يرجى إدخال مبلغ صحيح للسحب", "error");
+      return;
+    }
+    setSubmittingWithdraw(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-wallet/withdraw`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          branch_agent_id: id,
+          amount: parseFloat(withdrawAmount),
+          payment_method: withdrawMethod,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        setShowWithdrawModal(false);
+        setWithdrawAmount('');
+        fetchWalletData();
+      } else {
+        showToast(data.message || "فشل تقديم طلب السحب", "error");
+      }
+    } catch (e) {
+      showToast("حدث خطأ أثناء الاتصال بالخادم", "error");
+    } finally {
+      setSubmittingWithdraw(false);
+    }
+  };
+
+  const handleAdjustWallet = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustReason.trim()) {
+      showToast("يرجى إدخال سبب التعديل", "error");
+      return;
+    }
+    setSubmittingAdjust(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-wallet/adjust`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          branch_agent_id: id,
+          points_amount: adjustPoints ? parseInt(adjustPoints) : 0,
+          cash_amount: adjustCash ? parseFloat(adjustCash) : 0,
+          reason: adjustReason,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        setShowAdjustModal(false);
+        setAdjustPoints('');
+        setAdjustCash('');
+        setAdjustReason('');
+        fetchWalletData();
+      } else {
+        showToast(data.message || "فشل تعديل الأرصدة", "error");
+      }
+    } catch (e) {
+      showToast("حدث خطأ أثناء الاتصال بالخادم", "error");
+    } finally {
+      setSubmittingAdjust(false);
+    }
+  };
+
+  const handleUpdateWithdrawalStatus = async (status: 'approved' | 'rejected') => {
+    if (!selectedWithdrawRequest) return;
+    setSubmittingWithdrawStatus(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/agent-wallet/withdrawals/${selectedWithdrawRequest.id}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          status: status,
+          admin_notes: withdrawAdminNotes,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        setShowWithdrawStatusModal(false);
+        setSelectedWithdrawRequest(null);
+        setWithdrawAdminNotes('');
+        fetchWalletData();
+      } else {
+        showToast(data.message || "فشل تعديل حالة السحب", "error");
+      }
+    } catch (e) {
+      showToast("حدث خطأ أثناء الاتصال بالخادم", "error");
+    } finally {
+      setSubmittingWithdrawStatus(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -434,6 +668,7 @@ export default function BranchAgentDetails() {
           <nav className="tab-navigation">
             {[
               { id: 'agency', label: 'بيانات الوكالة', icon: 'fa-building' },
+              { id: 'wallet', label: 'المحفظة والنقاط', icon: 'fa-wallet' },
               { id: 'contact', label: 'الاتصال والهوية', icon: 'fa-address-card' },
               { id: 'custody', label: 'العهدة والعهد', icon: 'fa-boxes-stacked' },
               { id: 'permissions', label: 'الصلاحيات', icon: 'fa-shield-halved' },
@@ -470,6 +705,377 @@ export default function BranchAgentDetails() {
                     <InfoItem label="ملاحظات إضافية" value={branchAgent.notes} icon="fa-comment-dots" />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'wallet' && (
+              <div className="tab-pane">
+                <h3 className="tab-title">محفظة الوكيل ونقاط الولاء والتحفيز</h3>
+                
+                {loadingWallet && !walletDetails ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>جاري تحميل تفاصيل المحفظة...</div>
+                ) : (
+                  <>
+                    {/* Wallet Cards Summary */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                      
+                      {/* Cash Card */}
+                      <div className="details-section-card" style={{ 
+                        background: 'linear-gradient(135deg, rgba(1, 76, 177, 0.15) 0%, rgba(1, 76, 177, 0.03) 100%)',
+                        border: '1px solid rgba(1, 76, 177, 0.3)',
+                        borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 'bold' }}>الرصيد المالي القابل للسحب</span>
+                            <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#0ea5e9', margin: '5px 0' }}>
+                              {walletDetails?.wallet_balance?.toFixed(2) || '0.00'} <span style={{ fontSize: '14px' }}>د.ل</span>
+                            </h2>
+                          </div>
+                          <div style={{ background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <i className="fa-solid fa-wallet" style={{ fontSize: '24px' }}></i>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '15px' }}>
+                          <button 
+                            type="button"
+                            onClick={() => setShowWithdrawModal(true)} 
+                            disabled={!walletDetails || walletDetails.wallet_balance <= 0}
+                            className="btn-primary-sm"
+                            style={{ width: '100%', background: '#0ea5e9', border: 'none', justifyContent: 'center', borderRadius: '10px', height: '36px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                          >
+                            <i className="fa-solid fa-money-bill-transfer"></i> طلب سحب رصيد
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Points Card */}
+                      <div className="details-section-card" style={{ 
+                        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.03) 100%)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>نقاط الولاء الحالية</span>
+                              <i 
+                                className="fa-solid fa-circle-info" 
+                                style={{ color: '#f59e0b', cursor: 'pointer', fontSize: '14px' }}
+                                title="جدول تفاصيل نقاط الوثائق"
+                                onClick={() => setShowPointsHelp(true)}
+                              ></i>
+                            </span>
+                            <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#f59e0b', margin: '5px 0' }}>
+                              {walletDetails?.points_balance || 0} <span style={{ fontSize: '14px' }}>نقطة</span>
+                            </h2>
+                            <div style={{ marginTop: '5px', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.4' }}>
+                              تكسب نقاط مكافأة تلقائياً مع كل وثيقة تأمين تقوم بإصدارها. اضغط على ℹ️ للمزيد.
+                            </div>
+                          </div>
+                          <div style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <i className="fa-solid fa-star" style={{ fontSize: '24px' }}></i>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '15px' }}>
+                          <button 
+                            type="button"
+                            onClick={() => setShowRedeemModal(true)} 
+                            disabled={!walletDetails || walletDetails.points_balance < 1000}
+                            className="btn-primary-sm"
+                            style={{ width: '100%', background: '#f59e0b', border: 'none', justifyContent: 'center', borderRadius: '10px', height: '36px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                          >
+                            <i className="fa-solid fa-rotate"></i> استبدال النقاط بكاش
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Referrals Card */}
+                      <div className="details-section-card" style={{ 
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.03) 100%)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 'bold' }}>الوكلاء المسجلين عبر إحالتك</span>
+                            <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#10b981', margin: '5px 0' }}>
+                              {walletDetails?.referrals_count || 0} <span style={{ fontSize: '14px' }}>وكيل</span>
+                            </h2>
+                          </div>
+                          <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <i className="fa-solid fa-users" style={{ fontSize: '24px' }}></i>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>إجمالي أرباح الإحالة الكاش:</span>
+                            <strong style={{ color: '#10b981', fontSize: '13px' }}>{walletDetails?.total_earned_referral_cash?.toFixed(2) || '0.00'} د.ل</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Referral Link Copy Section */}
+                    <div className="details-section-card" style={{ marginBottom: '30px', padding: '20px', border: '1px solid var(--border)', borderRadius: '14px' }}>
+                      <h4 className="section-title-sm" style={{ margin: '0 0 10px 0', fontSize: '15px' }}>
+                        <i className="fa-solid fa-share-nodes" style={{ color: 'var(--accent-cyan)', marginLeft: '8px' }}></i>
+                        نظام دعوة الوكلاء (Referral Program)
+                      </h4>
+                      <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '0 0 15px 0', lineHeight: '1.6' }}>
+                        انسخ رابط الإحالة الخاص بك وأرسله للوكلاء الجدد. عند قيامهم بالتسجيل وإصدار وثائق التأمين، ستحصل تلقائياً على نقاط إضافية وعمولة مالية (كاش) تضاف لمحفظتك مع كل وثيقة يصدرونها!
+                      </p>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ 
+                          flex: 1, padding: '10px 15px', borderRadius: '10px', 
+                          background: 'var(--input-bg)', border: '1px solid var(--border)',
+                          fontFamily: 'monospace', fontSize: '13px', color: 'var(--text)',
+                          overflowX: 'auto', whiteSpace: 'nowrap'
+                        }}>
+                          {`${window.location.origin}/website/branches-agents?ref=${walletDetails?.referral_code || ''}`}
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const link = `${window.location.origin}/website/branches-agents?ref=${walletDetails?.referral_code || ''}`;
+                            navigator.clipboard.writeText(link);
+                            showToast("تم نسخ رابط الإحالة بنجاح!", "success");
+                          }}
+                          className="btn-outline-sm"
+                          style={{ height: '42px', flexShrink: 0, padding: '0 20px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '10px' }}
+                        >
+                          <i className="fa-solid fa-copy"></i> نسخ الرابط
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Admin Adjustment Trigger */}
+                    {isAdmin && (
+                      <div className="details-section-card" style={{ marginBottom: '30px', borderColor: 'rgba(1, 76, 177, 0.3)', background: 'rgba(1, 76, 177, 0.03)', borderRadius: '14px', padding: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <h4 style={{ margin: 0, color: 'var(--text)', fontWeight: '800', fontSize: '14px' }}>لوحة التحكم والسيطرة الإدارية (الأدمن)</h4>
+                            <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'var(--muted)' }}>تعديل الأرصدة يدوياً للوكيل أو خصم/إضافة مبالغ للتعويض والتعديل السريع.</p>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => setShowAdjustModal(true)} 
+                            className="btn-primary-sm" 
+                            style={{ background: 'var(--sidebar)', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '10px' }}
+                          >
+                            <i className="fa-solid fa-user-gear"></i> تعديل أرصدة المحفظة يدوياً
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* History Tabs Section */}
+                    <div style={{ border: '1px solid var(--border)', borderRadius: '14px', padding: '20px', background: 'var(--card-bg)' }}>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '15px', marginBottom: '20px' }}>
+                        <h4 className="section-title-sm" style={{ margin: 0, border: 'none' }}>
+                          <i className="fa-solid fa-clock-rotate-left" style={{ color: 'var(--accent-cyan)', marginLeft: '8px' }}></i> 
+                          سجل حركات المحفظة والسحوبات
+                        </h4>
+                        
+                        {/* Transaction Type Filter */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            type="button" 
+                            onClick={() => setWalletTxType('all')} 
+                            style={{ 
+                              padding: '4px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer',
+                              border: '1px solid var(--border)', 
+                              background: walletTxType === 'all' ? 'var(--accent-cyan)' : 'var(--input-bg)',
+                              color: walletTxType === 'all' ? '#fff' : 'var(--text)'
+                            }}
+                          >الكل</button>
+                          <button 
+                            type="button" 
+                            onClick={() => setWalletTxType('points')} 
+                            style={{ 
+                              padding: '4px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer',
+                              border: '1px solid var(--border)', 
+                              background: walletTxType === 'points' ? '#f59e0b' : 'var(--input-bg)',
+                              color: walletTxType === 'points' ? '#fff' : 'var(--text)'
+                            }}
+                          >النقاط</button>
+                          <button 
+                            type="button" 
+                            onClick={() => setWalletTxType('cash')} 
+                            style={{ 
+                              padding: '4px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer',
+                              border: '1px solid var(--border)', 
+                              background: walletTxType === 'cash' ? '#0ea5e9' : 'var(--input-bg)',
+                              color: walletTxType === 'cash' ? '#fff' : 'var(--text)'
+                            }}
+                          >الكاش</button>
+                        </div>
+                      </div>
+
+                      {/* Ledger Lists */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                        
+                        {/* 1. Wallet Transactions Table */}
+                        <div>
+                          <h5 style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--text)', fontWeight: 'bold' }}>سجل المعاملات المباشر ({walletTransactions.length} حركة)</h5>
+                          <div className="premium-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                            <table className="premium-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: '18%' }}>التاريخ</th>
+                                  <th style={{ width: '12%' }}>النوع</th>
+                                  <th style={{ width: '15%' }}>القيمة</th>
+                                  <th style={{ width: '18%' }}>العملية</th>
+                                  <th>الوصف والتفاصيل</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {walletTransactions.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لا توجد معاملات مسجلة</td>
+                                  </tr>
+                                ) : (
+                                  walletTransactions.map(tx => (
+                                    <tr key={tx.id}>
+                                      <td style={{ fontSize: '12px' }}>{new Date(tx.created_at).toLocaleString('ar-LY')}</td>
+                                      <td>
+                                        <span className={`premium-badge ${tx.transaction_type === 'points' ? 'badge-warning' : 'badge-info'}`} style={tx.transaction_type === 'points' ? { background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)' } : { background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
+                                          {tx.transaction_type === 'points' ? 'نقاط' : 'كاش'}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontWeight: 'bold', color: tx.amount >= 0 ? '#10b981' : '#ef4444' }}>
+                                        {tx.amount >= 0 ? '+' : ''}{tx.amount}
+                                      </td>
+                                      <td>
+                                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--muted)' }}>
+                                          {tx.action === 'earn_points' ? 'كسب نقاط' :
+                                           tx.action === 'redeem_points' ? 'استبدال نقاط' :
+                                           tx.action === 'withdraw_request' ? 'طلب سحب معلق' :
+                                           tx.action === 'withdraw_approved' ? 'سحب معتمد' :
+                                           tx.action === 'withdraw_refund' ? 'طلب سحب مرفوض' :
+                                           tx.action === 'referral_bonus' ? 'عمولة إحالة' :
+                                           tx.action === 'admin_adjustment' ? 'تعديل إداري' : tx.action}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontSize: '13px', color: 'var(--text)' }}>{tx.description}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* 2. Withdrawal Requests Table */}
+                        <div>
+                          <h5 style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--text)', fontWeight: 'bold' }}>طلبات السحب المعلقة والسابقة ({walletWithdrawals.length} طلب)</h5>
+                          <div className="premium-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                            <table className="premium-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: '18%' }}>التاريخ</th>
+                                  <th style={{ width: '15%' }}>المبلغ</th>
+                                  <th style={{ width: '22%' }}>طريقة السحب</th>
+                                  <th style={{ width: '15%' }}>الحالة</th>
+                                  <th>ملاحظات الإدارة</th>
+                                  {isAdmin && <th style={{ width: '150px' }}>الإجراءات</th>}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {walletWithdrawals.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={isAdmin ? 6 : 5} style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لا توجد طلبات سحب مسجلة</td>
+                                  </tr>
+                                ) : (
+                                  walletWithdrawals.map(w => (
+                                    <tr key={w.id}>
+                                      <td style={{ fontSize: '12px' }}>{new Date(w.created_at).toLocaleString('ar-LY')}</td>
+                                      <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{w.amount} د.ل</td>
+                                      <td>{w.payment_method}</td>
+                                      <td>
+                                        <span className={`status-pill ${w.status}`}>
+                                          {w.status === 'pending' ? 'في الانتظار' : w.status === 'approved' ? 'مقبول' : 'مرفوض'}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontSize: '13px', color: 'var(--muted)' }}>{w.admin_notes || '—'}</td>
+                                      {isAdmin && (
+                                        <td>
+                                          {w.status === 'pending' ? (
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                              <button 
+                                                type="button"
+                                                onClick={() => { setSelectedWithdrawRequest(w); setWithdrawStatus('approved'); setWithdrawAdminNotes(''); setShowWithdrawStatusModal(true); }}
+                                                className="btn-approve" style={{ background: '#10b981', padding: '4px 8px', fontSize: '11px', height: 'auto', borderRadius: '6px' }}
+                                              >
+                                                قبول
+                                              </button>
+                                              <button 
+                                                type="button"
+                                                onClick={() => { setSelectedWithdrawRequest(w); setWithdrawStatus('rejected'); setWithdrawAdminNotes(''); setShowWithdrawStatusModal(true); }}
+                                                className="btn-reject" style={{ background: '#ef4444', padding: '4px 8px', fontSize: '11px', height: 'auto', borderRadius: '6px' }}
+                                              >
+                                                رفض
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>تمت المعالجة</span>
+                                          )}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* 3. Referred Agents Table */}
+                        <div>
+                          <h5 style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--text)', fontWeight: 'bold' }}>الوكلاء المسجلين عبر إحالتك ({referrals.length} وكيل)</h5>
+                          <div className="premium-table-container" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            <table className="premium-table">
+                              <thead>
+                                <tr>
+                                  <th>كود الوكيل</th>
+                                  <th>اسم الوكالة</th>
+                                  <th>الاسم المسؤول</th>
+                                  <th>تاريخ التسجيل</th>
+                                  <th>حالة الوكيل</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {referrals.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لم يتم تسجيل أي وكلاء إحالة بعد</td>
+                                  </tr>
+                                ) : (
+                                  referrals.map(ref => (
+                                    <tr key={ref.id}>
+                                      <td style={{ fontWeight: 'bold' }}>{ref.code}</td>
+                                      <td>{ref.agency_name}</td>
+                                      <td>{ref.agent_name}</td>
+                                      <td style={{ fontSize: '12px' }}>{new Date(ref.created_at).toLocaleDateString('ar-LY')}</td>
+                                      <td>
+                                        <span className={`status-pill ${ref.status === 'نشط' ? 'approved' : 'rejected'}`} style={ref.status === 'نشط' ? { background: '#f0fdf4', color: '#16a34a' } : {}}>
+                                          {ref.status}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -900,6 +1506,248 @@ export default function BranchAgentDetails() {
                 {submittingRequest ? 'جاري الإرسال...' : 'إرسال الطلب'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Redeem Points Modal */}
+      {showRedeemModal && (
+        <div className="modal-overlay" onClick={() => setShowRedeemModal(false)}>
+          <div className="modal-inner" style={{ maxWidth: '450px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-top">
+              <h3>استبدال نقاط الولاء برصيد كاش</h3>
+              <button onClick={() => setShowRedeemModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <form onSubmit={handleRedeemPoints} className="modal-form" style={{ padding: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--muted)' }}>رصيد نقاطك الحالي:</span>
+                <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b', marginTop: '5px' }}>{walletDetails?.points_balance || 0} نقطة</h3>
+                <small style={{ color: 'var(--muted)' }}>سعر التحويل: كل 1000 نقطة تساوي 10.00 دينار ليبي</small>
+              </div>
+              <div className="input-group">
+                <label>عدد النقاط المراد تحويلها (مضاعفات الـ 1000)</label>
+                <input 
+                  type="number" 
+                  required 
+                  min="1000" 
+                  step="1000"
+                  max={walletDetails?.points_balance || 0}
+                  placeholder="مثال: 1000" 
+                  value={pointsToRedeem} 
+                  onChange={(e) => setPointsToRedeem(e.target.value)} 
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px', fontWeight: '700' }} 
+                />
+              </div>
+              
+              {pointsToRedeem && !isNaN(Number(pointsToRedeem)) && Number(pointsToRedeem) >= 1000 && (
+                <div style={{ 
+                  background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed #f59e0b', 
+                  borderRadius: '10px', padding: '15px', marginBottom: '20px', textAlign: 'center' 
+                }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text)' }}>ستحصل في المقابل على رصيد مالي بقيمة:</span>
+                  <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#10b981', marginTop: '5px' }}>
+                    {((parseInt(pointsToRedeem) / 1000) * 10).toFixed(2)} د.ل
+                  </h3>
+                </div>
+              )}
+
+              <button type="submit" className="btn-submit-full" style={{ background: '#f59e0b', marginTop: '20px' }} disabled={submittingRedeem}>
+                {submittingRedeem ? 'جاري التحويل...' : 'تأكيد عملية التحويل'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Request Withdrawal Modal */}
+      {showWithdrawModal && (
+        <div className="modal-overlay" onClick={() => setShowWithdrawModal(false)}>
+          <div className="modal-inner" style={{ maxWidth: '450px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-top">
+              <h3>تقديم طلب سحب رصيد كاش</h3>
+              <button onClick={() => setShowWithdrawModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <form onSubmit={handleRequestWithdrawal} className="modal-form" style={{ padding: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--muted)' }}>الرصيد المالي المتاح للسحب:</span>
+                <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#0ea5e9', marginTop: '5px' }}>
+                  {walletDetails?.wallet_balance?.toFixed(2) || '0.00'} د.ل
+                </h3>
+              </div>
+              <div className="input-group">
+                <label>المبلغ المطلوب سحبه (د.ل)</label>
+                <input 
+                  type="number" 
+                  required 
+                  min="1" 
+                  step="0.01"
+                  max={walletDetails?.wallet_balance || 0}
+                  placeholder="مثال: 50.00" 
+                  value={withdrawAmount} 
+                  onChange={(e) => setWithdrawAmount(e.target.value)} 
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px', fontWeight: '700' }} 
+                />
+              </div>
+              <div className="input-group">
+                <label>طريقة السحب المفضلة</label>
+                <select value={withdrawMethod} onChange={(e) => setWithdrawMethod(e.target.value)}>
+                  <option value="نقدي من الإدارة">نقدي من الإدارة</option>
+                  <option value="حوالة بنكية لحسابي">حوالة بنكية لحسابي</option>
+                  <option value="تحويل كاش إلى محفظتي الرقمية">تحويل كاش إلى محفظتي الرقمية</option>
+                </select>
+              </div>
+
+              <button type="submit" className="btn-submit-full" style={{ background: '#0ea5e9', marginTop: '20px' }} disabled={submittingWithdraw}>
+                {submittingWithdraw ? 'جاري إرسال الطلب...' : 'تأكيد إرسال طلب السحب'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Adjust Wallet Modal */}
+      {showAdjustModal && (
+        <div className="modal-overlay" onClick={() => setShowAdjustModal(false)}>
+          <div className="modal-inner" style={{ maxWidth: '450px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-top">
+              <h3>تعديل إداري لأرصدة الوكيل</h3>
+              <button onClick={() => setShowAdjustModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <form onSubmit={handleAdjustWallet} className="modal-form" style={{ padding: '20px' }}>
+              <div className="input-group">
+                <label>تعديل رصيد النقاط (استخدم علامة - للخصم)</label>
+                <input 
+                  type="number" 
+                  placeholder="مثال: 500 أو -500" 
+                  value={adjustPoints} 
+                  onChange={(e) => setAdjustPoints(e.target.value)} 
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px' }} 
+                />
+              </div>
+              <div className="input-group">
+                <label>تعديل رصيد الكاش بالدينار (استخدم علامة - للخصم)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  placeholder="مثال: 100 أو -100" 
+                  value={adjustCash} 
+                  onChange={(e) => setAdjustCash(e.target.value)} 
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px' }} 
+                />
+              </div>
+              <div className="input-group">
+                <label>سبب التعديل والقرار الإداري <span className="required">*</span></label>
+                <textarea 
+                  required
+                  placeholder="اكتب سبب تعديل الرصيد بالتفصيل للمتابعة..."
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  style={{ minHeight: '100px' }}
+                ></textarea>
+              </div>
+
+              <button type="submit" className="btn-submit-full" style={{ background: 'var(--sidebar)', marginTop: '20px' }} disabled={submittingAdjust}>
+                {submittingAdjust ? 'جاري تعديل الرصيد...' : 'حفظ وتحديث الأرصدة'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Process Withdrawal Request Modal */}
+      {showWithdrawStatusModal && (
+        <div className="modal-overlay" onClick={() => setShowWithdrawStatusModal(false)}>
+          <div className="modal-inner" style={{ maxWidth: '450px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-top">
+              <h3>معالجة طلب سحب رصيد الوكيل</h3>
+              <button onClick={() => setShowWithdrawStatusModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            <div className="modal-form" style={{ padding: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--muted)' }}>المبلغ المطلوب سحبه:</span>
+                <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text)', marginTop: '5px' }}>
+                  {selectedWithdrawRequest?.amount} د.ل
+                </h3>
+                <small style={{ color: 'var(--muted)' }}>القرار الإداري الحالي: <strong style={{ color: withdrawStatus === 'approved' ? '#10b981' : '#ef4444' }}>{withdrawStatus === 'approved' ? 'موافقة وقبول' : 'رفض وإرجاع'}</strong></small>
+              </div>
+              
+              <div className="input-group">
+                <label>ملاحظات وتفاصيل المعالجة الإدارية</label>
+                <textarea 
+                  placeholder="اكتب رقم الحوالة، أو سبب الرفض، أو أي تفاصيل..."
+                  value={withdrawAdminNotes}
+                  onChange={(e) => setWithdrawAdminNotes(e.target.value)}
+                  style={{ minHeight: '100px' }}
+                ></textarea>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button 
+                  onClick={() => handleUpdateWithdrawalStatus(withdrawStatus)} 
+                  className="btn-submit-full" 
+                  disabled={submittingWithdrawStatus}
+                  style={{ flex: 1, background: withdrawStatus === 'approved' ? '#10b981' : '#ef4444' }}
+                >
+                  {submittingWithdrawStatus ? 'جاري المعالجة...' : 'حفظ واعتماد القرار'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowWithdrawStatusModal(false)} 
+                  className="btn-outline-sm"
+                  style={{ flex: 1, height: '42px', justifyContent: 'center' }}
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Points Help Modal */}
+      {showPointsHelp && (
+        <div className="modal-overlay" onClick={() => setShowPointsHelp(false)} style={{ zIndex: 1100 }}>
+          <div className="modal-inner" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', borderRadius: '16px', padding: '25px', direction: 'rtl' }}>
+            <div className="modal-top" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontSize: '16px', fontWeight: 'bold' }}>
+                <i className="fa-solid fa-award"></i> تفاصيل نقاط مكافآت إصدار الوثائق
+              </h3>
+              <button type="button" onClick={() => setShowPointsHelp(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
+            </div>
+            
+            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px', lineHeight: '1.5', textAlign: 'right' }}>
+              تُمنح نقاط الولاء تلقائياً لمحفظتك فور إصدار أي وثيقة تأمين من حسابك. إليك عدد النقاط المخصصة لكل وثيقة حالياً:
+            </p>
+
+            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--table-header-bg)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,0.03)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700' }}>نوع الوثيقة</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', width: '100px', fontWeight: '700' }}>النقاط</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pointsRules.length > 0 ? (
+                    pointsRules.map((rule) => (
+                      <tr key={rule.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px 12px', fontWeight: '500', color: 'var(--text-color)' }}>{rule.display_name}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: '#f59e0b', fontWeight: 'bold' }}>+{rule.points_reward}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={2} style={{ padding: '15px', textAlign: 'center', color: 'var(--muted)' }}>جاري تحميل جدول النقاط...</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style={{ marginTop: '15px', background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.3)', borderRadius: '8px', padding: '10px', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.5', textAlign: 'right' }}>
+              <i className="fa-solid fa-circle-exclamation" style={{ color: '#f59e0b', marginLeft: '5px' }}></i>
+              كما تكسب <strong>20% نقاط إضافية + 1.00 د.ل كاش</strong> كعمولة إحالة عن كل وثيقة يصدرها الوكلاء المسجلين برابط إحالتك!
+            </div>
           </div>
         </div>
       )}

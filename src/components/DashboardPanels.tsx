@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
+import { showToast } from "./Toast";
 
 type ServiceCard = {
   label: string;
@@ -20,6 +21,10 @@ export function DashboardPanels({}: DashboardPanelsProps) {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [latestDocuments, setLatestDocuments] = useState<any[]>([]);
+  const [branchAgentId, setBranchAgentId] = useState<number | null>(null);
+  const [walletStats, setWalletStats] = useState<any>(null);
+  const [showPointsHelp, setShowPointsHelp] = useState(false);
+  const [pointsRules, setPointsRules] = useState<any[]>([]);
 
   // Load user permissions
   useEffect(() => {
@@ -31,11 +36,17 @@ export function DashboardPanels({}: DashboardPanelsProps) {
           setIsAdmin(user.is_admin || false);
           setAuthorizedDocs(user.authorized_documents || null);
           setUserName(user.name || user.username || '');
+          if (user.branch_agent_id) {
+            setBranchAgentId(Number(user.branch_agent_id));
+          } else {
+            setBranchAgentId(null);
+          }
         }
       } catch (error) {
         setIsAdmin(false);
         setAuthorizedDocs(null);
         setUserName('');
+        setBranchAgentId(null);
       }
     };
     
@@ -51,6 +62,51 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  // Fetch wallet statistics and points rules for agent
+  useEffect(() => {
+    if (!branchAgentId) {
+      setWalletStats(null);
+      return;
+    }
+    
+    const fetchWalletStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const res = await fetch(`${API_BASE_URL}/agent-wallet/${branchAgentId}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setWalletStats(data);
+        }
+      } catch (error) {
+        console.error("Error fetching wallet stats for dashboard:", error);
+      }
+    };
+
+    const fetchPointsRules = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const res = await fetch(`${API_BASE_URL}/agent-wallet/settings/loyalty`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setPointsRules(data);
+        }
+      } catch (error) {
+        console.error("Error fetching points rules for dashboard:", error);
+      }
+    };
+    
+    fetchWalletStats();
+    fetchPointsRules();
+  }, [branchAgentId]);
 
   // Digital clock state
   const [clock, setClock] = useState(() => {
@@ -319,6 +375,129 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         </div>
       </div>
 
+      {/* Wallet Cards Summary for Agents */}
+      {branchAgentId && (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          gap: '20px', 
+          marginBottom: '25px' 
+        }}>
+          
+          {/* Cash Card */}
+          <div className="details-section-card" style={{ 
+            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.02) 100%)',
+            border: '1px solid rgba(14, 165, 233, 0.25)',
+            borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.03)', minHeight: '230px', position: 'relative', overflow: 'hidden'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: '700', letterSpacing: '0.5px' }}>الرصيد المالي القابل للسحب</span>
+                <h2 style={{ fontSize: '32px', fontWeight: '800', color: '#0ea5e9', margin: '8px 0' }}>
+                  {walletStats?.wallet_balance?.toFixed(2) || '0.00'} <span style={{ fontSize: '16px', fontWeight: '500' }}>د.ل</span>
+                </h2>
+                <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '5px 0 0 0', lineHeight: '1.5', minHeight: '36px' }}>
+                  رصيدك المالي المكتسب الجاهز للسحب النقدي من الإدارة أو التحويل البنكي الفوري.
+                </p>
+              </div>
+              <div style={{ background: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9', borderRadius: '14px', width: '52px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="fa-solid fa-wallet" style={{ fontSize: '24px' }}></i>
+              </div>
+            </div>
+            <div style={{ marginTop: '20px' }}>
+              <button 
+                type="button"
+                onClick={() => navigate(`/branches-agents/${branchAgentId}?tab=wallet`)} 
+                className="btn-primary-sm"
+                style={{ width: '100%', background: '#0ea5e9', border: 'none', justifyContent: 'center', borderRadius: '12px', height: '40px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', color: '#fff', boxShadow: '0 4px 12px rgba(14, 165, 233, 0.25)', transition: 'all 0.2s' }}
+              >
+                <i className="fa-solid fa-money-bill-transfer"></i> طلب سحب رصيد
+              </button>
+            </div>
+          </div>
+
+          {/* Points Card */}
+          <div className="details-section-card" style={{ 
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 100%)',
+            border: '1px solid rgba(245, 158, 11, 0.25)',
+            borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.03)', minHeight: '230px', position: 'relative', overflow: 'hidden'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
+                  <span>نقاط الولاء الحالية</span>
+                  <i 
+                    className="fa-solid fa-circle-info" 
+                    style={{ color: '#f59e0b', cursor: 'pointer', fontSize: '14px', transition: 'transform 0.2s' }}
+                    title="جدول تفاصيل نقاط الوثائق"
+                    onClick={(e) => { e.stopPropagation(); setShowPointsHelp(true); }}
+                  ></i>
+                </span>
+                <h2 style={{ fontSize: '32px', fontWeight: '800', color: '#f59e0b', margin: '8px 0' }}>
+                  {walletStats?.points_balance || 0} <span style={{ fontSize: '16px', fontWeight: '500' }}>نقطة</span>
+                </h2>
+                <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '5px 0 0 0', lineHeight: '1.5', minHeight: '36px' }}>
+                  تكسب نقاط مكافأة تلقائياً مع كل وثيقة تأمين تقوم بإصدارها. اضغط على ℹ️ للمزيد.
+                </p>
+              </div>
+              <div style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', borderRadius: '14px', width: '52px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="fa-solid fa-star" style={{ fontSize: '24px' }}></i>
+              </div>
+            </div>
+            <div style={{ marginTop: '20px' }}>
+              <button 
+                type="button"
+                onClick={() => navigate(`/branches-agents/${branchAgentId}?tab=wallet`)} 
+                className="btn-primary-sm"
+                style={{ width: '100%', background: '#f59e0b', border: 'none', justifyContent: 'center', borderRadius: '12px', height: '40px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', color: '#fff', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)', transition: 'all 0.2s' }}
+              >
+                <i className="fa-solid fa-rotate"></i> استبدال النقاط بكاش
+              </button>
+            </div>
+          </div>
+
+          {/* Referrals Card */}
+          <div className="details-section-card" style={{ 
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.03)', minHeight: '230px', position: 'relative', overflow: 'hidden'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: '700', letterSpacing: '0.5px' }}>الوكلاء المسجلين عبر إحالتك</span>
+                <h2 style={{ fontSize: '32px', fontWeight: '800', color: '#10b981', margin: '8px 0' }}>
+                  {walletStats?.referrals_count || 0} <span style={{ fontSize: '16px', fontWeight: '500' }}>وكيل</span>
+                </h2>
+                <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '5px 0 0 0', lineHeight: '1.5', minHeight: '36px' }}>
+                  إجمالي الأرباح الكاش المكتسبة من مبيعات وكلائك: <strong style={{ color: '#10b981' }}>{walletStats?.total_earned_referral_cash?.toFixed(2) || '0.00'} د.ل</strong>
+                </p>
+              </div>
+              <div style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', borderRadius: '14px', width: '52px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="fa-solid fa-users" style={{ fontSize: '24px' }}></i>
+              </div>
+            </div>
+            <div style={{ marginTop: '20px' }}>
+              <button 
+                type="button"
+                onClick={() => {
+                  const link = `${window.location.origin}/website/branches-agents?ref=${walletStats?.referral_code || ''}`;
+                  navigator.clipboard.writeText(link);
+                  showToast("تم نسخ رابط الإحالة بنجاح!", "success");
+                }}
+                className="btn-primary-sm"
+                style={{ width: '100%', background: '#10b981', border: 'none', justifyContent: 'center', borderRadius: '12px', height: '40px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', color: '#fff', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', transition: 'all 0.2s' }}
+              >
+                <i className="fa-solid fa-copy"></i> نسخ رابط الإحالة الخاص بك
+              </button>
+            </div>
+          </div>
+
+        </div>
+      )}
+
       <div className="services-grid">
         {services.map((service, index) => (
           <div
@@ -399,6 +578,54 @@ export function DashboardPanels({}: DashboardPanelsProps) {
               >
                 إغلاق
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Points Help Modal */}
+      {showPointsHelp && (
+        <div className="modal-overlay" onClick={() => setShowPointsHelp(false)} style={{ zIndex: 1100 }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', borderRadius: '16px', padding: '25px', direction: 'rtl' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontSize: '16px', fontWeight: 'bold' }}>
+                <i className="fa-solid fa-award"></i> تفاصيل نقاط مكافآت إصدار الوثائق
+              </h3>
+              <button type="button" onClick={() => setShowPointsHelp(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--muted)', padding: '0 5px' }}>&times;</button>
+            </div>
+            
+            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px', lineHeight: '1.5', textAlign: 'right' }}>
+              تُمنح نقاط الولاء تلقائياً لمحفظتك فور إصدار أي وثيقة تأمين من حسابك. إليك عدد النقاط المخصصة لكل وثيقة حالياً:
+            </p>
+
+            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--table-header-bg)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,0.03)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700' }}>نوع الوثيقة</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', width: '100px', fontWeight: '700' }}>النقاط</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pointsRules.length > 0 ? (
+                    pointsRules.map((rule) => (
+                      <tr key={rule.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px 12px', fontWeight: '500', color: 'var(--text-color)' }}>{rule.display_name}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: '#f59e0b', fontWeight: 'bold' }}>+{rule.points_reward}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={2} style={{ padding: '15px', textAlign: 'center', color: 'var(--muted)' }}>جاري تحميل جدول النقاط...</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style={{ marginTop: '15px', background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.3)', borderRadius: '8px', padding: '10px', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.5', textAlign: 'right' }}>
+              <i className="fa-solid fa-circle-exclamation" style={{ color: '#f59e0b', marginLeft: '5px' }}></i>
+              كما تكسب <strong>20% نقاط إضافية + 1.00 د.ل كاش</strong> كعمولة إحالة عن كل وثيقة يصدرها الوكلاء المسجلين برابط إحالتك!
             </div>
           </div>
         </div>
