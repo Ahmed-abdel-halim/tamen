@@ -18,13 +18,19 @@ type User = {
   employment_contract_url: string | null;
 };
 
+const getInventoryTypeName = (inventoryType?: string) => {
+  if (!inventoryType) return 'غير محدد';
+  if (inventoryType === 'fixed') return 'أصول ثابتة';
+  if (inventoryType === 'consumable') return 'مخزون مستهلك';
+  return inventoryType;
+};
+
 export default function UserDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fixedCustodies, setFixedCustodies] = useState<any[]>([]);
-  const [consumedCustodies, setConsumedCustodies] = useState<any[]>([]);
+  const [custodiesList, setCustodiesList] = useState<any[]>([]);
 
   useEffect(() => {
     fetchUserData();
@@ -49,8 +55,7 @@ export default function UserDetails() {
       const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${id}&recipient_type=employee`);
       if (res.ok) {
         const allCustody: any[] = await res.json();
-        setFixedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active'));
-        setConsumedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'consumable' || c.inventory_type === 'consumable') && c.status === 'active'));
+        setCustodiesList(allCustody.filter(c => c.status === 'active'));
       }
     } catch (e) {
       console.error("Failed to fetch user custody", e);
@@ -192,75 +197,66 @@ export default function UserDetails() {
 
           {/* العهدة */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '15px', marginTop: '30px' }}>
-            <div className="details-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
-              <h3 className="section-title-with-icon">
-                <i className="fa-solid fa-boxes-stacked" style={{ color: '#f59e0b' }}></i>
-                العهدة الثابتة
-              </h3>
-              <div className="users-table-wrapper no-scroll-wrapper" style={{ flex: 1 }}>
-                <table className="users-table compact-table" style={{ borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '60px' }}>#</th>
-                      <th>البيان والوصف</th>
-                      <th style={{ width: '100px', textAlign: 'center' }}>الكمية</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fixedCustodies.length > 0 ? (
-                      fixedCustodies.map((item, idx) => (
-                        <tr key={item.id}>
-                          <td>{idx + 1}</td>
-                          <td>{item.item?.name || item.item_name}</td>
-                          <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={3} style={{ textAlign: 'center', color: '#94a3b8', padding: '30px' }}>
-                          لا توجد عهد ثابتة مسجلة
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {(() => {
+              if (custodiesList.length === 0) {
+                return (
+                  <div className="details-section-card" style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '30px' }}>
+                    <i className="fa-solid fa-boxes-stacked" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
+                    لا توجد عهد نشطة مسجلة لهذا الموظف
+                  </div>
+                );
+              }
 
-            <div className="details-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
-              <h3 className="section-title-with-icon">
-                <i className="fa-solid fa-box-open" style={{ color: '#ef4444' }}></i>
-                العهدة المستهلكة
-              </h3>
-              <div className="users-table-wrapper no-scroll-wrapper" style={{ flex: 1 }}>
-                <table className="users-table compact-table" style={{ borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '60px' }}>#</th>
-                      <th>البيان والوصف</th>
-                      <th style={{ width: '100px', textAlign: 'center' }}>الكمية</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {consumedCustodies.length > 0 ? (
-                      consumedCustodies.map((item, idx) => (
-                        <tr key={item.id}>
-                          <td>{idx + 1}</td>
-                          <td>{item.item?.name || item.item_name}</td>
-                          <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={3} style={{ textAlign: 'center', color: '#94a3b8', padding: '30px' }}>
-                          لا توجد عهد مستهلكة مسجلة
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              // Group custodies by inventory type name
+              const grouped: Record<string, any[]> = {};
+              custodiesList.forEach(c => {
+                const typeKey = c.item?.inventory_type || c.inventory_type || 'other';
+                const typeName = getInventoryTypeName(typeKey);
+                if (!grouped[typeName]) grouped[typeName] = [];
+                grouped[typeName].push(c);
+              });
+
+              return Object.keys(grouped).map(typeName => {
+                const list = grouped[typeName];
+                const isConsumable = typeName.toLowerCase().includes('consumable') || typeName.includes('مستهلك');
+                
+                return (
+                  <div key={typeName} className="details-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h3 className="section-title-with-icon">
+                      <i className={`fa-solid ${isConsumable ? 'fa-box-open' : 'fa-boxes-stacked'}`} style={{ color: isConsumable ? '#ef4444' : '#f59e0b' }}></i>
+                      {typeName}
+                    </h3>
+                    <div className="users-table-wrapper no-scroll-wrapper" style={{ flex: 1 }}>
+                      <table className="users-table compact-table" style={{ borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '60px' }}>#</th>
+                            <th>البيان والوصف</th>
+                            {!isConsumable && <th>الأرقام التسلسلية</th>}
+                            <th style={{ width: '100px', textAlign: 'center' }}>الكمية</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {list.map((item, idx) => {
+                            const serial = (item.serial_start || item.serial_end)
+                              ? `${item.serial_start || '—'}${item.serial_end ? ` ➔ ${item.serial_end}` : ''}`
+                              : '—';
+                            return (
+                              <tr key={item.id || idx}>
+                                <td>{idx + 1}</td>
+                                <td>{item.item?.name || item.item_name}</td>
+                                {!isConsumable && <td>{serial}</td>}
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
 
           {/* المرفقات */}

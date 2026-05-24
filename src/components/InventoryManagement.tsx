@@ -23,7 +23,7 @@ interface StoreItem {
   id: number;
   name: string;
   category: string;
-  inventory_type?: 'fixed' | 'consumable';
+  inventory_type?: string;
   unit: string;
   price?: number;
   unit_price?: number;
@@ -55,7 +55,7 @@ interface InventoryMovement {
   item: {
     id?: number;
     name?: string;
-    inventory_type?: 'fixed' | 'consumable';
+    inventory_type?: string;
   };
   recipient: {
     id?: number;
@@ -68,12 +68,7 @@ interface InventoryMovement {
   };
 }
 
-const DEFAULT_CATEGORY_OPTIONS = [
-  { value: 'paper', label: 'مطبوعات ودفاتر (Paper)' },
-  { value: 'electronic', label: 'أجهزة إلكترونية (Devices)' },
-  { value: 'furniture', label: 'أثاث ومعدات (Furniture)' },
-];
-const FALLBACK_CATEGORY_OPTION = { value: 'other', label: 'أخرى (Other)' };
+
 
 export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState<'store' | 'custody' | 'assign' | 'log'>('store');
@@ -81,10 +76,10 @@ export default function InventoryManagement() {
   const [custodies, setCustodies] = useState<Custody[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterInventoryType, setFilterInventoryType] = useState<'all' | 'fixed' | 'consumable'>('all');
+  const [filterInventoryType, setFilterInventoryType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterQuantityStatus, setFilterQuantityStatus] = useState<'all' | 'low' | 'available' | 'out'>('all');
-  const [custodyFilterType, setCustodyFilterType] = useState<'all' | 'fixed' | 'consumable'>('all');
+  const [custodyFilterType, setCustodyFilterType] = useState<string>('all');
   const [custodyFilterStatus, setCustodyFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [custodyFilterRecipientType, setCustodyFilterRecipientType] = useState<'all' | 'agent' | 'employee'>('all');
   const [custodyFilterRecipient, setCustodyFilterRecipient] = useState('');
@@ -104,11 +99,18 @@ export default function InventoryManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
+  const [dbSettings, setDbSettings] = useState<{id: number, setting_type: string, name: string}[]>([]);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsModalType, setSettingsModalType] = useState<'category' | 'inventory_type'>('category');
+  const [newSettingName, setNewSettingName] = useState('');
+  const [editingSettingId, setEditingSettingId] = useState<number | null>(null);
+  const [editingSettingName, setEditingSettingName] = useState('');
+
   // Form states
   const getDefaultItemForm = () => ({
     name: '',
-    inventory_type: 'consumable' as 'fixed' | 'consumable',
-    category: 'paper',
+    inventory_type: '',
+    category: '',
     unit: 'قطعة',
     price: '',
     min_threshold: 5,
@@ -116,8 +118,7 @@ export default function InventoryManagement() {
     location: '',
   });
   const [newItem, setNewItem] = useState(getDefaultItemForm());
-  const [customCategory, setCustomCategory] = useState('');
-  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+
   const [assignment, setAssignment] = useState({
     item_id: '',
     recipient_id: '',
@@ -135,8 +136,8 @@ export default function InventoryManagement() {
   const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
   const recipientDropdownRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [assignInventoryType, setAssignInventoryType] = useState<'fixed' | 'consumable'>('fixed');
   const [assignmentItems, setAssignmentItems] = useState<Array<{
+    inventory_type: string;
     item_id: string;
     quantity: number;
     serial_start: string;
@@ -144,7 +145,7 @@ export default function InventoryManagement() {
     condition: string;
     notes: string;
   }>>([
-    { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }
+    { inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }
   ]);
 
   const getBatchKey = (custody: Custody) =>
@@ -170,6 +171,10 @@ export default function InventoryManagement() {
       const itemsData = await itemsRes.json();
       setItems(Array.isArray(itemsData) ? itemsData : []);
 
+      const settingsRes = await fetch(`${API_BASE_URL}/inventory/settings`, { headers });
+      const settingsData = await settingsRes.json();
+      setDbSettings(Array.isArray(settingsData) ? settingsData : []);
+
       const custodyRes = await fetch(`${API_BASE_URL}/inventory/custody`, { headers });
       const custodyData = await custodyRes.json();
       setCustodies(Array.isArray(custodyData) ? custodyData : []);
@@ -182,14 +187,16 @@ export default function InventoryManagement() {
       // Fetch agents and employees
       const agentsRes = await fetch(`${API_BASE_URL}/branches-agents`, { headers });
       const agentsData = await agentsRes.json();
-      setAgents(Array.isArray(agentsData) ? agentsData : []);
+      const activeAgents = (Array.isArray(agentsData) ? agentsData : []).filter((a: any) => a.status === 'نشط');
+      setAgents(activeAgents);
 
       const employeesRes = await fetch(`${API_BASE_URL}/users?active=1&per_page=1000`, { headers });
       const employeesData = await employeesRes.json();
       const employeesList = Array.isArray(employeesData)
         ? employeesData
         : (Array.isArray(employeesData?.data) ? employeesData.data : []);
-      setEmployees(employeesList);
+      const activeEmployees = employeesList.filter((e: any) => e.is_active !== false && e.is_active !== 0 && e.is_active !== '0');
+      setEmployees(activeEmployees);
 
     } catch (error) {
       console.error('Error fetching inventory data:', error);
@@ -214,11 +221,8 @@ export default function InventoryManagement() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const selectedCategory = showCustomCategoryInput
-        ? customCategory.trim()
-        : newItem.category;
-      if (!selectedCategory) {
-        showToast('يرجى إدخال اسم التصنيف الجديد', 'error');
+      if (!newItem.category || !newItem.inventory_type) {
+        showToast('يرجى إدخال اسم التصنيف ونوع المخزون', 'error');
         setSubmitting(false);
         return;
       }
@@ -226,7 +230,7 @@ export default function InventoryManagement() {
       const payload = {
         name: newItem.name,
         inventory_type: newItem.inventory_type,
-        category: selectedCategory,
+        category: newItem.category,
         unit: newItem.unit,
         min_threshold: Number(newItem.min_threshold) || 0,
         price: newItem.price === '' ? null : Number(newItem.price),
@@ -287,8 +291,6 @@ export default function InventoryManagement() {
       }
 
       setNewItem(getDefaultItemForm());
-      setCustomCategory('');
-      setShowCustomCategoryInput(false);
       setEditingItemId(null);
       setShowAddModal(false);
       await fetchData();
@@ -304,26 +306,21 @@ export default function InventoryManagement() {
   const openAddItemModal = () => {
     setEditingItemId(null);
     setNewItem(getDefaultItemForm());
-    setCustomCategory('');
-    setShowCustomCategoryInput(false);
     setShowAddModal(true);
   };
 
   const openEditItemModal = (item: StoreItem) => {
-    const isDefaultCategory = DEFAULT_CATEGORY_OPTIONS.some((opt) => opt.value === item.category);
     setEditingItemId(item.id);
     setNewItem({
       name: item.name ?? '',
-      inventory_type: item.inventory_type ?? 'consumable',
-      category: isDefaultCategory ? (item.category ?? 'other') : 'other',
+      inventory_type: item.inventory_type ?? '',
+      category: item.category ?? '',
       unit: item.unit ?? 'قطعة',
       price: String(item.price ?? item.unit_price ?? ''),
       min_threshold: item.min_threshold ?? 0,
       quantity: item.stocks?.[0]?.quantity ?? 0,
       location: item.stocks?.[0]?.warehouse_location ?? '',
     });
-    setCustomCategory(isDefaultCategory ? '' : (item.category ?? ''));
-    setShowCustomCategoryInput(!isDefaultCategory);
     setShowAddModal(true);
   };
 
@@ -350,6 +347,70 @@ export default function InventoryManagement() {
     }
   };
 
+  const handleAddSetting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSettingName.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inventory/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ setting_type: settingsModalType, name: newSettingName.trim() })
+      });
+      if (res.ok) {
+        setNewSettingName('');
+        await fetchData();
+        showToast('تمت الإضافة بنجاح', 'success');
+      } else throw new Error('Failed');
+    } catch (e) {
+      showToast('خطأ في الإضافة', 'error');
+    }
+  };
+
+  const handleUpdateSetting = async (id: number) => {
+    if (!editingSettingName.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inventory/settings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ name: editingSettingName.trim() })
+      });
+      if (res.ok) {
+        setEditingSettingId(null);
+        await fetchData();
+        showToast('تم التعديل بنجاح', 'success');
+      } else throw new Error('Failed');
+    } catch (e) {
+      showToast('خطأ في التعديل', 'error');
+    }
+  };
+
+  const handleDeleteSetting = async (id: number) => {
+    if (!window.confirm('هل أنت متأكد من الحذف؟ سيتم حذف هذا الخيار من القوائم.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inventory/settings/${id}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        await fetchData();
+        showToast('تم الحذف بنجاح', 'success');
+      } else throw new Error('Failed');
+    } catch (e) {
+      showToast('خطأ في الحذف', 'error');
+    }
+  };
+
   const handleAssignCustody = async (e: React.FormEvent) => {
     e.preventDefault();
     if (assignmentItems.length === 0 || assignmentItems.some((it) => !it.item_id)) {
@@ -357,14 +418,7 @@ export default function InventoryManagement() {
       return;
     }
 
-    const selectedItems = assignmentItems
-      .map((it) => items.find((i) => String(i.id) === it.item_id))
-      .filter(Boolean) as StoreItem[];
-    const hasWrongType = selectedItems.some((it) => (it.inventory_type ?? 'consumable') !== assignInventoryType);
-    if (hasWrongType) {
-      showToast('يجب أن تكون كل الأصناف المختارة من نفس النوع المحدد', 'error');
-      return;
-    }
+
 
     setSubmitting(true);
     try {
@@ -380,7 +434,7 @@ export default function InventoryManagement() {
           },
           body: JSON.stringify({
             ...assignment,
-            inventory_type: assignInventoryType,
+            inventory_type: items.find(i => String(i.id) === row.item_id)?.inventory_type || 'consumable',
             batch_ref: batchRef,
             item_id: row.item_id,
             quantity: row.quantity,
@@ -401,7 +455,7 @@ export default function InventoryManagement() {
         quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' 
       });
       setRecipientSearch('');
-      setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
+      setAssignmentItems([{ inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
       fetchData();
       setActiveTab('custody');
     } catch (error) {
@@ -413,14 +467,14 @@ export default function InventoryManagement() {
   };
 
   const addAssignmentItemRow = () => {
-    setAssignmentItems((prev) => [...prev, { item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
+    setAssignmentItems((prev) => [...prev, { inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
   };
 
   const removeAssignmentItemRow = (index: number) => {
     setAssignmentItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateAssignmentItemRow = (index: number, key: 'item_id' | 'quantity' | 'serial_start' | 'serial_end' | 'condition' | 'notes', value: string | number) => {
+  const updateAssignmentItemRow = (index: number, key: 'inventory_type' | 'item_id' | 'quantity' | 'serial_start' | 'serial_end' | 'condition' | 'notes', value: string | number) => {
     setAssignmentItems((prev) => prev.map((row, i) => i === index ? { ...row, [key]: value } : row));
   };
 
@@ -569,13 +623,25 @@ export default function InventoryManagement() {
     printBatches(Object.values(grouped), 'طباعة جميع إيصالات العهد');
   };
 
-  const getCategoryName = (category: string) => {
-    const names: Record<string, string> = { paper: 'ورقيات/دفاتر', electronic: 'أجهزة إلكترونية', furniture: 'أثاث/معدات', other: 'أخرى' };
-    return names[category] || category;
-  };
+  const dbCategories = dbSettings.filter(s => s.setting_type === 'category').map(s => s.name);
+  const dbTypes = dbSettings.filter(s => s.setting_type === 'inventory_type').map(s => s.name);
 
+  const categoryOptions = dbCategories.map(cat => ({ value: cat, label: cat }));
+  const inventoryTypeOptions = dbTypes.map(t => ({ value: t, label: t }));
+
+  const getCategoryName = (category: string) => {
+    if (!category) return 'غير محدد';
+    if (category === 'paper') return dbCategories.find(c => c.includes('ورق')) || 'ورقيات/دفاتر';
+    if (category === 'electronic') return dbCategories.find(c => c.includes('إلكترون')) || 'أجهزة إلكترونية';
+    if (category === 'furniture') return dbCategories.find(c => c.includes('أثاث') || c.includes('معدات')) || 'أثاث/معدات';
+    if (category === 'other') return dbCategories.find(c => c.includes('أخر')) || 'أخرى';
+    return category;
+  };
   const getInventoryTypeName = (inventoryType?: string) => {
-    return inventoryType === 'fixed' ? 'مخزون ثابت' : 'مخزون مستهلك';
+    if (!inventoryType) return 'غير محدد';
+    if (inventoryType === 'fixed') return dbTypes.find(t => t.includes('ثابت')) || 'أصول ثابتة';
+    if (inventoryType === 'consumable') return dbTypes.find(t => t.includes('مستهلك')) || 'مخزون مستهلك';
+    return inventoryType;
   };
   const getMovementTypeName = (type: InventoryMovement['type']) => {
     const labels: Record<InventoryMovement['type'], string> = {
@@ -586,13 +652,13 @@ export default function InventoryManagement() {
     };
     return labels[type] || type;
   };
-  const getRecipientTypeName = (type: 'agent' | 'employee') => (type === 'agent' ? 'وكيل / فرع' : 'موظف عام');
-  const assignableItems = items.filter((i) => (i.inventory_type ?? 'consumable') === assignInventoryType);
+  const getRecipientTypeName = (type: string) => (type === 'agent' || type.includes('BranchAgent') ? 'وكيل / فرع' : 'موظف عام');
+
 
   const filteredItems = items.filter((i) => {
     const matchesSearch = i.name.includes(searchTerm.trim());
-    const matchesType = filterInventoryType === 'all' || i.inventory_type === filterInventoryType;
-    const matchesCategory = filterCategory === 'all' || i.category === filterCategory;
+    const matchesType = filterInventoryType === 'all' || i.inventory_type === filterInventoryType || getInventoryTypeName(i.inventory_type) === filterInventoryType;
+    const matchesCategory = filterCategory === 'all' || i.category === filterCategory || getCategoryName(i.category) === filterCategory;
     const qty = i.stocks?.[0]?.quantity || 0;
     const isLow = qty <= i.min_threshold;
     const matchesQty =
@@ -626,12 +692,14 @@ export default function InventoryManagement() {
     const matchesFrom = !fromDate || (rowDate && rowDate >= fromDate);
     const matchesTo = !toDate || (rowDate && rowDate <= toDate);
 
-    const matchesType = custodyFilterType === 'all' || groupType === custodyFilterType;
+    const matchesType = custodyFilterType === 'all' || groupType === custodyFilterType || getInventoryTypeName(groupType) === custodyFilterType;
     const matchesStatus =
       custodyFilterStatus === 'all' ||
       (custodyFilterStatus === 'active' && isActive) ||
       (custodyFilterStatus === 'inactive' && !isActive);
-    const matchesRecipientType = custodyFilterRecipientType === 'all' || main.recipient_type === custodyFilterRecipientType;
+    const matchesRecipientType = custodyFilterRecipientType === 'all' || 
+      (custodyFilterRecipientType === 'agent' && (main.recipient_type === 'agent' || main.recipient_type.includes('BranchAgent'))) ||
+      (custodyFilterRecipientType === 'employee' && (main.recipient_type === 'employee' || main.recipient_type.includes('User')));
     const matchesRecipient = !recipientQuery || recipientName.includes(recipientQuery);
     const matchesItem = !itemQuery || itemNames.includes(itemQuery);
     return matchesType && matchesStatus && matchesRecipientType && matchesRecipient && matchesItem && matchesFrom && matchesTo;
@@ -654,17 +722,7 @@ export default function InventoryManagement() {
 
     return matchesType && matchesRecipientType && matchesItem && matchesRecipient && matchesFrom && matchesTo;
   });
-  const categoryOptions = [
-    ...DEFAULT_CATEGORY_OPTIONS,
-    ...Array.from(
-      new Set(
-        items
-          .map((i) => i.category)
-          .filter((cat) => !!cat && cat !== FALLBACK_CATEGORY_OPTION.value && !DEFAULT_CATEGORY_OPTIONS.some((opt) => opt.value === cat))
-      )
-    ).map((cat) => ({ value: cat, label: cat })),
-    FALLBACK_CATEGORY_OPTION,
-  ];
+
   const getItemPrice = (item: StoreItem) => {
     const value = item.price ?? item.unit_price;
     if (value === null || value === undefined) return null;
@@ -788,11 +846,10 @@ export default function InventoryManagement() {
     printWindow.document.close();
   };
 
-  const handleExportFixedAssetsReport = async () => {
-    const fixedCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
+  const handleExportCustodiesReport = async () => {
+    const currentCustodies = filteredCustodyGroups.flat();
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     let grandTotalValue = 0;
-    let grandTotalDepreciation = 0;
     
     try {
       const columns = [
@@ -800,32 +857,28 @@ export default function InventoryManagement() {
         { header: 'الصنف', key: 'name', width: 35 },
         { header: 'الكمية', key: 'quantity', width: 15 },
         { header: 'المستلم', key: 'recipient', width: 30 },
+        { header: 'نوع المستلم', key: 'recipient_type', width: 20 },
         { header: 'تاريخ الصرف', key: 'date', width: 20 },
+        { header: 'نوع المخزون', key: 'inventory_type', width: 15 },
         { header: 'إجمالي القيمة', key: 'total_value', width: 20 },
-        { header: 'قيمة الاستهلاك', key: 'depreciation', width: 20 },
         { header: 'التفاصيل', key: 'details', width: 35 },
       ];
 
-      const data = fixedCustodies.map((c, index) => {
+      const data = currentCustodies.map((c, index) => {
         const price = getItemPrice(c.item) || 0;
         const totalValue = price * c.quantity;
         
-        const assignedDate = new Date(c.assigned_at);
-        const years = Math.max(0, (new Date().getTime() - assignedDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
-        const depreciationRate = 0.10; 
-        const depreciationValue = totalValue * depreciationRate * years;
-        
         grandTotalValue += totalValue;
-        grandTotalDepreciation += depreciationValue;
         
         return {
           index: index + 1,
           name: c.item.name,
           quantity: `${c.quantity} ${c.item.unit}`,
           recipient: c.recipient.agency_name || c.recipient.name,
+          recipient_type: getRecipientTypeName(c.recipient_type),
           date: new Date(c.assigned_at).toLocaleDateString('ar-LY'),
+          inventory_type: getInventoryTypeName(c.item.inventory_type),
           total_value: totalValue.toLocaleString() + ' د.ل',
-          depreciation: depreciationValue.toFixed(2) + ' د.ل',
           details: `${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}`,
         };
       });
@@ -836,89 +889,30 @@ export default function InventoryManagement() {
         name: 'الإجمالي العام',
         quantity: '',
         recipient: '',
+        recipient_type: '',
         date: '',
-        total_value: grandTotalValue.toLocaleString() + ' د.ل',
-        depreciation: grandTotalDepreciation.toLocaleString() + ' د.ل',
-        details: '',
-      });
-
-      await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير العهد والأصول الثابتة',
-        subtitle: `إجمالي عدد الأصول: ${fixedCustodies.length} - تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
-        columns,
-        data,
-        fileName: 'العهد_الثابتة',
-        qrData: `الأصول الثابتة - شركة المدار الليبي\nعدد الأصناف: ${fixedCustodies.length}\nإجمالي القيمة: ${grandTotalValue.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
-      });
-
-      showToast('تم تصدير تقرير الأصول الثابتة بنجاح', 'success');
-    } catch (error) {
-      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
-    }
-  };
-
-  const handleExportConsumableAssetsReport = async () => {
-    const consumableCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'consumable' && c.status === 'active');
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    let grandTotalValue = 0;
-
-    try {
-      const columns = [
-        { header: '#', key: 'index', width: 8 },
-        { header: 'الصنف', key: 'name', width: 35 },
-        { header: 'الكمية', key: 'quantity', width: 15 },
-        { header: 'المستلم', key: 'recipient', width: 30 },
-        { header: 'تاريخ الصرف', key: 'date', width: 20 },
-        { header: 'إجمالي القيمة', key: 'total_value', width: 20 },
-        { header: 'التفاصيل', key: 'details', width: 35 },
-      ];
-
-      const data = consumableCustodies.map((c, index) => {
-        const price = getItemPrice(c.item) || 0;
-        const totalValue = price * c.quantity;
-        grandTotalValue += totalValue;
-        
-        return {
-          index: index + 1,
-          name: c.item.name,
-          quantity: `${c.quantity} ${c.item.unit}`,
-          recipient: c.recipient.agency_name || c.recipient.name,
-          date: new Date(c.assigned_at).toLocaleDateString('ar-LY'),
-          total_value: totalValue.toLocaleString() + ' د.ل',
-          details: c.notes || '-',
-        };
-      });
-
-      // Summary row
-      data.push({
-        index: '-' as any,
-        name: 'إجمالي قيمة العهد المستهلكة',
-        quantity: '',
-        recipient: '',
-        date: '',
+        inventory_type: '',
         total_value: grandTotalValue.toLocaleString() + ' د.ل',
         details: '',
       });
 
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير العهد والمخازن (المواد المستهلكة)',
-        subtitle: `إجمالي عدد العهد: ${consumableCustodies.length} - تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
+        title: 'شركة المدار الليبي للتأمين - تقرير العهد',
+        subtitle: `إجمالي عدد العهد: ${currentCustodies.length} - تاريخ التقرير: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
-        fileName: 'العهد_المستهلكة',
-        qrData: `العهد المستهلكة - شركة المدار الليبي\nعدد العهد: ${consumableCustodies.length}\nإجمالي القيمة: ${grandTotalValue.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: 'العهد',
+        qrData: `تقرير العهد - شركة المدار الليبي\nعدد العهد: ${currentCustodies.length}\nإجمالي القيمة: ${grandTotalValue.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
-      showToast('تم تصدير تقرير العهد المستهلكة بنجاح', 'success');
+      showToast('تم تصدير تقرير العهد بنجاح', 'success');
     } catch (error) {
       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
     }
   };
 
-  const handlePrintFixedCustodyReport = () => {
-    const fixedCustodies = filteredCustodyGroups
-      .flat()
-      .filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
+  const handlePrintCustodiesReport = () => {
+    const currentCustodies = filteredCustodyGroups.flat();
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const printWindow = window.open('', '', 'width=1100,height=850');
@@ -928,44 +922,39 @@ export default function InventoryManagement() {
     }
 
     let grandTotalValue = 0;
-    let grandTotalNet = 0;
 
-    const rows = fixedCustodies.map((c, index) => {
+    const rows = currentCustodies.map((c, index) => {
       const price = getItemPrice(c.item) || 0;
       const totalValue = price * c.quantity;
-      const depreciationRate = 0.20; 
-      const netValue = totalValue * (1 - depreciationRate);
 
       grandTotalValue += totalValue;
-      grandTotalNet += netValue;
 
       return `
         <tr>
           <td>${index + 1}</td>
           <td style="text-align: right;">${c.item.name}</td>
           <td>${c.recipient.agency_name || c.recipient.name || '-'}</td>
+          <td>${getRecipientTypeName(c.recipient_type)}</td>
           <td>${new Date(c.assigned_at).toLocaleDateString('ar-LY')}</td>
-          <td>مخزون ثابت</td>
+          <td>${getInventoryTypeName(c.item.inventory_type)}</td>
           <td>${getCategoryName(c.item.category)}</td>
           <td>${c.item.unit || 'قطعة'}</td>
           <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
           <td>${c.quantity}</td>
           <td>${price.toLocaleString()} د.ل</td>
           <td>${totalValue.toLocaleString()} د.ل</td>
-          <td>20%</td>
-          <td>${netValue.toLocaleString()} د.ل</td>
           <td style="text-align: right;">${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}</td>
         </tr>
       `;
     }).join('');
 
-    const fromDateStr = custodyFilterFromDate ? custodyFilterFromDate.replace(/-/g, '/') : '2024/01/01';
-    const toDateStr = custodyFilterToDate ? custodyFilterToDate.replace(/-/g, '/') : new Date().toLocaleDateString('zh-Hans-CN');
+    const fromDateStr = custodyFilterFromDate ? custodyFilterFromDate.replace(/-/g, '/') : '-';
+    const toDateStr = custodyFilterToDate ? custodyFilterToDate.replace(/-/g, '/') : '-';
 
     const html = `
       <html dir="rtl">
       <head>
-        <title>تقرير العهد والأصول الثابتة</title>
+        <title>تقرير العهد</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
           body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 10px; color: #000; background-color: #fff; }
@@ -1005,7 +994,7 @@ export default function InventoryManagement() {
             
             <div class="header-center">
               <h1>المدار الليبي للتأمين</h1>
-              <h2>تقرير العهد الثابتة</h2>
+              <h2>تقرير العهد</h2>
             </div>
             
             <div class="header-side logo-box">
@@ -1018,156 +1007,24 @@ export default function InventoryManagement() {
             <thead>
               <tr>
                 <th style="width: 3%;">م</th>
-                <th style="width: 12%; text-align: right;">اسم الصنف</th>
+                <th style="width: 14%; text-align: right;">اسم الصنف</th>
                 <th style="width: 13%; text-align: right;">المستلم</th>
-                <th style="width: 8%;">تاريخ الصرف</th>
-                <th style="width: 6%;">نوع المخزون</th>
-                <th style="width: 8%;">التصنيف</th>
-                <th style="width: 5%;">الوحدة</th>
-                <th style="width: 5%;">الحالة</th>
-                <th style="width: 4%;">الكمية</th>
-                <th style="width: 6%;">السعر</th>
-                <th style="width: 7%;">القيمة</th>
-                <th style="width: 6%;">الاستهلاك</th>
-                <th style="width: 7%;">الصافي</th>
-                <th style="width: 10%; text-align: right;">ملاحظات</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.length ? rows : `<tr><td colspan="14" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد ثابتة مطابقة للفلاتر المحددة</td></tr>`}
-              <tr class="total-row">
-                <td colspan="10" style="text-align: left; padding-left: 20px;">المجموع العام</td>
-                <td>${grandTotalValue.toLocaleString()} د.ل</td>
-                <td>—</td>
-                <td>${grandTotalNet.toLocaleString()} د.ل</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="footer-note">تاريخ الاستخراج: ${new Date().toLocaleString('ar-LY')}</div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-  };
-
-  const handlePrintConsumedCustodyReport = () => {
-    const consumableCustodies = filteredCustodyGroups
-      .flat()
-      .filter(c => (c.item.inventory_type ?? 'consumable') === 'consumable' && c.status === 'active');
-
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const printWindow = window.open('', '', 'width=1100,height=850');
-    if (!printWindow) {
-      showToast('يرجى السماح بالنوافذ المنبثقة (Pop-ups) للطباعة', 'error');
-      return;
-    }
-
-    let grandTotalValue = 0;
-
-    const rows = consumableCustodies.map((c, index) => {
-      const price = getItemPrice(c.item) || 0;
-      const totalValue = price * c.quantity;
-
-      grandTotalValue += totalValue;
-
-      return `
-        <tr>
-          <td>${index + 1}</td>
-          <td style="text-align: right;">${c.item.name}</td>
-          <td>${c.recipient.agency_name || c.recipient.name || '-'}</td>
-          <td>${new Date(c.assigned_at).toLocaleDateString('ar-LY')}</td>
-          <td>مخزون مستهلك</td>
-          <td>${getCategoryName(c.item.category)}</td>
-          <td>${c.item.unit || 'قطعة'}</td>
-          <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
-          <td>${c.quantity}</td>
-          <td>${price.toLocaleString()} د.ل</td>
-          <td>${totalValue.toLocaleString()} د.ل</td>
-          <td style="text-align: right;">${c.notes || '-'}</td>
-        </tr>
-      `;
-    }).join('');
-
-    const fromDateStr = custodyFilterFromDate ? custodyFilterFromDate.replace(/-/g, '/') : '2024/01/01';
-    const toDateStr = custodyFilterToDate ? custodyFilterToDate.replace(/-/g, '/') : new Date().toLocaleDateString('zh-Hans-CN');
-
-    const html = `
-      <html dir="rtl">
-      <head>
-        <title>تقرير العهد المستهلكة</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-          body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 10px; color: #000; background-color: #fff; }
-          .report-container { border: 2px solid #000; padding: 15px; margin: 0 auto; max-width: 1100px; box-sizing: border-box; }
-          .report-header { display: flex; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; justify-content: space-between; align-items: stretch; }
-          .header-side { width: 25%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 13px; font-weight: bold; box-sizing: border-box; }
-          .header-center { width: 48%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; }
-          .header-center h1 { margin: 0; font-size: 24px; font-weight: 800; color: #000; }
-          .header-center h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: 700; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 5px; }
-          .logo-box { display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
-          .logo-box img { max-height: 55px; width: auto; margin-bottom: 4px; }
-          table.report-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; margin-top: 10px; }
-          table.report-table th, table.report-table td { border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }
-          table.report-table th { background-color: #e2e8f0; font-weight: 700; }
-          .total-row { background-color: #f1f5f9; font-weight: bold !important; }
-          .footer-note { font-size: 11px; color: #475569; text-align: left; margin-top: 10px; }
-          @media print { 
-            @page { margin: 10mm; } 
-            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-            .report-container { border: 2px solid #000 !important; }
-          }
-        </style>
-      </head>
-      <body onload="setTimeout(() => window.print(), 500);">
-        <div class="report-container">
-          <div class="report-header">
-            <div class="header-side" style="text-align: right;">
-              <div style="display: flex; justify-content: space-between;">
-                <span>من:</span>
-                <span>${fromDateStr}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-top: 6px;">
-                <span>الى:</span>
-                <span>${toDateStr}</span>
-              </div>
-            </div>
-            
-            <div class="header-center">
-              <h1>المدار الليبي للتأمين</h1>
-              <h2>تقرير العهد المستهلكة</h2>
-            </div>
-            
-            <div class="header-side logo-box">
-              <img src="/img/logo.png" alt="لوجو" onerror="this.src='https://placehold.co/120x50?text=Logo'" />
-              <div style="font-size: 11px; margin-top: 4px;">اسم المستخدم: ${currentUser.name || currentUser.username || 'مرام'}</div>
-            </div>
-          </div>
-
-          <table class="report-table">
-            <thead>
-              <tr>
-                <th style="width: 3%;">م</th>
-                <th style="width: 15%; text-align: right;">اسم الصنف</th>
-                <th style="width: 15%; text-align: right;">المستلم</th>
+                <th style="width: 10%;">نوع المستلم</th>
                 <th style="width: 8%;">تاريخ الصرف</th>
                 <th style="width: 8%;">نوع المخزون</th>
                 <th style="width: 8%;">التصنيف</th>
-                <th style="width: 6%;">الوحدة</th>
-                <th style="width: 6%;">الحالة</th>
-                <th style="width: 6%;">الكمية</th>
-                <th style="width: 8%;">السعر</th>
-                <th style="width: 8%;">الإجمالي</th>
-                <th style="width: 11%; text-align: right;">ملاحظات</th>
+                <th style="width: 5%;">الوحدة</th>
+                <th style="width: 5%;">الحالة</th>
+                <th style="width: 5%;">الكمية</th>
+                <th style="width: 7%;">السعر</th>
+                <th style="width: 7%;">الإجمالي</th>
+                <th style="width: 7%; text-align: right;">ملاحظات</th>
               </tr>
             </thead>
             <tbody>
-              ${rows.length ? rows : `<tr><td colspan="12" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مستهلكة مطابقة للفلاتر المحددة</td></tr>`}
+              ${rows.length ? rows : `<tr><td colspan="13" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مطابقة للفلاتر المحددة</td></tr>`}
               <tr class="total-row">
-                <td colspan="10" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td colspan="11" style="text-align: left; padding-left: 20px;">المجموع العام</td>
                 <td>${grandTotalValue.toLocaleString()} د.ل</td>
                 <td></td>
               </tr>
@@ -1280,12 +1137,13 @@ export default function InventoryManagement() {
                 <label><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i> نوع المخزون</label>
                 <select 
                   value={filterInventoryType} 
-                  onChange={(e) => setFilterInventoryType(e.target.value as 'all' | 'fixed' | 'consumable')}
+                  onChange={(e) => setFilterInventoryType(e.target.value)}
                   className="premium-filter-select"
                 >
                   <option value="all">الكل</option>
-                  <option value="fixed">مخزون ثابت</option>
-                  <option value="consumable">مخزون مستهلك</option>
+                  {inventoryTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="premium-filter-group">
@@ -1500,12 +1358,13 @@ export default function InventoryManagement() {
                 <label><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i> نوع العهدة</label>
                 <select 
                   value={custodyFilterType} 
-                  onChange={(e) => setCustodyFilterType(e.target.value as 'all' | 'fixed' | 'consumable')}
+                  onChange={(e) => setCustodyFilterType(e.target.value)}
                   className="premium-filter-select"
                 >
                   <option value="all">كل الأنواع</option>
-                  <option value="fixed">مخزون ثابت</option>
-                  <option value="consumable">مخزون مستهلك</option>
+                  {inventoryTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="premium-filter-group">
@@ -1600,30 +1459,16 @@ export default function InventoryManagement() {
                   <button
                     type="button"
                     className="premium-secondary-btn"
-                    onClick={handlePrintFixedCustodyReport}
+                    onClick={handlePrintCustodiesReport}
                   >
-                    <i className="fa-solid fa-print"></i> تقرير العهد الثابتة
+                    <i className="fa-solid fa-print"></i> طباعة تقرير العهد
                   </button>
                   <button
                     type="button"
                     className="premium-excel-btn"
-                    onClick={handlePrintConsumedCustodyReport}
+                    onClick={handleExportCustodiesReport}
                   >
-                    <i className="fa-solid fa-print"></i> تقرير العهد المستهلكة
-                  </button>
-                  <button
-                    type="button"
-                    className="premium-secondary-btn"
-                    onClick={handleExportFixedAssetsReport}
-                  >
-                    <i className="fa-solid fa-file-excel"></i> تصدير الثابتة Excel
-                  </button>
-                  <button
-                    type="button"
-                    className="premium-excel-btn"
-                    onClick={handleExportConsumableAssetsReport}
-                  >
-                    <i className="fa-solid fa-file-excel"></i> تصدير المستهلكة Excel
+                    <i className="fa-solid fa-file-excel"></i> تصدير العهد Excel
                   </button>
                 </div>
               </div>
@@ -1670,8 +1515,8 @@ export default function InventoryManagement() {
                               {main.recipient.agency_name || main.recipient.name}
                             </td>
                             <td>
-                              <span className={`premium-badge ${main.recipient_type === 'agent' ? 'badge-info' : 'badge-purple'}`}>
-                                {main.recipient_type === 'agent' ? 'وكيل / فرع' : 'موظف عام'}
+                              <span className={`premium-badge ${(main.recipient_type === 'agent' || main.recipient_type.includes('BranchAgent')) ? 'badge-info' : 'badge-purple'}`}>
+                                {getRecipientTypeName(main.recipient_type)}
                               </span>
                             </td>
                             <td>{formatDateTime(main.assigned_at)}</td>
@@ -1828,62 +1673,6 @@ export default function InventoryManagement() {
               
               <form onSubmit={handleAssignCustody} className="user-form">
                 {/* 1. Global Type Selection */}
-                <div style={{ marginBottom: '20px', padding: '12px 18px', backgroundColor: 'var(--hover-bg)', borderRadius: '12px', border: '1px dashed var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
-                  <label style={{ margin: 0, fontWeight: 'bold', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}>
-                    <i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i>
-                    نوع المخزون المصروف حالياً:
-                  </label>
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <label style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      padding: '8px 16px', 
-                      borderRadius: '8px', 
-                      border: `2px solid ${assignInventoryType === 'fixed' ? 'var(--accent-cyan)' : 'var(--border)'}`,
-                      backgroundColor: assignInventoryType === 'fixed' ? 'var(--card-bg)' : 'transparent',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      margin: 0
-                    }}>
-                      <input 
-                        type="radio" 
-                        name="assignType" 
-                        value="fixed" 
-                        checked={assignInventoryType === 'fixed'} 
-                        onChange={() => {
-                          setAssignInventoryType('fixed');
-                          setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
-                        }}
-                      />
-                      <span style={{ fontWeight: assignInventoryType === 'fixed' ? 'bold' : 'normal', fontSize: '0.9rem', color: 'var(--text)' }}>مخزون ثابت (أجهزة، أثاث، سيارات)</span>
-                    </label>
-                    <label style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      padding: '8px 16px', 
-                      borderRadius: '8px', 
-                      border: `2px solid ${assignInventoryType === 'consumable' ? 'var(--accent-cyan)' : 'var(--border)'}`,
-                      backgroundColor: assignInventoryType === 'consumable' ? 'var(--card-bg)' : 'transparent',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      margin: 0
-                    }}>
-                      <input 
-                        type="radio" 
-                        name="assignType" 
-                        value="consumable" 
-                        checked={assignInventoryType === 'consumable'} 
-                        onChange={() => {
-                          setAssignInventoryType('consumable');
-                          setAssignmentItems([{ item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
-                        }}
-                      />
-                      <span style={{ fontWeight: assignInventoryType === 'consumable' ? 'bold' : 'normal', fontSize: '0.9rem', color: 'var(--text)' }}>مخزون مستهلك (قرطاسية، مطبوعات، دفاتر)</span>
-                    </label>
-                  </div>
-                </div>
 
                 {/* 2. Recipient Section (Compact Horizontal Grid) */}
                 <div className="recipient-horizontal-grid">
@@ -2067,20 +1856,36 @@ export default function InventoryManagement() {
                     <table className="compact-form-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '4%', textAlign: 'center' }}>#</th>
-                          <th style={{ width: '28%' }}>الصنف المصروف <span className="required">*</span></th>
-                          <th style={{ width: '10%' }}>الكمية</th>
-                          <th style={{ width: '10%' }}>حالة الصنف</th>
-                          <th style={{ width: '14%' }}>السيريال (من)</th>
-                          <th style={{ width: '14%' }}>السيريال (إلى)</th>
-                          <th style={{ width: '16%' }}>ملاحظات الصنف</th>
-                          <th style={{ width: '4%', textAlign: 'center' }}></th>
+                          <th style={{ width: '20%', minWidth: '170px' }}>نوع المخزون <span className="required">*</span></th>
+                          <th style={{ width: '24%', minWidth: '240px' }}>الصنف المصروف <span className="required">*</span></th>
+                          <th style={{ width: '6%', minWidth: '70px' }}>الكمية</th>
+                          <th style={{ width: '10%', minWidth: '120px' }}>حالة الصنف</th>
+                          <th style={{ width: '12%', minWidth: '130px' }}>السيريال (من)</th>
+                          <th style={{ width: '12%', minWidth: '130px' }}>السيريال (إلى)</th>
+                          <th style={{ width: '14%', minWidth: '180px' }}>ملاحظات الصنف</th>
+                          <th style={{ width: '2%', textAlign: 'center', minWidth: '40px' }}></th>
                         </tr>
                       </thead>
                       <tbody>
                         {assignmentItems.map((row, index) => (
                           <tr key={`assign-row-${index}`}>
-                            <td style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--text)' }}>{index + 1}</td>
+                            <td>
+                              <select
+                                required
+                                value={row.inventory_type}
+                                onChange={(e) => {
+                                  updateAssignmentItemRow(index, 'inventory_type', e.target.value);
+                                  updateAssignmentItemRow(index, 'item_id', '');
+                                }}
+                                className="premium-filter-select"
+                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                              >
+                                <option value="">اختر النوع...</option>
+                                {inventoryTypeOptions.map(opt => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </td>
                             <td>
                               <select
                                 required
@@ -2088,9 +1893,13 @@ export default function InventoryManagement() {
                                 onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
                                 className="premium-filter-select"
                                 style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                disabled={!row.inventory_type}
                               >
                                 <option value="">اختر صنفاً...</option>
-                                {assignableItems.map(i => (
+                                {items.filter(i => {
+                                  const t = i.inventory_type ?? 'consumable';
+                                  return t === row.inventory_type || getInventoryTypeName(t) === row.inventory_type;
+                                }).map(i => (
                                   <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
                                     {i.name} (المتوفر: {i.stocks?.[0]?.quantity || 0})
                                   </option>
@@ -2397,36 +2206,58 @@ export default function InventoryManagement() {
               
               <div className="form-group">
                 <label>نوع المخزون <span className="required">*</span></label>
-                <select value={newItem.inventory_type} onChange={e => setNewItem({...newItem, inventory_type: e.target.value as 'fixed' | 'consumable'})}>
-                  <option value="consumable">مخزون مستهلك</option>
-                  <option value="fixed">مخزون ثابت</option>
-                </select>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <select value={newItem.inventory_type} onChange={e => setNewItem({...newItem, inventory_type: e.target.value})}>
+                      <option value="">اختر نوع المخزون...</option>
+                      {inventoryTypeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    title="إدارة أنواع المخزون"
+                    style={{ 
+                      width: '42px', height: '42px', flexShrink: 0,
+                      backgroundColor: 'var(--card-bg)', color: 'var(--accent-cyan)', 
+                      border: '1px solid var(--border)', borderRadius: '8px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.2rem', transition: 'all 0.2s'
+                    }}
+                    onClick={() => { setSettingsModalType('inventory_type'); setShowSettingsModal(true); }}
+                  >
+                    <i className="fa-solid fa-plus-minus"></i>
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
                 <label>التصنيف <span className="required">*</span></label>
-                {!showCustomCategoryInput ? (
-                  <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
-                    {categoryOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="اسم التصنيف الجديد (مثال: أدوات مكتبية)"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                  />
-                )}
-                <button
-                  type="button"
-                  className="btn-submit"
-                  style={{ width: 'fit-content', marginTop: '8px' }}
-                  onClick={() => setShowCustomCategoryInput((prev) => !prev)}
-                >
-                  {showCustomCategoryInput ? 'إلغاء واختيار تصنيف موجود' : '+ إضافة تصنيف جديد'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
+                      <option value="">اختر التصنيف...</option>
+                      {categoryOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    title="إدارة التصنيفات"
+                    style={{ 
+                      width: '42px', height: '42px', flexShrink: 0,
+                      backgroundColor: 'var(--card-bg)', color: 'var(--accent-cyan)', 
+                      border: '1px solid var(--border)', borderRadius: '8px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.2rem', transition: 'all 0.2s'
+                    }}
+                    onClick={() => { setSettingsModalType('category'); setShowSettingsModal(true); }}
+                  >
+                    <i className="fa-solid fa-plus-minus"></i>
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '15px' }}>
@@ -2478,6 +2309,91 @@ export default function InventoryManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
+          <div className="modal-content dark-modal" style={{ maxWidth: '600px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{settingsModalType === 'category' ? 'إدارة تصنيفات المخزون' : 'إدارة أنواع المخزون'}</h3>
+              <button onClick={() => setShowSettingsModal(false)} className="close-btn">&times;</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={handleAddSetting} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <input 
+                  type="text" 
+                  placeholder={settingsModalType === 'category' ? "اسم التصنيف الجديد..." : "اسم النوع الجديد..."} 
+                  required
+                  value={newSettingName}
+                  onChange={e => setNewSettingName(e.target.value)}
+                  style={{ 
+                    flex: 1, height: '42px', borderRadius: '10px', padding: '0 12px',
+                    border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)'
+                  }}
+                />
+                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', padding: '0 20px', fontWeight: 'bold' }}>
+                  إضافة
+                </button>
+              </form>
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px' }}>
+                {dbSettings.filter(s => s.setting_type === settingsModalType).length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>لا توجد عناصر مضافة حالياً.</div>
+                ) : (
+                  dbSettings.filter(s => s.setting_type === settingsModalType).map(s => (
+                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid var(--border)' }}>
+                      {editingSettingId === s.id ? (
+                        <div style={{ display: 'flex', gap: '8px', flex: 1, marginLeft: '10px' }}>
+                          <input 
+                            type="text" 
+                            value={editingSettingName} 
+                            onChange={e => setEditingSettingName(e.target.value)}
+                            style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => handleUpdateSetting(s.id)} 
+                            style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer' }}
+                          >
+                            <i className="fa-solid fa-check"></i>
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setEditingSettingId(null)} 
+                            style={{ background: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer' }}
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{s.name}</span>
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                              type="button"
+                              onClick={() => { setEditingSettingId(s.id); setEditingSettingName(s.name); }}
+                              style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '15px' }}
+                            >
+                              <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteSetting(s.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '15px' }}
+                            >
+                              <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

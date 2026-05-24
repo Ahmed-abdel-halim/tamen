@@ -157,6 +157,13 @@ const SETTINGS_PERMISSIONS = [
   'أنواع السيارات',
 ];
 
+const getInventoryTypeName = (inventoryType?: string) => {
+  if (!inventoryType) return 'غير محدد';
+  if (inventoryType === 'fixed') return 'أصول ثابتة';
+  if (inventoryType === 'consumable') return 'مخزون مستهلك';
+  return inventoryType;
+};
+
 export default function UsersList() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -493,15 +500,12 @@ export default function UsersList() {
 
   const printEmployeeA4 = async (u: User) => {
     // جلب بيانات العهدة للموظف
-    let userFixedCustodies: any[] = [];
-    let userConsumedCustodies: any[] = [];
+    let allCustody: any[] = [];
 
     try {
       const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${u.id}&recipient_type=employee`);
       if (res.ok) {
-        const allCustody: any[] = await res.json();
-        userFixedCustodies = allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active');
-        userConsumedCustodies = allCustody.filter(c => (c.item?.inventory_type === 'consumable' || c.inventory_type === 'consumable') && c.status === 'active');
+        allCustody = (await res.json()).filter((c: any) => c.status === 'active');
       }
     } catch (e) {
       console.error("Failed to fetch user custody", e);
@@ -600,23 +604,33 @@ export default function UsersList() {
     let col1Html = '';
     let col2Html = '';
 
-    if (userFixedCustodies.length >= 10 && userConsumedCustodies.length <= 5) {
-      const half = Math.ceil(userFixedCustodies.length / 2);
-      const f1 = userFixedCustodies.slice(0, half);
-      const f2 = userFixedCustodies.slice(half);
-      col1Html = buildFixedTable(f1, 'العهدة الثابتة (الأصول والمعدات) - 1');
-      col2Html = buildFixedTable(f2, 'العهدة الثابتة (الأصول والمعدات) - 2') + 
-                 (userConsumedCustodies.length > 0 ? buildConsumedTable(userConsumedCustodies, 'العهدة المستهلكة (المطبوعات والمستلزمات)') : '');
-    } else if (userConsumedCustodies.length >= 10 && userFixedCustodies.length <= 5) {
-      const half = Math.ceil(userConsumedCustodies.length / 2);
-      const c1 = userConsumedCustodies.slice(0, half);
-      const c2 = userConsumedCustodies.slice(half);
-      col1Html = buildConsumedTable(c1, 'العهدة المستهلكة (المطبوعات والمستلزمات) - 1');
-      col2Html = buildConsumedTable(c2, 'العهدة المستهلكة (المطبوعات والمستلزمات) - 2') + 
-                 (userFixedCustodies.length > 0 ? buildFixedTable(userFixedCustodies, 'العهدة الثابتة (الأصول والمعدات)') : '');
+    if (allCustody.length === 0) {
+      col1Html = buildFixedTable([], 'العهدة الثابتة');
+      col2Html = buildConsumedTable([], 'العهدة المستهلكة');
     } else {
-      col1Html = buildFixedTable(userFixedCustodies, 'العهدة الثابتة (الأصول والمعدات)');
-      col2Html = buildConsumedTable(userConsumedCustodies, 'العهدة المستهلكة (المطبوعات والمستلزمات)');
+      // Group all custodies by their inventory type name
+      const groupedCustodies: Record<string, any[]> = {};
+      allCustody.forEach((c) => {
+        const typeKey = c.item?.inventory_type || c.inventory_type || 'other';
+        const typeName = getInventoryTypeName(typeKey);
+        if (!groupedCustodies[typeName]) {
+          groupedCustodies[typeName] = [];
+        }
+        groupedCustodies[typeName].push(c);
+      });
+
+      const groupNames = Object.keys(groupedCustodies);
+      groupNames.forEach((name, idx) => {
+        const list = groupedCustodies[name];
+        const isConsumable = name.toLowerCase().includes('consumable') || name.includes('مستهلك');
+        const tableHtml = isConsumable ? buildConsumedTable(list, name) : buildFixedTable(list, name);
+        
+        if (idx % 2 === 0) {
+          col1Html += tableHtml;
+        } else {
+          col2Html += tableHtml;
+        }
+      });
     }
 
     const detailsGridHtml = `
@@ -629,7 +643,7 @@ export default function UsersList() {
       <div class="detail-item full-width"><span class="detail-label">الراتب الشهري</span><span class="detail-value currency">${u.salary != null ? `${Number(u.salary).toLocaleString('ar-LY')} دينار ليبي` : '—'}</span></div>
     `;
 
-    const totalCustodies = userFixedCustodies.length + userConsumedCustodies.length;
+    const totalCustodies = allCustody.length;
     const isVeryLong = totalCustodies > 10;
     const isMediumLong = totalCustodies > 5 && totalCustodies <= 10;
 

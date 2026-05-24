@@ -87,6 +87,13 @@ type DocumentRequest = {
   created_at: string;
 };
 
+const getInventoryTypeName = (inventoryType?: string) => {
+  if (!inventoryType) return 'غير محدد';
+  if (inventoryType === 'fixed') return 'أصول ثابتة';
+  if (inventoryType === 'consumable') return 'مخزون مستهلك';
+  return inventoryType;
+};
+
 export default function BranchAgentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -130,14 +137,28 @@ export default function BranchAgentDetails() {
     subject: '',
     description: ''
   });
+  const [custodiesList, setCustodiesList] = useState<any[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchBranchAgent(parseInt(id));
       fetchRequests();
       fetchDocRequests();
+      fetchCustodyData();
     }
   }, [id]);
+
+  const fetchCustodyData = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${id}&recipient_type=agent`);
+      if (res.ok) {
+        const allCustody: any[] = await res.json();
+        setCustodiesList(allCustody.filter(c => c.status === 'active'));
+      }
+    } catch (e) {
+      console.error("Failed to fetch agent custody", e);
+    }
+  };
 
   const fetchBranchAgent = async (branchAgentId: number) => {
     setLoading(true);
@@ -488,65 +509,65 @@ export default function BranchAgentDetails() {
               <div className="tab-pane">
                 <h3 className="tab-title">سجل العهد والمستندات</h3>
                 
-                <div style={{ marginBottom: '40px' }}>
-                  <h4 className="section-title-sm"><i className="fa-solid fa-boxes-stacked" style={{ color: '#3b82f6' }}></i> العهدة الثابتة</h4>
-                  <div className="premium-table-container">
-                    <table className="premium-table">
-                      <thead>
-                        <tr>
-                          <th>البيان والوصف</th>
-                          <th style={{ width: '120px' }}>الكمية</th>
-                        </tr>
-                      </thead>
-                       <tbody>
-                        {branchAgent.fixed_custodies && branchAgent.fixed_custodies.length > 0 ? (
-                          branchAgent.fixed_custodies.map((c, i) => (
-                            <tr key={i}>
-                              <td>{c.description}</td>
-                              <td><span className="perm-badge-blue">{c.quantity}</span></td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td style={{ padding: '20px', color: '#6b7280' }}>لا يوجد عهد ثابتة</td>
-                            <td style={{ color: '#e2e8f0' }}>—</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="section-divider"></div>
-
-                <div>
-                  <h4 className="section-title-sm"><i className="fa-solid fa-box-open" style={{ color: '#ef4444' }}></i> العهدة المستهلكة</h4>
-                  <div className="premium-table-container">
-                    <table className="premium-table">
-                      <thead>
-                        <tr>
-                          <th>البيان والوصف</th>
-                          <th style={{ width: '120px' }}>الكمية</th>
-                        </tr>
-                      </thead>
-                       <tbody>
-                        {branchAgent.consumed_custodies && branchAgent.consumed_custodies.length > 0 ? (
-                          branchAgent.consumed_custodies.map((c, i) => (
-                            <tr key={i}>
-                              <td>{c.description}</td>
-                              <td><span className="perm-badge-blue" style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' }}>{c.quantity}</span></td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td style={{ padding: '20px', color: '#6b7280' }}>لا يوجد عهد مستهلكة</td>
-                            <td style={{ color: '#e2e8f0' }}>—</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                {(() => {
+                  if (custodiesList.length === 0) {
+                    return <div style={{ padding: '20px', color: '#6b7280', textAlign: 'center' }}>لا توجد عهد نشطة مسجلة</div>;
+                  }
+                  
+                  // Group custodies by inventory type
+                  const grouped: Record<string, any[]> = {};
+                  custodiesList.forEach(c => {
+                    const typeKey = c.item?.inventory_type || c.inventory_type || 'other';
+                    const typeName = getInventoryTypeName(typeKey);
+                    if (!grouped[typeName]) grouped[typeName] = [];
+                    grouped[typeName].push(c);
+                  });
+                  
+                  return Object.keys(grouped).map(typeName => {
+                    const list = grouped[typeName];
+                    const isConsumable = typeName.toLowerCase().includes('consumable') || typeName.includes('مستهلك');
+                    
+                    return (
+                      <div key={typeName} style={{ marginBottom: '30px' }}>
+                        <h4 className="section-title-sm">
+                          <i className={`fa-solid ${isConsumable ? 'fa-box-open' : 'fa-boxes-stacked'}`} style={{ color: isConsumable ? '#ef4444' : '#3b82f6', marginLeft: '8px' }}></i> 
+                          {typeName}
+                        </h4>
+                        <div className="premium-table-container">
+                          <table className="premium-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '60px' }}>#</th>
+                                <th>البيان والوصف</th>
+                                {!isConsumable && <th>الأرقام التسلسلية</th>}
+                                <th style={{ width: '120px' }}>الكمية</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {list.map((item, idx) => {
+                                const serial = (item.serial_start || item.serial_end)
+                                  ? `${item.serial_start || '—'}${item.serial_end ? ` ➔ ${item.serial_end}` : ''}`
+                                  : '—';
+                                return (
+                                  <tr key={item.id || idx}>
+                                    <td>{idx + 1}</td>
+                                    <td>{item.item?.name || item.item_name}</td>
+                                    {!isConsumable && <td>{serial}</td>}
+                                    <td>
+                                      <span className={isConsumable ? 'perm-badge-red' : 'perm-badge-blue'} style={isConsumable ? { background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' } : {}}>
+                                        {item.quantity}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
 

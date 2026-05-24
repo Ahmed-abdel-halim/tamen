@@ -15516,3 +15516,18 @@ body,
   color: #ffffff;
   box-shadow: 0 4px 10px rgba(1, 76, 177, 0.15);
 }
+
+/* Compact styling for selects and inputs within compact form tables to prevent text clipping */
+.compact-form-table .premium-filter-select {
+  height: 36px !important;
+  padding: 6px 8px 6px 24px !important;
+  font-size: 0.85rem !important;
+  background-position: left 6px center !important;
+  background-size: 11px !important;
+}
+
+.compact-form-table .premium-filter-input {
+  height: 36px !important;
+  padding: 6px 8px !important;
+  font-size: 0.85rem !important;
+}

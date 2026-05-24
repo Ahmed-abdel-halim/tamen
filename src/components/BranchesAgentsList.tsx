@@ -22,6 +22,13 @@ type BranchAgent = {
   user?: { id: number; username: string; name: string; is_blocked?: boolean };
 };
 
+const getInventoryTypeName = (inventoryType?: string) => {
+  if (!inventoryType) return 'غير محدد';
+  if (inventoryType === 'fixed') return 'أصول ثابتة';
+  if (inventoryType === 'consumable') return 'مخزون مستهلك';
+  return inventoryType;
+};
+
 export default function BranchesAgentsList() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -128,23 +135,24 @@ export default function BranchesAgentsList() {
 
   const printAgentA4 = async (ba: BranchAgent) => {
     // جلب بيانات العهدة للوكيل/الفرع
-    let agentFixedCustodies: any[] = [];
-    let agentConsumedCustodies: any[] = [];
+    let allCustody: any[] = [];
 
     try {
       const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${ba.id}&recipient_type=agent`);
       if (res.ok) {
-        const allCustody: any[] = await res.json();
-        agentFixedCustodies = allCustody.filter((c: any) => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active');
-        agentConsumedCustodies = allCustody.filter((c: any) => (c.item?.inventory_type === 'consumable' || c.inventory_type === 'consumable') && c.status === 'active');
+        allCustody = (await res.json()).filter((c: any) => c.status === 'active');
       } else {
-        agentFixedCustodies = (ba.fixed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity }));
-        agentConsumedCustodies = (ba.consumed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity }));
+        allCustody = [
+          ...(ba.fixed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity, inventory_type: 'fixed', status: 'active' })),
+          ...(ba.consumed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity, inventory_type: 'consumable', status: 'active' }))
+        ];
       }
     } catch (e) {
       console.error("Failed to fetch agent custody", e);
-      agentFixedCustodies = (ba.fixed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity }));
-      agentConsumedCustodies = (ba.consumed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity }));
+      allCustody = [
+        ...(ba.fixed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity, inventory_type: 'fixed', status: 'active' })),
+        ...(ba.consumed_custodies || []).map(c => ({ item: { name: c.description }, quantity: c.quantity, inventory_type: 'consumable', status: 'active' }))
+      ];
     }
 
     const w = window.open('', '_blank', 'width=900,height=1200');
@@ -239,23 +247,33 @@ export default function BranchesAgentsList() {
     let col1Html = '';
     let col2Html = '';
 
-    if (agentFixedCustodies.length >= 10 && agentConsumedCustodies.length <= 5) {
-      const half = Math.ceil(agentFixedCustodies.length / 2);
-      const f1 = agentFixedCustodies.slice(0, half);
-      const f2 = agentFixedCustodies.slice(half);
-      col1Html = buildFixedTable(f1, 'العهدة الثابتة (الأصول والمعدات) - 1');
-      col2Html = buildFixedTable(f2, 'العهدة الثابتة (الأصول والمعدات) - 2') + 
-                 (agentConsumedCustodies.length > 0 ? buildConsumedTable(agentConsumedCustodies, 'العهدة المستهلكة (المطبوعات والمستلزمات)') : '');
-    } else if (agentConsumedCustodies.length >= 10 && agentFixedCustodies.length <= 5) {
-      const half = Math.ceil(agentConsumedCustodies.length / 2);
-      const c1 = agentConsumedCustodies.slice(0, half);
-      const c2 = agentConsumedCustodies.slice(half);
-      col1Html = buildConsumedTable(c1, 'العهدة المستهلكة (المطبوعات والمستلزمات) - 1');
-      col2Html = buildConsumedTable(c2, 'العهدة المستهلكة (المطبوعات والمستلزمات) - 2') + 
-                 (agentFixedCustodies.length > 0 ? buildFixedTable(agentFixedCustodies, 'العهدة الثابتة (الأصول والمعدات)') : '');
+    if (allCustody.length === 0) {
+      col1Html = buildFixedTable([], 'العهدة الثابتة');
+      col2Html = buildConsumedTable([], 'العهدة المستهلكة');
     } else {
-      col1Html = buildFixedTable(agentFixedCustodies, 'العهدة الثابتة (الأصول والمعدات)');
-      col2Html = buildConsumedTable(agentConsumedCustodies, 'العهدة المستهلكة (المطبوعات والمستلزمات)');
+      // Group all custodies by their inventory type name
+      const groupedCustodies: Record<string, any[]> = {};
+      allCustody.forEach((c) => {
+        const typeKey = c.item?.inventory_type || c.inventory_type || 'other';
+        const typeName = getInventoryTypeName(typeKey);
+        if (!groupedCustodies[typeName]) {
+          groupedCustodies[typeName] = [];
+        }
+        groupedCustodies[typeName].push(c);
+      });
+
+      const groupNames = Object.keys(groupedCustodies);
+      groupNames.forEach((name, idx) => {
+        const list = groupedCustodies[name];
+        const isConsumable = name.toLowerCase().includes('consumable') || name.includes('مستهلك');
+        const tableHtml = isConsumable ? buildConsumedTable(list, name) : buildFixedTable(list, name);
+        
+        if (idx % 2 === 0) {
+          col1Html += tableHtml;
+        } else {
+          col2Html += tableHtml;
+        }
+      });
     }
 
     const statusColorClass = ba.status === 'نشط' ? 'status-active' : ba.status === 'غير نشط' ? 'status-inactive' : 'status-pending';
@@ -271,7 +289,7 @@ export default function BranchesAgentsList() {
       <div class="detail-item"><span class="detail-label">نوع المنشأة</span><span class="detail-value">${escapeHtml(ba.type)}</span></div>
     `;
 
-    const totalCustodies = agentFixedCustodies.length + agentConsumedCustodies.length;
+    const totalCustodies = allCustody.length;
     const isVeryLong = totalCustodies > 10;
     const isMediumLong = totalCustodies > 5 && totalCustodies <= 10;
 

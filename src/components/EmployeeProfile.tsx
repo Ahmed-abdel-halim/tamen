@@ -102,6 +102,13 @@ const DOCUMENT_TYPES = [
   { key: 'contract_conditions_photo', label: 'شروط العقد', urlAttr: 'contract_conditions_photo_url' },
 ];
 
+const getInventoryTypeName = (inventoryType?: string) => {
+  if (!inventoryType) return 'غير محدد';
+  if (inventoryType === 'fixed') return 'أصول ثابتة';
+  if (inventoryType === 'consumable') return 'مخزون مستهلك';
+  return inventoryType;
+};
+
 export default function EmployeeProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -116,8 +123,7 @@ export default function EmployeeProfile() {
     return 'personal';
   });
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
-  const [fixedCustodies, setFixedCustodies] = useState<any[]>([]);
-  const [consumedCustodies, setConsumedCustodies] = useState<any[]>([]);
+  const [custodiesList, setCustodiesList] = useState<any[]>([]);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [newRequest, setNewRequest] = useState({
@@ -180,8 +186,7 @@ export default function EmployeeProfile() {
       const res = await fetch(`${API_BASE_URL}/inventory/custody?recipient_id=${id}&recipient_type=employee`);
       if (res.ok) {
         const allCustody: any[] = await res.json();
-        setFixedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'fixed' || c.inventory_type === 'fixed') && c.status === 'active'));
-        setConsumedCustodies(allCustody.filter(c => (c.item?.inventory_type === 'consumable' || c.inventory_type === 'consumable') && c.status === 'active'));
+        setCustodiesList(allCustody.filter(c => c.status === 'active'));
       }
     } catch (e) {
       console.error("Failed to fetch user custody", e);
@@ -623,67 +628,65 @@ export default function EmployeeProfile() {
               <div className="tab-pane">
                 <h3 className="tab-title">سجل العهد والمستندات</h3>
                 
-                <div style={{ marginBottom: '40px' }}>
-                  <h4 className="section-title-sm"><i className="fa-solid fa-boxes-stacked" style={{ color: '#3b82f6' }}></i> العهدة الثابتة</h4>
-                  <div className="premium-table-container">
-                    <table className="premium-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '60px' }}>#</th>
-                          <th>البيان والوصف</th>
-                          <th style={{ width: '120px' }}>الكمية</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {fixedCustodies.length > 0 ? (
-                          fixedCustodies.map((item, idx) => (
-                            <tr key={item.id || idx}>
-                              <td>{idx + 1}</td>
-                              <td>{item.item?.name || item.item_name}</td>
-                              <td><span className="perm-badge-blue">{item.quantity}</span></td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={3} style={{ padding: '20px', color: '#6b7280', textAlign: 'center' }}>لا توجد عهد ثابتة مسجلة</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="section-divider"></div>
-
-                <div>
-                  <h4 className="section-title-sm"><i className="fa-solid fa-box-open" style={{ color: '#ef4444' }}></i> العهدة المستهلكة</h4>
-                  <div className="premium-table-container">
-                    <table className="premium-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '60px' }}>#</th>
-                          <th>البيان والوصف</th>
-                          <th style={{ width: '120px' }}>الكمية</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {consumedCustodies.length > 0 ? (
-                          consumedCustodies.map((item, idx) => (
-                            <tr key={item.id || idx}>
-                              <td>{idx + 1}</td>
-                              <td>{item.item?.name || item.item_name}</td>
-                              <td><span className="perm-badge-blue" style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' }}>{item.quantity}</span></td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={3} style={{ padding: '20px', color: '#6b7280', textAlign: 'center' }}>لا توجد عهد مستهلكة مسجلة</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                {(() => {
+                  if (custodiesList.length === 0) {
+                    return <div style={{ padding: '20px', color: '#6b7280', textAlign: 'center' }}>لا توجد عهد نشطة مسجلة</div>;
+                  }
+                  
+                  // Group custodies by inventory type
+                  const grouped: Record<string, any[]> = {};
+                  custodiesList.forEach(c => {
+                    const typeKey = c.item?.inventory_type || c.inventory_type || 'other';
+                    const typeName = getInventoryTypeName(typeKey);
+                    if (!grouped[typeName]) grouped[typeName] = [];
+                    grouped[typeName].push(c);
+                  });
+                  
+                  return Object.keys(grouped).map(typeName => {
+                    const list = grouped[typeName];
+                    const isConsumable = typeName.toLowerCase().includes('consumable') || typeName.includes('مستهلك');
+                    
+                    return (
+                      <div key={typeName} style={{ marginBottom: '30px' }}>
+                        <h4 className="section-title-sm">
+                          <i className={`fa-solid ${isConsumable ? 'fa-box-open' : 'fa-boxes-stacked'}`} style={{ color: isConsumable ? '#ef4444' : '#3b82f6', marginLeft: '8px' }}></i> 
+                          {typeName}
+                        </h4>
+                        <div className="premium-table-container">
+                          <table className="premium-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '60px' }}>#</th>
+                                <th>البيان والوصف</th>
+                                {!isConsumable && <th>الأرقام التسلسلية</th>}
+                                <th style={{ width: '120px' }}>الكمية</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {list.map((item, idx) => {
+                                const serial = (item.serial_start || item.serial_end)
+                                  ? `${item.serial_start || '—'}${item.serial_end ? ` ➔ ${item.serial_end}` : ''}`
+                                  : '—';
+                                return (
+                                  <tr key={item.id || idx}>
+                                    <td>{idx + 1}</td>
+                                    <td>{item.item?.name || item.item_name}</td>
+                                    {!isConsumable && <td>{serial}</td>}
+                                    <td>
+                                      <span className={isConsumable ? 'perm-badge-red' : 'perm-badge-blue'} style={isConsumable ? { background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' } : {}}>
+                                        {item.quantity}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
 
