@@ -42,6 +42,7 @@ interface PosMachine {
   notes?: string;
   transactions_count?: number;
   transactions_sum_amount?: number;
+  branch_agents?: BranchAgent[];
 }
 
 interface PosTransaction {
@@ -278,8 +279,11 @@ export default function TreasuryAndBanksPage() {
     bank_name: BANKS[0],
     merchant_id: '',
     location: '',
-    notes: ''
+    notes: '',
+    branch_agent_ids: [] as number[]
   });
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
   const [posTxnFormData, setPosTxnFormData] = useState({
     pos_machine_id: '',
     transaction_date: new Date().toISOString().split('T')[0],
@@ -792,10 +796,15 @@ export default function TreasuryAndBanksPage() {
         ? `${API_BASE_URL}/pos-machines/${editingMachineId}`
         : `${API_BASE_URL}/pos-machines`;
       const method = editingMachineId ? 'PUT' : 'POST';
+      const payload = {
+        ...machineFormData,
+        branch_agent_ids: machineFormData.branch_agent_ids
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(machineFormData)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         showToast(editingMachineId ? 'تم تحديث بيانات الماكينة بنجاح' : 'تم إضافة ماكينة POS بنجاح', 'success');
@@ -807,7 +816,8 @@ export default function TreasuryAndBanksPage() {
           bank_name: BANKS[0],
           merchant_id: '',
           location: '',
-          notes: ''
+          notes: '',
+          branch_agent_ids: []
         });
         fetchPosData();
       }
@@ -1346,10 +1356,6 @@ export default function TreasuryAndBanksPage() {
                 <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
                 إضافة إيداع بنكي (+)
               </button>
-              <button className="primary" onClick={() => openBankModal('withdrawal')} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#ef4444' }}>
-                <i className="fa-solid fa-minus" style={{ marginLeft: '8px' }}></i>
-                إضافة سحب/مصروف بنكي (-)
-              </button>
             </div>
           )}
           {activeTab === 'pos' && (
@@ -1358,7 +1364,19 @@ export default function TreasuryAndBanksPage() {
                 <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                 تصدير إكسيل
               </button>
-              <button className="primary" onClick={() => setShowMachineModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#475569' }}>
+              <button className="primary" onClick={() => {
+                setEditingMachineId(null);
+                setMachineFormData({
+                  machine_name: '',
+                  machine_serial: '',
+                  bank_name: BANKS[0],
+                  merchant_id: '',
+                  location: '',
+                  notes: '',
+                  branch_agent_ids: []
+                });
+                setShowMachineModal(true);
+              }} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#475569' }}>
                 <i className="fa-solid fa-laptop-code" style={{ marginLeft: '8px' }}></i>
                 تعريف ماكينة POS
               </button>
@@ -2007,6 +2025,22 @@ export default function TreasuryAndBanksPage() {
                           {mac.bank_name} {mac.machine_serial ? `• S/N: ${mac.machine_serial}` : ''}
                         </div>
                         {mac.location && <div style={{ fontSize: '10px', color: 'var(--muted)' }}><i className="fa-solid fa-location-dot" style={{ marginLeft: '4px' }}></i>{mac.location}</div>}
+                        {mac.branch_agents && mac.branch_agents.length > 0 ? (
+                          <div style={{ fontSize: '10px', color: '#014cb1', fontWeight: 'bold', marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                            <i className="fa-solid fa-user-shield" style={{ marginLeft: '4px' }}></i>
+                            <span>الوكلاء:</span>
+                            {mac.branch_agents.map((agent) => (
+                              <span key={agent.id} style={{ background: 'rgba(1, 76, 177, 0.08)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px' }}>
+                                {agent.agency_name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
+                            <i className="fa-solid fa-building" style={{ marginLeft: '4px' }}></i>
+                            رئيسية بالشركة (غير مرتبطة بوكيل)
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span style={{ 
@@ -2027,7 +2061,8 @@ export default function TreasuryAndBanksPage() {
                             bank_name: mac.bank_name,
                             merchant_id: mac.merchant_id || '',
                             location: mac.location || '',
-                            notes: mac.notes || ''
+                            notes: mac.notes || '',
+                            branch_agent_ids: mac.branch_agents ? mac.branch_agents.map(a => a.id) : []
                           });
                           setShowMachineModal(true);
                         }}
@@ -2712,7 +2747,7 @@ export default function TreasuryAndBanksPage() {
       {/* MODAL 3: ADD POS MACHINE */}
       {showMachineModal && (
         <div className="modal-overlay" onClick={() => setShowMachineModal(false)}>
-          <div className="modal-content dark-modal" style={{ maxWidth: '900px', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content dark-modal" style={{ width: '900px', maxWidth: '95vw', background: 'var(--panel)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingMachineId ? 'تعديل بيانات ماكينة POS' : 'تعريف ماكينة نقاط بيع جديدة (POS)'}</h3>
               <button onClick={() => { setShowMachineModal(false); setEditingMachineId(null); }} className="close-btn">&times;</button>
@@ -2783,6 +2818,205 @@ export default function TreasuryAndBanksPage() {
                     value={machineFormData.location} 
                     onChange={e => setMachineFormData({ ...machineFormData, location: e.target.value })} 
                   />
+                </div>
+                <div className="form-group" style={{ gridColumn: 'span 2', position: 'relative' }}>
+                  <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                    الوكلاء المرتبطون بالماكينة (عهدة للوكلاء - تشاركي)
+                  </label>
+                  
+                  {/* Selected Agents Badges Container */}
+                  <div style={{
+                    minHeight: '44px',
+                    width: '100%',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    padding: '8px 12px',
+                    background: 'var(--input-bg)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
+                  onClick={() => setIsAgentDropdownOpen(!isAgentDropdownOpen)}
+                  >
+                    {machineFormData.branch_agent_ids.length === 0 ? (
+                      <span style={{ color: 'var(--muted)', fontSize: '13px' }}>-- اختر الوكلاء من القائمة المنسدلة --</span>
+                    ) : (
+                      machineFormData.branch_agent_ids.map(id => {
+                        const agent = agents.find(a => a.id === id);
+                        if (!agent) return null;
+                        return (
+                          <div 
+                            key={id} 
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              background: 'rgba(16, 185, 129, 0.08)',
+                              color: '#10b981',
+                              border: '1px solid #10b981',
+                              borderRadius: '20px',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              transition: 'all 0.2s ease',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <i className="fa-solid fa-file-signature" style={{ fontSize: '11px' }}></i>
+                            <span>{agent.agency_name}</span>
+                            <span 
+                              onClick={() => {
+                                setMachineFormData(prev => ({
+                                  ...prev,
+                                  branch_agent_ids: prev.branch_agent_ids.filter(x => x !== id)
+                                }));
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                background: '#ef4444',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontSize: '10px',
+                                marginRight: '4px',
+                                transition: 'background 0.2s'
+                              }}
+                              title="إزالة الوكيل"
+                            >
+                              &times;
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                    
+                    {/* Toggle Icon */}
+                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}>
+                      <i className={`fa-solid ${isAgentDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+                    </div>
+                  </div>
+
+                  {/* Dropdown Container */}
+                  {isAgentDropdownOpen && (
+                    <>
+                      {/* Invisible backdrop to close the dropdown on click outside */}
+                      <div 
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} 
+                        onClick={() => setIsAgentDropdownOpen(false)}
+                      />
+                      
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        right: 0,
+                        left: 0,
+                        marginBottom: '6px',
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        zIndex: 999,
+                        maxHeight: '260px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                      }}>
+                        {/* Search field inside dropdown */}
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--input-bg)' }}>
+                          <input 
+                            type="text" 
+                            placeholder="بحث سريع عن وكيل..." 
+                            value={agentSearchQuery}
+                            onChange={e => setAgentSearchQuery(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            style={{ 
+                              width: '100%', 
+                              height: '36px', 
+                              fontSize: '13px', 
+                              padding: '0 10px', 
+                              borderRadius: '8px', 
+                              border: '1px solid var(--border)', 
+                              background: 'var(--panel)',
+                              color: 'var(--text)',
+                              outline: 'none'
+                            }} 
+                          />
+                        </div>
+                        
+                        {/* Dropdown List */}
+                        <div style={{
+                          overflowY: 'auto',
+                          flex: 1,
+                          padding: '6px'
+                        }}>
+                          {agents
+                            .filter(a => !agentSearchQuery || a.agency_name.toLowerCase().includes(agentSearchQuery.toLowerCase()) || a.agent_name.toLowerCase().includes(agentSearchQuery.toLowerCase()))
+                            .map(a => {
+                              const isChecked = machineFormData.branch_agent_ids.includes(a.id);
+                              return (
+                                <div 
+                                  key={a.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isChecked) {
+                                      setMachineFormData(prev => ({
+                                        ...prev,
+                                        branch_agent_ids: prev.branch_agent_ids.filter(id => id !== a.id)
+                                      }));
+                                    } else {
+                                      setMachineFormData(prev => ({
+                                        ...prev,
+                                        branch_agent_ids: [...prev.branch_agent_ids, a.id]
+                                      }));
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    background: isChecked ? 'rgba(1, 76, 177, 0.05)' : 'transparent',
+                                    transition: 'background 0.2s',
+                                    marginBottom: '2px'
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = isChecked ? 'rgba(1, 76, 177, 0.08)' : 'var(--border)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = isChecked ? 'rgba(1, 76, 177, 0.05)' : 'transparent'; }}
+                                >
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: isChecked ? '#014cb1' : 'var(--text)' }}>
+                                      {a.agency_name}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                                      {a.agent_name} ({a.code})
+                                    </span>
+                                  </div>
+                                  
+                                  {isChecked && (
+                                    <i className="fa-solid fa-check" style={{ color: '#014cb1', fontSize: '14px' }}></i>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          
+                          {agents.filter(a => !agentSearchQuery || a.agency_name.toLowerCase().includes(agentSearchQuery.toLowerCase()) || a.agent_name.toLowerCase().includes(agentSearchQuery.toLowerCase())).length === 0 && (
+                            <div style={{ padding: '15px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
+                              لا توجد نتائج تطابق البحث
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label>ملاحظات إضافية</label>

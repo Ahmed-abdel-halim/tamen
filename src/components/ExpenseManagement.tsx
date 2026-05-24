@@ -18,11 +18,12 @@ interface Expense {
   name: string;
   recipient?: string;
   category: string;
+  sub_category?: string;
   amount: number;
   currency: 'LYD' | 'USD';
   voucher_number?: string;
   receipt_image?: string;
-  expense_type: 'fixed' | 'consumable';
+  expense_type: string;
   expense_date: string;
   status: string;
   notes?: string;
@@ -93,10 +94,11 @@ export default function ExpenseManagement({
   const [name, setName] = useState('');
   const [recipient, setRecipient] = useState('');
   const [category, setCategory] = useState('قرطاسية');
+  const [subCategory, setSubCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<'LYD' | 'USD'>('LYD');
   const [voucherNumber, setVoucherNumber] = useState('');
-  const [expenseType, setExpenseType] = useState<'fixed' | 'consumable'>('consumable');
+  const [expenseType, setExpenseType] = useState<string>('حوالة مصرفية');
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [expenseReceiptImage, setExpenseReceiptImage] = useState<File | null>(null);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -104,13 +106,21 @@ export default function ExpenseManagement({
   const [notes, setNotes] = useState('');
   const [indemnityType, setIndemnityType] = useState('orange_card');
   const [employees, setEmployees] = useState<{ id: number; name: string }[]>([]);
-  const [isCustomRecipient, setIsCustomRecipient] = useState(false);
+  const [agents, setAgents] = useState<{ id: number; agency_name: string; agent_name: string }[]>([]);
+  const [recipientType, setRecipientType] = useState<'employee' | 'agent' | 'custom'>('employee');
+  const [banks, setBanks] = useState<{ id: number; name: string; account_number?: string }[]>([]);
+  const [paymentSource, setPaymentSource] = useState<string>('treasury');
 
   // Categories Management States
   const [dbCategories, setDbCategories] = useState<{ id: number; name: string }[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategory, setEditingCategory] = useState<{ id: number; name: string } | null>(null);
+
+  // SubCategories Management States
+  const [dbSubCategories, setDbSubCategories] = useState<{ id: number; name: string; category_name: string }[]>([]);
+  const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
+  const [newSubCategoryName, setNewSubCategoryName] = useState('');
 
   // Custom Confirmation Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void } | null>(null);
@@ -387,7 +397,8 @@ export default function ExpenseManagement({
               ` : `
                 <th>البيان</th>
                 <th>المستلم</th>
-                <th>الفئة</th>
+                <th>الفئة / البند الفرعي</th>
+                <th>طريقة السداد</th>
                 <th>المبلغ</th>
                 <th>التاريخ</th>
                 <th>الحالة</th>
@@ -407,7 +418,8 @@ export default function ExpenseManagement({
                 ` : `
                   <td>${item.name}</td>
                   <td>${item.recipient || '-'}</td>
-                  <td>${item.category}</td>
+                  <td>${item.category} ${item.sub_category ? ` / ${item.sub_category}` : ''}</td>
+                  <td>${item.expense_type || '-'}</td>
                   <td>${item.amount.toLocaleString()} ${item.currency}</td>
                   <td>${item.expense_date}</td>
                   <td>${item.status}</td>
@@ -475,7 +487,7 @@ export default function ExpenseManagement({
           <div class="section-title">بيانات المصروف الأساسية</div>
           <table class="data-table">
             <tr><td class="label">رقم المصروف:</td><td>${expense.voucher_number || expense.id}</td><td class="label">تاريخ الصرف:</td><td>${expense.expense_date}</td></tr>
-            <tr><td class="label">الفئة:</td><td>${expense.category}</td><td class="label">نوع المصروف:</td><td>${expense.expense_type === 'fixed' ? 'ثابت' : 'مستهلك'}</td></tr>
+            <tr><td class="label">الفئة:</td><td>${expense.category} ${expense.sub_category ? ` (${expense.sub_category})` : ''}</td><td class="label">طريقة السداد:</td><td>${expense.expense_type || '—'}</td></tr>
             <tr><td class="label">المستلم:</td><td colspan="3">${expense.recipient || '---'}</td></tr>
             <tr><td class="label">البيان / الغرض:</td><td colspan="3" style="font-weight: 900;">${expense.name}</td></tr>
           </table>
@@ -573,8 +585,25 @@ export default function ExpenseManagement({
   }, [filteredUnion]);
 
   const dynamicCategories = useMemo(() => {
-    return dbCategories.map(c => c.name);
+    const list = dbCategories.map(c => c.name);
+    const defaults = ['مصاريف تشغيلية', 'مصاريف فنية', 'مصاريف إدارية'];
+    return Array.from(new Set([...defaults, ...list]));
   }, [dbCategories]);
+
+  const filteredSubCategories = useMemo(() => {
+    return dbSubCategories.filter(sub => sub.category_name === category).map(sub => sub.name);
+  }, [dbSubCategories, category]);
+
+  useEffect(() => {
+    const list = dbSubCategories.filter(sub => sub.category_name === category);
+    if (list.length > 0) {
+      if (!list.some(s => s.name === subCategory)) {
+        setSubCategory(list[0].name);
+      }
+    } else {
+      setSubCategory('');
+    }
+  }, [category, dbSubCategories]);
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
@@ -645,7 +674,10 @@ export default function ExpenseManagement({
     fetchExpenses();
     fetchUnionBalances();
     fetchEmployees();
+    fetchAgents();
+    fetchSubCategories();
     fetchCategories();
+    fetchBanks();
   }, []);
 
   useEffect(() => {
@@ -693,6 +725,24 @@ export default function ExpenseManagement({
     }
   };
 
+  const fetchBanks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/bank-settings/banks`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setBanks(data);
+      }
+    } catch (e) {
+      console.error('Error fetching banks:', e);
+    }
+  };
+
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -706,6 +756,43 @@ export default function ExpenseManagement({
       setEmployees(data);
     } catch (e) {
       console.error('Error fetching employees:', e);
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/branches-agents`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const activeAgents = data.filter((a: any) => a.status === 'نشط');
+        setAgents(activeAgents.length > 0 ? activeAgents : data);
+      }
+    } catch (e) {
+      console.error('Error fetching agents:', e);
+    }
+  };
+
+  const fetchSubCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/expense-subcategories`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDbSubCategories(data.data);
+      }
+    } catch (e) {
+      console.error('Error fetching subcategories:', e);
     }
   };
 
@@ -753,34 +840,46 @@ export default function ExpenseManagement({
       setName(expense.name);
       setRecipient(expense.recipient || '');
       setCategory(expense.category);
+      setSubCategory((expense as any).sub_category || '');
       setAmount(expense.amount.toString());
       setDate(expense.expense_date);
       setStatus(expense.status);
       setNotes(expense.notes || '');
       setCurrency(expense.currency || 'LYD');
       setVoucherNumber(expense.voucher_number || '');
-      setExpenseType(expense.expense_type || 'consumable');
+      setExpenseType(expense.expense_type || 'حوالة مصرفية');
       setItems(expense.items || []);
       setExpenseReceiptImage(null);
+      setPaymentSource(expense.payment_source || 'treasury');
 
+      // Determine recipient type
       const isEmployee = employees.some(emp => emp.name === expense.recipient);
-      setIsCustomRecipient(expense.recipient && !isEmployee ? true : false);
+      const isAgent = agents.some(a => a.agent_name === expense.recipient || a.agency_name === expense.recipient || `${a.agency_name} - ${a.agent_name}` === expense.recipient);
+      if (isEmployee) {
+        setRecipientType('employee');
+      } else if (isAgent) {
+        setRecipientType('agent');
+      } else {
+        setRecipientType('custom');
+      }
     } else {
       setEditingExpense(null);
       setName('');
       setRecipient('');
-      setCategory(activeTab === 'indemnities' ? 'التعويضات' : 'قرطاسية');
+      setCategory(activeTab === 'indemnities' ? 'التعويضات' : 'مصاريف تشغيلية');
+      setSubCategory('');
       setAmount('');
       setCurrency('LYD');
       setVoucherNumber('');
-      setExpenseType('consumable');
+      setExpenseType('حوالة مصرفية');
       setItems([]);
       setExpenseReceiptImage(null);
       setDate(new Date().toISOString().split('T')[0]);
       setStatus('مدفوع');
       setNotes('');
       setIndemnityType('orange_card');
-      setIsCustomRecipient(false);
+      setRecipientType('employee');
+      setPaymentSource('treasury');
     }
     setShowModal(true);
   };
@@ -794,6 +893,7 @@ export default function ExpenseManagement({
       formData.append('name', name);
       formData.append('recipient', recipient);
       formData.append('category', category);
+      formData.append('sub_category', subCategory);
       formData.append('amount', amount);
       formData.append('currency', currency);
       formData.append('voucher_number', voucherNumber);
@@ -804,7 +904,7 @@ export default function ExpenseManagement({
       formData.append('items', JSON.stringify(items));
       formData.append('is_indemnity', category === 'التعويضات' ? '1' : '0');
       formData.append('indemnity_type', category === 'التعويضات' ? indemnityType : '');
-      formData.append('payment_source', category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : 'bank');
+      formData.append('payment_source', category === 'التعويضات' ? (indemnityType === 'orange_card' ? 'union_deposit' : 'bank') : paymentSource);
 
       if (expenseReceiptImage) {
         formData.append('receipt_image', expenseReceiptImage);
@@ -969,9 +1069,10 @@ export default function ExpenseManagement({
       const columns = [
         { header: 'البند (الوصف)', key: 'name', width: 35 },
         { header: 'رقم الواصل', key: 'voucher_number', width: 15 },
-        { header: 'نوع المصروف', key: 'expense_type', width: 15 },
+        { header: 'طريقة السداد', key: 'expense_type', width: 15 },
         { header: 'المستلم', key: 'recipient', width: 25 },
         { header: 'الفئة', key: 'category', width: 20 },
+        { header: 'البند الفرعي', key: 'sub_category', width: 20 },
         { header: 'المبلغ', key: 'amount', width: 20 },
         { header: 'العملة', key: 'currency', width: 10 },
         { header: 'التاريخ', key: 'expense_date', width: 15 },
@@ -982,9 +1083,10 @@ export default function ExpenseManagement({
       const data = expenses.map((e) => ({
         name: e.name,
         voucher_number: e.voucher_number || '-',
-        expense_type: e.expense_type === 'fixed' ? 'ثابت' : 'مستهلك',
+        expense_type: e.expense_type || '-',
         recipient: e.recipient || '-',
         category: e.category,
+        sub_category: (e as any).sub_category || '-',
         amount: e.amount.toLocaleString(),
         currency: e.currency === 'USD' ? 'دولار' : 'دينار',
         expense_date: e.expense_date,
@@ -999,6 +1101,7 @@ export default function ExpenseManagement({
         expense_type: '',
         recipient: '',
         category: '',
+        sub_category: '',
         amount: statistics.monthly_total.toLocaleString(),
         currency: '',
         expense_date: '',
@@ -1235,7 +1338,8 @@ export default function ExpenseManagement({
                 <tr>
                   <th style={{ verticalAlign: 'middle' }}>البند / الوصف</th>
                   <th style={{ verticalAlign: 'middle' }}>المستلم</th>
-                  <th style={{ verticalAlign: 'middle' }}>الفئة</th>
+                  <th style={{ verticalAlign: 'middle' }}>الفئة / البند الفرعي</th>
+                  <th style={{ verticalAlign: 'middle' }}>طريقة السداد</th>
                   <th style={{ verticalAlign: 'middle' }}>المبلغ</th>
                   <th style={{ verticalAlign: 'middle' }}>التاريخ</th>
                   <th style={{ verticalAlign: 'middle' }}>رقم الواصل</th>
@@ -1246,13 +1350,19 @@ export default function ExpenseManagement({
               </thead>
               <tbody>
                 {paginatedExpenses.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>لا توجد بيانات تطابق البحث الحالي</td></tr>
+                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>لا توجد بيانات تطابق البحث الحالي</td></tr>
                 ) : (
                   paginatedExpenses.map(e => (
                     <tr key={e.id}>
                       <td style={{ fontWeight: 700, verticalAlign: 'middle' }}>{e.name}</td>
                       <td style={{ verticalAlign: 'middle' }}>{e.recipient || '-'}</td>
-                      <td style={{ verticalAlign: 'middle' }}><span style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg)', fontSize: '0.85rem', fontWeight: 600 }}>{e.category}</span></td>
+                      <td style={{ verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg)', fontSize: '0.85rem', fontWeight: 600, width: 'fit-content' }}>{e.category}</span>
+                          {(e as any).sub_category && <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 700 }}>{(e as any).sub_category}</span>}
+                        </div>
+                      </td>
+                      <td style={{ verticalAlign: 'middle' }}>{e.expense_type || '—'}</td>
                       <td style={{ fontWeight: '900', color: '#ef4444', verticalAlign: 'middle' }}>{e.amount.toLocaleString()} {e.currency === 'USD' ? '$' : 'د.ل'}</td>
                       <td style={{ fontSize: '0.9rem', verticalAlign: 'middle' }}>{e.expense_date}</td>
                       <td style={{ fontWeight: 600, verticalAlign: 'middle' }}>{e.voucher_number || '-'}</td>
@@ -1272,8 +1382,8 @@ export default function ExpenseManagement({
                           {e.status}
                         </span>
                       </td>
-                      <td className="no-print" style={{ verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+                      <td className="no-print" style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
                           <button onClick={() => handlePrintExpenseVoucher(e)} style={{ background: '#f59e0b', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="طباعة الوصل"><i className="fa-solid fa-print"></i></button>
                           <button onClick={() => navigate(`/reports/expenses/${e.id}`)} style={{ background: '#10b981', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
                           <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
@@ -1415,8 +1525,8 @@ export default function ExpenseManagement({
                           ) : <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>لا يوجد</span>}
                         </div>
                       </td>
-                      <td className="no-print" style={{ verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+                      <td className="no-print" style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
                           <button onClick={() => handlePrintUnionVoucher(u)} style={{ background: '#ea580c', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="طباعة الواصل"><i className="fa-solid fa-print"></i></button>
                           <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
                           <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
@@ -1447,56 +1557,95 @@ export default function ExpenseManagement({
         }}>
           <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '1100px', borderRadius: '15px', padding: '30px', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <h3>{editingExpense ? 'تعديل بيانات' : (activeTab === 'expenses' ? 'تسجيل مصروف' : 'تسجيل تعويض')}</h3>
-            <form onSubmit={handleAddExpense} style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            <form onSubmit={handleAddExpense} style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', alignItems: 'start' }}>
               <div style={{ gridColumn: 'span 4' }}>
                 <label>الوصف / البيان</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label>المستلم</label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  {!isCustomRecipient ? (
-                    <div style={{ flex: 1 }}>
-                      <SearchableSelect
-                        options={employees.map(emp => ({ value: emp.name, label: emp.name }))}
-                        value={recipient}
-                        onChange={(val) => setRecipient(val)}
-                        placeholder="اختر موظف..."
-                      />
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      value={recipient}
-                      onChange={e => setRecipient(e.target.value)}
-                      placeholder="ادخل اسم المستلم..."
-                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }}
-                    />
-                  )}
+              <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontWeight: 800 }}>المستلم</label>
+                <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsCustomRecipient(!isCustomRecipient);
-                      setRecipient('');
-                    }}
+                    onClick={() => { setRecipientType('employee'); setRecipient(''); }}
                     style={{
-                      padding: '8px 12px',
+                      flex: 1,
+                      padding: '8px',
                       borderRadius: '8px',
                       border: '1px solid var(--border)',
-                      background: isCustomRecipient ? '#014cb1' : 'var(--bg)',
-                      color: isCustomRecipient ? '#fff' : 'var(--text)',
+                      background: recipientType === 'employee' ? '#014cb1' : 'var(--bg)',
+                      color: recipientType === 'employee' ? '#fff' : 'var(--text)',
+                      fontWeight: 'bold',
                       cursor: 'pointer',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap'
+                      fontSize: '0.85rem'
                     }}
                   >
-                    {isCustomRecipient ? 'إلغاء' : 'اسم آخر'}
+                    موظف
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRecipientType('agent'); setRecipient(''); }}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: recipientType === 'agent' ? '#014cb1' : 'var(--bg)',
+                      color: recipientType === 'agent' ? '#fff' : 'var(--text)',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    الوكيل
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRecipientType('custom'); setRecipient(''); }}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: recipientType === 'custom' ? '#014cb1' : 'var(--bg)',
+                      color: recipientType === 'custom' ? '#fff' : 'var(--text)',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    اسم آخر
                   </button>
                 </div>
+
+                {recipientType === 'employee' && (
+                  <SearchableSelect
+                    options={employees.map(emp => ({ value: emp.name, label: emp.name }))}
+                    value={recipient}
+                    onChange={(val) => setRecipient(val)}
+                    placeholder="اختر موظف..."
+                  />
+                )}
+                {recipientType === 'agent' && (
+                  <SearchableSelect
+                    options={agents.map(a => ({ value: a.agency_name, label: `${a.agency_name} (${a.agent_name})` }))}
+                    value={recipient}
+                    onChange={(val) => setRecipient(val)}
+                    placeholder="اختر وكيل..."
+                  />
+                )}
+                {recipientType === 'custom' && (
+                  <input
+                    type="text"
+                    value={recipient}
+                    onChange={e => setRecipient(e.target.value)}
+                    placeholder="ادخل اسم المستلم..."
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }}
+                  />
+                )}
               </div>
               <div>
-                <label>الفئة</label>
+                <label style={{ fontWeight: 800 }}>الفئة</label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
                   <select 
                     value={category} 
@@ -1525,13 +1674,45 @@ export default function ExpenseManagement({
                       boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
                       transition: 'all 0.2s'
                     }}
-                    title="إدارة الفئات (إضافة، تعديل، حذف)"
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'var(--border)';
+                    title="إدارة الفئات"
+                  >
+                    + / -
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontWeight: 800 }}>البند الفرعي</label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
+                  <select 
+                    value={subCategory} 
+                    onChange={e => setSubCategory(e.target.value)} 
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600 }}
+                  >
+                    <option value="">-- اختر بند فرعي --</option>
+                    {filteredSubCategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowSubCategoryModal(true)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      color: '#014cb1',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '42px',
+                      height: '42px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s'
                     }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'var(--bg)';
-                    }}
+                    title="إدارة البنود الفرعية"
                   >
                     + / -
                   </button>
@@ -1551,13 +1732,30 @@ export default function ExpenseManagement({
                     </select>
                   </div>
                 ) : (
-                  <div>
-                    <label>الحالة</label>
-                    <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
-                      <option value="مدفوع">مدفوع</option>
-                      <option value="معلق">معلق</option>
-                    </select>
-                  </div>
+                  <>
+                    <div>
+                      <label>الحالة</label>
+                      <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                        <option value="مدفوع">مدفوع</option>
+                        <option value="معلق">معلق</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontWeight: 800 }}>مصدر الصرف (الخزينة / المصرف)</label>
+                      <select
+                        value={paymentSource}
+                        onChange={e => setPaymentSource(e.target.value)}
+                        style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }}
+                      >
+                        <option value="treasury">الخزينة النقدية (كاش)</option>
+                        {banks.map(bank => (
+                          <option key={bank.id} value={bank.name}>
+                            {bank.name} {bank.account_number ? `(${bank.account_number})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
                 )}
               </>
 
@@ -1566,19 +1764,53 @@ export default function ExpenseManagement({
                 <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
 
-              <div>
-                <label>نوع العملة</label>
-                <select value={currency} onChange={e => setCurrency(e.target.value as any)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontWeight: 700 }}>
-                  <option value="LYD">دينار ليبي (LYD)</option>
-                  <option value="USD">دولار أمريكي (USD)</option>
-                </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontWeight: 800 }}>نوع العملة</label>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('LYD')}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: currency === 'LYD' ? '#014cb1' : 'var(--bg)',
+                      color: currency === 'LYD' ? '#fff' : 'var(--text)',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    دينار (LYD)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('USD')}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: currency === 'USD' ? '#014cb1' : 'var(--bg)',
+                      color: currency === 'USD' ? '#fff' : 'var(--text)',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    دولار (USD)
+                  </button>
+                </div>
               </div>
 
               <div>
-                <label>نوع المصروف</label>
-                <select value={expenseType} onChange={e => setExpenseType(e.target.value as any)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontWeight: 700 }}>
-                  <option value="consumable">مستهلك</option>
-                  <option value="fixed">ثابت</option>
+                <label style={{ fontWeight: 800 }}>طريقة السداد</label>
+                <select value={expenseType} onChange={e => setExpenseType(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 700 }}>
+                  <option value="حوالة مصرفية">حوالة مصرفية</option>
+                  <option value="وسائل الكترونية">وسائل الكترونية</option>
+                  <option value="مكاتب حوالات">مكاتب حوالات</option>
+                  <option value="بطاقة مصرفية">بطاقة مصرفية</option>
                 </select>
               </div>
 
@@ -1587,7 +1819,7 @@ export default function ExpenseManagement({
                 <input type="text" value={voucherNumber} onChange={e => setVoucherNumber(e.target.value)} placeholder="مثال: 3167" style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
               </div>
 
-              <div>
+              <div style={{ gridColumn: 'span 2' }}>
                 <label>صورة الواصل</label>
                 <input type="file" accept="image/*,application/pdf" onChange={e => setExpenseReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '8px', border: '1px dashed var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }} />
               </div>
@@ -1948,6 +2180,131 @@ export default function ExpenseManagement({
             </div>
             <div className="premium-modal-footer">
               <button type="button" className="btn btn-link text-muted fw-bold text-decoration-none px-4" onClick={() => setShowCategoryModal(false)}>
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SubCategories Management Modal */}
+      {showSubCategoryModal && (
+        <div className="modal-overlay no-print" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, padding: '20px'
+        }} onClick={() => setShowSubCategoryModal(false)}>
+          <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '800px', borderRadius: '15px', padding: '30px', position: 'relative', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}><i className="fa-solid fa-list-check text-primary me-2"></i> إدارة البنود الفرعية لـ ({category})</h3>
+              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--muted)' }} onClick={() => setShowSubCategoryModal(false)}>
+                &times;
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px', overflowX: 'hidden' }}>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <input
+                  type="text"
+                  value={newSubCategoryName}
+                  onChange={e => setNewSubCategoryName(e.target.value)}
+                  placeholder="اسم البند الفرعي الجديد..."
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
+                />
+                <button
+                  type="button"
+                  style={{ whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: '10px', border: 'none', background: '#38bdf8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                  onClick={async () => {
+                    if (!newSubCategoryName) return;
+                    try {
+                      setLoading(true);
+                      const response = await fetch(`${API_BASE_URL}/expense-subcategories`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({ category_name: category, name: newSubCategoryName })
+                      });
+
+                      if (response.ok) {
+                        showToast('تم إضافة البند الفرعي بنجاح', 'success');
+                        setNewSubCategoryName('');
+                        fetchSubCategories();
+                      } else {
+                        const err = await response.json();
+                        showToast(err.message || 'فشلت العملية', 'error');
+                      }
+                    } catch (e) {
+                      showToast('خطأ في الاتصال', 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? 'جاري الحفظ...' : 'إضافة'}
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
+                <table className="users-table" style={{ width: '100%', tableLayout: 'fixed', wordWrap: 'break-word' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '10px' }}>اسم البند الفرعي</th>
+                      <th style={{ width: '120px', padding: '10px', textAlign: 'center' }}>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dbSubCategories.filter(sub => sub.category_name === category).map(sub => (
+                      <tr key={sub.id}>
+                        <td style={{ padding: '10px', whiteSpace: 'normal', lineHeight: '1.5' }}>{sub.name}</td>
+                        <td style={{ padding: '10px' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}
+                              title="حذف"
+                              onClick={async () => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'تأكيد حذف البند الفرعي',
+                                  message: `هل أنت متأكد من حذف البند الفرعي "${sub.name}"؟`,
+                                  onConfirm: async () => {
+                                    setConfirmDialog(null);
+                                    try {
+                                      const response = await fetch(`${API_BASE_URL}/expense-subcategories/${sub.id}`, {
+                                        method: 'DELETE',
+                                        headers: {
+                                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                        }
+                                      });
+                                      if (response.ok) {
+                                        showToast('تم حذف البند الفرعي بنجاح', 'success');
+                                        fetchSubCategories();
+                                      } else {
+                                        showToast('لا يمكن حذف هذا البند الفرعي', 'error');
+                                      }
+                                    } catch (e) {
+                                      showToast('خطأ في الاتصال', 'error');
+                                    }
+                                  }
+                                });
+                              }}
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {dbSubCategories.filter(sub => sub.category_name === category).length === 0 && (
+                      <tr><td colSpan={2} style={{ textAlign: 'center', padding: '20px' }}>لا توجد بنود فرعية مضافة بعد...</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="premium-modal-footer">
+              <button type="button" className="btn btn-link text-muted fw-bold text-decoration-none px-4" onClick={() => setShowSubCategoryModal(false)}>
                 إغلاق
               </button>
             </div>

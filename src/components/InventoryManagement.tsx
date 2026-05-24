@@ -103,12 +103,14 @@ export default function InventoryManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
-  const [dbSettings, setDbSettings] = useState<{id: number, setting_type: string, name: string}[]>([]);
+  const [dbSettings, setDbSettings] = useState<{id: number, setting_type: string, name: string, inventory_type?: string}[]>([]);
+  const [newSettingInventoryType, setNewSettingInventoryType] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsModalType, setSettingsModalType] = useState<'category' | 'inventory_type'>('category');
   const [newSettingName, setNewSettingName] = useState('');
   const [editingSettingId, setEditingSettingId] = useState<number | null>(null);
   const [editingSettingName, setEditingSettingName] = useState('');
+  const [editingSettingInventoryType, setEditingSettingInventoryType] = useState('');
 
   // Form states
   const getDefaultItemForm = () => ({
@@ -429,10 +431,15 @@ export default function InventoryManagement() {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ setting_type: settingsModalType, name: newSettingName.trim() })
+        body: JSON.stringify({
+          setting_type: settingsModalType,
+          name: newSettingName.trim(),
+          inventory_type: settingsModalType === 'category' ? newSettingInventoryType : null
+        })
       });
       if (res.ok) {
         setNewSettingName('');
+        setNewSettingInventoryType('');
         await fetchData();
         showToast('تمت الإضافة بنجاح', 'success');
       } else throw new Error('Failed');
@@ -452,7 +459,10 @@ export default function InventoryManagement() {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ name: editingSettingName.trim() })
+        body: JSON.stringify({
+          name: editingSettingName.trim(),
+          inventory_type: settingsModalType === 'category' ? editingSettingInventoryType : null
+        })
       });
       if (res.ok) {
         setEditingSettingId(null);
@@ -696,7 +706,9 @@ export default function InventoryManagement() {
   const dbCategories = dbSettings.filter(s => s.setting_type === 'category').map(s => s.name);
   const dbTypes = dbSettings.filter(s => s.setting_type === 'inventory_type').map(s => s.name);
 
-  const categoryOptions = dbCategories.map(cat => ({ value: cat, label: cat }));
+  const categoryOptions = dbSettings
+    .filter(s => s.setting_type === 'category' && (!newItem.inventory_type || !s.inventory_type || s.inventory_type === newItem.inventory_type))
+    .map(s => ({ value: s.name, label: s.name }));
   const inventoryTypeOptions = dbTypes.map(t => ({ value: t, label: t }));
 
   const getCategoryName = (category: string) => {
@@ -2420,19 +2432,37 @@ export default function InventoryManagement() {
               <button onClick={() => setShowSettingsModal(false)} className="close-btn">&times;</button>
             </div>
             <div style={{ padding: '20px' }}>
-              <form onSubmit={handleAddSetting} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                <input 
-                  type="text" 
-                  placeholder={settingsModalType === 'category' ? "اسم التصنيف الجديد..." : "اسم النوع الجديد..."} 
-                  required
-                  value={newSettingName}
-                  onChange={e => setNewSettingName(e.target.value)}
-                  style={{ 
-                    flex: 1, height: '42px', borderRadius: '10px', padding: '0 12px',
-                    border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)'
-                  }}
-                />
-                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', padding: '0 20px', fontWeight: 'bold' }}>
+              <form onSubmit={handleAddSetting} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="text" 
+                    placeholder={settingsModalType === 'category' ? "اسم التصنيف الجديد..." : "اسم النوع الجديد..."} 
+                    required
+                    value={newSettingName}
+                    onChange={e => setNewSettingName(e.target.value)}
+                    style={{ 
+                      flex: 2, height: '42px', borderRadius: '10px', padding: '0 12px',
+                      border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)'
+                    }}
+                  />
+                  {settingsModalType === 'category' && (
+                    <select
+                      value={newSettingInventoryType}
+                      onChange={e => setNewSettingInventoryType(e.target.value)}
+                      required
+                      style={{ 
+                        flex: 1, height: '42px', borderRadius: '10px', padding: '0 12px',
+                        border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)'
+                      }}
+                    >
+                      <option value="">اختر نوع المخزون...</option>
+                      {inventoryTypeOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <button type="submit" className="primary" style={{ height: '42px', borderRadius: '10px', padding: '0 20px', fontWeight: 'bold', width: 'fit-content', alignSelf: 'flex-start' }}>
                   إضافة
                 </button>
               </form>
@@ -2449,8 +2479,24 @@ export default function InventoryManagement() {
                             type="text" 
                             value={editingSettingName} 
                             onChange={e => setEditingSettingName(e.target.value)}
-                            style={{ flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            style={{ flex: 1.5, height: '32px', fontSize: '12px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                           />
+                          {settingsModalType === 'category' && (
+                            <select
+                              value={editingSettingInventoryType}
+                              onChange={e => setEditingSettingInventoryType(e.target.value)}
+                              style={{ 
+                                flex: 1, height: '32px', fontSize: '12px', padding: '0 8px', 
+                                borderRadius: '6px', border: '1px solid var(--border)', 
+                                background: 'var(--input-bg)', color: 'var(--text)' 
+                              }}
+                            >
+                              <option value="">اختر نوع المخزون...</option>
+                              {inventoryTypeOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          )}
                           <button 
                             type="button" 
                             onClick={() => handleUpdateSetting(s.id)} 
@@ -2468,11 +2514,17 @@ export default function InventoryManagement() {
                         </div>
                       ) : (
                         <>
-                          <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{s.name}</span>
+                          <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                            {s.name} {s.inventory_type ? `(${s.inventory_type})` : ''}
+                          </span>
                           <div style={{ display: 'flex', gap: '12px' }}>
                             <button 
                               type="button"
-                              onClick={() => { setEditingSettingId(s.id); setEditingSettingName(s.name); }}
+                              onClick={() => { 
+                                setEditingSettingId(s.id); 
+                                setEditingSettingName(s.name); 
+                                setEditingSettingInventoryType(s.inventory_type || ''); 
+                              }}
                               style={{ background: 'none', border: 'none', color: '#014cb1', cursor: 'pointer', fontSize: '15px' }}
                             >
                               <i className="fa-solid fa-pen-to-square"></i>

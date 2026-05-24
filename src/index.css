@@ -13396,6 +13396,10 @@ tbody tr:last-child td {
 .no-print {
   display: block;
 }
+th.no-print,
+td.no-print {
+  display: table-cell;
+}
 
 .print-only {
   display: none;

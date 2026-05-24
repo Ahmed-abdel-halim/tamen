@@ -464,6 +464,7 @@ const createMenuSections = (
       { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
       { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
       { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
+      { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
       { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
     ],
     'الشؤون الفنية': [
@@ -514,6 +515,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/union-balances',
     '/reports/rental-vouchers',
+    '/reports/expenses',
     '/reports/treasury-banks',
   ];
   const adminOrder: string[] = [
@@ -734,7 +736,7 @@ const createMenuSections = (
   }
 
   if (reportsItems.length > 0) {
-    const expensesGroup = reportsItems.filter(i => i.to === '/reports/union-balances' || i.to === '/reports/rental-vouchers');
+    const expensesGroup = reportsItems.filter(i => i.to === '/reports/union-balances' || i.to === '/reports/rental-vouchers' || i.to === '/reports/expenses');
     const accountantGroup = reportsItems.filter(i =>
       i.to === '/reports/commissions' ||
       i.to === '/reports/branch-agent-account' ||

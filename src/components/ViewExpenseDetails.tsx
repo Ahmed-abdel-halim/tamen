@@ -16,6 +16,7 @@ type Expense = {
   name: string;
   recipient?: string;
   category: string;
+  sub_category?: string;
   amount: number;
   currency: string;
   voucher_number?: string;
@@ -247,9 +248,9 @@ export default function ViewExpenseDetails() {
             </tr>
             <tr>
               <td class="label">الفئة:</td>
-              <td class="value">${expense.category}</td>
-              <td class="label">نوع المصروف:</td>
-              <td class="value">${expense.expense_type === 'fixed' ? 'ثابت' : 'مستهلك'}</td>
+              <td class="value">${expense.category} ${expense.sub_category ? ` (${expense.sub_category})` : ''}</td>
+              <td class="label">طريقة السداد:</td>
+              <td class="value">${expense.expense_type || '—'}</td>
             </tr>
             <tr>
               <td class="label">المستلم:</td>
@@ -384,11 +385,11 @@ export default function ViewExpenseDetails() {
               </h3>
               <Row label="اسم المصروف / البيان" value={expense.name} />
               <Row label="المستلم" value={expense.recipient || 'غير محدد'} />
-              <Row label="الفئة" value={expense.category} />
+              <Row label="الفئة" value={`${expense.category}${expense.sub_category ? ` / ${expense.sub_category}` : ''}`} />
               <Row label="التاريخ" value={formatDate(expense.expense_date)} />
-              <Row label="نوع المصروف" value={
-                <span style={{ padding: '3px 12px', borderRadius: '20px', background: expense.expense_type === 'fixed' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)', color: expense.expense_type === 'fixed' ? '#3b82f6' : '#10b981', fontWeight: 700, fontSize: '0.82rem' }}>
-                  {expense.expense_type === 'fixed' ? 'ثابت' : 'مستهلك'}
+              <Row label="طريقة السداد" value={
+                <span style={{ padding: '3px 12px', borderRadius: '20px', background: 'rgba(59,130,246,0.15)', color: '#3b82f6', fontWeight: 700, fontSize: '0.82rem' }}>
+                  {expense.expense_type || '—'}
                 </span>
               } />
               <Row label="رقم الواصل" value={expense.voucher_number || '---'} />

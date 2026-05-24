@@ -13,6 +13,7 @@ type PosMachine = {
   machine_name: string;
   bank_name: string;
   is_active: boolean;
+  branch_agents?: Array<{ id: number; agency_name: string }>;
 };
 
 type Bank = {
@@ -801,9 +802,14 @@ export default function AgentTransfers() {
                         required
                       >
                         <option value="">اختر ماكينة الـ POS...</option>
-                        {posMachines.map(p => (
-                          <option key={p.id} value={p.id}>{p.machine_name} - {p.bank_name}</option>
-                        ))}
+                        {posMachines
+                          .filter(p => {
+                            if (!isAdmin || !formAgentId) return true;
+                            return p.branch_agents?.some(a => a.id === Number(formAgentId));
+                          })
+                          .map(p => (
+                            <option key={p.id} value={p.id}>{p.machine_name} - {p.bank_name}</option>
+                          ))}
                       </select>
                     </div>
 
