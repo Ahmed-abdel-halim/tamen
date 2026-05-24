@@ -721,6 +721,7 @@ export default function InventoryManagement() {
   };
   const getInventoryTypeName = (inventoryType?: string) => {
     if (!inventoryType) return 'غير محدد';
+    if (dbTypes.includes(inventoryType)) return inventoryType;
     const lowerType = inventoryType.toLowerCase();
     if (lowerType === 'fixed' || lowerType.includes('ثابت')) return dbTypes.find(t => t.includes('ثابت')) || 'مخزون ثابت';
     if (lowerType === 'consumable' || lowerType.includes('مستهلك')) return dbTypes.find(t => t.includes('مستهلك')) || 'مخزون مستهلك';
