@@ -76,6 +76,10 @@ export default function InventoryManagement() {
   const [custodies, setCustodies] = useState<Custody[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [storePage, setStorePage] = useState(1);
+  const [custodyPage, setCustodyPage] = useState(1);
+  const [logPage, setLogPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [filterInventoryType, setFilterInventoryType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterQuantityStatus, setFilterQuantityStatus] = useState<'all' | 'low' | 'available' | 'out'>('all');
@@ -151,12 +155,86 @@ export default function InventoryManagement() {
   const getBatchKey = (custody: Custody) =>
     custody.batch_ref || `single-${custody.id}`;
 
+  // Reset page numbers when filters change
+  useEffect(() => {
+    setStorePage(1);
+  }, [searchTerm, filterInventoryType, filterCategory, filterQuantityStatus]);
+
+  useEffect(() => {
+    setCustodyPage(1);
+  }, [custodyFilterType, custodyFilterStatus, custodyFilterRecipientType, custodyFilterRecipient, custodyFilterItem, custodyFilterFromDate, custodyFilterToDate]);
+
+  useEffect(() => {
+    setLogPage(1);
+  }, [movementFilterType, movementFilterRecipientType, movementFilterItem, movementFilterRecipient, movementFilterFromDate, movementFilterToDate]);
+
   useEffect(() => {
     fetchData();
   }, []);
 
+  const renderPagination = (currentPage: number, totalItems: number, onPageChange: (p: number) => void) => {
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+    if (totalPages <= 1) return null;
+
+    const startIdx = (currentPage - 1) * PAGE_SIZE + 1;
+    const endIdx = Math.min(currentPage * PAGE_SIZE, totalItems);
+
+    return (
+      <div className="premium-pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '10px 15px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+          عرض {startIdx} - {endIdx} من {totalItems} عنصر
+        </div>
+        <div style={{ display: 'flex', gap: '5px' }}>
+          <button
+            type="button"
+            disabled={currentPage === 1}
+            onClick={() => onPageChange(currentPage - 1)}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
+          >
+            السابق
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+            if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
+              if (p === 2 || p === totalPages - 1) {
+                return <span key={p} style={{ padding: '6px', color: 'var(--muted)' }}>...</span>;
+              }
+              return null;
+            }
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  background: currentPage === p ? 'var(--accent-cyan)' : 'var(--card-bg)',
+                  color: currentPage === p ? '#fff' : 'var(--text)',
+                  cursor: 'pointer',
+                  fontWeight: currentPage === p ? 'bold' : 'normal'
+                }}
+              >
+                {p}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            disabled={currentPage === totalPages}
+            onClick={() => onPageChange(currentPage + 1)}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
+          >
+            التالي
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const fetchData = async () => {
     setLoading(true);
+    setMovementsLoading(true);
     try {
       const token = localStorage.getItem('token');
       const headers = {
@@ -164,39 +242,31 @@ export default function InventoryManagement() {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
 
-      const itemsRes = await fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, { 
-        cache: 'no-store',
-        headers 
-      });
-      const itemsData = await itemsRes.json();
+      // Run all requests in parallel
+      const [itemsRes, settingsRes, custodyRes, movementsRes, agentsRes, employeesRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, { cache: 'no-store', headers }),
+        fetch(`${API_BASE_URL}/inventory/settings`, { headers }),
+        fetch(`${API_BASE_URL}/inventory/custody`, { headers }),
+        fetch(`${API_BASE_URL}/inventory/movements`, { headers }),
+        fetch(`${API_BASE_URL}/branches-agents?light=1&status=نشط`, { headers }),
+        fetch(`${API_BASE_URL}/employee-payrolls/employees`, { headers })
+      ]);
+
+      const [itemsData, settingsData, custodyData, movementsData, agentsData, employeesData] = await Promise.all([
+        itemsRes.json().catch(() => []),
+        settingsRes.json().catch(() => []),
+        custodyRes.json().catch(() => []),
+        movementsRes.json().catch(() => []),
+        agentsRes.json().catch(() => []),
+        employeesRes.json().catch(() => [])
+      ]);
+
       setItems(Array.isArray(itemsData) ? itemsData : []);
-
-      const settingsRes = await fetch(`${API_BASE_URL}/inventory/settings`, { headers });
-      const settingsData = await settingsRes.json();
       setDbSettings(Array.isArray(settingsData) ? settingsData : []);
-
-      const custodyRes = await fetch(`${API_BASE_URL}/inventory/custody`, { headers });
-      const custodyData = await custodyRes.json();
       setCustodies(Array.isArray(custodyData) ? custodyData : []);
-
-      setMovementsLoading(true);
-      const movementsRes = await fetch(`${API_BASE_URL}/inventory/movements`, { headers });
-      const movementsData = await movementsRes.json();
       setMovements(Array.isArray(movementsData) ? movementsData : []);
-
-      // Fetch agents and employees
-      const agentsRes = await fetch(`${API_BASE_URL}/branches-agents`, { headers });
-      const agentsData = await agentsRes.json();
-      const activeAgents = (Array.isArray(agentsData) ? agentsData : []).filter((a: any) => a.status === 'نشط');
-      setAgents(activeAgents);
-
-      const employeesRes = await fetch(`${API_BASE_URL}/users?active=1&per_page=1000`, { headers });
-      const employeesData = await employeesRes.json();
-      const employeesList = Array.isArray(employeesData)
-        ? employeesData
-        : (Array.isArray(employeesData?.data) ? employeesData.data : []);
-      const activeEmployees = employeesList.filter((e: any) => e.is_active !== false && e.is_active !== 0 && e.is_active !== '0');
-      setEmployees(activeEmployees);
+      setAgents(Array.isArray(agentsData) ? agentsData : []);
+      setEmployees(Array.isArray(employeesData) ? employeesData : []);
 
     } catch (error) {
       console.error('Error fetching inventory data:', error);
@@ -1299,12 +1369,13 @@ export default function InventoryManagement() {
                           </td>
                         </tr>
                       ) : (
-                        filteredItems.map((item, index) => {
+                        filteredItems.slice((storePage - 1) * PAGE_SIZE, storePage * PAGE_SIZE).map((item, index) => {
+                          const itemIndex = (storePage - 1) * PAGE_SIZE + index;
                           const qty = item.stocks?.[0]?.quantity || 0;
                           const isLow = qty <= item.min_threshold;
                           return (
                             <tr key={item.id}>
-                              <td>{index + 1}</td>
+                              <td>{itemIndex + 1}</td>
                               <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{item.name}</td>
                               <td>
                                 <span className={`premium-badge ${getInventoryTypeBadgeClass(item.inventory_type)}`}>
@@ -1357,6 +1428,7 @@ export default function InventoryManagement() {
                     </tbody>
                   </table>
                 </div>
+                {renderPagination(storePage, filteredItems.length, setStorePage)}
               </div>
             )}
           </div>
@@ -1517,12 +1589,13 @@ export default function InventoryManagement() {
                         </td>
                       </tr>
                     ) : (
-                      filteredCustodyGroups.map((group, index) => {
+                      filteredCustodyGroups.slice((custodyPage - 1) * PAGE_SIZE, custodyPage * PAGE_SIZE).map((group, index) => {
+                        const custodyIndex = (custodyPage - 1) * PAGE_SIZE + index;
                         const main = group[0];
                         const isActive = group.some((item) => item.status === 'active');
                         return (
                           <tr key={getBatchKey(main)}>
-                            <td>{index + 1}</td>
+                            <td>{custodyIndex + 1}</td>
                             <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>
                               {main.recipient.agency_name || main.recipient.name}
                             </td>
@@ -1591,7 +1664,7 @@ export default function InventoryManagement() {
                   لا توجد عهد مطابقة للفلاتر الحالية
                 </div>
               ) : (
-                filteredCustodyGroups.map((group) => {
+                filteredCustodyGroups.slice((custodyPage - 1) * PAGE_SIZE, custodyPage * PAGE_SIZE).map((group) => {
                   const main = group[0];
                   const isActive = group.some((item) => item.status === 'active');
                   return (
@@ -1660,6 +1733,7 @@ export default function InventoryManagement() {
                 })
               )}
             </div>
+            {renderPagination(custodyPage, filteredCustodyGroups.length, setCustodyPage)}
           </div>
         )}
 
@@ -2172,7 +2246,7 @@ export default function InventoryManagement() {
                         <td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0' }}>لا توجد حركات مطابقة للفلاتر</td>
                       </tr>
                     ) : (
-                      filteredMovements.map((row) => (
+                      filteredMovements.slice((logPage - 1) * PAGE_SIZE, logPage * PAGE_SIZE).map((row) => (
                         <tr key={row.id}>
                           <td>{row.created_at ? new Date(row.created_at).toLocaleString('en-GB') : '-'}</td>
                           <td>
@@ -2201,6 +2275,7 @@ export default function InventoryManagement() {
                   </tbody>
                 </table>
               </div>
+              {renderPagination(logPage, filteredMovements.length, setLogPage)}
             </div>
           </div>
         )}
