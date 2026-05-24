@@ -164,6 +164,8 @@ export default function EmployeeSalaries() {
   const [saving, setSaving] = useState(false);
   const [bulkPaying, setBulkPaying] = useState(false);
   const [query, setQuery] = useState('');
+  const [hireFrom, setHireFrom] = useState<string>('');
+  const [hireTo, setHireTo] = useState<string>('');
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [status, setStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
@@ -274,10 +276,26 @@ export default function EmployeeSalaries() {
     return employees.filter((e) => {
       // فلترة بناءً على تاريخ التعيين وانهاء العمل
       if (!isEmployeeActiveInPeriod(e, year, month)) return false;
+      
+      // فلترة بتاريخ التعيين
+      if (hireFrom || hireTo) {
+        if (!e.start_date) return false;
+        const sDate = new Date(e.start_date);
+        sDate.setHours(0, 0, 0, 0);
+        if (hireFrom) {
+          const fDate = new Date(`${hireFrom}T00:00:00`);
+          if (sDate < fDate) return false;
+        }
+        if (hireTo) {
+          const tDate = new Date(`${hireTo}T23:59:59`);
+          if (sDate > tDate) return false;
+        }
+      }
+
       // فلترة بناءً على البحث
       return !q || e.name.toLowerCase().includes(q) || e.username.toLowerCase().includes(q);
     });
-  }, [employees, query, year, month]);
+  }, [employees, query, year, month, hireFrom, hireTo]);
 
   // الموظفون النشطون فقط لعرضهم في الـ dropdown
   const activeEmployeesForDropdown = useMemo(() => {
@@ -1172,6 +1190,22 @@ export default function EmployeeSalaries() {
                     <option value="paid">مصروف</option>
                     <option value="unpaid">غير مصروف</option>
                   </select>
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="ep-hire-from">تعيين من تاريخ</label>
+                  <CustomDatePicker
+                    id="ep-hire-from"
+                    value={hireFrom}
+                    onChange={setHireFrom}
+                  />
+                </div>
+                <div className="ep-field">
+                  <label htmlFor="ep-hire-to">تعيين إلى تاريخ</label>
+                  <CustomDatePicker
+                    id="ep-hire-to"
+                    value={hireTo}
+                    onChange={setHireTo}
+                  />
                 </div>
               </div>
               <div className="ep-payroll-actions">

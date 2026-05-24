@@ -277,6 +277,113 @@ export default function BranchAgentAccountReport() {
     }
   };
 
+  const handlePrintRevenue = async () => {
+    // للوكلاء (غير admin)، استخدام الوكيل الحالي تلقائياً
+    const agentToUse = isAdmin ? selectedAgent : (selectedAgent || (currentAgentId ? agents.find(a => a.id === currentAgentId) : null));
+    
+    if (!agentToUse) {
+      showToast('يرجى اختيار الوكيل', 'error');
+      return;
+    }
+
+    if (reportType === 'range' && (!dateFrom || !dateTo)) {
+      showToast('يرجى تحديد نطاق التاريخ', 'error');
+      return;
+    }
+
+    if (reportType === 'range' && dateFrom > dateTo) {
+      showToast('تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let url = `${API_BASE_URL}/branches-agents/${agentToUse.id}/revenue-report`;
+      const params = new URLSearchParams();
+      
+      if (reportType === 'range') {
+        params.append('type', 'range');
+        params.append('from_date', dateFrom);
+        params.append('to_date', dateTo);
+        params.append('preset', datePreset);
+      } else {
+        params.append('type', 'full');
+      }
+      
+      url += `?${params.toString()}`;
+
+      const res = await fetch(url, {
+        headers: { 'Accept': 'text/html' }
+      });
+
+      if (!res.ok) {
+        throw new Error('فشل في جلب التقرير');
+      }
+
+      const htmlContent = await res.text();
+
+      // إنشاء iframe مخفي للطباعة
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '-9999px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+
+      let printed = false;
+
+      const printFrame = () => {
+        if (!printed) {
+          printed = true;
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            if (iframe.parentNode) {
+              document.body.removeChild(iframe);
+            }
+          }, 750);
+        }
+      };
+
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        iframeDoc.open();
+        iframeDoc.write(htmlContent);
+        iframeDoc.close();
+        
+        // انتظار تحميل الصور قبل الطباعة
+        const images = iframeDoc.getElementsByTagName('img');
+        let imagesLoaded = 0;
+        const totalImages = images.length;
+        
+        if (totalImages === 0) {
+          printFrame();
+        } else {
+          Array.from(images).forEach((img) => {
+            if (img.complete) {
+              imagesLoaded++;
+              if (imagesLoaded === totalImages) printFrame();
+            } else {
+              img.onload = () => {
+                imagesLoaded++;
+                if (imagesLoaded === totalImages) printFrame();
+              };
+              img.onerror = () => {
+                imagesLoaded++;
+                if (imagesLoaded === totalImages) printFrame();
+              };
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      showToast('حدث خطأ أثناء طباعة التقرير', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="users-management">
@@ -516,7 +623,7 @@ export default function BranchAgentAccountReport() {
           )}
         </div>
 
-        <div style={{ marginTop: '24px' }}>
+        <div style={{ marginTop: '24px', display: 'flex', gap: '15px' }}>
           <button
             onClick={handlePrint}
             disabled={loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo))}
@@ -537,7 +644,37 @@ export default function BranchAgentAccountReport() {
             ) : (
               <>
                 <i className="fa-solid fa-print" style={{ marginLeft: '8px' }}></i>
-                طباعة
+                طباعة كشف حساب
+              </>
+            )}
+          </button>
+          
+          <button
+            onClick={handlePrintRevenue}
+            disabled={loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo))}
+            style={{
+              padding: '12px 24px',
+              fontSize: '16px',
+              fontWeight: 600,
+              backgroundColor: '#0ea5e9',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              opacity: loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo)) ? 0.6 : 1,
+              cursor: loading || !selectedAgent || (reportType === 'range' && (!dateFrom || !dateTo)) ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            {loading ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" style={{ marginLeft: '8px' }}></i>
+                جاري الطباعة...
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-file-invoice-dollar" style={{ marginLeft: '8px' }}></i>
+                طباعة تقرير الإيرادات
               </>
             )}
           </button>

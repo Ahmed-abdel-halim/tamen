@@ -238,6 +238,100 @@ export default function PaymentVouchers() {
     window.open(whatsappUrl, '_blank');
   };
 
+  const handlePrintAgentsRevenue = async () => {
+    try {
+      showToast('جاري تجهيز تقرير إيرادات الوكلاء...', 'success');
+      const response = await fetch(`${API_BASE_URL}/financial-statistics/all-agents-revenue`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      
+      const printWindow = window.open('', '', 'width=1200,height=900');
+      if (!printWindow) {
+        showToast('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
+        return;
+      }
+
+      const rows = data.agents.map((agent: any, idx: number) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td style="font-weight: bold; text-align: right;">${agent.agency_name}</td>
+          <td style="text-align: right;">${agent.agent_name || '-'}</td>
+          <td>${agent.document_count}</td>
+          <td style="font-weight: bold; color: #014cb1;">${agent.sales.toLocaleString()} د.ل</td>
+        </tr>
+      `).join('');
+
+      printWindow.document.write(`
+        <html dir="rtl">
+        <head>
+          <title>تقرير إيرادات جميع الوكلاء</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+            @media print { 
+              @page { margin: 10mm; } 
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+            body { font-family: 'Cairo', sans-serif; margin: 20px; padding: 20px; color: #1e293b; }
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; }
+            .header h1 { margin: 0; color: #0ea5e9; font-size: 24px; font-weight: 900; }
+            .meta-info { margin-bottom: 20px; font-size: 14px; color: #64748b; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; font-size: 13px; }
+            th { background: #f8fafc; font-weight: 900; color: #0ea5e9; }
+            .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 15px; }
+            .total-row { background: #f0f9ff; font-weight: 900; }
+          </style>
+        </head>
+        <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+          <div class="header">
+            <div>
+              <h1>شركة المدار الليبي للتأمين</h1>
+              <p style="margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #334155;">تقرير إيرادات جميع الوكلاء</p>
+            </div>
+            <img src="/img/logo.png" style="height: 70px;">
+          </div>
+          <div class="meta-info">
+            <div>
+              <strong>تاريخ التقرير:</strong> ${new Date().toLocaleString('ar-LY')}
+            </div>
+            <div>
+              <strong>إجمالي الإيرادات:</strong> ${data.total_revenue.toLocaleString()} د.ل &nbsp;|&nbsp; <strong>عدد الوكلاء:</strong> ${data.agents.length}
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 30%; text-align: right;">اسم الوكالة</th>
+                <th style="width: 25%; text-align: right;">اسم الوكيل</th>
+                <th style="width: 15%;">عدد الوثائق</th>
+                <th style="width: 25%;">إجمالي الإيرادات</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="3" style="text-align: right; padding-right: 20px;">المجموع الكلي</td>
+                <td>${data.agents.reduce((acc: any, a: any) => acc + a.document_count, 0)}</td>
+                <td>${data.total_revenue.toLocaleString()} د.ل</td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="footer">
+            تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+          </div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (error) {
+      console.error('Error printing agents revenue:', error);
+      showToast('حدث خطأ أثناء إعداد التقرير للطباعة', 'error');
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb no-print" style={{
@@ -255,6 +349,20 @@ export default function PaymentVouchers() {
           نظام إيصالات القبض المالي
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handlePrintAgentsRevenue}
+            className="secondary"
+            style={{
+              padding: '10px 20px', borderRadius: '10px',
+              fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+              border: '1px solid var(--border)',
+              background: '#0ea5e9',
+              color: '#fff'
+            }}
+          >
+            <i className="fa-solid fa-print"></i>
+            تقرير الإيرادات
+          </button>
           <button
             onClick={async () => {
               const currentUser = JSON.parse(localStorage.getItem('user') || '{}');

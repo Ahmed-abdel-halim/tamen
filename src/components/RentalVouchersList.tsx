@@ -346,10 +346,14 @@ export default function RentalVouchersList() {
         <title>تقرير سجل الإيجارات العقارية</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { 
+            @page { margin: 10mm; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
           body { font-family: 'Cairo', sans-serif; margin: 20px; padding: 20px; color: #1e293b; }
-          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; }
           .header h1 { margin: 0; color: #0ea5e9; font-size: 24px; font-weight: 900; }
-          .meta-info { margin-bottom: 20px; font-size: 14px; color: #64748b; font-weight: 600; }
+          .meta-info { margin-bottom: 20px; font-size: 14px; color: #64748b; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; }
           th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: right; font-size: 13px; }
           th { background: #f8fafc; font-weight: 900; color: #0ea5e9; }
@@ -357,16 +361,21 @@ export default function RentalVouchersList() {
           .total-row { background: #f0f9ff; font-weight: 900; }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
         <div class="header">
           <div>
             <h1>شركة المدار الليبي للتأمين</h1>
-            <p>تقرير سجل الإيجارات العقارية</p>
+            <p style="margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #334155;">تقرير سجل الإيجارات العقارية</p>
           </div>
           <img src="/img/logo.png" style="height: 70px;">
         </div>
         <div class="meta-info">
-          تاريخ التقرير: ${new Date().toLocaleString('ar-LY')} | عدد الوثائق: ${filtered.length} | إجمالي المبالغ: ${totalAmount.toLocaleString()} د.ل
+          <div>
+            ${filterFromDate || filterToDate ? `<strong>الفترة:</strong> من (${filterFromDate || 'البداية'}) إلى (${filterToDate || 'الآن'})` : '<strong>الفترة:</strong> كل السجلات'}
+          </div>
+          <div>
+            <strong>تاريخ التقرير:</strong> ${new Date().toLocaleString('ar-LY')} &nbsp;|&nbsp; <strong>عدد الوثائق:</strong> ${filtered.length} &nbsp;|&nbsp; <strong>إجمالي المبالغ:</strong> ${totalAmount.toLocaleString()} د.ل
+          </div>
         </div>
         <table>
           <thead>

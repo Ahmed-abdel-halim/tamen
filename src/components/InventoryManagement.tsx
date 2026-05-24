@@ -672,6 +672,121 @@ export default function InventoryManagement() {
     return Number.isFinite(parsed) ? parsed : null;
   };
 
+  const handlePrintMainInventoryReport = () => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const printWindow = window.open('', '', 'width=1100,height=850');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة (Pop-ups) للطباعة', 'error');
+      return;
+    }
+
+    let grandTotalValue = 0;
+
+    const rows = filteredItems.map((item, index) => {
+      const price = getItemPrice(item) || 0;
+      const qty = item.stocks?.[0]?.quantity || 0;
+      const totalValue = price * qty;
+      grandTotalValue += totalValue;
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td style="text-align: right; font-weight: bold;">${item.name}</td>
+          <td>${getInventoryTypeName(item.inventory_type)}</td>
+          <td>${getCategoryName(item.category)}</td>
+          <td>${item.unit || 'قطعة'}</td>
+          <td>${qty}</td>
+          <td>${price.toLocaleString()} د.ل</td>
+          <td>${totalValue.toLocaleString()} د.ل</td>
+          <td>${item.stocks?.[0]?.warehouse_location || '-'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <html dir="rtl">
+      <head>
+        <title>تقرير المخزن الرئيسي</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 10px; color: #000; background-color: #fff; }
+          .report-container { border: 2px solid #000; padding: 15px; margin: 0 auto; max-width: 1100px; box-sizing: border-box; }
+          .report-header { display: flex; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; justify-content: space-between; align-items: stretch; }
+          .header-side { width: 25%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 13px; font-weight: bold; box-sizing: border-box; }
+          .header-center { width: 48%; border: 1px solid #000; padding: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; }
+          .header-center h1 { margin: 0; font-size: 24px; font-weight: 800; color: #000; }
+          .header-center h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: 700; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 5px; }
+          .logo-box { display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
+          .logo-box img { max-height: 55px; width: auto; margin-bottom: 4px; }
+          table.report-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; margin-top: 10px; }
+          table.report-table th, table.report-table td { border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }
+          table.report-table th { background-color: #e2e8f0; font-weight: 700; }
+          .total-row { background-color: #f1f5f9; font-weight: bold !important; }
+          .footer-note { font-size: 11px; color: #475569; text-align: left; margin-top: 10px; }
+          @media print { 
+            @page { margin: 10mm; } 
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+            .report-container { border: 2px solid #000 !important; }
+          }
+        </style>
+      </head>
+      <body onload="setTimeout(() => window.print(), 500);">
+        <div class="report-container">
+          <div class="report-header">
+            <div class="header-side" style="text-align: right; justify-content: center;">
+              <div style="display: flex; justify-content: space-between;">
+                <span>تاريخ التقرير:</span>
+                <span>${new Date().toLocaleDateString('ar-LY')}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                <span>إجمالي الأصناف:</span>
+                <span>${filteredItems.length}</span>
+              </div>
+            </div>
+            
+            <div class="header-center">
+              <h1>المدار الليبي للتأمين</h1>
+              <h2>تقرير المخزن الرئيسي</h2>
+            </div>
+            
+            <div class="header-side logo-box">
+              <img src="/img/logo.png" alt="لوجو" onerror="this.src='https://placehold.co/120x50?text=Logo'" />
+              <div style="font-size: 11px; margin-top: 4px;">اسم المستخدم: ${currentUser.name || currentUser.username || 'مرام'}</div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 3%;">م</th>
+                <th style="width: 25%; text-align: right;">اسم الصنف</th>
+                <th style="width: 12%;">النوع</th>
+                <th style="width: 12%;">التصنيف</th>
+                <th style="width: 8%;">الوحدة</th>
+                <th style="width: 10%;">الكمية</th>
+                <th style="width: 10%;">السعر</th>
+                <th style="width: 10%;">الإجمالي</th>
+                <th style="width: 10%;">الموقع</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows : `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #64748b;">لا توجد أصناف مطابقة للفلاتر المحددة</td></tr>`}
+              <tr class="total-row">
+                <td colspan="7" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td>${grandTotalValue.toLocaleString()} د.ل</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer-note">تاريخ الاستخراج: ${new Date().toLocaleString('ar-LY')}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   const handleExportFixedAssetsReport = async () => {
     const fixedCustodies = custodies.filter(c => (c.item.inventory_type ?? 'consumable') === 'fixed' && c.status === 'active');
@@ -685,6 +800,7 @@ export default function InventoryManagement() {
         { header: 'الصنف', key: 'name', width: 35 },
         { header: 'الكمية', key: 'quantity', width: 15 },
         { header: 'المستلم', key: 'recipient', width: 30 },
+        { header: 'تاريخ الصرف', key: 'date', width: 20 },
         { header: 'إجمالي القيمة', key: 'total_value', width: 20 },
         { header: 'قيمة الاستهلاك', key: 'depreciation', width: 20 },
         { header: 'التفاصيل', key: 'details', width: 35 },
@@ -707,6 +823,7 @@ export default function InventoryManagement() {
           name: c.item.name,
           quantity: `${c.quantity} ${c.item.unit}`,
           recipient: c.recipient.agency_name || c.recipient.name,
+          date: new Date(c.assigned_at).toLocaleDateString('ar-LY'),
           total_value: totalValue.toLocaleString() + ' د.ل',
           depreciation: depreciationValue.toFixed(2) + ' د.ل',
           details: `${c.notes || '-'} ${c.serial_start ? `(S/N: ${c.serial_start})` : ''}`,
@@ -719,6 +836,7 @@ export default function InventoryManagement() {
         name: 'الإجمالي العام',
         quantity: '',
         recipient: '',
+        date: '',
         total_value: grandTotalValue.toLocaleString() + ' د.ل',
         depreciation: grandTotalDepreciation.toLocaleString() + ' د.ل',
         details: '',
@@ -750,6 +868,7 @@ export default function InventoryManagement() {
         { header: 'الصنف', key: 'name', width: 35 },
         { header: 'الكمية', key: 'quantity', width: 15 },
         { header: 'المستلم', key: 'recipient', width: 30 },
+        { header: 'تاريخ الصرف', key: 'date', width: 20 },
         { header: 'إجمالي القيمة', key: 'total_value', width: 20 },
         { header: 'التفاصيل', key: 'details', width: 35 },
       ];
@@ -764,6 +883,7 @@ export default function InventoryManagement() {
           name: c.item.name,
           quantity: `${c.quantity} ${c.item.unit}`,
           recipient: c.recipient.agency_name || c.recipient.name,
+          date: new Date(c.assigned_at).toLocaleDateString('ar-LY'),
           total_value: totalValue.toLocaleString() + ' د.ل',
           details: c.notes || '-',
         };
@@ -775,6 +895,7 @@ export default function InventoryManagement() {
         name: 'إجمالي قيمة العهد المستهلكة',
         quantity: '',
         recipient: '',
+        date: '',
         total_value: grandTotalValue.toLocaleString() + ' د.ل',
         details: '',
       });
@@ -822,6 +943,8 @@ export default function InventoryManagement() {
         <tr>
           <td>${index + 1}</td>
           <td style="text-align: right;">${c.item.name}</td>
+          <td>${c.recipient.agency_name || c.recipient.name || '-'}</td>
+          <td>${new Date(c.assigned_at).toLocaleDateString('ar-LY')}</td>
           <td>مخزون ثابت</td>
           <td>${getCategoryName(c.item.category)}</td>
           <td>${c.item.unit || 'قطعة'}</td>
@@ -860,7 +983,7 @@ export default function InventoryManagement() {
           .total-row { background-color: #f1f5f9; font-weight: bold !important; }
           .footer-note { font-size: 11px; color: #475569; text-align: left; margin-top: 10px; }
           @media print { 
-            @page { margin: 10mm; size: A4 landscape; } 
+            @page { margin: 10mm; } 
             body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
             .report-container { border: 2px solid #000 !important; }
           }
@@ -895,23 +1018,25 @@ export default function InventoryManagement() {
             <thead>
               <tr>
                 <th style="width: 3%;">م</th>
-                <th style="width: 20%; text-align: right;">اسم الصنف</th>
-                <th style="width: 10%;">نوع المخزون</th>
-                <th style="width: 10%;">التصنيف</th>
-                <th style="width: 7%;">وحدة القياس</th>
-                <th style="width: 7%;">حالة الصنف</th>
-                <th style="width: 5%;">الكمية</th>
-                <th style="width: 8%;">السعر</th>
-                <th style="width: 9%;">القيمة</th>
-                <th style="width: 6%;">نسبة الاستهلاك</th>
-                <th style="width: 9%;">السعر الاجمالي</th>
-                <th style="width: 16%; text-align: right;">ملاحظات</th>
+                <th style="width: 12%; text-align: right;">اسم الصنف</th>
+                <th style="width: 13%; text-align: right;">المستلم</th>
+                <th style="width: 8%;">تاريخ الصرف</th>
+                <th style="width: 6%;">نوع المخزون</th>
+                <th style="width: 8%;">التصنيف</th>
+                <th style="width: 5%;">الوحدة</th>
+                <th style="width: 5%;">الحالة</th>
+                <th style="width: 4%;">الكمية</th>
+                <th style="width: 6%;">السعر</th>
+                <th style="width: 7%;">القيمة</th>
+                <th style="width: 6%;">الاستهلاك</th>
+                <th style="width: 7%;">الصافي</th>
+                <th style="width: 10%; text-align: right;">ملاحظات</th>
               </tr>
             </thead>
             <tbody>
-              ${rows.length ? rows : `<tr><td colspan="12" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد ثابتة مطابقة للفلاتر المحددة</td></tr>`}
+              ${rows.length ? rows : `<tr><td colspan="14" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد ثابتة مطابقة للفلاتر المحددة</td></tr>`}
               <tr class="total-row">
-                <td colspan="8" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td colspan="10" style="text-align: left; padding-left: 20px;">المجموع العام</td>
                 <td>${grandTotalValue.toLocaleString()} د.ل</td>
                 <td>—</td>
                 <td>${grandTotalNet.toLocaleString()} د.ل</td>
@@ -953,13 +1078,14 @@ export default function InventoryManagement() {
         <tr>
           <td>${index + 1}</td>
           <td style="text-align: right;">${c.item.name}</td>
+          <td>${c.recipient.agency_name || c.recipient.name || '-'}</td>
+          <td>${new Date(c.assigned_at).toLocaleDateString('ar-LY')}</td>
           <td>مخزون مستهلك</td>
           <td>${getCategoryName(c.item.category)}</td>
           <td>${c.item.unit || 'قطعة'}</td>
           <td>${c.condition === 'new' ? 'جديد' : 'مستعمل'}</td>
           <td>${c.quantity}</td>
           <td>${price.toLocaleString()} د.ل</td>
-          <td>${totalValue.toLocaleString()} د.ل</td>
           <td>${totalValue.toLocaleString()} د.ل</td>
           <td style="text-align: right;">${c.notes || '-'}</td>
         </tr>
@@ -990,7 +1116,7 @@ export default function InventoryManagement() {
           .total-row { background-color: #f1f5f9; font-weight: bold !important; }
           .footer-note { font-size: 11px; color: #475569; text-align: left; margin-top: 10px; }
           @media print { 
-            @page { margin: 10mm; size: A4 landscape; } 
+            @page { margin: 10mm; } 
             body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
             .report-container { border: 2px solid #000 !important; }
           }
@@ -1025,21 +1151,23 @@ export default function InventoryManagement() {
             <thead>
               <tr>
                 <th style="width: 3%;">م</th>
-                <th style="width: 25%; text-align: right;">اسم الصنف</th>
-                <th style="width: 12%;">نوع المخزون</th>
-                <th style="width: 12%;">التصنيف</th>
-                <th style="width: 10%;">وحدة القياس</th>
-                <th style="width: 10%;">حالة الصنف</th>
-                <th style="width: 8%;">الكمية</th>
-                <th style="width: 10%;">السعر الفردي</th>
-                <th style="width: 10%;">السعر الاجمالي</th>
-                <th style="width: 20%; text-align: right;">ملاحظات</th>
+                <th style="width: 15%; text-align: right;">اسم الصنف</th>
+                <th style="width: 15%; text-align: right;">المستلم</th>
+                <th style="width: 8%;">تاريخ الصرف</th>
+                <th style="width: 8%;">نوع المخزون</th>
+                <th style="width: 8%;">التصنيف</th>
+                <th style="width: 6%;">الوحدة</th>
+                <th style="width: 6%;">الحالة</th>
+                <th style="width: 6%;">الكمية</th>
+                <th style="width: 8%;">السعر</th>
+                <th style="width: 8%;">الإجمالي</th>
+                <th style="width: 11%; text-align: right;">ملاحظات</th>
               </tr>
             </thead>
             <tbody>
-              ${rows.length ? rows : `<tr><td colspan="10" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مستهلكة مطابقة للفلاتر المحددة</td></tr>`}
+              ${rows.length ? rows : `<tr><td colspan="12" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مستهلكة مطابقة للفلاتر المحددة</td></tr>`}
               <tr class="total-row">
-                <td colspan="8" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td colspan="10" style="text-align: left; padding-left: 20px;">المجموع العام</td>
                 <td>${grandTotalValue.toLocaleString()} د.ل</td>
                 <td></td>
               </tr>
@@ -1246,6 +1374,14 @@ export default function InventoryManagement() {
                     }}
                   >
                     <i className="fa-solid fa-file-excel"></i> تصدير Excel
+                  </button>
+                  <button 
+                    type="button"
+                    className="premium-primary-btn" 
+                    onClick={handlePrintMainInventoryReport}
+                    style={{ background: '#014cb1', color: '#fff', border: '1px solid #013a88' }}
+                  >
+                    <i className="fa-solid fa-print"></i> طباعة التقرير
                   </button>
                   <button 
                     type="button"
