@@ -639,9 +639,21 @@ export default function InventoryManagement() {
   };
   const getInventoryTypeName = (inventoryType?: string) => {
     if (!inventoryType) return 'غير محدد';
-    if (inventoryType === 'fixed') return dbTypes.find(t => t.includes('ثابت')) || 'أصول ثابتة';
-    if (inventoryType === 'consumable') return dbTypes.find(t => t.includes('مستهلك')) || 'مخزون مستهلك';
+    const lowerType = inventoryType.toLowerCase();
+    if (lowerType === 'fixed' || lowerType.includes('ثابت')) return dbTypes.find(t => t.includes('ثابت')) || 'مخزون ثابت';
+    if (lowerType === 'consumable' || lowerType.includes('مستهلك')) return dbTypes.find(t => t.includes('مستهلك')) || 'مخزون مستهلك';
+    if (lowerType === 'digital' || lowerType.includes('رقمي')) return dbTypes.find(t => t.includes('رقمي')) || 'مخزون رقمي';
+    if (lowerType === 'administrative' || lowerType.includes('إداري') || lowerType.includes('اداري')) return dbTypes.find(t => t.includes('إداري') || t.includes('اداري')) || 'مخزون إداري';
     return inventoryType;
+  };
+  const getInventoryTypeBadgeClass = (inventoryType?: string) => {
+    if (!inventoryType) return 'badge-secondary';
+    const lowerType = inventoryType.toLowerCase();
+    if (lowerType === 'fixed' || lowerType.includes('ثابت')) return 'badge-purple';
+    if (lowerType === 'consumable' || lowerType.includes('مستهلك')) return 'badge-success';
+    if (lowerType === 'digital' || lowerType.includes('رقمي')) return 'badge-info';
+    if (lowerType === 'administrative' || lowerType.includes('إداري') || lowerType.includes('اداري')) return 'badge-warning';
+    return 'badge-secondary';
   };
   const getMovementTypeName = (type: InventoryMovement['type']) => {
     const labels: Record<InventoryMovement['type'], string> = {
@@ -1295,8 +1307,8 @@ export default function InventoryManagement() {
                               <td>{index + 1}</td>
                               <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{item.name}</td>
                               <td>
-                                <span className={`premium-badge ${item.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
-                                  {item.inventory_type === 'fixed' ? 'مخزون ثابت' : 'مخزون مستهلك'}
+                                <span className={`premium-badge ${getInventoryTypeBadgeClass(item.inventory_type)}`}>
+                                  {getInventoryTypeName(item.inventory_type)}
                                 </span>
                               </td>
                               <td>{getCategoryName(item.category)}</td>
@@ -1521,7 +1533,7 @@ export default function InventoryManagement() {
                             </td>
                             <td>{formatDateTime(main.assigned_at)}</td>
                             <td>
-                              <span className={`premium-badge ${main.item.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
+                              <span className={`premium-badge ${getInventoryTypeBadgeClass(main.item.inventory_type)}`}>
                                 {getInventoryTypeName(main.item.inventory_type)}
                               </span>
                             </td>
@@ -1867,120 +1879,131 @@ export default function InventoryManagement() {
                         </tr>
                       </thead>
                       <tbody>
-                        {assignmentItems.map((row, index) => (
-                          <tr key={`assign-row-${index}`}>
-                            <td>
-                              <select
-                                required
-                                value={row.inventory_type}
-                                onChange={(e) => {
-                                  updateAssignmentItemRow(index, 'inventory_type', e.target.value);
-                                  updateAssignmentItemRow(index, 'item_id', '');
-                                }}
-                                className="premium-filter-select"
-                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
-                              >
-                                <option value="">اختر النوع...</option>
-                                {inventoryTypeOptions.map(opt => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>
-                              <select
-                                required
-                                value={row.item_id}
-                                onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
-                                className="premium-filter-select"
-                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
-                                disabled={!row.inventory_type}
-                              >
-                                <option value="">اختر صنفاً...</option>
-                                {items.filter(i => {
-                                  const t = i.inventory_type ?? 'consumable';
-                                  return t === row.inventory_type || getInventoryTypeName(t) === row.inventory_type;
-                                }).map(i => (
-                                  <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
-                                    {i.name} (المتوفر: {i.stocks?.[0]?.quantity || 0})
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="1"
-                                required
-                                value={row.quantity}
-                                onChange={(e) => updateAssignmentItemRow(index, 'quantity', parseInt(e.target.value || '1'))}
-                                className="premium-filter-input"
-                                style={{ height: '36px', textAlign: 'center', fontSize: '0.85rem', width: '100%' }}
-                              />
-                            </td>
-                            <td>
-                              <select
-                                value={row.condition}
-                                onChange={(e) => updateAssignmentItemRow(index, 'condition', e.target.value)}
-                                className="premium-filter-select"
-                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
-                              >
-                                <option value="new">جديد</option>
-                                <option value="used">مستعمل</option>
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                dir="ltr"
-                                placeholder="اختياري"
-                                value={row.serial_start}
-                                onChange={(e) => updateAssignmentItemRow(index, 'serial_start', e.target.value)}
-                                className="premium-filter-input"
-                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                dir="ltr"
-                                placeholder="اختياري"
-                                value={row.serial_end}
-                                onChange={(e) => updateAssignmentItemRow(index, 'serial_end', e.target.value)}
-                                className="premium-filter-input"
-                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="مثال: موديل/موقع..."
-                                value={row.notes}
-                                onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
-                                className="premium-filter-input"
-                                style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
-                              />
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button
-                                type="button"
-                                onClick={() => removeAssignmentItemRow(index)}
-                                disabled={assignmentItems.length === 1}
-                                style={{ 
-                                  background: 'none', 
-                                  border: 'none', 
-                                  color: '#ef4444', 
-                                  cursor: 'pointer',
-                                  padding: '4px',
-                                  opacity: assignmentItems.length === 1 ? 0.3 : 1,
-                                  fontSize: '1rem'
-                                }}
-                                title="حذف السطر"
-                              >
-                                <i className="fa-solid fa-trash-can"></i>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {assignmentItems.map((row, index) => {
+                          const isDigital = row.inventory_type === 'digital' || row.inventory_type.includes('رقمي');
+                          return (
+                            <tr key={`assign-row-${index}`}>
+                              <td>
+                                <select
+                                  required
+                                  value={row.inventory_type}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    updateAssignmentItemRow(index, 'inventory_type', val);
+                                    updateAssignmentItemRow(index, 'item_id', '');
+                                    if (val === 'digital' || val.includes('رقمي')) {
+                                      updateAssignmentItemRow(index, 'quantity', 1);
+                                      updateAssignmentItemRow(index, 'condition', 'new');
+                                    }
+                                  }}
+                                  className="premium-filter-select"
+                                  style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                >
+                                  <option value="">اختر النوع...</option>
+                                  {inventoryTypeOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <select
+                                  required
+                                  value={row.item_id}
+                                  onChange={(e) => updateAssignmentItemRow(index, 'item_id', e.target.value)}
+                                  className="premium-filter-select"
+                                  style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                  disabled={!row.inventory_type}
+                                >
+                                  <option value="">اختر صنفاً...</option>
+                                  {items.filter(i => {
+                                    const t = i.inventory_type ?? 'consumable';
+                                    return t === row.inventory_type || getInventoryTypeName(t) === row.inventory_type;
+                                  }).map(i => (
+                                    <option key={i.id} value={i.id} disabled={(i.stocks?.[0]?.quantity || 0) <= 0}>
+                                      {i.name} (المتوفر: {i.stocks?.[0]?.quantity || 0})
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  required
+                                  value={row.quantity}
+                                  onChange={(e) => updateAssignmentItemRow(index, 'quantity', parseInt(e.target.value || '1'))}
+                                  className="premium-filter-input"
+                                  style={{ height: '36px', textAlign: 'center', fontSize: '0.85rem', width: '100%' }}
+                                  disabled={isDigital}
+                                />
+                              </td>
+                              <td>
+                                <select
+                                  value={row.condition}
+                                  onChange={(e) => updateAssignmentItemRow(index, 'condition', e.target.value)}
+                                  className="premium-filter-select"
+                                  style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                  disabled={isDigital}
+                                >
+                                  <option value="new">جديد</option>
+                                  <option value="used">مستعمل</option>
+                                </select>
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  dir={isDigital ? "rtl" : "ltr"}
+                                  placeholder={isDigital ? "اسم المستخدم / الإيميل" : "اختياري"}
+                                  value={row.serial_start}
+                                  onChange={(e) => updateAssignmentItemRow(index, 'serial_start', e.target.value)}
+                                  className="premium-filter-input"
+                                  style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                  required={isDigital}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  dir={isDigital ? "rtl" : "ltr"}
+                                  placeholder={isDigital ? "رابط المنظومة أو الرقم" : "اختياري"}
+                                  value={row.serial_end}
+                                  onChange={(e) => updateAssignmentItemRow(index, 'serial_end', e.target.value)}
+                                  className="premium-filter-input"
+                                  style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  placeholder={isDigital ? "كلمة المرور / تفاصيل أخرى" : "مثال: موديل/موقع..."}
+                                  value={row.notes}
+                                  onChange={(e) => updateAssignmentItemRow(index, 'notes', e.target.value)}
+                                  className="premium-filter-input"
+                                  style={{ height: '36px', fontSize: '0.85rem', width: '100%' }}
+                                />
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAssignmentItemRow(index)}
+                                  disabled={assignmentItems.length === 1}
+                                  style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    color: '#ef4444', 
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    opacity: assignmentItems.length === 1 ? 0.3 : 1,
+                                    fontSize: '1rem'
+                                  }}
+                                  title="حذف السطر"
+                                >
+                                  <i className="fa-solid fa-trash-can"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -2163,7 +2186,7 @@ export default function InventoryManagement() {
                           </td>
                           <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{row.item?.name || '-'}</td>
                           <td>
-                            <span className={`premium-badge ${row.item?.inventory_type === 'fixed' ? 'badge-purple' : 'badge-success'}`}>
+                            <span className={`premium-badge ${getInventoryTypeBadgeClass(row.item?.inventory_type)}`}>
                               {getInventoryTypeName(row.item?.inventory_type)}
                             </span>
                           </td>
