@@ -120,9 +120,7 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
     if (!formData.agent_name.trim()) errors.agent_name = 'اسم الوكيل مطلوب';
     if (!formData.contract_date) errors.contract_date = 'تاريخ التعاقد مطلوب';
     if (!formData.city) errors.city = 'المدينة مطلوبة';
-    if (formData.national_id && formData.national_id.length !== 12) {
-      errors.national_id = 'الرقم الوطني يجب أن يكون 12 رقم بالضبط';
-    }
+
     if (!formData.username.trim()) errors.username = 'اسم المستخدم مطلوب';
     if (!formData.password || formData.password.length < 6) {
       errors.password = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
@@ -320,10 +318,7 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
         <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div className="form-group">
             <label>الرقم الوطني</label>
-            <input type="text" value={formData.national_id} onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 12);
-              setFormData({ ...formData, national_id: value });
-            }} placeholder="12 رقم" maxLength={12} />
+            <input type="text" value={formData.national_id} onChange={(e) => setFormData({ ...formData, national_id: e.target.value })} placeholder="الرقم الوطني" maxLength={50} />
             {formErrors.national_id && <span className="error-message" style={{color: 'red', fontSize: '12px'}}>{formErrors.national_id}</span>}
           </div>
           <div className="form-group">
