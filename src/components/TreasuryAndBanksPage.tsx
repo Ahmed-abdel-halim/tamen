@@ -270,6 +270,14 @@ export default function TreasuryAndBanksPage() {
     to_date: '',
     is_reconciled: 'all'
   });
+  const [currentMachinePage, setCurrentMachinePage] = useState(1);
+  const [currentPosTxnPage, setCurrentPosTxnPage] = useState(1);
+  const perPage = 15;
+
+  useEffect(() => {
+    setCurrentPosTxnPage(1);
+  }, [posFilter.machine_id, posFilter.from_date, posFilter.to_date, posFilter.is_reconciled]);
+
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [editingMachineId, setEditingMachineId] = useState<number | null>(null);
   const [showPosTxnModal, setShowPosTxnModal] = useState(false);
@@ -960,6 +968,18 @@ export default function TreasuryAndBanksPage() {
     });
     return balances;
   }, [bankTxns, dbBanks]);
+
+  // Calculations for POS Machines pagination
+  const totalMachinesCount = posMachines.length;
+  const totalMachinesPages = Math.ceil(totalMachinesCount / perPage);
+  const machinesStartIndex = (currentMachinePage - 1) * perPage;
+  const paginatedMachines = posMachines.slice(machinesStartIndex, machinesStartIndex + perPage);
+
+  // Calculations for POS Transactions pagination
+  const totalPosTxnsCount = posTxns.length;
+  const totalPosTxnsPages = Math.ceil(totalPosTxnsCount / perPage);
+  const posTxnsStartIndex = (currentPosTxnPage - 1) * perPage;
+  const paginatedPosTxns = posTxns.slice(posTxnsStartIndex, posTxnsStartIndex + perPage);
 
   // -------------------------------------------------------------
   // WhatsApp Sharing Functions
@@ -2001,7 +2021,7 @@ export default function TreasuryAndBanksPage() {
                 قائمة ماكينات POS المعتمدة ({posMachines.length})
               </h3>
               <div style={{ display: 'flex', flexDirection: 'row', gap: '12px', flexWrap: 'wrap' }}>
-                {posMachines.map(mac => (
+                {paginatedMachines.map(mac => (
                   <div key={mac.id} style={{ 
                     background: 'var(--panel)', 
                     padding: '15px 18px', 
@@ -2093,6 +2113,63 @@ export default function TreasuryAndBanksPage() {
                   </div>
                 ))}
               </div>
+              {totalMachinesPages > 1 && (
+                <div className="pagination-wrapper" style={{ marginTop: '20px' }}>
+                  <div className="pagination-info">
+                    عرض {machinesStartIndex + 1}
+                    {' إلى '}
+                    {Math.min(machinesStartIndex + paginatedMachines.length, totalMachinesCount)}
+                    {' من '}
+                    {totalMachinesCount}
+                    {' ماكينة'}
+                  </div>
+                  <div className="pagination-controls">
+                    <button
+                      className="pagination-btn pagination-prev"
+                      onClick={() => setCurrentMachinePage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentMachinePage === 1}
+                    >
+                      <i className="fa-solid fa-chevron-right"></i>
+                    </button>
+                    {(() => {
+                      const items: (number | 'dots')[] = [];
+                      if (totalMachinesPages <= 3) {
+                        for (let p = 1; p <= totalMachinesPages; p++) {
+                          items.push(p);
+                        }
+                      } else {
+                        items.push(1);
+                        let start = Math.max(2, currentMachinePage - 1);
+                        let end = Math.min(totalMachinesPages - 1, currentMachinePage + 1);
+                        if (start > 2) items.push('dots');
+                        for (let p = start; p <= end; p++) items.push(p);
+                        if (end < totalMachinesPages - 1) items.push('dots');
+                        items.push(totalMachinesPages);
+                      }
+                      return items.map((item, idx) =>
+                        item === 'dots' ? (
+                          <span key={`dots-${idx}`} className="pagination-dots">...</span>
+                        ) : (
+                          <button
+                            key={item}
+                            className={`pagination-btn pagination-number ${currentMachinePage === item ? 'active' : ''}`}
+                            onClick={() => setCurrentMachinePage(item as number)}
+                          >
+                            {item}
+                          </button>
+                        )
+                      );
+                    })()}
+                    <button
+                      className="pagination-btn pagination-next"
+                      onClick={() => setCurrentMachinePage((prev) => Math.min(totalMachinesPages, prev + 1))}
+                      disabled={currentMachinePage === totalMachinesPages}
+                    >
+                      <i className="fa-solid fa-chevron-left"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right side: daily POS settlement reports transactions list */}
@@ -2185,9 +2262,9 @@ export default function TreasuryAndBanksPage() {
                   <tbody>
                     {posLoading ? (
                       <tr><td colSpan={8} style={{ textAlign: 'center', padding: '25px' }}>جاري تحميل التسويات...</td></tr>
-                    ) : posTxns.length === 0 ? (
+                    ) : paginatedPosTxns.length === 0 ? (
                       <tr><td colSpan={8} style={{ textAlign: 'center', padding: '25px', color: 'var(--muted)' }}>لا توجد تسويات مسجلة حالياً.</td></tr>
-                    ) : posTxns.map(txn => (
+                    ) : paginatedPosTxns.map(txn => (
                       <tr key={txn.id}>
                         <td style={{ fontWeight: 'bold' }}>{txn.transaction_date}</td>
                         <td>{txn.machine?.machine_name || 'ماكينة محذوفة'}</td>
@@ -2255,6 +2332,63 @@ export default function TreasuryAndBanksPage() {
                   </tbody>
                 </table>
               </div>
+              {totalPosTxnsPages > 1 && (
+                <div className="pagination-wrapper" style={{ marginTop: '20px' }}>
+                  <div className="pagination-info">
+                    عرض {posTxnsStartIndex + 1}
+                    {' إلى '}
+                    {Math.min(posTxnsStartIndex + paginatedPosTxns.length, totalPosTxnsCount)}
+                    {' من '}
+                    {totalPosTxnsCount}
+                    {' تسوية'}
+                  </div>
+                  <div className="pagination-controls">
+                    <button
+                      className="pagination-btn pagination-prev"
+                      onClick={() => setCurrentPosTxnPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPosTxnPage === 1}
+                    >
+                      <i className="fa-solid fa-chevron-right"></i>
+                    </button>
+                    {(() => {
+                      const items: (number | 'dots')[] = [];
+                      if (totalPosTxnsPages <= 3) {
+                        for (let p = 1; p <= totalPosTxnsPages; p++) {
+                          items.push(p);
+                        }
+                      } else {
+                        items.push(1);
+                        let start = Math.max(2, currentPosTxnPage - 1);
+                        let end = Math.min(totalPosTxnsPages - 1, currentPosTxnPage + 1);
+                        if (start > 2) items.push('dots');
+                        for (let p = start; p <= end; p++) items.push(p);
+                        if (end < totalPosTxnsPages - 1) items.push('dots');
+                        items.push(totalPosTxnsPages);
+                      }
+                      return items.map((item, idx) =>
+                        item === 'dots' ? (
+                          <span key={`dots-${idx}`} className="pagination-dots">...</span>
+                        ) : (
+                          <button
+                            key={item}
+                            className={`pagination-btn pagination-number ${currentPosTxnPage === item ? 'active' : ''}`}
+                            onClick={() => setCurrentPosTxnPage(item as number)}
+                          >
+                            {item}
+                          </button>
+                        )
+                      );
+                    })()}
+                    <button
+                      className="pagination-btn pagination-next"
+                      onClick={() => setCurrentPosTxnPage((prev) => Math.min(totalPosTxnsPages, prev + 1))}
+                      disabled={currentPosTxnPage === totalPosTxnsPages}
+                    >
+                      <i className="fa-solid fa-chevron-left"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>

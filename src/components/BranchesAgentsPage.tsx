@@ -104,7 +104,7 @@ export default function BranchesAgentsPage() {
         const branchesData = Array.isArray(data) ? data : (data.data || []);
         // Filter only active branches/agents and map to correct structure
         const activeData = branchesData
-          .filter((item: any) => item.status === 'نشط')
+          .filter((item: any) => item.status === 'نشط' && item.show_on_landing !== false && item.show_on_landing !== 0)
           .map((item: any) => ({
             id: item.id,
             type: item.type,

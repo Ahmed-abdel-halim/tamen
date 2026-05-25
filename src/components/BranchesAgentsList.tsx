@@ -20,6 +20,7 @@ type BranchAgent = {
   personal_photo?: string;
   city?: string;
   user?: { id: number; username: string; name: string; is_blocked?: boolean };
+  show_on_landing?: boolean;
 };
 
 const getInventoryTypeName = (inventoryType?: string) => {
@@ -883,6 +884,63 @@ export default function BranchesAgentsList() {
     }
   };
 
+  const handleToggleShowOnLanding = async (ba: BranchAgent) => {
+    // Optimistic Update: toggle state in UI immediately
+    const originalValue = ba.show_on_landing !== false;
+    setBranchesAgents(prev => prev.map(item => {
+      if (item.id === ba.id) {
+        return {
+          ...item,
+          show_on_landing: !originalValue
+        };
+      }
+      return item;
+    }));
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${ba.id}/toggle-landing`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'حدث خطأ أثناء تحديث حالة الظهور في الواجهة');
+      }
+
+      const data = await res.json();
+      showToast(data.message, 'success');
+
+      // Update with exact value returned from server (just in case)
+      setBranchesAgents(prev => prev.map(item => {
+        if (item.id === ba.id) {
+          return {
+            ...item,
+            show_on_landing: data.show_on_landing
+          };
+        }
+        return item;
+      }));
+    } catch (error: any) {
+      showToast(error.message, 'error');
+      // Revert back to original value if it fails
+      setBranchesAgents(prev => prev.map(item => {
+        if (item.id === ba.id) {
+          return {
+            ...item,
+            show_on_landing: originalValue
+          };
+        }
+        return item;
+      }));
+    }
+  };
+
   const handleApproveAgent = async (ba: BranchAgent) => {
     if (!window.confirm(`هل أنت متأكد من تفعيل الوكيل "${ba.agency_name}"؟`)) {
         return;
@@ -1110,6 +1168,16 @@ export default function BranchesAgentsList() {
                                 </button>
                               </>
                             )}
+                            {branchAgent.status !== 'قيد الانتظار' && (
+                              <label className="switch" title="عرض في الواجهة الرئيسية" style={{ alignSelf: 'center', marginLeft: '5px', marginRight: '5px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={branchAgent.show_on_landing !== false}
+                                  onChange={() => handleToggleShowOnLanding(branchAgent)}
+                                />
+                                <span className="slider round"></span>
+                              </label>
+                            )}
                             {branchAgent.status === 'قيد الانتظار' && (
                               <button
                                 onClick={() => handleApproveAgent(branchAgent)}
@@ -1226,6 +1294,16 @@ export default function BranchesAgentsList() {
                               <i className={`fa-solid ${branchAgent.user?.is_blocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
                             </button>
                           </>
+                        )}
+                        {branchAgent.status !== 'قيد الانتظار' && (
+                          <label className="switch" title="عرض في الواجهة الرئيسية" style={{ alignSelf: 'center', marginLeft: '5px', marginRight: '5px' }}>
+                            <input
+                              type="checkbox"
+                              checked={branchAgent.show_on_landing !== false}
+                              onChange={() => handleToggleShowOnLanding(branchAgent)}
+                            />
+                            <span className="slider round"></span>
+                          </label>
                         )}
                         {branchAgent.status === 'قيد الانتظار' && (
                           <button

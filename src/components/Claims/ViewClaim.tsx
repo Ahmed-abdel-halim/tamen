@@ -12,6 +12,11 @@ export default function ViewClaim() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const navigate = useNavigate();
 
+  const isDamagedBodyType = (type: string) => {
+    if (!claim || !claim.damaged_body_type) return false;
+    return claim.damaged_body_type.split(/[،,]\s*/).includes(type);
+  };
+
   // Transfer Form State
   const [transferType, setTransferType] = useState('تسويه وديه');
   const [otherTransferType, setOtherTransferType] = useState('');
@@ -257,7 +262,7 @@ export default function ViewClaim() {
             <div class="data-item"><span class="label">مكان الحادث:</span> <span class="value">${claim.accident_location || '---'}</span></div>
             <div class="data-item"><span class="label">الرقم الإشاري:</span> <span class="value">${claim.reference_number || '---'}</span></div>
             <div class="data-item"><span class="label">الرقم الإداري:</span> <span class="value">${claim.admin_number || '---'}</span></div>
-            <div class="data-item"><span class="label">نوع الأضرار:</span> <span class="value">${claim.damage_type === 'اخر' ? claim.other_damage_type : claim.damage_type}</span></div>
+            <div class="data-item"><span class="label">نوع الأضرار:</span> <span class="value">${claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '---'}</span></div>
             <div class="data-item"><span class="label">يوجد وفيات:</span> <span class="value">${claim.has_fatalities ? 'نعم' : 'لا'}</span></div>
             <div class="data-item"><span class="label">حالة المطالبة:</span> <span class="value">${displayStatus}</span></div>
           </div>
@@ -615,7 +620,7 @@ export default function ViewClaim() {
               </div>
               <div className="detail-item">
                 <span className="label">نوع الأضرار</span>
-                <span className="value badge-value">{claim.damage_type === 'اخر' ? claim.other_damage_type : claim.damage_type}</span>
+                <span className="value badge-value">{claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</span>
               </div>
               {claim.accident_location && (
                 <div className="detail-item">
@@ -710,34 +715,43 @@ export default function ViewClaim() {
                 <i className="fa-solid fa-car-burst text-danger"></i>
                 <h3>بيانات الجسم المتضرر - <span style={{ color: 'var(--accent-cyan)' }}>{claim.damaged_body_type}</span></h3>
               </div>
-              {claim.damaged_body_type === 'سيارة' && (
-                <div className="details-grid three-cols">
-                  {claim.damaged_vehicle_model && <div className="detail-item"><span className="label">موديل السيارة</span><span className="value">{claim.damaged_vehicle_model}</span></div>}
-                  {claim.damaged_vehicle_plate && <div className="detail-item"><span className="label">رقم اللوحة</span><span className="value">{claim.damaged_vehicle_plate}</span></div>}
-                  {claim.damaged_vehicle_repair_shop && <div className="detail-item"><span className="label">ورشة التصليح</span><span className="value">{claim.damaged_vehicle_repair_shop}</span></div>}
-                  {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+              {isDamagedBodyType('سيارة') && (
+                <div style={{ marginBottom: isDamagedBodyType('شخص') || isDamagedBodyType('مبنى') ? '20px' : '0' }}>
+                  <h5 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '10px' }}><i className="fa-solid fa-car me-2"></i>أضرار المركبة</h5>
+                  <div className="details-grid three-cols">
+                    {claim.damaged_vehicle_model && <div className="detail-item"><span className="label">موديل السيارة</span><span className="value">{claim.damaged_vehicle_model}</span></div>}
+                    {claim.damaged_vehicle_plate && <div className="detail-item"><span className="label">رقم اللوحة</span><span className="value">{claim.damaged_vehicle_plate}</span></div>}
+                    {claim.damaged_vehicle_repair_shop && <div className="detail-item"><span className="label">ورشة التصليح</span><span className="value">{claim.damaged_vehicle_repair_shop}</span></div>}
+                    {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                  </div>
                 </div>
               )}
-              {claim.damaged_body_type === 'شخص' && (
-                <div className="details-grid">
-                  {claim.damaged_person_name && <div className="detail-item"><span className="label">اسم المتضرر</span><span className="value">{claim.damaged_person_name}</span></div>}
-                  {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+              {isDamagedBodyType('شخص') && (
+                <div style={{ marginBottom: isDamagedBodyType('مبنى') ? '20px' : '0', borderTop: isDamagedBodyType('سيارة') ? '1px dashed var(--border)' : 'none', paddingTop: isDamagedBodyType('سيارة') ? '15px' : '0' }}>
+                  <h5 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '10px' }}><i className="fa-solid fa-person me-2"></i>أضرار الشخص/الإصابة الجسدية</h5>
+                  <div className="details-grid">
+                    {claim.damaged_person_name && <div className="detail-item"><span className="label">اسم المتضرر</span><span className="value">{claim.damaged_person_name}</span></div>}
+                    {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                  </div>
                 </div>
               )}
-              {claim.damaged_body_type === 'مبنى' && (
-                <div className="details-grid">
-                  {claim.damaged_building_description && <div className="detail-item" style={{ gridColumn: 'span 2' }}><span className="label">وصف المبنى</span><span className="value">{claim.damaged_building_description}</span></div>}
-                  {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+              {isDamagedBodyType('مبنى') && (
+                <div style={{ borderTop: isDamagedBodyType('سيارة') || isDamagedBodyType('شخص') ? '1px dashed var(--border)' : 'none', paddingTop: isDamagedBodyType('سيارة') || isDamagedBodyType('شخص') ? '15px' : '0' }}>
+                  <h5 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '10px' }}><i className="fa-solid fa-building me-2"></i>أضرار المبنى/الممتلكات</h5>
+                  <div className="details-grid">
+                    {claim.damaged_building_description && <div className="detail-item" style={{ gridColumn: 'span 2' }}><span className="label">وصف المبنى</span><span className="value">{claim.damaged_building_description}</span></div>}
+                    {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                  </div>
                 </div>
               )}
               {/* Damage photos */}
               {(() => {
-                const photos = claim.damaged_body_type === 'سيارة' ? claim.damaged_vehicle_photos
-                  : claim.damaged_body_type === 'شخص' ? claim.damaged_person_photos
-                    : claim.damaged_building_photos;
-                const photoArr = Array.isArray(photos) ? photos : [];
+                const vehiclePhotos = isDamagedBodyType('سيارة') && Array.isArray(claim.damaged_vehicle_photos) ? claim.damaged_vehicle_photos : [];
+                const personPhotos = isDamagedBodyType('شخص') && Array.isArray(claim.damaged_person_photos) ? claim.damaged_person_photos : [];
+                const buildingPhotos = isDamagedBodyType('مبنى') && Array.isArray(claim.damaged_building_photos) ? claim.damaged_building_photos : [];
+                const photoArr = [...vehiclePhotos, ...personPhotos, ...buildingPhotos];
                 return photoArr.length > 0 ? (
-                  <div className="photos-strip mt-2">
+                  <div className="photos-strip mt-3" style={{ borderTop: '1px dashed var(--border)', paddingTop: '15px' }}>
                     {photoArr.map((p: string, i: number) => (
                       <a key={i} href={`${BACKEND_URL}/storage/${p}`} target="_blank" rel="noreferrer">
                         <img src={`${BACKEND_URL}/storage/${p}`} alt={`ضرر ${i + 1}`} className="damage-thumb" />

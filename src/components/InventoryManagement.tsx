@@ -27,6 +27,7 @@ interface StoreItem {
   unit: string;
   price?: number;
   unit_price?: number;
+  depreciation_rate?: number;
   min_threshold: number;
   stocks: { quantity: number; warehouse_location: string }[];
 }
@@ -119,6 +120,7 @@ export default function InventoryManagement() {
     category: '',
     unit: 'قطعة',
     price: '',
+    depreciation_rate: '',
     min_threshold: 5,
     quantity: 0,
     location: '',
@@ -306,6 +308,7 @@ export default function InventoryManagement() {
         unit: newItem.unit,
         min_threshold: Number(newItem.min_threshold) || 0,
         price: newItem.price === '' ? null : Number(newItem.price),
+        depreciation_rate: newItem.depreciation_rate === '' ? null : Number(newItem.depreciation_rate),
       };
       const token = localStorage.getItem('token');
       const isEditMode = editingItemId !== null;
@@ -389,6 +392,7 @@ export default function InventoryManagement() {
       category: item.category ?? '',
       unit: item.unit ?? 'قطعة',
       price: String(item.price ?? item.unit_price ?? ''),
+      depreciation_rate: String(item.depreciation_rate ?? ''),
       min_threshold: item.min_threshold ?? 0,
       quantity: item.stocks?.[0]?.quantity ?? 0,
       location: item.stocks?.[0]?.warehouse_location ?? '',
@@ -840,6 +844,8 @@ export default function InventoryManagement() {
       const qty = item.stocks?.[0]?.quantity || 0;
       const totalValue = price * qty;
       grandTotalValue += totalValue;
+      const isFixed = isItemFixed(item.inventory_type);
+      const depRateText = isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null ? `${item.depreciation_rate}%` : '—';
 
       return `
         <tr>
@@ -850,6 +856,7 @@ export default function InventoryManagement() {
           <td>${item.unit || 'قطعة'}</td>
           <td>${qty}</td>
           <td>${price.toLocaleString()} د.ل</td>
+          <td>${depRateText}</td>
           <td>${totalValue.toLocaleString()} د.ل</td>
           <td>${item.stocks?.[0]?.warehouse_location || '-'}</td>
         </tr>
@@ -912,20 +919,21 @@ export default function InventoryManagement() {
             <thead>
               <tr>
                 <th style="width: 3%;">م</th>
-                <th style="width: 25%; text-align: right;">اسم الصنف</th>
-                <th style="width: 12%;">النوع</th>
-                <th style="width: 12%;">التصنيف</th>
+                <th style="width: 22%; text-align: right;">اسم الصنف</th>
+                <th style="width: 10%;">النوع</th>
+                <th style="width: 10%;">التصنيف</th>
                 <th style="width: 8%;">الوحدة</th>
-                <th style="width: 10%;">الكمية</th>
+                <th style="width: 8%;">الكمية</th>
                 <th style="width: 10%;">السعر</th>
+                <th style="width: 10%;">الاستهلاك</th>
                 <th style="width: 10%;">الإجمالي</th>
-                <th style="width: 10%;">الموقع</th>
+                <th style="width: 9%;">الموقع</th>
               </tr>
             </thead>
             <tbody>
-              ${rows.length ? rows : `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #64748b;">لا توجد أصناف مطابقة للفلاتر المحددة</td></tr>`}
+              ${rows.length ? rows : `<tr><td colspan="10" style="text-align: center; padding: 20px; color: #64748b;">لا توجد أصناف مطابقة للفلاتر المحددة</td></tr>`}
               <tr class="total-row">
-                <td colspan="7" style="text-align: left; padding-left: 20px;">المجموع العام</td>
+                <td colspan="8" style="text-align: left; padding-left: 20px;">المجموع العام</td>
                 <td>${grandTotalValue.toLocaleString()} د.ل</td>
                 <td></td>
               </tr>
@@ -1135,10 +1143,20 @@ export default function InventoryManagement() {
     printWindow.document.close();
   };
 
+  const isItemFixed = (inventoryType?: string) => {
+    if (!inventoryType) return false;
+    const lower = inventoryType.toLowerCase();
+    return lower === 'fixed' || lower.includes('ثابت');
+  };
+
   const totalWarehouseQty = items.reduce((acc, item) => acc + (Number(item.stocks?.[0]?.quantity) || 0), 0);
   const activeCustodyCount = custodies.filter(c => c.status === 'active').reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
-  const activeFixedCustodyCount = custodies.filter(c => c.status === 'active' && (c.item.inventory_type === 'fixed')).reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
+  const activeFixedCustodyCount = custodies.filter(c => c.status === 'active' && isItemFixed(c.item.inventory_type)).reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
   const lowStockCount = items.filter(item => (item.stocks?.[0]?.quantity || 0) <= item.min_threshold).length;
+
+  const totalWarehouseValue = items.reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item.stocks?.[0]?.quantity || 0)), 0);
+  const fixedAssetsValue = items.filter(item => isItemFixed(item.inventory_type)).reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item.stocks?.[0]?.quantity || 0)), 0);
+  const consumablesValue = items.filter(item => !isItemFixed(item.inventory_type)).reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item.stocks?.[0]?.quantity || 0)), 0);
 
   return (
     <section className="users-management">
@@ -1158,6 +1176,37 @@ export default function InventoryManagement() {
               <div className="premium-stat-label">إجمالي المخزون بالمخزن</div>
             </div>
           </div>
+
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-total" style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
+              <i className="fa-solid fa-coins"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{totalWarehouseValue.toLocaleString()} د.ل</div>
+              <div className="premium-stat-label">إجمالي قيمة المخزون الكلية</div>
+            </div>
+          </div>
+
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-fixed" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+              <i className="fa-solid fa-vault"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{fixedAssetsValue.toLocaleString()} د.ل</div>
+              <div className="premium-stat-label">قيمة الأصول الثابتة بالمخزن</div>
+            </div>
+          </div>
+
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-consumable" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+              <i className="fa-solid fa-cart-shopping"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="premium-stat-value">{consumablesValue.toLocaleString()} د.ل</div>
+              <div className="premium-stat-label">قيمة المواد المستهلكة بالمخزن</div>
+            </div>
+          </div>
+
           <div className="premium-stat-card">
             <div className="premium-stat-icon-wrapper kpi-fixed">
               <i className="fa-solid fa-couch"></i>
@@ -1167,6 +1216,7 @@ export default function InventoryManagement() {
               <div className="premium-stat-label">عهد الأصول الثابتة النشطة</div>
             </div>
           </div>
+
           <div className="premium-stat-card">
             <div className="premium-stat-icon-wrapper kpi-consumable">
               <i className="fa-solid fa-box-open"></i>
@@ -1176,6 +1226,7 @@ export default function InventoryManagement() {
               <div className="premium-stat-label">إجمالي العهد النشطة المصروفة</div>
             </div>
           </div>
+
           <div className="premium-stat-card">
             <div className="premium-stat-icon-wrapper kpi-alert">
               <i className="fa-solid fa-triangle-exclamation"></i>
@@ -1294,22 +1345,33 @@ export default function InventoryManagement() {
                           { header: 'الصنف', key: 'name', width: 35 },
                           { header: 'النوع', key: 'type', width: 20 },
                           { header: 'التصنيف', key: 'category', width: 20 },
-                          { header: 'السعر', key: 'price', width: 15 },
+                          { header: 'السعر الفردي', key: 'price', width: 15 },
+                          { header: 'نسبة الاستهلاك', key: 'depreciation_rate', width: 15 },
                           { header: 'الكمية', key: 'quantity', width: 12 },
+                          { header: 'إجمالي القيمة', key: 'total_value', width: 18 },
                           { header: 'الوحدة', key: 'unit', width: 12 },
                           { header: 'الموقع', key: 'location', width: 20 },
                         ];
 
-                        const data = filteredItems.map((item, index) => ({
-                          index: index + 1,
-                          name: item.name,
-                          type: getInventoryTypeName(item.inventory_type),
-                          category: getCategoryName(item.category),
-                          price: getItemPrice(item) ? item.price + ' د.ل' : '-',
-                          quantity: item.stocks?.[0]?.quantity || 0,
-                          unit: item.unit,
-                          location: item.stocks?.[0]?.warehouse_location || '-',
-                        }));
+                        const data = filteredItems.map((item, index) => {
+                          const price = getItemPrice(item);
+                          const qty = item.stocks?.[0]?.quantity || 0;
+                          const totalVal = price !== null ? price * qty : 0;
+                          const isFixed = isItemFixed(item.inventory_type);
+                          
+                          return {
+                            index: index + 1,
+                            name: item.name,
+                            type: getInventoryTypeName(item.inventory_type),
+                            category: getCategoryName(item.category),
+                            price: price !== null ? price.toLocaleString() + ' د.ل' : '-',
+                            depreciation_rate: isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null ? item.depreciation_rate + '%' : '-',
+                            quantity: qty,
+                            total_value: totalVal > 0 ? totalVal.toLocaleString() + ' د.ل' : '-',
+                            unit: item.unit,
+                            location: item.stocks?.[0]?.warehouse_location || '-',
+                          };
+                        });
 
                         await generatePremiumExcel({
                           title: 'شركة المدار الليبي للتأمين - تقرير المخزن الرئيسي',
@@ -1362,21 +1424,23 @@ export default function InventoryManagement() {
                   <table className="premium-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '5%' }}>#</th>
-                        <th style={{ width: '25%' }}>الصنف</th>
-                        <th style={{ width: '12%' }}>نوع المخزون</th>
-                        <th style={{ width: '15%' }}>التصنيف</th>
-                        <th style={{ width: '12%' }}>سعر الصنف</th>
+                        <th style={{ width: '3%' }}>#</th>
+                        <th style={{ width: '20%' }}>الصنف</th>
+                        <th style={{ width: '10%' }}>نوع المخزون</th>
+                        <th style={{ width: '10%' }}>التصنيف</th>
+                        <th style={{ width: '10%' }}>سعر الصنف</th>
+                        <th style={{ width: '10%' }}>نسبة الاستهلاك</th>
                         <th style={{ width: '10%' }}>الكمية المتوفرة</th>
-                        <th style={{ width: '8%' }}>الوحدة</th>
-                        <th style={{ width: '15%' }}>موقع التخزين</th>
-                        <th style={{ width: '10%' }}>الإجراءات</th>
+                        <th style={{ width: '10%' }}>إجمالي القيمة</th>
+                        <th style={{ width: '5%' }}>الوحدة</th>
+                        <th style={{ width: '12%' }}>موقع التخزين</th>
+                        <th style={{ width: '8%' }}>الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredItems.length === 0 ? (
                         <tr>
-                          <td colSpan={9} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                          <td colSpan={11} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
                             <i className="fa-solid fa-box-open" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
                             لا توجد أصناف في المخزن تناسب بحثك
                           </td>
@@ -1386,6 +1450,9 @@ export default function InventoryManagement() {
                           const itemIndex = (storePage - 1) * PAGE_SIZE + index;
                           const qty = item.stocks?.[0]?.quantity || 0;
                           const isLow = qty <= item.min_threshold;
+                          const price = getItemPrice(item);
+                          const totalVal = price !== null ? price * qty : null;
+                          const isFixed = isItemFixed(item.inventory_type);
                           return (
                             <tr key={item.id}>
                               <td>{itemIndex + 1}</td>
@@ -1397,9 +1464,18 @@ export default function InventoryManagement() {
                               </td>
                               <td>{getCategoryName(item.category)}</td>
                               <td>
-                                {getItemPrice(item) !== null ? (
+                                {price !== null ? (
                                   <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
-                                    {Number(getItemPrice(item)).toLocaleString()} د.ل
+                                    {price.toLocaleString()} د.ل
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--muted)' }}>-</span>
+                                )}
+                              </td>
+                              <td>
+                                {isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null ? (
+                                  <span style={{ color: 'var(--text)', fontWeight: 'bold' }}>
+                                    {Number(item.depreciation_rate)}%
                                   </span>
                                 ) : (
                                   <span style={{ color: 'var(--muted)' }}>-</span>
@@ -1409,6 +1485,15 @@ export default function InventoryManagement() {
                                 <span className={`premium-badge ${isLow ? (qty === 0 ? 'badge-danger' : 'badge-warning') : 'badge-success'}`}>
                                   {qty} {isLow ? (qty === 0 ? '(نافد)' : '(منخفض)') : ''}
                                 </span>
+                              </td>
+                              <td>
+                                {totalVal !== null ? (
+                                  <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                                    {totalVal.toLocaleString()} د.ل
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--muted)' }}>-</span>
+                                )}
                               </td>
                               <td>{item.unit}</td>
                               <td>{item.stocks?.[0]?.warehouse_location || '-'}</td>
@@ -2385,6 +2470,25 @@ export default function InventoryManagement() {
                     placeholder="مثال: 150"
                     value={newItem.price}
                     onChange={e => setNewItem({...newItem, price: e.target.value})}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>نسبة الاستهلاك السنوي (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder={
+                      newItem.inventory_type && (newItem.inventory_type.toLowerCase() === 'fixed' || newItem.inventory_type.includes('ثابت'))
+                        ? "مثال: 10"
+                        : "للأصول الثابتة فقط"
+                    }
+                    disabled={
+                      !(newItem.inventory_type && (newItem.inventory_type.toLowerCase() === 'fixed' || newItem.inventory_type.includes('ثابت')))
+                    }
+                    value={newItem.depreciation_rate}
+                    onChange={e => setNewItem({...newItem, depreciation_rate: e.target.value})}
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>

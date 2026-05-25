@@ -212,6 +212,44 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     assessor_other_amount: claim?.assessor_other_amount || '',
   });
 
+  const isDamageTypeSelected = (type: string) => {
+    if (!claimData.damage_type) return false;
+    return claimData.damage_type.split(/[،,]\s*/).includes(type);
+  };
+
+  const toggleDamageType = (type: string) => {
+    const currentTypes = claimData.damage_type ? claimData.damage_type.split(/[،,]\s*/).filter(Boolean) : [];
+    let nextTypes: string[];
+    if (currentTypes.includes(type)) {
+      nextTypes = currentTypes.filter((t: string) => t !== type);
+    } else {
+      nextTypes = [...currentTypes, type];
+    }
+    setClaimData({
+      ...claimData,
+      damage_type: nextTypes.join('، ')
+    });
+  };
+
+  const isDamagedBodyTypeSelected = (type: string) => {
+    if (!claimData.damaged_body_type) return false;
+    return claimData.damaged_body_type.split(/[،,]\s*/).includes(type);
+  };
+
+  const toggleDamagedBodyType = (type: string) => {
+    const currentTypes = claimData.damaged_body_type ? claimData.damaged_body_type.split(/[،,]\s*/).filter(Boolean) : [];
+    let nextTypes: string[];
+    if (currentTypes.includes(type)) {
+      nextTypes = currentTypes.filter((t: string) => t !== type);
+    } else {
+      nextTypes = [...currentTypes, type];
+    }
+    setClaimData({
+      ...claimData,
+      damaged_body_type: nextTypes.join('، ')
+    });
+  };
+
   const [damageCosts, setDamageCosts] = useState<any>(claim?.damage_costs || {
     vehicle: { parts_amount: '', parts_shop: '', repair_amount: '', other_amount: '', total_amount: '' },
     person: { hospital_amount: '', hospital_name: '', medical_tests_amount: '', other_amount: '', total_amount: '' },
@@ -935,25 +973,25 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 <div className="field-group" style={{ gridColumn: 'span 2' }}>
                   <label className="premium-label">نوع الأضرار</label>
                   <div className="d-flex gap-3 align-items-center p-2 rounded-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)', minHeight: '44px' }}>
-                    {['بدني', 'مادي'].map(type => (
+                    {['بدني', 'مادي', 'معنوي'].map(type => (
                       <label key={type} className="m-0 d-flex align-items-center gap-2 cursor-pointer px-3 py-1 rounded-pill"
-                        style={{ background: claimData.damage_type === type ? 'var(--accent-cyan)' : 'transparent', color: claimData.damage_type === type ? 'white' : 'inherit', transition: 'all 0.2s' }}>
-                        <input type="radio" className="form-check-input m-0 d-none"
-                          checked={claimData.damage_type === type}
-                          onChange={() => setClaimData({ ...claimData, damage_type: type })} />
-                        <i className={`fa-solid ${type === 'بدني' ? 'fa-user-injured' : 'fa-car-burst'} ${claimData.damage_type === type ? 'text-white' : 'var(--accent-cyan)'}`}></i>
+                        style={{ background: isDamageTypeSelected(type) ? 'var(--accent-cyan)' : 'transparent', color: isDamageTypeSelected(type) ? 'white' : 'inherit', transition: 'all 0.2s' }}>
+                        <input type="checkbox" className="form-check-input m-0 d-none"
+                          checked={isDamageTypeSelected(type)}
+                          onChange={() => toggleDamageType(type)} />
+                        <i className={`fa-solid ${type === 'بدني' ? 'fa-user-injured' : type === 'مادي' ? 'fa-car-burst' : 'fa-brain'} ${isDamageTypeSelected(type) ? 'text-white' : 'var(--accent-cyan)'}`}></i>
                         <span className="fw-bold small">{type}</span>
                       </label>
                     ))}
                     <label className="m-0 d-flex align-items-center gap-2 cursor-pointer px-3 py-1 rounded-pill ms-2"
-                      style={{ background: claimData.damage_type === 'اخر' ? 'var(--accent-cyan)' : 'transparent', color: claimData.damage_type === 'اخر' ? 'white' : 'inherit', transition: 'all 0.2s' }}>
-                      <input type="radio" className="form-check-input m-0 d-none"
-                        checked={claimData.damage_type === 'اخر'}
-                        onChange={() => setClaimData({ ...claimData, damage_type: 'اخر' })} />
-                      <i className={`fa-solid fa-ellipsis ${claimData.damage_type === 'اخر' ? 'text-white' : 'var(--accent-cyan)'}`}></i>
+                      style={{ background: isDamageTypeSelected('اخر') ? 'var(--accent-cyan)' : 'transparent', color: isDamageTypeSelected('اخر') ? 'white' : 'inherit', transition: 'all 0.2s' }}>
+                      <input type="checkbox" className="form-check-input m-0 d-none"
+                        checked={isDamageTypeSelected('اخر')}
+                        onChange={() => toggleDamageType('اخر')} />
+                      <i className={`fa-solid fa-ellipsis ${isDamageTypeSelected('اخر') ? 'text-white' : 'var(--accent-cyan)'}`}></i>
                       <span className="fw-bold small">آخر</span>
                     </label>
-                    {claimData.damage_type === 'اخر' && (
+                    {isDamageTypeSelected('اخر') && (
                       <input type="text" className="premium-field ms-auto py-0 px-3"
                         style={{ width: '250px', height: '32px', fontSize: '0.8rem', borderRadius: '8px' }}
                         value={claimData.other_damage_type}
@@ -1081,44 +1119,47 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
               </div>
             </div>
 
-            {/* ===== بيانات الجسم المتضرر ===== */}
-            <div className="section-card">
-              <div className="section-header"><i className="fa-solid fa-car-burst"></i><h4>بيانات الجسم المتضرر</h4></div>
-              <div className="d-flex gap-3 mb-3">
-                {['سيارة', 'شخص', 'مبنى'].map(t => (
-                  <label key={t} className="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
-                    style={{ background: claimData.damaged_body_type === t ? 'var(--accent-cyan)' : 'var(--input-bg)', color: claimData.damaged_body_type === t ? 'white' : 'inherit', border: '1.5px solid var(--border)', cursor: 'pointer', fontWeight: 700 }}>
-                    <input type="radio" className="d-none" checked={claimData.damaged_body_type === t} onChange={() => setClaimData({ ...claimData, damaged_body_type: t })} />
-                    <i className={`fa-solid ${t === 'سيارة' ? 'fa-car' : t === 'شخص' ? 'fa-person' : 'fa-building'}`}></i>{t}
-                  </label>
-                ))}
-              </div>
-              {claimData.damaged_body_type === 'سيارة' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                  <div className="field-group"><label className="premium-label">موديل السيارة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_model} onChange={e => setClaimData({ ...claimData, damaged_vehicle_model: e.target.value })} placeholder="الموديل..." /></div>
-                  <div className="field-group"><label className="premium-label">رقم لوحة السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_plate} onChange={e => setClaimData({ ...claimData, damaged_vehicle_plate: e.target.value })} placeholder="رقم اللوحة..." /></div>
-                  <div className="field-group"><label className="premium-label">ورشة التصليح</label><input className="premium-field" value={claimData.damaged_vehicle_repair_shop} onChange={e => setClaimData({ ...claimData, damaged_vehicle_repair_shop: e.target.value })} placeholder="اسم وعنوان الورشة..." /></div>
-                  <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_vehicle_amount} onChange={e => setClaimData({ ...claimData, damaged_vehicle_amount: e.target.value })} placeholder="0.000" /></div>
-                  <div className="field-group"><label className="premium-label">بيانات أضرار السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_details} onChange={e => setClaimData({ ...claimData, damaged_vehicle_details: e.target.value })} placeholder="كسر زجاج أمامي، إلخ..." /></div>
-                  <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">صور الأضرار (يمكن اختيار أكثر من صورة)</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedVehiclePhotos(Array.from(e.target.files || []))} /></div>
-                </div>
-              )}
-              {claimData.damaged_body_type === 'شخص' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                  <div className="field-group"><label className="premium-label">اسم الشخص المتضرر</label><input className="premium-field" value={claimData.damaged_person_name} onChange={e => setClaimData({ ...claimData, damaged_person_name: e.target.value })} placeholder="الاسم الكامل..." /></div>
-                  <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_person_amount} onChange={e => setClaimData({ ...claimData, damaged_person_amount: e.target.value })} placeholder="0.000" /></div>
-                  <div className="field-group"><label className="premium-label">بيانات أضرار الشخص</label><input className="premium-field" value={claimData.damaged_person_details} onChange={e => setClaimData({ ...claimData, damaged_person_details: e.target.value })} placeholder="كسر في اليد، إلخ..." /></div>
-                  <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedPersonPhotos(Array.from(e.target.files || []))} /></div>
-                </div>
-              )}
-              {claimData.damaged_body_type === 'مبنى' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                  <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">وصف المبنى المتضرر</label><input className="premium-field" value={claimData.damaged_building_description} onChange={e => setClaimData({ ...claimData, damaged_building_description: e.target.value })} placeholder="وصف الضرر..." /></div>
-                  <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_building_amount} onChange={e => setClaimData({ ...claimData, damaged_building_amount: e.target.value })} placeholder="0.000" /></div>
-                  <div className="field-group"><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedBuildingPhotos(Array.from(e.target.files || []))} /></div>
-                </div>
-              )}
-            </div>
+             {/* ===== بيانات الجسم المتضرر ===== */}
+             <div className="section-card">
+               <div className="section-header"><i className="fa-solid fa-car-burst"></i><h4>بيانات الجسم المتضرر</h4></div>
+               <div className="d-flex gap-3 mb-3">
+                 {['سيارة', 'شخص', 'مبنى'].map(t => (
+                   <label key={t} className="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                     style={{ background: isDamagedBodyTypeSelected(t) ? 'var(--accent-cyan)' : 'var(--input-bg)', color: isDamagedBodyTypeSelected(t) ? 'white' : 'inherit', border: '1.5px solid var(--border)', cursor: 'pointer', fontWeight: 700 }}>
+                     <input type="checkbox" className="d-none" checked={isDamagedBodyTypeSelected(t)} onChange={() => toggleDamagedBodyType(t)} />
+                     <i className={`fa-solid ${t === 'سيارة' ? 'fa-car' : t === 'شخص' ? 'fa-person' : 'fa-building'}`}></i>{t}
+                   </label>
+                 ))}
+               </div>
+               {isDamagedBodyTypeSelected('سيارة') && (
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px', borderBottom: '1px dashed var(--border)', paddingBottom: '20px' }}>
+                   <h5 style={{ gridColumn: 'span 2', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: 0 }}><i className="fa-solid fa-car me-2"></i>أضرار المركبة</h5>
+                   <div className="field-group"><label className="premium-label">موديل السيارة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_model} onChange={e => setClaimData({ ...claimData, damaged_vehicle_model: e.target.value })} placeholder="الموديل..." /></div>
+                   <div className="field-group"><label className="premium-label">رقم لوحة السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_plate} onChange={e => setClaimData({ ...claimData, damaged_vehicle_plate: e.target.value })} placeholder="رقم اللوحة..." /></div>
+                   <div className="field-group"><label className="premium-label">ورشة التصليح</label><input className="premium-field" value={claimData.damaged_vehicle_repair_shop} onChange={e => setClaimData({ ...claimData, damaged_vehicle_repair_shop: e.target.value })} placeholder="اسم وعنوان الورشة..." /></div>
+                   <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_vehicle_amount} onChange={e => setClaimData({ ...claimData, damaged_vehicle_amount: e.target.value })} placeholder="0.000" /></div>
+                   <div className="field-group"><label className="premium-label">بيانات أضرار السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_details} onChange={e => setClaimData({ ...claimData, damaged_vehicle_details: e.target.value })} placeholder="كسر زجاج أمامي، إلخ..." /></div>
+                   <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">صور الأضرار (يمكن اختيار أكثر من صورة)</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedVehiclePhotos(Array.from(e.target.files || []))} /></div>
+                 </div>
+               )}
+               {isDamagedBodyTypeSelected('شخص') && (
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px', borderBottom: '1px dashed var(--border)', paddingBottom: '20px' }}>
+                   <h5 style={{ gridColumn: 'span 2', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: 0 }}><i className="fa-solid fa-person me-2"></i>أضرار الشخص/الإصابة الجسدية</h5>
+                   <div className="field-group"><label className="premium-label">اسم الشخص المتضرر</label><input className="premium-field" value={claimData.damaged_person_name} onChange={e => setClaimData({ ...claimData, damaged_person_name: e.target.value })} placeholder="الاسم الكامل..." /></div>
+                   <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_person_amount} onChange={e => setClaimData({ ...claimData, damaged_person_amount: e.target.value })} placeholder="0.000" /></div>
+                   <div className="field-group"><label className="premium-label">بيانات أضرار الشخص</label><input className="premium-field" value={claimData.damaged_person_details} onChange={e => setClaimData({ ...claimData, damaged_person_details: e.target.value })} placeholder="كسر في اليد، إلخ..." /></div>
+                   <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedPersonPhotos(Array.from(e.target.files || []))} /></div>
+                 </div>
+               )}
+               {isDamagedBodyTypeSelected('مبنى') && (
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                   <h5 style={{ gridColumn: 'span 2', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: 0 }}><i className="fa-solid fa-building me-2"></i>أضرار المبنى/الممتلكات</h5>
+                   <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">وصف المبنى المتضرر</label><input className="premium-field" value={claimData.damaged_building_description} onChange={e => setClaimData({ ...claimData, damaged_building_description: e.target.value })} placeholder="وصف الضرر..." /></div>
+                   <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_building_amount} onChange={e => setClaimData({ ...claimData, damaged_building_amount: e.target.value })} placeholder="0.000" /></div>
+                   <div className="field-group"><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedBuildingPhotos(Array.from(e.target.files || []))} /></div>
+                 </div>
+               )}
+             </div>
 
             {/* ===== بيانات وثيقة تأمين المتضرر ===== */}
             <div className="section-card">

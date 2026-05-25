@@ -16,9 +16,18 @@ export default function ClaimsList() {
 
   const [statusFilter, setStatusFilter] = useState('');
   const [damageTypeFilter, setDamageTypeFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [sortBy, setSortBy] = useState('date_desc');
   const [editingClaim, setEditingClaim] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [claimIdToDelete, setClaimIdToDelete] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, damageTypeFilter, startDateFilter, endDateFilter, searchQuery, sortBy]);
 
   useEffect(() => {
     fetchClaims();
@@ -98,6 +107,9 @@ export default function ClaimsList() {
     setSearchQuery('');
     setStatusFilter('');
     setDamageTypeFilter('');
+    setStartDateFilter('');
+    setEndDateFilter('');
+    setSortBy('date_desc');
   };
 
   const exportToExcel = async () => {
@@ -141,7 +153,7 @@ export default function ClaimsList() {
           claim_date: claim.claim_date ? toArabicNumerals(new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
           insurance_number: toArabicNumerals(claim.document?.insurance_number || '—'),
           document_coverage: claim.document_coverage || '—',
-          damage_type: claim.damage_type === 'اخر' ? claim.other_damage_type : claim.damage_type,
+          damage_type: claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: string) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—',
           accident_location: claim.accident_location || '—',
           estimated_amount: estimatedAmount ? `${toArabicNumerals(estimatedAmount.toLocaleString('en-US'))} د.ل` : '—',
           final_amount: finalAmount ? `${toArabicNumerals(finalAmount.toLocaleString('en-US'))} د.ل` : '—',
@@ -180,12 +192,205 @@ export default function ClaimsList() {
     return statuses[status] || status;
   };
 
-  const filteredClaims = claims.filter(c =>
-    c.claim_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.claimant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.document?.insurance_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.status?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredClaims = claims.filter(c => {
+    const matchesSearch = 
+      c.claim_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.claimant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.document?.insurance_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.status?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    if (startDateFilter) {
+      const claimDate = new Date(c.claim_date);
+      const startDate = new Date(startDateFilter);
+      if (claimDate < startDate) return false;
+    }
+    if (endDateFilter) {
+      const claimDate = new Date(c.claim_date);
+      const endDate = new Date(endDateFilter);
+      endDate.setHours(23, 59, 59, 999);
+      if (claimDate > endDate) return false;
+    }
+
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === 'claim_number_asc') {
+      return (a.claim_number || '').localeCompare(b.claim_number || '', 'ar', { numeric: true });
+    }
+    if (sortBy === 'claim_number_desc') {
+      return (b.claim_number || '').localeCompare(a.claim_number || '', 'ar', { numeric: true });
+    }
+    if (sortBy === 'date_asc') {
+      return new Date(a.claim_date).getTime() - new Date(b.claim_date).getTime();
+    }
+    if (sortBy === 'date_desc') {
+      return new Date(b.claim_date).getTime() - new Date(a.claim_date).getTime();
+    }
+    if (sortBy === 'status') {
+      return (a.status || '').localeCompare(b.status || '', 'ar');
+    }
+    return 0;
+  });
+
+  const totalClaims = filteredClaims.length;
+  const totalPages = Math.ceil(totalClaims / perPage);
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + perPage;
+  const paginatedClaims = filteredClaims.slice(startIndex, endIndex);
+
+  const handlePrintDetailedReport = () => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) return;
+
+    const dateText = startDateFilter || endDateFilter
+      ? `الفترة من: ${startDateFilter || 'البداية'} إلى: ${endDateFilter || 'النهاية'}`
+      : 'كل التواريخ';
+
+    const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>تقرير المطالبات التفصيلي</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { 
+            @page { margin: 10mm; size: A4 landscape; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+          body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            color: #1e293b;
+            background: #fff;
+            line-height: 1.5;
+            font-size: 11px;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1e293b;
+          }
+          .header-center {
+            text-align: center;
+            flex: 1;
+          }
+          .header-center h1 { margin: 0; font-size: 20px; color: #1e293b; font-weight: 900; }
+          .header-center p { margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: 700; }
+          
+          .logo-container { width: 120px; text-align: right; }
+          .logo { height: 60px; width: auto; }
+          
+          .meta-info {
+            display: flex;
+            justify-content: space-between;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 700;
+          }
+
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center; }
+          th { background: #f1f5f9; font-weight: 800; color: #0f172a; }
+          tr:nth-child(even) { background: #f8fafc; }
+
+          .footer-sigs {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+          }
+          .sig-box { width: 180px; text-align: center; }
+          .sig-line { border-top: 1.5px solid #1e293b; margin-bottom: 8px; }
+          .sig-text { font-weight: 800; font-size: 13px; }
+
+          .print-meta {
+            margin-top: 30px;
+            font-size: 9px;
+            color: #94a3b8;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body onload="setTimeout(() => { window.print(); }, 500);">
+        <div class="header">
+          <div style="width: 120px;"></div>
+          <div class="header-center">
+            <h1>شركة المدار الليبي للتأمين</h1>
+            <p>إدارة المطالبات والحوادث - تقرير تفصيلي</p>
+          </div>
+          <div class="logo-container">
+            <img src="/img/logo.png" class="logo" alt="Logo" onerror="this.style.display='none'">
+          </div>
+        </div>
+
+        <div class="meta-info">
+          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</div>
+          <div>${dateText}</div>
+          <div>${statusText}</div>
+          <div>إجمالي المطالبات: ${filteredClaims.length}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>رقم المطالبة</th>
+              <th>تاريخ المطالبة</th>
+              <th>رقم الوثيقة</th>
+              <th>مقدم المطالبة</th>
+              <th>نوع الأضرار</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredClaims.map((claim, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td><strong>${claim.claim_number}</strong></td>
+                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
+                <td>${claim.document?.insurance_number || 'غير متوفر'}</td>
+                <td>${claim.claimant_name}</td>
+                <td>${claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: string) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
+                <td>${getStatusLabel(claim.status)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer-sigs">
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div class="sig-text">الموظف المختص</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div class="sig-text">رئيس قسم المطالبات</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div class="sig-text">مدير إدارة العمليات</div>
+          </div>
+        </div>
+
+        <div class="print-meta">
+          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const handlePrintClaim = async (claim: any) => {
     let fullClaim = claim;
@@ -440,7 +645,7 @@ export default function ClaimsList() {
               <div class="field-row"><div class="field-label">تاريــــخ المطالبــــة</div><div class="field-input">${fullClaim.claim_date || '---'}</div></div>
               <div class="field-row"><div class="field-label">تاريــــخ الحــــادث</div><div class="field-input">${fullClaim.accident_date || '---'}</div></div>
               <div class="field-row"><div class="field-label">وقـــــت الحــــادث</div><div class="field-input">${fullClaim.accident_time || '---'}</div></div>
-              <div class="field-row"><div class="field-label">نـــوع الأضـــــرار</div><div class="field-input">${fullClaim.damage_type === 'اخر' ? (fullClaim.other_damage_type || '') : (fullClaim.damage_type || '---')}</div></div>
+              <div class="field-row"><div class="field-label">نـــوع الأضـــــرار</div><div class="field-input">${fullClaim.damage_type ? fullClaim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (fullClaim.other_damage_type || 'أخرى') : t).join('، ') : '---'}</div></div>
               <div class="field-row"><div class="field-label">حـــالــة المطالبــــة</div><div class="field-input">${fullClaim.status || '---'}</div></div>
               <div class="field-row full-width"><div class="field-label">مكـــان الحــــادث</div><div class="field-input">${fullClaim.accident_location || '---'}</div></div>
             </div>
@@ -519,6 +724,14 @@ export default function ClaimsList() {
             <h5 className="claims-title">قائمة المطالبات المسجلة</h5>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
+                className="print-report-btn"
+                onClick={handlePrintDetailedReport}
+                title="طباعة التقرير التفصيلي"
+              >
+                <i className="fa-solid fa-print"></i>
+                <span>طباعة التقرير التفصيلي</span>
+              </button>
+              <button
                 className="export-excel-btn"
                 onClick={exportToExcel}
                 title="تصدير إكسل"
@@ -555,8 +768,8 @@ export default function ClaimsList() {
             </div>
           </div>
 
-          <div className="filters-row-modern">
-            <div className="filter-group">
+          <div className="filters-row-modern" style={{ flexWrap: 'wrap', gap: '16px 12px' }}>
+            <div className="filter-group" style={{ minWidth: '160px' }}>
               <label>تصفية حسب الحالة</label>
               <select
                 value={statusFilter}
@@ -570,7 +783,7 @@ export default function ClaimsList() {
               </select>
             </div>
 
-            <div className="filter-group">
+            <div className="filter-group" style={{ minWidth: '160px' }}>
               <label>نوع الأضرار</label>
               <select
                 value={damageTypeFilter}
@@ -580,6 +793,72 @@ export default function ClaimsList() {
                 <option value="مادي">مادي</option>
                 <option value="بدني">بدني</option>
                 <option value="اخر">أخرى</option>
+              </select>
+            </div>
+
+            <div className="filter-group" style={{ minWidth: '140px' }}>
+              <label>من تاريخ</label>
+              <input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  padding: '0 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div className="filter-group" style={{ minWidth: '140px' }}>
+              <label>إلى تاريخ</label>
+              <input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  padding: '0 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div className="filter-group" style={{ minWidth: '160px' }}>
+              <label>ترتيب حسب</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  padding: '0 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="date_desc">تاريخ المطالبة (الأحدث)</option>
+                <option value="date_asc">تاريخ المطالبة (الأقدم)</option>
+                <option value="claim_number_asc">رقم المطالبة (أ-ي)</option>
+                <option value="claim_number_desc">رقم المطالبة (ي-أ)</option>
+                <option value="status">الحالة</option>
               </select>
             </div>
 
@@ -670,6 +949,26 @@ export default function ClaimsList() {
             background: #15803d !important;
             transform: translateY(-1px);
             box-shadow: 0 6px 15px rgba(22, 101, 52, 0.3);
+          }
+          
+          .print-report-btn {
+            background: #4f46e5 !important;
+            color: white !important;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+          }
+          .print-report-btn:hover {
+            background: #4338ca !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3);
           }
 
           
@@ -824,10 +1123,12 @@ export default function ClaimsList() {
             </p>
           </div>
         ) : (
-          <div className="users-table-wrapper">
+          <>
+            <div className="users-table-wrapper">
             <table className="users-table">
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>رقم المطالبة</th>
                   <th>تاريخ المطالبة</th>
                   <th>رقم الوثيقة</th>
@@ -838,13 +1139,14 @@ export default function ClaimsList() {
                 </tr>
               </thead>
               <tbody>
-                {filteredClaims.map((claim) => (
+                {paginatedClaims.map((claim, index) => (
                   <tr key={claim.id}>
+                    <td>{startIndex + index + 1}</td>
                     <td><span className="fw-bold">{claim.claim_number}</span></td>
                     <td>{claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
                     <td>{claim.document?.insurance_number || 'غير متوفر'}</td>
                     <td>{claim.claimant_name}</td>
-                    <td>{claim.damage_type}</td>
+                    <td>{claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
                     <td>
                       <span className="badge" style={{
                         background: claim.status === 'pending' ? '#f59e0b' : '#3b82f6',
@@ -890,6 +1192,64 @@ export default function ClaimsList() {
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div className="pagination-wrapper">
+              <div className="pagination-info">
+                عرض {startIndex + 1}
+                {' إلى '}
+                {Math.min(startIndex + paginatedClaims.length, totalClaims)}
+                {' من '}
+                {totalClaims}
+                {' مطالبة'}
+              </div>
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn pagination-prev"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <i className="fa-solid fa-chevron-right"></i>
+                </button>
+                {(() => {
+                  const items: (number | 'dots')[] = [];
+                  if (totalPages <= 3) {
+                    for (let p = 1; p <= totalPages; p++) {
+                      items.push(p);
+                    }
+                  } else {
+                    items.push(1);
+                    let start = Math.max(2, currentPage - 1);
+                    let end = Math.min(totalPages - 1, currentPage + 1);
+                    if (start > 2) items.push('dots');
+                    for (let p = start; p <= end; p++) items.push(p);
+                    if (end < totalPages - 1) items.push('dots');
+                    items.push(totalPages);
+                  }
+                  return items.map((item, idx) =>
+                    item === 'dots' ? (
+                      <span key={`dots-${idx}`} className="pagination-dots">...</span>
+                    ) : (
+                      <button
+                        key={item}
+                        className={`pagination-btn pagination-number ${currentPage === item ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(item as number)}
+                      >
+                        {item}
+                      </button>
+                    )
+                  );
+                })()}
+                <button
+                  className="pagination-btn pagination-next"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <i className="fa-solid fa-chevron-left"></i>
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
 

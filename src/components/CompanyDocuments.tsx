@@ -27,6 +27,13 @@ const CompanyDocuments: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const perPage = 15;
+    const [filterType, setFilterType] = useState('');
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterType]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -36,8 +43,6 @@ const CompanyDocuments: React.FC = () => {
         issue_date: '',
         expiry_date: ''
     });
-
-    const [filterType, setFilterType] = useState('');
 
     const dynamicTypes = Array.from(new Set(documents.map(d => d.type).filter(t => t && t !== ''))).sort();
     const documentTypes = [...dynamicTypes, 'إضافة نوع جديد'];
@@ -215,6 +220,12 @@ const CompanyDocuments: React.FC = () => {
         return matchesSearch && matchesType;
     });
 
+    const totalDocsCount = filteredDocs.length;
+    const totalPages = Math.ceil(totalDocsCount / perPage);
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const paginatedDocs = filteredDocs.slice(startIndex, endIndex);
+
 
     return (
         <section className="users-management">
@@ -322,7 +333,7 @@ const CompanyDocuments: React.FC = () => {
                             {loading ? (
                                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>جاري التحميل...</td></tr>
                             ) : filteredDocs.length > 0 ? (
-                                filteredDocs.map(doc => (
+                                paginatedDocs.map(doc => (
                                     <tr key={doc.id}>
                                         <td style={{ fontWeight: 800 }}>{doc.name}</td>
                                         <td>
@@ -385,6 +396,63 @@ const CompanyDocuments: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="pagination-wrapper" style={{ padding: '0 25px 25px 25px' }}>
+                        <div className="pagination-info">
+                            عرض {startIndex + 1}
+                            {' إلى '}
+                            {Math.min(startIndex + paginatedDocs.length, totalDocsCount)}
+                            {' من '}
+                            {totalDocsCount}
+                            {' مستند'}
+                        </div>
+                        <div className="pagination-controls">
+                            <button
+                                className="pagination-btn pagination-prev"
+                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                            >
+                                <i className="fa-solid fa-chevron-right"></i>
+                            </button>
+                            {(() => {
+                                const items: (number | 'dots')[] = [];
+                                if (totalPages <= 3) {
+                                    for (let p = 1; p <= totalPages; p++) {
+                                        items.push(p);
+                                    }
+                                } else {
+                                    items.push(1);
+                                    let start = Math.max(2, currentPage - 1);
+                                    let end = Math.min(totalPages - 1, currentPage + 1);
+                                    if (start > 2) items.push('dots');
+                                    for (let p = start; p <= end; p++) items.push(p);
+                                    if (end < totalPages - 1) items.push('dots');
+                                    items.push(totalPages);
+                                }
+                                return items.map((item, idx) =>
+                                    item === 'dots' ? (
+                                        <span key={`dots-${idx}`} className="pagination-dots">...</span>
+                                    ) : (
+                                        <button
+                                            key={item}
+                                            className={`pagination-btn pagination-number ${currentPage === item ? 'active' : ''}`}
+                                            onClick={() => setCurrentPage(item as number)}
+                                        >
+                                            {item}
+                                        </button>
+                                    )
+                                );
+                            })()}
+                            <button
+                                className="pagination-btn pagination-next"
+                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                            >
+                                <i className="fa-solid fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal for adding/editing */}
