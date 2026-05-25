@@ -1066,7 +1066,7 @@ export default function BranchesAgentsList() {
                     <th>رقم الهاتف</th>
                     <th>العنوان</th>
                     <th>الملاحظات</th>
-                    <th>الإجراء</th>
+                    <th style={{ textAlign: 'center' }}>الإجراء</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1106,8 +1106,8 @@ export default function BranchesAgentsList() {
                         <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {branchAgent.notes || '-'}
                         </td>
-                        <td>
-                          <div className="action-buttons">
+                        <td style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: 'none' }}>
+                          <div className="action-buttons" style={{ justifyContent: 'center' }}>
                             <button
                               onClick={() => navigate(`/branches-agents/${branchAgent.id}`)}
                               className="action-btn view"
