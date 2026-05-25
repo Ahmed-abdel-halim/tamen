@@ -1621,6 +1621,10 @@ export default function EditInsuranceDocument() {
           eidc_vehicle_type_id: formData.eidc_vehicle_type_id || null,
           eidc_vehicle_spec_id: formData.eidc_vehicle_spec_id || null,
           eidc_vehicle_detail_id: formData.eidc_vehicle_detail_id || null,
+          TypeOfVehicle: (() => {
+            const vt = vehicleTypes.find(t => t.id.toString() === formData.vehicle_type_id);
+            return vt ? `${vt.brand}` : '';
+          })(),
         }),
       });
 
