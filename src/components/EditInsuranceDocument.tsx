@@ -62,6 +62,9 @@ type InsuranceDocument = {
   premium: number;
   print_type?: string;
   eidc_policy_id?: string;
+  eidc_vehicle_type_id?: string;
+  eidc_vehicle_spec_id?: string;
+  eidc_vehicle_detail_id?: string;
 };
 
 // قائمة السنوات من 1960 إلى 2026
@@ -299,6 +302,9 @@ export default function EditInsuranceDocument() {
     address: '',
     email: '',
     premium: '',
+    eidc_vehicle_type_id: '',
+    eidc_vehicle_spec_id: '',
+    eidc_vehicle_detail_id: '',
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -340,6 +346,156 @@ export default function EditInsuranceDocument() {
       console.error('Error loading user permissions:', error);
     }
   };
+
+  // EIDC data states
+  const [eidcVehicleTypes, setEidcVehicleTypes] = useState<any[]>([]);
+  const [eidcVehicleSpecs, setEidcVehicleSpecs] = useState<any[]>([]);
+  const [eidcVehicleDetails, setEidcVehicleDetails] = useState<any[]>([]);
+  const [loadingEidcData, setLoadingEidcData] = useState(false);
+  const [loadingSpecs, setLoadingSpecs] = useState(false);
+
+  const fetchEidcVehicleTypes = async () => {
+    setLoadingEidcData(true);
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/vehicle-types`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error || 'فشل جلب بيانات الهيئة', 'error');
+          setEidcVehicleTypes([]);
+        } else {
+          setEidcVehicleTypes(Array.isArray(data) ? data : []);
+        }
+      } else {
+        const data = await res.json();
+        showToast(data.message || data.error || 'خطأ في الاتصال بنظام الهيئة', 'error');
+        setEidcVehicleTypes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching EIDC vehicle types:', error);
+      showToast('خطأ في جلب تصنيفات المركبات', 'error');
+    } finally {
+      setLoadingEidcData(false);
+    }
+  };
+
+  const fetchEidcVehicleSpecs = async (typeId: string) => {
+    setLoadingSpecs(true);
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/vehicle-specs?typeId=${typeId}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error, 'error');
+          setEidcVehicleSpecs([]);
+        } else {
+          const list = Array.isArray(data) ? data : [];
+          setEidcVehicleSpecs(list);
+        }
+      } else {
+        setEidcVehicleSpecs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching EIDC vehicle specs:', error);
+    } finally {
+      setLoadingSpecs(false);
+    }
+  };
+
+  const fetchEidcVehicleDetails = async (typeId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc/vehicle-details?typeId=${typeId}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error, 'error');
+          setEidcVehicleDetails([]);
+        } else {
+          const list = Array.isArray(data) ? data : [];
+          setEidcVehicleDetails(list);
+        }
+      } else {
+        setEidcVehicleDetails([]);
+      }
+    } catch (error) {
+      console.error('Error fetching EIDC vehicle details:', error);
+    }
+  };
+
+  const isMandatoryInsurance = formData.insurance_type === 'تأمين إجباري سيارات';
+  const isCustomsInsurance = formData.insurance_type === 'تأمين سيارة جمرك';
+  const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
+  const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
+
+  useEffect(() => {
+    if (isMandatoryInsurance) {
+      fetchEidcVehicleTypes();
+    }
+  }, [formData.insurance_type]);
+
+  useEffect(() => {
+    if (isMandatoryInsurance && formData.eidc_vehicle_type_id) {
+      setEidcVehicleSpecs([]);
+      setEidcVehicleDetails([]);
+      fetchEidcVehicleSpecs(formData.eidc_vehicle_type_id);
+    } else {
+      setEidcVehicleSpecs([]);
+      setEidcVehicleDetails([]);
+    }
+  }, [formData.eidc_vehicle_type_id]);
+
+  useEffect(() => {
+    if (isMandatoryInsurance && formData.eidc_vehicle_spec_id) {
+      fetchEidcVehicleDetails(formData.eidc_vehicle_type_id);
+    } else {
+      setEidcVehicleDetails([]);
+    }
+  }, [formData.eidc_vehicle_spec_id, formData.eidc_vehicle_type_id, isMandatoryInsurance]);
 
   // تعيين فئة السيارة بعد تحميل البيانات
   useEffect(() => {
@@ -412,6 +568,9 @@ export default function EditInsuranceDocument() {
         address: (data as any).address || '',
         email: (data as any).email || '',
         premium: data.premium?.toString() || '',
+        eidc_vehicle_type_id: (data as any).eidc_vehicle_type_id || '',
+        eidc_vehicle_spec_id: (data as any).eidc_vehicle_spec_id || '',
+        eidc_vehicle_detail_id: (data as any).eidc_vehicle_detail_id || '',
       });
       
       // تحديث المرجع بعد تحميل البيانات لتجنب إعادة تعيين القيم الافتراضية
@@ -432,10 +591,7 @@ export default function EditInsuranceDocument() {
     }
   };
 
-  const isMandatoryInsurance = formData.insurance_type === 'تأمين إجباري سيارات';
-  const isCustomsInsurance = formData.insurance_type === 'تأمين سيارة جمرك';
-  const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
-  const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
+
 
   // إعادة تعيين مدة التأمين عند تغيير نوع التأمين
   useEffect(() => {
@@ -1400,6 +1556,15 @@ export default function EditInsuranceDocument() {
     if (!formData.address?.trim()) errors.address = 'العنوان التفصيلي مطلوب';
     if (!formData.email?.trim()) errors.email = 'البريد الإلكتروني مطلوب';
 
+    if (isMandatoryInsurance) {
+      if (!formData.eidc_vehicle_type_id) {
+        errors.eidc_vehicle_type_id = 'تصنيف المركبة (النوع) مطلوب للهيئة';
+      }
+      if (!formData.eidc_vehicle_spec_id) {
+        errors.eidc_vehicle_spec_id = 'تصنيف المركبة (المواصفة) مطلوب للهيئة';
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       showToast('يرجى التحقق من الحقول المطلوبة وتصحيح الأخطاء', 'error');
@@ -1453,6 +1618,9 @@ export default function EditInsuranceDocument() {
           whatsapp_number: formData.whatsapp_number || null,
           nationality: formData.nationality || null,
           nid_passport: formData.nid_passport || null,
+          eidc_vehicle_type_id: formData.eidc_vehicle_type_id || null,
+          eidc_vehicle_spec_id: formData.eidc_vehicle_spec_id || null,
+          eidc_vehicle_detail_id: formData.eidc_vehicle_detail_id || null,
         }),
       });
 
@@ -1863,6 +2031,53 @@ export default function EditInsuranceDocument() {
                       error={formErrors.vehicle_weight}
                       disabled={isSynced && isMandatoryInsurance}
                     />
+
+                    {isMandatoryInsurance && (
+                      <>
+                        {/* بيانات احتساب القسط والاشتراك */}
+                        <div className="grid-header">
+                          <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط والاشتراك (EIDC)
+                        </div>
+
+                        <div className={`form-group ${formErrors.eidc_vehicle_type_id ? 'has-error' : ''}`}>
+                          <label>نوع المركبة (هيئة) <span className="required">*</span></label>
+                          <select 
+                            value={formData.eidc_vehicle_type_id} 
+                            disabled={isSynced && isMandatoryInsurance}
+                            onChange={(e) => setFormData({ ...formData, eidc_vehicle_type_id: e.target.value, eidc_vehicle_spec_id: '', eidc_vehicle_detail_id: '' })}
+                          >
+                            <option value="">{loadingEidcData ? 'جاري التحميل...' : '-- اختر النوع الرئيسي --'}</option>
+                            {eidcVehicleTypes.map(t => <option key={t.id} value={t.id}>{t.typeVehicle || t.name}</option>)}
+                          </select>
+                          {formErrors.eidc_vehicle_type_id && <span className="error-message">{formErrors.eidc_vehicle_type_id}</span>}
+                        </div>
+
+                        <div className={`form-group ${formErrors.eidc_vehicle_spec_id ? 'has-error' : ''}`}>
+                          <label>النوع المحدد (هيئة) <span className="required">*</span></label>
+                          <select
+                            value={formData.eidc_vehicle_spec_id}
+                            onChange={(e) => setFormData({ ...formData, eidc_vehicle_spec_id: e.target.value, eidc_vehicle_detail_id: '' })}
+                            disabled={(isSynced && isMandatoryInsurance) || !formData.eidc_vehicle_type_id || loadingSpecs}
+                          >
+                            <option value="">{loadingSpecs ? 'جاري التحميل...' : '-- اختر النوع التفصيلي --'}</option>
+                            {!loadingSpecs && eidcVehicleSpecs.map(s => <option key={s.id} value={s.id}>{s.specVehicle || s.name}</option>)}
+                          </select>
+                          {formErrors.eidc_vehicle_spec_id && <span className="error-message">{formErrors.eidc_vehicle_spec_id}</span>}
+                        </div>
+
+                        <div className="form-group">
+                          <label>التفاصيل الإضافية (هيئة)</label>
+                          <select 
+                            value={formData.eidc_vehicle_detail_id} 
+                            onChange={(e) => setFormData({ ...formData, eidc_vehicle_detail_id: e.target.value })} 
+                            disabled={(isSynced && isMandatoryInsurance) || !formData.eidc_vehicle_spec_id}
+                          >
+                            <option value="">-- لا يوجد / اختر --</option>
+                            {eidcVehicleDetails.map(d => <option key={d.id} value={d.id}>{d.specVehicle || d.name}</option>)}
+                          </select>
+                        </div>
+                      </>
+                    )}
 
                     {/* بيانات التأمين */}
                     <div className="grid-header"><i className="fa-solid fa-file-invoice-dollar"></i> بيانات مدة التأمين والمبالغ</div>
