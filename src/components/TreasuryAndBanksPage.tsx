@@ -1396,6 +1396,10 @@ export default function TreasuryAndBanksPage() {
                 <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                 تصدير إكسيل
               </button>
+              <button className="secondary" onClick={() => window.dispatchEvent(new CustomEvent('open-category-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)', background: '#475569', color: '#fff' }}>
+                <i className="fa-solid fa-tags"></i>
+                إدارة الفئات
+              </button>
               <button className="primary" onClick={() => window.dispatchEvent(new CustomEvent('open-expense-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#ef4444' }}>
                 <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
                 إضافة مصروف

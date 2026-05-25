@@ -188,9 +188,21 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
   const handleRetryEidcSync = async (id: number) => {
     try {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
+
+      const headers: HeadersInit = { 'Accept': 'application/json' };
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}/eidc-retry`, {
         method: 'POST',
-        headers: { 'Accept': 'application/json' }
+        headers
       });
       const data = await res.json();
       if (res.ok) {
@@ -207,9 +219,27 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const handleGlobalSync = async () => {
     setSyncing(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc-sync-all`, {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
+
+      const headers: HeadersInit = { 'Accept': 'application/json' };
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // If filters.agentId is set, pass it to the sync endpoint
+      const params = new URLSearchParams();
+      if (filters.agentId) {
+        params.append('branch_agent_id', filters.agentId);
+      }
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/eidc-sync-all?${params.toString()}`, {
         method: 'POST',
-        headers: { 'Accept': 'application/json' }
+        headers
       });
       const data = await res.json();
       if (res.ok) {

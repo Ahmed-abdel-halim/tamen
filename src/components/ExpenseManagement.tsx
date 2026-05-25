@@ -692,15 +692,20 @@ export default function ExpenseManagement({
     const handlePrintReportEvent = () => {
       handlePrintReport();
     };
+    const handleOpenCategoryModalEvent = () => {
+      setShowCategoryModal(true);
+    };
 
     window.addEventListener('open-expense-modal', handleOpenExpenseModalEvent);
     window.addEventListener('export-expense-excel', handleExportExcelEvent);
     window.addEventListener('print-expense-report', handlePrintReportEvent);
+    window.addEventListener('open-category-modal', handleOpenCategoryModalEvent);
 
     return () => {
       window.removeEventListener('open-expense-modal', handleOpenExpenseModalEvent);
       window.removeEventListener('export-expense-excel', handleExportExcelEvent);
       window.removeEventListener('print-expense-report', handlePrintReportEvent);
+      window.removeEventListener('open-category-modal', handleOpenCategoryModalEvent);
     };
   }, [hideHeader, expenses, statistics, filteredExpenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
@@ -1285,17 +1290,19 @@ export default function ExpenseManagement({
                   {activeTab === 'expenses' ? 'تخصيص عرض المصروفات والبحث عن بند محدد' : 'تصفية قائمة التعويضات والمطالبات المالية'}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setShowCategoryModal(true)} className="btn-secondary" style={{ background: '#475569', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-                  <i className="fa-solid fa-tags"></i> إدارة الفئات
-                </button>
-                <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-                  <i className="fa-solid fa-file-excel"></i> تصدير Excel
-                </button>
-                <button onClick={() => handleOpenModal()} className="btn-primary" style={{ background: activeTab === 'expenses' ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-                  <i className="fa-solid fa-plus"></i> {activeTab === 'expenses' ? 'إضافة مصروف' : 'إضافة تعويض'}
-                </button>
-              </div>
+              {!hideHeader && (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => setShowCategoryModal(true)} className="btn-secondary" style={{ background: '#475569', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <i className="fa-solid fa-tags"></i> إدارة الفئات
+                  </button>
+                  <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <i className="fa-solid fa-file-excel"></i> تصدير Excel
+                  </button>
+                  <button onClick={() => handleOpenModal()} className="btn-primary" style={{ background: activeTab === 'expenses' ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <i className="fa-solid fa-plus"></i> {activeTab === 'expenses' ? 'إضافة مصروف' : 'إضافة تعويض'}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>

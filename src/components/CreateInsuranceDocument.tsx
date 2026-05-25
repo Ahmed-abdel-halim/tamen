@@ -2286,7 +2286,7 @@ export default function CreateInsuranceDocument() {
         year: yearValue,
         fuel_type: formData.fuel_type || null,
         license_purpose: formData.license_purpose || null,
-        engine_power: formData.engine_power || null,
+        engine_power: (isThirdPartyInsurance || isForeignCarInsurance) ? null : (formData.engine_power || null),
         authorized_passengers: authorizedPassengersValue,
         load_capacity: loadCapacityValue,
         insured_name: formData.insured_name || null,
@@ -3120,12 +3120,15 @@ export default function CreateInsuranceDocument() {
 
                   <div className="grid-header"><i className="fa-solid fa-car-side"></i> بيانات المركبة</div>
 
-                  <div className="form-group">
-                    <label>الجهة المقيدة بها <span className="required">*</span></label>
-                    <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
-                      {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
-                    </select>
-                  </div>
+                  {!isForeignCarInsurance && (
+                    <div className="form-group">
+                      <label>الجهة المقيدة بها <span className="required">*</span></label>
+                      <select value={formData.plate_id} onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}>
+                        <option value="">اختر الجهة...</option>
+                        {plates.map(p => <option key={p.id} value={p.id}>{p.city.name_ar}</option>)}
+                      </select>
+                    </div>
+                  )}
 
                   <div className={`form-group ${formErrors.plate_number_manual ? 'has-error' : ''}`}>
                     {formErrors.plate_number_manual ? (
@@ -3151,6 +3154,96 @@ export default function CreateInsuranceDocument() {
                     )}
                     <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
                   </div>
+
+                  <div className={`form-group ${formErrors.start_date ? 'has-error' : ''}`}>
+                    {formErrors.start_date ? (
+                      <span className="error-message">{formErrors.start_date}</span>
+                    ) : (
+                      <label htmlFor="start_date">تاريخ البدء <span className="required">*</span></label>
+                    )}
+                    <input type="date" id="start_date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+                  </div>
+
+                  <div className={`form-group ${formErrors.color ? 'has-error' : ''}`}>
+                    {formErrors.color ? (
+                      <span className="error-message">{formErrors.color}</span>
+                    ) : (
+                      <label>اللون <span className="required">*</span></label>
+                    )}
+                    <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
+                      <option value="">اختر اللون...</option>
+                      {colors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className={`form-group ${formErrors.year ? 'has-error' : ''}`}>
+                    {formErrors.year ? (
+                      <span className="error-message">{formErrors.year}</span>
+                    ) : (
+                      <label>سنة الصنع <span className="required">*</span></label>
+                    )}
+                    <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
+                      <option value="">اختر السنة...</option>
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+
+                  {isThirdPartyInsurance && (
+                    <>
+                      <div className={`form-group ${formErrors.third_party_purpose ? 'has-error' : ''}`}>
+                        {formErrors.third_party_purpose ? (
+                          <span className="error-message">{formErrors.third_party_purpose}</span>
+                        ) : (
+                          <label>الغرض من الطرف الثالث <span className="required">*</span></label>
+                        )}
+                        <select value={formData.third_party_purpose} onChange={(e) => setFormData({ ...formData, third_party_purpose: e.target.value })}>
+                          <option value="">اختر الغرض...</option>
+                          <option value="خاصة">خاصة</option>
+                          <option value="عامة">عامة</option>
+                          <option value="نقل">نقل</option>
+                        </select>
+                      </div>
+
+                      <div className={`form-group ${formErrors.license_purpose ? 'has-error' : ''}`}>
+                        {formErrors.license_purpose ? (
+                          <span className="error-message">{formErrors.license_purpose}</span>
+                        ) : (
+                          <label>الغرض من الترخيص <span className="required">*</span></label>
+                        )}
+                        <select value={formData.license_purpose} onChange={(e) => setFormData({ ...formData, license_purpose: e.target.value })}>
+                          <option value="">اختر الغرض...</option>
+                          {LICENSE_PURPOSES.map(lp => <option key={lp.ar} value={`${lp.ar}/${lp.en}`}>{lp.ar}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {isForeignCarInsurance && (
+                    <>
+                      <div className={`form-group ${formErrors.foreign_car_country ? 'has-error' : ''}`}>
+                        {formErrors.foreign_car_country ? (
+                          <span className="error-message">{formErrors.foreign_car_country}</span>
+                        ) : (
+                          <label>دولة السيارة <span className="required">*</span></label>
+                        )}
+                        <input type="text" value={formData.foreign_car_country} onChange={(e) => setFormData({ ...formData, foreign_car_country: e.target.value })} placeholder="مثال: تونس، مصر..." />
+                      </div>
+
+                      <div className={`form-group ${formErrors.foreign_car_purpose ? 'has-error' : ''}`}>
+                        {formErrors.foreign_car_purpose ? (
+                          <span className="error-message">{formErrors.foreign_car_purpose}</span>
+                        ) : (
+                          <label>الغرض من السيارة <span className="required">*</span></label>
+                        )}
+                        <select value={formData.foreign_car_purpose} onChange={(e) => setFormData({ ...formData, foreign_car_purpose: e.target.value })}>
+                          <option value="">اختر الغرض...</option>
+                          <option value="سيارات خاصة سياحية">سيارات خاصة سياحية</option>
+                          <option value="سيارات نقل ركاب">سيارات نقل ركاب</option>
+                          <option value="سيارات نقل وشحن">سيارات نقل وشحن</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
 
                   <div className="grid-header"><i className="fa-solid fa-money-bill-wave"></i> المبالغ المالية</div>
 
