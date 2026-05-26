@@ -122,141 +122,179 @@ export default function ContactUs() {
       <WebsiteTopBar />
       <WebsiteNavbar />
       
-      <section className="contact-hero">
-        <div className="container">
-          <div className="contact-hero-content">
-            <h1>{t.heroTitle}</h1>
-            <p className="contact-hero-subtitle">{t.heroSubtitle}</p>
-            <p className="contact-hero-description">
-              {t.heroDesc}
-            </p>
-          </div>
+      {/* Redesigned Premium Hero Section (Matches AboutUs & Management Hero Layout) */}
+      <section className="about-hero-new">
+        <div className="about-hero-bg">
+          <img src="/new/قبل الفوتر 2.png" alt="Skyscraper Cityscape" />
+          <div className="about-hero-overlay"></div>
+        </div>
+        
+        <div className="about-hero-content-new">
+          <h2 className="about-hero-title-green">{t.heroTitle}</h2>
+          <h1 className="about-hero-title-white">{t.heroSubtitle}</h1>
+          <p className="about-hero-desc-new">
+            {t.heroDesc}
+          </p>
         </div>
       </section>
 
-      <section className="contact-content">
-        <div className="container">
-          <div className="contact-grid">
-            <div className="contact-info">
-                <h2>{t.contactInfo}</h2>
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <i className="fas fa-phone"></i>
-                </div>
-                <div className="contact-details">
-                    <h3>{t.phone}</h3>
-                  <p>+218 XX XXX XXXX</p>
-                  <p>+218 XX XXX XXXX</p>
-                </div>
-              </div>
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <i className="fas fa-envelope"></i>
-                </div>
-                <div className="contact-details">
-                    <h3>{t.email}</h3>
-                  <p>info@almadar.ly</p>
-                  <p>support@almadar.ly</p>
-                </div>
-              </div>
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <i className="fas fa-map-marker-alt"></i>
-                </div>
-                <div className="contact-details">
-                    <h3>{t.address}</h3>
-                    <p>{t.addressValue}</p>
-                </div>
-              </div>
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <i className="fas fa-clock"></i>
-                </div>
-                <div className="contact-details">
-                    <h3>{t.hours}</h3>
-                    <p>{t.hoursValue1}</p>
-                    <p>{t.hoursValue2}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="contact-form-container">
+      {/* Redesigned Content & Contact Split-Card Section */}
+      <div className="about-sections-wrapper">
+        <section className="contact-section-new">
+          <div className="container">
+            <div className="contact-split-card">
+              {/* White Column: Message Form */}
+              <div className="contact-form-column">
                 <h2>{t.sendUs}</h2>
-              {submitted ? (
-                <div className="success-message">
-                  <i className="fas fa-check-circle"></i>
+                {submitted ? (
+                  <div className="success-message">
+                    <i className="fas fa-check-circle"></i>
                     <p>{t.success}</p>
-                </div>
-              ) : (
-                <form className="contact-form" onSubmit={handleSubmit}>
-                  <div className="form-group">
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit}>
+                    <div className="form-group-new">
                       <label htmlFor="name">{t.fullName}</label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder={language === 'ar' ? 'أدخل الاسم كامل' : 'Enter full name'}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group-new">
                       <label htmlFor="email">{t.emailLabel}</label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder={language === 'ar' ? 'أدخل بريدك الإلكتروني' : 'Enter your email'}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group-new">
                       <label htmlFor="phone">{t.phoneLabel}</label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="form-group">
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        placeholder={language === 'ar' ? 'أدخل رقم هاتفك' : 'Enter your phone number'}
+                      />
+                    </div>
+
+                    <div className="form-group-new">
                       <label htmlFor="subject">{t.subjectLabel}</label>
-                    <select
-                      id="subject"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                    >
+                      <select
+                        id="subject"
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleChange}
+                        required
+                      >
                         <option value="">{t.subjectPlaceholder}</option>
                         {t.subjectOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
+                      </select>
+                    </div>
+
+                    <div className="form-group-new">
                       <label htmlFor="message">{t.messageLabel}</label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      rows={6}
-                      value={formData.message}
-                      onChange={handleChange}
-                      required
-                    ></textarea>
-                  </div>
-                  <button type="submit" className="btn-primary">
-                    <i className="fas fa-paper-plane"></i>
+                      <textarea
+                        id="message"
+                        name="message"
+                        rows={4}
+                        value={formData.message}
+                        onChange={handleChange}
+                        placeholder={language === 'ar' ? 'اكتب رسالتك هنا' : 'Type your message here'}
+                        required
+                      ></textarea>
+                    </div>
+
+                    <button type="submit" className="contact-btn-submit">
+                      <i className="fas fa-paper-plane"></i>
                       {t.submit}
-                  </button>
-                </form>
-              )}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              {/* Blue Column: Contact Info */}
+              <div className="contact-info-column">
+                <div className="info-column-bg">
+                  <img src="/new/قبل الفوتر 2.png" alt="Cityscape" />
+                  <div className="info-column-overlay"></div>
+                </div>
+
+                <div className="info-column-content">
+                  <h2>{language === 'ar' ? 'نحن هنا لمساعدتك' : 'We are here to help'}</h2>
+                  <p className="info-column-subtitle">
+                    {language === 'ar' 
+                      ? 'تواصل معنا الآن للحصول على طلب خدمة أو طلب استشارة' 
+                      : 'Contact us now to get service or consultation requests'}
+                  </p>
+
+                  <div className="info-items-list">
+                    {/* Item 1: Phone */}
+                    <div className="info-item-new">
+                      <div className="info-item-icon">
+                        <i className="fas fa-phone-alt"></i>
+                      </div>
+                      <div className="info-item-text">
+                        <span>{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</span>
+                        <a href="tel:+218920003366" dir="ltr">+218 920003366</a>
+                      </div>
+                    </div>
+
+                    {/* Item 2: Email */}
+                    <div className="info-item-new">
+                      <div className="info-item-icon">
+                        <i className="fas fa-envelope"></i>
+                      </div>
+                      <div className="info-item-text">
+                        <span>{language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</span>
+                        <a href="mailto:info@mli.ly">info@mli.ly</a>
+                        <a href="mailto:support@almadar.ly">support@almadar.ly</a>
+                      </div>
+                    </div>
+
+                    {/* Item 3: Address */}
+                    <div className="info-item-new">
+                      <div className="info-item-icon">
+                        <i className="fas fa-map-marker-alt"></i>
+                      </div>
+                      <div className="info-item-text">
+                        <span>{language === 'ar' ? 'العنوان' : 'Address'}</span>
+                        <p>{language === 'ar' ? 'طرابلس، ليبيا' : 'Tripoli, Libya'}</p>
+                      </div>
+                    </div>
+
+                    {/* Item 4: Hours */}
+                    <div className="info-item-new">
+                      <div className="info-item-icon">
+                        <i className="fas fa-clock"></i>
+                      </div>
+                      <div className="info-item-text">
+                        <span>{language === 'ar' ? 'المواعيد' : 'Working Hours'}</span>
+                        <p>{t.hoursValue1}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <Footer />
     </div>

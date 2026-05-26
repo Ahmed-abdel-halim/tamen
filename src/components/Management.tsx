@@ -67,26 +67,26 @@ export default function Management() {
     {
       name: 'أ. محمد أحمد',
       position: t.positions.generalManager,
-      description: language === 'ar' ? 'خبرة تزيد عن 20 عاماً في مجال التأمين' : 'Over 20 years of experience in insurance',
-      icon: 'fas fa-user-tie'
+      description: language === 'ar' ? 'خبرة تزيد عن 25 عاماً في مجال التأمين' : 'Over 25 years of experience in insurance',
+      image: '/img/mohamed.png'
     },
     {
       name: 'أ. فاطمة علي',
       position: t.positions.deputy,
       description: language === 'ar' ? 'متخصصة في إدارة المخاطر والتأمين' : 'Specialized in risk management and insurance',
-      icon: 'fas fa-user-shield'
+      image: '/img/fatima.png'
+    },
+    {
+      name: 'أ. سارة حسن',
+      position: t.positions.sales,
+      description: language === 'ar' ? 'خبيرة في تطوير الأعمال والمبيعات' : 'Experienced in business development and sales',
+      image: '/img/sara.png'
     },
     {
       name: 'أ. خالد محمود',
       position: t.positions.operations,
       description: language === 'ar' ? 'خبرة واسعة في إدارة العمليات التأمينية' : 'Extensive experience in insurance operations management',
-      icon: 'fas fa-cogs'
-    },
-    {
-      name: 'أ. سارة حسن',
-      position: t.positions.sales,
-      description: language === 'ar' ? 'خبرة في تطوير الأعمال والمبيعات' : 'Experienced in business development and sales',
-      icon: 'fas fa-chart-line'
+      image: '/img/khaled.png'
     }
   ];
 
@@ -95,85 +95,75 @@ export default function Management() {
       <WebsiteTopBar />
       <WebsiteNavbar />
       
-      <section className="management-hero">
-        <div className="container">
-          <div className="management-hero-content">
-            <h1>{t.heroTitle}</h1>
-            <p className="management-hero-subtitle">{t.heroSubtitle}</p>
-            <p className="management-hero-description">
-              {t.heroDesc}
-            </p>
-          </div>
+      {/* Redesigned Premium Hero Section (Matches AboutUs Hero Layout) */}
+      <section className="about-hero-new">
+        <div className="about-hero-bg">
+          <img src="/new/قبل الفوتر 2.png" alt="Skyscraper Cityscape" />
+          <div className="about-hero-overlay"></div>
+        </div>
+        
+        <div className="about-hero-content-new">
+          <h2 className="about-hero-title-green">{t.heroTitle}</h2>
+          <h1 className="about-hero-title-white">{t.heroSubtitle}</h1>
+          <p className="about-hero-desc-new">
+            {t.heroDesc}
+          </p>
         </div>
       </section>
 
-      <section className="management-content">
-        <div className="container">
-          <div className="management-intro">
-            <h2>{t.teamTitle}</h2>
-            <p>{t.teamIntro}</p>
-          </div>
+      {/* Redesigned Content & Team Grid Section */}
+      <div className="about-sections-wrapper">
+        <section className="team-section-new">
+          <div className="container">
+            <div className="team-intro-new">
+              <h2>{t.teamTitle}</h2>
+              <p>{t.teamIntro}</p>
+            </div>
 
-          <div className="management-grid">
-            {managementTeam.map((member, index) => (
-              <div key={index} className="management-card">
-                <div className="management-card-inner">
-                  <div className="management-icon-wrapper">
-                    <div className="management-icon">
-                      <i className={member.icon}></i>
+            <div className="team-grid-new">
+              {/* Top Row: General Manager Centered */}
+              <div className="team-top-row">
+                {managementTeam.slice(0, 1).map((member, idx) => (
+                  <div className="team-card-new gm-card" key={`gm-${idx}`}>
+                    <div className="team-photo-wrapper">
+                      {member.image ? (
+                        <img src={member.image} alt={member.name} className="team-photo-new" />
+                      ) : (
+                        <div className="team-placeholder-new"></div>
+                      )}
                     </div>
-                    <div className="management-icon-bg"></div>
+                    <div className="team-info-new">
+                      <h3>{member.name}</h3>
+                      <p className="team-position-new">{member.position}</p>
+                      <p className="team-desc-new">{member.description}</p>
+                    </div>
                   </div>
-                  <div className="management-info">
-                    <h3>{member.name}</h3>
-                    <p className="management-position">{member.position}</p>
-                    <p className="management-description">{member.description}</p>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="management-structure">
-            <h2 className="section-title">{t.structureTitle}</h2>
-            <div className="structure-diagram">
-              <div className="structure-level">
-                <div className="structure-box main">
-                  <div className="structure-icon">
-                    <i className="fas fa-crown"></i>
+              {/* Bottom Row: 3 Team Members */}
+              <div className="team-bottom-row">
+                {managementTeam.slice(1).map((member, idx) => (
+                  <div className="team-card-new" key={`member-${idx}`}>
+                    <div className="team-photo-wrapper">
+                      {member.image ? (
+                        <img src={member.image} alt={member.name} className="team-photo-new" />
+                      ) : (
+                        <div className="team-placeholder-new"></div>
+                      )}
+                    </div>
+                    <div className="team-info-new">
+                      <h3>{member.name}</h3>
+                      <p className="team-position-new">{member.position}</p>
+                      <p className="team-desc-new">{member.description}</p>
+                    </div>
                   </div>
-                  <h4>{t.positions.generalManager}</h4>
-                  <p>أ. محمد أحمد</p>
-                </div>
-              </div>
-              <div className="structure-connector"></div>
-              <div className="structure-level">
-                <div className="structure-box">
-                  <div className="structure-icon">
-                    <i className="fas fa-user-shield"></i>
-                  </div>
-                  <h4>{t.positions.deputy}</h4>
-                  <p>أ. فاطمة علي</p>
-                </div>
-                <div className="structure-box">
-                  <div className="structure-icon">
-                    <i className="fas fa-cogs"></i>
-                  </div>
-                  <h4>{t.positions.operations}</h4>
-                  <p>أ. خالد محمود</p>
-                </div>
-                <div className="structure-box">
-                  <div className="structure-icon">
-                    <i className="fas fa-chart-line"></i>
-                  </div>
-                  <h4>{t.positions.sales}</h4>
-                  <p>أ. سارة حسن</p>
-                </div>
+                ))}
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <Footer />
     </div>

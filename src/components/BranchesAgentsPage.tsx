@@ -3,7 +3,7 @@ import WebsiteNavbar from './WebsiteNavbar';
 import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
 import NewAgentRegistration from './NewAgentRegistration';
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, resolveImageUrl } from "../config/api";
 
 type BranchAgent = {
   id: number;
@@ -16,6 +16,25 @@ type BranchAgent = {
   phone?: string;
   status: 'نشط' | 'غير نشط';
   activity?: string;
+  personal_photo?: string;
+};
+
+const getWhatsAppLink = (phone: string) => {
+  if (!phone) return '#';
+  const arabicNums = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let clean = phone;
+  for (let i = 0; i < 10; i++) {
+    const regex = new RegExp(arabicNums[i], 'g');
+    clean = clean.replace(regex, i.toString());
+  }
+  clean = clean.replace(/[^\d]/g, '');
+  
+  if (clean.startsWith('0')) {
+    clean = '218' + clean.slice(1);
+  } else if (!clean.startsWith('218') && clean.length === 9) {
+    clean = '218' + clean;
+  }
+  return `https://wa.me/${clean}`;
 };
 
 export default function BranchesAgentsPage() {
@@ -115,7 +134,8 @@ export default function BranchesAgentsPage() {
             address: item.address,
             phone: item.phone,
             status: item.status,
-            activity: item.activity
+            activity: item.activity,
+            personal_photo: item.personal_photo
           }));
         setBranchesAgents(activeData);
       }
@@ -157,34 +177,41 @@ export default function BranchesAgentsPage() {
       <WebsiteTopBar />
       <WebsiteNavbar />
       
-      <section className="branches-hero">
-        <div className="container">
-          <div className="branches-hero-content">
-            <h1>{t.heroTitle}</h1>
-            <p className="branches-hero-subtitle">{t.heroSubtitle}</p>
-            <p className="branches-hero-description">
-              {t.heroDesc}
-            </p>
-            <button 
-              onClick={() => setShowRegistrationModal(true)}
-              style={{
-                marginTop: '20px',
-                padding: '12px 30px',
-                background: '#10b981',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '30px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.25)',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <i className="fas fa-handshake" style={{ marginLeft: '10px' }}></i>
-              انضم إلينا كوكيل/فرع
-            </button>
-          </div>
+      <section className="about-hero-new">
+        <div className="about-hero-bg">
+          <img src="/new/قبل الفوتر 2.png" alt="Skyscraper Cityscape" />
+          <div className="about-hero-overlay"></div>
+        </div>
+        
+        <div className="about-hero-content-new">
+          <h2 className="about-hero-title-green">{t.heroTitle}</h2>
+          <h1 className="about-hero-title-white">{t.heroSubtitle}</h1>
+          <p className="about-hero-desc-new">
+            {t.heroDesc}
+          </p>
+          <button 
+            onClick={() => setShowRegistrationModal(true)}
+            style={{
+              marginTop: '25px',
+              padding: '12px 35px',
+              background: '#139625',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '30px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(19, 150, 37, 0.3)',
+              transition: 'all 0.3s ease',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontFamily: "'Cairo', sans-serif"
+            }}
+          >
+            <i className="fas fa-handshake"></i>
+            {language === 'ar' ? 'انضم إلينا كوكيل' : 'Join us as an agent'}
+          </button>
         </div>
       </section>
 
@@ -266,12 +293,38 @@ export default function BranchesAgentsPage() {
                       textAlign: language === 'en' ? 'left' : 'right',
                     }}
                   >
-                    <div className="branch-card-header">
-                      <div className={`branch-type-badge ${item.type === 'وكيل' ? 'agent' : 'branch'}`}>
+                    <div className="branch-card-image-wrapper">
+                      <img 
+                        src={resolveImageUrl(item.personal_photo) || '/img/khaled.png'} 
+                        alt={item.agent_name} 
+                        className="branch-card-image" 
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                        onError={(e) => {
+                          const currentSrc = e.currentTarget.src;
+                          // If local dev environment, try fetching from production server before using default avatar
+                          if (currentSrc.includes('localhost') || currentSrc.includes('127.0.0.1')) {
+                            const storageIndex = currentSrc.indexOf('/storage/');
+                            if (storageIndex !== -1) {
+                              const path = currentSrc.substring(storageIndex);
+                              e.currentTarget.src = `https://api.mli.ly${path}`;
+                              return;
+                            }
+                          }
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/img/khaled.png';
+                        }}
+                      />
+                      <div className={`branch-type-badge-overlay ${item.type === 'وكيل' ? 'agent' : 'branch'}`}>
                         <i className={item.type === 'وكيل' ? 'fas fa-user-tie' : 'fas fa-building'}></i>
                         <span>{item.type === 'وكيل' ? t.agentType : t.branchType}</span>
                       </div>
                     </div>
+                    
                     <div
                       className="branch-card-body"
                       style={{
@@ -337,11 +390,17 @@ export default function BranchesAgentsPage() {
                         )}
                       </div>
                     </div>
+                    
                     <div className="branch-card-footer">
-                      <span className="status-badge active">
-                        <i className="fas fa-check-circle"></i>
-                        {item.status}
-                      </span>
+                      <a 
+                        href={item.phone ? getWhatsAppLink(item.phone) : '#'} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="branch-whatsapp-btn"
+                      >
+                        <i className="fab fa-whatsapp"></i>
+                        <span>{language === 'ar' ? 'تواصل الآن' : 'Contact Now'}</span>
+                      </a>
                     </div>
                   </div>
                 ))}
