@@ -13,6 +13,19 @@ export default function HomePage() {
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
   const [entities, setEntities] = useState<{ id: number; name: string; logo_url: string }[]>([]);
 
+  const bannerImages = [
+    '/new/Gemini_Generated_Image_evgx1ievgx1ievgx (1).png',
+    '/new/قبل الفوتر 2.png'
+  ];
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const fetchEntities = async () => {
       try {
@@ -197,8 +210,26 @@ export default function HomePage() {
       {/* Hero Banner Section */}
       <section className="hero-banner-new">
         <div className="hero-bg-container">
-          <img src="/new/قبل الفوتر 2.png" alt="City Background" className="hero-bg-img" />
-          <div className="hero-overlay"></div>
+          {bannerImages.map((src, idx) => (
+            <img 
+              key={src}
+              src={src} 
+              alt="City Background" 
+              className="hero-bg-img" 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: currentImageIndex === idx ? 1 : 0,
+                transition: 'opacity 1.5s ease-in-out',
+                zIndex: currentImageIndex === idx ? 1 : 0
+              }}
+            />
+          ))}
+          <div className="hero-overlay" style={{ zIndex: 2 }}></div>
         </div>
         
         <div className="hero-content-container">
