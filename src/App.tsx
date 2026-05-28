@@ -117,6 +117,7 @@ import EditRentalVoucher from './components/EditRentalVoucher';
 import ExcelImportPage from './components/ExcelImportPage';
 import TreasuryAndBanksPage from './components/TreasuryAndBanksPage';
 import AgentTransfers from './components/AgentTransfers';
+import NotificationsPage from './components/NotificationsPage';
 
 
 
@@ -1051,6 +1052,7 @@ export default function App() {
                   <Route path="/company-documents" element={isAdmin ? <CompanyDocuments /> : <Navigate to="/dashboard" />} />
                   <Route path="/excel-import" element={isAdmin ? <ExcelImportPage /> : <Navigate to="/dashboard" />} />
                   <Route path="/dashboard" element={<DashboardPanels />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/users" element={<UsersList />} />

@@ -589,7 +589,7 @@ export default function BranchAgentDetails() {
 
   const getRequestTypeName = (type: string) => {
     const types: any = {
-      stock: 'طلب عهدة/مستندات',
+      stock: 'طلب مخزون/مستندات',
       support: 'دعم فني',
       financial: 'تسوية مالية',
       commission: 'طلب عمولة',
@@ -603,7 +603,11 @@ export default function BranchAgentDetails() {
     return types[type] || type;
   };
 
-  const getStatusName = (status: string) => {
+  const getStatusName = (status: string, type?: string) => {
+    if (type === 'stock') {
+      if (status === 'pending') return 'تحت الطلب';
+      if (status === 'completed') return 'نفذت';
+    }
     const statuses: any = {
       pending: 'قيد الانتظار',
       processing: 'جاري المعالجة',
@@ -1254,7 +1258,7 @@ export default function BranchAgentDetails() {
                         <div className="request-body">
                           <div className="request-top">
                             <h4 className="request-type-title">{getRequestTypeName(req.type)} - {req.subject}</h4>
-                            <span className={`status-pill ${req.status}`}>{getStatusName(req.status)}</span>
+                            <span className={`status-pill ${req.status}`}>{getStatusName(req.status, req.type)}</span>
                           </div>
                           <p className="request-reason">{req.message}</p>
                           <div className="request-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
@@ -1343,7 +1347,7 @@ export default function BranchAgentDetails() {
               <div className="input-group">
                 <label>نوع الطلب</label>
                 <select value={newRequest.type} onChange={(e) => setNewRequest({...newRequest, type: e.target.value})}>
-                  <option value="stock">طلب عهدة/مستندات</option>
+                  <option value="stock">طلب مخزون/مستندات</option>
                   <option value="support">دعم فني</option>
                   <option value="financial">تسوية مالية</option>
                   <option value="commission">طلب عمولة</option>

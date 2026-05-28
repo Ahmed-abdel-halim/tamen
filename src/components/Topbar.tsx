@@ -1,5 +1,71 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../config/api'
+import { showToast } from './Toast'
+
+const playSynthesizedNotificationSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    // First tone (pleasant chime)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    gain1.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+    
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start();
+    osc1.stop(ctx.currentTime + 0.6);
+    
+    // Second tone delayed for harmony (F#5)
+    setTimeout(() => {
+      try {
+        if (ctx.state === 'closed') return;
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(739.99, ctx.currentTime); // F#5
+        gain2.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.8);
+        
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.8);
+      } catch (e) {
+        // Catch issues silently
+      }
+    }, 120);
+  } catch (e) {
+    console.error('Audio synthesis failed:', e);
+  }
+};
+
+const playNotificationSound = () => {
+  try {
+    const base = window.location.origin + (import.meta.env.BASE_URL || '/');
+    const audioUrl = new URL('sounds/notification.mp3', base).toString();
+    console.log('🔊 Attempting to play notification sound from:', audioUrl);
+    
+    const audio = new Audio(audioUrl);
+    audio.play()
+      .then(() => {
+        console.log('✅ Notification sound played successfully.');
+      })
+      .catch((err) => {
+        console.warn('⚠️ MP3 playback blocked/failed, falling back to Web Audio API synthesis:', err);
+        playSynthesizedNotificationSound();
+      });
+  } catch (error) {
+    console.error('❌ Audio playback setup error, falling back to synthesis:', error);
+    playSynthesizedNotificationSound();
+  }
+};
 
 type TopbarProps = {
   onToggleSidebar: () => void;
@@ -15,6 +81,153 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+  const notificationRef = useRef<HTMLDivElement>(null)
+
+  const unreadCountRef = useRef(0)
+  useEffect(() => {
+    unreadCountRef.current = unreadCount
+  }, [unreadCount])
+
+  const fetchNotifications = async (showToasts = false) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const countRes = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!countRes.ok) return;
+      const countData = await countRes.json();
+      const newCount = countData.unread_count;
+
+      if (newCount !== unreadCountRef.current || notifications.length === 0) {
+        const listRes = await fetch(`${API_BASE_URL}/notifications`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setNotifications(listData);
+          
+          if (showToasts && newCount > unreadCountRef.current && listData.length > 0) {
+            const latest = listData[0];
+            if (latest && !latest.read_at) {
+              const toastType = (latest.type === 'error' || latest.type === 'warning' || latest.type === 'rejected') ? 'error' : 'success';
+              showToast(`${latest.title}: ${latest.message}`, toastType);
+              playNotificationSound();
+            }
+          }
+        }
+      }
+      
+      setUnreadCount(newCount);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications(false);
+
+    const interval = setInterval(() => {
+      fetchNotifications(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAsRead = async (id: string, actionUrl: string | null) => {
+    setIsNotificationOpen(false);
+    setNotifications(prev => prev.map((n: any) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      if (actionUrl) navigate(actionUrl);
+      return;
+    }
+
+    try {
+      await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+
+    if (actionUrl) {
+      navigate(actionUrl);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setNotifications(prev => prev.map((n: any) => ({ ...n, read_at: new Date().toISOString() })));
+    setUnreadCount(0);
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      showToast('تم تحديد جميع الإشعارات كمقروءة', 'success');
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const toggleNotifications = () => {
+    setIsNotificationOpen(prev => !prev);
+    if (!isNotificationOpen) {
+      fetchNotifications(false);
+    }
+  };
+
+  const getNotificationIcon = (type?: string) => {
+    switch (type) {
+      case 'success': return 'fa-solid fa-circle-check';
+      case 'warning': return 'fa-solid fa-circle-exclamation';
+      case 'error': return 'fa-solid fa-circle-xmark';
+      default: return 'fa-solid fa-circle-info';
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) return 'الآن';
+      if (diffMins < 60) return `منذ ${diffMins} د`;
+      if (diffHours < 24) return `منذ ${diffHours} س`;
+      if (diffDays === 1) return 'أمس';
+      return date.toLocaleDateString('ar-LY', { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -58,9 +271,12 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!userMenuRef.current) return
-      if (userMenuRef.current.contains(event.target as Node)) return
-      setIsUserMenuOpen(false)
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationOpen(false)
+      }
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -157,7 +373,6 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
             aria-hidden="true"
           />
         </button>
-
         <button
           className="icon-button subtle fullscreen-toggle"
           type="button"
@@ -169,6 +384,66 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
             aria-hidden="true"
           />
         </button>
+
+        {/* جرس الإشعارات المتكامل */}
+        <div className="notification-container" ref={notificationRef}>
+          <button
+            className="icon-button subtle notification-trigger"
+            type="button"
+            aria-label="الإشعارات"
+            onClick={toggleNotifications}
+            title="الإشعارات"
+          >
+            <i className="fa-regular fa-bell" aria-hidden="true" />
+            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+          </button>
+          <div className={`notification-dropdown${isNotificationOpen ? ' is-open' : ''}`}>
+            <div className="notification-header">
+              <h3>الإشعارات</h3>
+              {unreadCount > 0 && (
+                <button type="button" className="notification-mark-all" onClick={handleMarkAllAsRead}>
+                  تحديد الكل كمقروء
+                </button>
+              )}
+            </div>
+            <div className="notification-list custom-scrollbar">
+              {notifications.length === 0 ? (
+                <div className="notification-empty">
+                  <i className="fa-regular fa-bell-slash" />
+                  <p>لا توجد إشعارات حالياً</p>
+                </div>
+              ) : (
+                notifications.map((n: any) => (
+                  <div
+                    key={n.id}
+                    className={`notification-item${!n.read_at ? ' unread' : ''}`}
+                    onClick={() => { handleMarkAsRead(n.id, n.action_url); }}
+                  >
+                    <div className={`notification-icon-container ${n.type || 'info'}`}>
+                      <i className={getNotificationIcon(n.type)} aria-hidden="true" />
+                    </div>
+                    <div className="notification-content">
+                      <div className="notification-title-text">{n.title}</div>
+                      <div className="notification-message-text">{n.message}</div>
+                      <div className="notification-time-text">{formatTime(n.created_at)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="notification-footer">
+              <button 
+                type="button" 
+                className="notification-view-all-btn font-cairo"
+                onClick={() => { navigate('/notifications'); setIsNotificationOpen(false); }}
+              >
+                <i className="fa-solid fa-list"></i>
+                عرض جميع الإشعارات
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="topbar-user" ref={userMenuRef}>
           <button
             type="button"

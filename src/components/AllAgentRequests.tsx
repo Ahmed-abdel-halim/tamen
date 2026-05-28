@@ -99,7 +99,7 @@ export default function AllAgentRequests() {
 
   const getTypeName = (type: string) => {
     const types: any = {
-      stock: 'طلب عهدة/مستندات',
+      stock: 'طلب مخزون/مستندات',
       support: 'دعم فني',
       financial: 'تسوية مالية',
       commission: 'طلب عمولة',
@@ -113,7 +113,11 @@ export default function AllAgentRequests() {
     return types[type] || type;
   };
 
-  const getStatusName = (status: string) => {
+  const getStatusName = (status: string, type?: string) => {
+    if (type === 'stock') {
+      if (status === 'pending') return 'تحت الطلب';
+      if (status === 'completed') return 'نفذت';
+    }
     const statuses: any = {
       pending: 'قيد الانتظار',
       processing: 'جاري المعالجة',
@@ -238,7 +242,7 @@ export default function AllAgentRequests() {
                   <td style={{ fontSize: '0.8rem' }}>{new Date(req.created_at).toLocaleString('ar-LY', { dateStyle: 'medium', timeStyle: 'short' })}</td>
                   <td>
                     <span className={`status-pill ${req.status}`}>
-                      {getStatusName(req.status)}
+                      {getStatusName(req.status, req.type)}
                     </span>
                   </td>
                   <td>
