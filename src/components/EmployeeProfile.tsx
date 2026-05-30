@@ -114,6 +114,7 @@ export default function EmployeeProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'job' | 'financial' | 'documents' | 'requests' | 'custody'>(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
@@ -134,6 +135,12 @@ export default function EmployeeProfile() {
   });
 
   useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch {}
+    }
     fetchUser();
     fetchRequests();
     fetchCustodyData();
@@ -494,7 +501,16 @@ export default function EmployeeProfile() {
             </div>
           </div>
           <div className="header-actions">
-            <button onClick={() => navigate('/users')} className="btn-outline-sm">عودة للقائمة</button>
+            {currentUser?.is_admin && <button onClick={() => navigate('/users')} className="btn-outline-sm">عودة للقائمة</button>}
+            {currentUser?.id === user?.id && (
+              <button 
+                className="btn-primary-sm" 
+                onClick={() => navigate('/profile?tab=identity')} 
+                style={{ background: '#10b981', borderColor: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل بياناتي
+              </button>
+            )}
             <button className="btn-primary-sm" onClick={() => window.print()}>
               <i className="fa-solid fa-print"></i> طباعة الاستمارة
             </button>
@@ -530,6 +546,22 @@ export default function EmployeeProfile() {
           <div className="content-card">
             {activeTab === 'personal' && (
               <div className="tab-pane">
+                {currentUser?.id === user?.id && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '15px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '12px', direction: 'rtl', textAlign: 'right' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#10b981' }}>تعديل وتحديث بياناتك أو مستنداتك الشخصية</h4>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--muted)' }}>لتحديث الاسم، الهاتف، أو المرفقات (الصورة، جواز السفر، الهوية)، يرجى تقديم طلب مراجعة وتدقيق للإدارة.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => navigate('/profile?tab=identity')}
+                      className="btn-primary-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10b981', border: 'none', borderRadius: '8px' }}
+                    >
+                      <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل
+                    </button>
+                  </div>
+                )}
                 <h3 className="tab-title">المعلومات الشخصية الأساسية</h3>
                 <div className="info-grid">
                   <InfoItem label="الاسم الرباعي" value={user.full_name_quad} />
@@ -597,6 +629,22 @@ export default function EmployeeProfile() {
 
             {activeTab === 'documents' && (
               <div className="tab-pane">
+                {currentUser?.id === user?.id && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '15px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '12px', direction: 'rtl', textAlign: 'right' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#10b981' }}>تعديل وتحديث بياناتك أو مستنداتك الشخصية</h4>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--muted)' }}>لتحديث الاسم، الهاتف، أو المرفقات (الصورة، جواز السفر، الهوية)، يرجى تقديم طلب مراجعة وتدقيق للإدارة.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => navigate('/profile?tab=identity')}
+                      className="btn-primary-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10b981', border: 'none', borderRadius: '8px' }}
+                    >
+                      <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل
+                    </button>
+                  </div>
+                )}
                 <h3 className="tab-title">المستندات والأوراق الثبوتية المؤرشفة</h3>
                 <div className="documents-grid-layout">
                   {DOCUMENT_TYPES.map((doc) => {

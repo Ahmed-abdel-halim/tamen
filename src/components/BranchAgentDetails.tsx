@@ -660,6 +660,15 @@ export default function BranchAgentDetails() {
                 <i className="fa-solid fa-pencil"></i> تعديل البيانات
               </button>
             )}
+            {!isAdmin && (
+              <button 
+                className="btn-primary-sm" 
+                onClick={() => navigate('/profile?tab=identity')} 
+                style={{ background: '#10b981', borderColor: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل ملفي
+              </button>
+            )}
             <button className="btn-primary-sm" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className="fa-solid fa-print"></i> طباعة العقد
             </button>
@@ -695,6 +704,22 @@ export default function BranchAgentDetails() {
           <div className="content-card">
             {activeTab === 'agency' && (
               <div className="tab-pane">
+                {!isAdmin && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '15px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '12px', direction: 'rtl', textAlign: 'right' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#10b981' }}>تعديل وتحديث بيانات الوكالة أو المستندات الشخصية</h4>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--muted)' }}>لتحديث الاسم، الهاتف، أو المرفقات (الصورة، جواز السفر، الهوية)، يرجى تقديم طلب مراجعة وتدقيق للإدارة.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => navigate('/profile?tab=identity')}
+                      className="btn-primary-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10b981', border: 'none', borderRadius: '8px' }}
+                    >
+                      <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل
+                    </button>
+                  </div>
+                )}
                 <h3 className="tab-title">المعلومات الأساسية للوكالة</h3>
                 <div className="info-grid">
                   <InfoItem label="اسم الوكالة" value={branchAgent.agency_name} icon="fa-building" />
@@ -1085,6 +1110,22 @@ export default function BranchAgentDetails() {
 
             {activeTab === 'contact' && (
               <div className="tab-pane">
+                {!isAdmin && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '15px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '12px', direction: 'rtl', textAlign: 'right' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#10b981' }}>تعديل وتحديث بيانات الوكالة أو المستندات الشخصية</h4>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--muted)' }}>لتحديث الاسم، الهاتف، أو المرفقات (الصورة، جواز السفر، الهوية)، يرجى تقديم طلب مراجعة وتدقيق للإدارة.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => navigate('/profile?tab=identity')}
+                      className="btn-primary-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10b981', border: 'none', borderRadius: '8px' }}
+                    >
+                      <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل
+                    </button>
+                  </div>
+                )}
                 <h3 className="tab-title">معلومات الاتصال والبيانات الشخصية</h3>
                 <div className="info-grid">
                   <InfoItem label="المدينة" value={branchAgent.city} icon="fa-city" />

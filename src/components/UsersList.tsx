@@ -79,6 +79,7 @@ type User = {
   eidc_username?: string | null;
   eidc_password?: string | null;
   eidc_api_key?: string | null;
+  show_on_landing?: boolean;
 };
 
 function escapeHtml(s: string): string {
@@ -232,6 +233,7 @@ export default function UsersList() {
     eidc_username: '',
     eidc_password: '',
     eidc_api_key: '',
+    show_on_landing: false,
   });
 
   const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
@@ -1234,6 +1236,7 @@ export default function UsersList() {
         eidc_username: showForm.user.eidc_username || '',
         eidc_password: showForm.user.eidc_password || '',
         eidc_api_key: showForm.user.eidc_api_key || '',
+        show_on_landing: showForm.user.show_on_landing ?? false,
       });
     } else {
       const nextId = total + 1;
@@ -1293,6 +1296,7 @@ export default function UsersList() {
         eidc_username: '',
         eidc_password: '',
         eidc_api_key: '',
+        show_on_landing: false,
       });
     }
     setFormErrors({});
@@ -1353,6 +1357,60 @@ export default function UsersList() {
       showToast(`حدث خطأ أثناء حذف المستخدم: ${error.message || 'تأكد من أن الخادم يعمل'}`, 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleToggleShowOnLanding = async (u: User) => {
+    const originalValue = u.show_on_landing === true;
+    setUsers(prev => prev.map(item => {
+      if (item.id === u.id) {
+        return {
+          ...item,
+          show_on_landing: !originalValue
+        };
+      }
+      return item;
+    }));
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/users/${u.id}/toggle-landing`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'حدث خطأ أثناء تحديث حالة الظهور في الواجهة');
+      }
+
+      const data = await res.json();
+      showToast(data.message, 'success');
+
+      setUsers(prev => prev.map(item => {
+        if (item.id === u.id) {
+          return {
+            ...item,
+            show_on_landing: data.show_on_landing
+          };
+        }
+        return item;
+      }));
+    } catch (error: any) {
+      showToast(error.message || 'فشل تبديل حالة الظهور في الواجهة', 'error');
+      setUsers(prev => prev.map(item => {
+        if (item.id === u.id) {
+          return {
+            ...item,
+            show_on_landing: originalValue
+          };
+        }
+        return item;
+      }));
     }
   };
 
@@ -1418,6 +1476,7 @@ export default function UsersList() {
         tax_file_number: formData.tax_file_number || null,
         social_security_file_number: formData.social_security_file_number || null,
         end_date: formData.end_date || null,
+        show_on_landing: formData.show_on_landing,
       };
 
       // الصلاحيات فقط للمستخدمين غير المديرين
@@ -1531,6 +1590,7 @@ export default function UsersList() {
         eidc_username: '',
         eidc_password: '',
         eidc_api_key: '',
+        show_on_landing: false,
       });
       if (uploadError) {
         showToast(`تم حفظ البيانات. ${uploadError}`, 'error');
@@ -1642,13 +1702,14 @@ export default function UsersList() {
                     <th>الرقم الوطني</th>
                     <th>المهنة</th>
                     <th>الصلاحيات</th>
+                    <th>عرض بالواجهة</th>
                     <th>الإجراء</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="empty-state">
+                      <td colSpan={12} className="empty-state">
                         لا توجد نتائج
                       </td>
                     </tr>
@@ -1731,6 +1792,18 @@ export default function UsersList() {
                             </div>
                           ) : (
                             <span style={{ color: 'var(--muted)' }}>لا توجد صلاحيات</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {!u.is_admin && (
+                            <label className="switch" title="عرض في الواجهة الرئيسية" style={{ margin: '0 auto' }}>
+                              <input
+                                type="checkbox"
+                                checked={u.show_on_landing === true}
+                                onChange={() => handleToggleShowOnLanding(u)}
+                              />
+                              <span className="slider round"></span>
+                            </label>
                           )}
                         </td>
                         <td>
@@ -1879,6 +1952,19 @@ export default function UsersList() {
                           )}
                         </span>
                       </div>
+                      {!u.is_admin && (
+                        <div className="user-mobile-row" style={{ alignItems: 'center' }}>
+                          <span className="user-mobile-label">عرض بالواجهة:</span>
+                          <label className="switch" title="عرض في الواجهة الرئيسية" style={{ margin: 0 }}>
+                            <input
+                              type="checkbox"
+                              checked={u.show_on_landing === true}
+                              onChange={() => handleToggleShowOnLanding(u)}
+                            />
+                            <span className="slider round"></span>
+                          </label>
+                        </div>
+                      )}
                       <div className="user-mobile-actions">
                         <button
                           type="button"
@@ -2109,6 +2195,24 @@ export default function UsersList() {
                       />
                     </label>
                   </div>
+                  {!formData.is_admin && (
+                    <div className="form-group flex-1">
+                      <label className="checkbox-label-premium">
+                        <div className="chk-content">
+                          <i className="fa-solid fa-window-restore"></i>
+                          <div>
+                            <span className="chk-title">عرض بالواجهة</span>
+                            <span className="chk-desc">عرض الموظف في قسم فريق العمل بالواجهة</span>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={formData.show_on_landing}
+                          onChange={(e) => setFormData({ ...formData, show_on_landing: e.target.checked })}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 

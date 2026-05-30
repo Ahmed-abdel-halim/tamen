@@ -102,6 +102,7 @@ import AllEmployeeRequests from './components/AllEmployeeRequests';
 import AllAgentRequests from './components/AllAgentRequests';
 import EmployeeSalaries from './components/EmployeeSalaries';
 import { ToastContainer } from './components/Toast';
+import ProfileUpdateRequestsList from './components/ProfileUpdateRequestsList';
 import { TaxSSReport } from './components/TaxSSReport';
 import ExternalEntitiesManagement from './components/ExternalEntitiesManagement';
 import MailManagement from './components/MailManagement';
@@ -322,12 +323,14 @@ const menuSections: SidebarSection[] = [
           { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
           { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
+          { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent' },
         ]
       },
       {
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+          { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee' },
         ]
       },
       { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
@@ -1055,6 +1058,7 @@ export default function App() {
                   <Route path="/notifications" element={<NotificationsPage />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/profile-update-requests" element={isAdmin ? <ProfileUpdateRequestsList /> : <Navigate to="/dashboard" />} />
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
