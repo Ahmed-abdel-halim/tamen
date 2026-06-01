@@ -4846,84 +4846,155 @@ tbody tr:last-child td {
   color: #fff;
 }
 
-/* Login Page Styles */
-.login-page {
+/* Redesigned Login Page Styles */
+.login-page-new {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
-  padding: 20px;
-}
-
-.login-container {
-  width: 480px;
-  max-width: 100%;
-  margin: auto;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 8px 38px #e3e8ee;
-  padding: 44px 40px 36px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.login-title {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 24px;
   font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
-  text-align: center;
-  font-weight: 700;
-  font-size: 26px;
-  margin: 0 0 28px 0;
-  color: #263240;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.login-label {
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 4px;
-  font-size: 13px;
-  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
-}
-
-.login-input {
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1.3px solid #e7e9ef;
-  font-size: 14px;
-  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
-  background: #f9fafb;
-  outline: none;
-  transition: border-color 0.2s ease, background 0.2s ease;
-  width: 100%;
   box-sizing: border-box;
 }
 
-.login-input:focus {
-  border-color: var(--accent);
-  background: #fff;
+.login-split-card {
+  display: flex;
+  width: 1080px;
+  max-width: 100%;
+  height: 680px;
+  background: #003173;
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 49, 115, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
 }
 
-.login-password-wrapper {
+/* Left Side: Form Column */
+.login-form-column-new {
+  flex: 1 1 50%;
+  width: 50%;
+  padding: 50px 60px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.login-logo-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.login-logo-header img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.login-logo-header h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #003173;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.login-logo-header .logo-sub-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.login-title-new {
+  font-size: 26px;
+  font-weight: 800;
+  color: #003173;
+  text-align: center;
+  margin: 0 0 24px 0;
   position: relative;
+  padding-bottom: 12px;
 }
 
-.login-password-input {
-  padding-right: 12px;
-  padding-left: 40px;
+.login-title-new::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: #139625;
+  border-radius: 2px;
 }
 
-.login-password-toggle {
+.login-form-new {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group-new {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-label-new {
+  font-size: 13px;
+  font-weight: 700;
+  color: #003173;
+  margin-bottom: 8px;
+  text-align: right;
+}
+
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.login-input-wrapper .input-icon {
+  position: absolute;
+  right: 14px;
+  color: #64748b;
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.login-input-new {
+  width: 100%;
+  padding: 12px 55px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14.5px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: 'Cairo', sans-serif;
+  box-sizing: border-box;
+}
+
+.login-input-new:focus {
+  border-color: #139625;
+  box-shadow: 0 0 0 4px rgba(19, 150, 37, 0.08);
+}
+
+.login-password-input-new {
+  /* Symmetrical padding is handled by .login-input-new */
+}
+
+.login-password-toggle-new {
   position: absolute;
   left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
@@ -4935,288 +5006,302 @@ tbody tr:last-child td {
   transition: color 0.2s ease;
   min-width: 32px;
   min-height: 32px;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: none;
 }
 
-.login-password-toggle:hover {
-  color: #014cb1;
-  transform: translateY(-50%);
-  box-shadow: none;
+.login-password-toggle-new:hover {
+  color: #139625;
 }
 
-.login-password-toggle:active {
-  transform: translateY(-50%);
+/* Math CAPTCHA */
+.login-captcha-new {
+  margin-top: 8px;
 }
 
-.login-password-toggle i {
-  font-size: 16px;
+.login-captcha-container-new {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
 }
 
-.login-submit-btn {
-  margin-top: 18px;
-  padding: 11px 0;
-  border-radius: 10px;
-  background: #014cb1;
-  color: #fff;
-  font-weight: 600;
-  font-size: 16px;
-  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
-  border: none;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 12px rgba(1, 76, 177, 0.1);
-  cursor: pointer;
+.login-captcha-question-new {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  transition: all 0.2s ease;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
-}
-
-.login-submit-btn:hover:not(:disabled) {
-  background: #003173;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(51, 179, 73, 0.4);
-}
-
-.login-submit-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.login-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.login-captcha {
-  margin-top: 20px;
-  margin-bottom: 8px;
-}
-
-.login-captcha-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.login-captcha-question {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px 16px;
   background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #003173;
+  direction: ltr;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-.login-captcha-number {
-  font-size: 24px;
-  font-weight: 700;
-  color: #014cb1;
-  min-width: 40px;
+.login-captcha-number-new {
+  min-width: 20px;
   text-align: center;
 }
 
-.login-captcha-operator,
-.login-captcha-equals {
-  font-size: 20px;
-  font-weight: 600;
+.login-captcha-operator-new,
+.login-captcha-equals-new {
   color: #64748b;
 }
 
-.login-captcha-input-wrapper {
+.login-captcha-input-wrapper-new {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.login-captcha-input {
   flex: 1;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 18px;
-  font-weight: 600;
+}
+
+.login-captcha-input-new {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
   text-align: center;
-  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Cairo', sans-serif;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.login-captcha-input:focus {
-  border-color: #014cb1;
-  box-shadow: 0 0 0 3px rgba(51, 179, 73, 0.1);
+.login-captcha-input-new:focus {
+  border-color: #139625;
+  box-shadow: 0 0 0 4px rgba(19, 150, 37, 0.08);
 }
 
-.login-captcha-input.error {
+.login-captcha-input-new.error {
   border-color: #ef4444;
 }
 
-.login-captcha-refresh {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
+.login-captcha-refresh-new {
+  width: 46px;
+  height: 46px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
   color: #64748b;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
-.login-captcha-refresh:hover {
+.login-captcha-refresh-new:hover {
   background: #f8fafc;
-  border-color: #014cb1;
-  color: #014cb1;
+  border-color: #139625;
+  color: #139625;
   transform: rotate(90deg);
 }
 
-.login-error {
-  color: #ef4444;
-  text-align: center;
-  margin-top: 6px;
-  font-weight: 600;
-  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
-  font-size: 13px;
+.login-submit-btn-new {
+  width: 100%;
+  padding: 14px 20px;
+  background: #139625;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 10px 20px rgba(19, 150, 37, 0.15);
+  font-family: 'Cairo', sans-serif;
+  margin-top: 10px;
 }
 
-.login-toast {
-  margin: 22px auto 0;
+.login-submit-btn-new:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: #003173;
+  box-shadow: 0 10px 20px rgba(0, 49, 115, 0.15);
+}
+
+.login-submit-btn-new:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-error-text-new {
+  color: #ef4444;
+  text-align: center;
+  margin-top: 8px;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+/* Right Side: Image Column */
+.login-image-column-new {
+  flex: 1 1 50%;
+  width: 50%;
+  position: relative;
+  background-size: calc(100% + 25px) 100%;
+  background-position: -25px center;
+  background-repeat: no-repeat;
+  background-color: #003173;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 60px;
+  box-sizing: border-box;
+}
+
+.login-image-overlay-new {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(0, 49, 115, 0.2) 0%, rgba(0, 49, 115, 0.85) 100%);
+  z-index: 1;
+}
+
+.login-image-content-new {
+  position: relative;
+  z-index: 2;
+  text-align: right;
+}
+
+.login-image-content-new h2 {
+  font-size: 36px;
+  font-weight: 900;
+  margin: 0 0 12px 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.login-image-content-new p {
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.95;
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Dark Mode Overrides for Login */
-[data-theme='dark'] .login-container {
+[data-theme='dark'] .login-split-card {
   background: var(--panel) !important;
-  box-shadow: 0 8px 38px rgba(0, 0, 0, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
-[data-theme='dark'] .login-title {
+[data-theme='dark'] .login-form-column-new {
+  background: var(--panel) !important;
+}
+
+[data-theme='dark'] .login-title-new {
   color: var(--text) !important;
 }
 
-[data-theme='dark'] .login-label {
+[data-theme='dark'] .login-logo-header h3 {
   color: var(--text) !important;
 }
 
-[data-theme='dark'] .login-captcha-question {
+[data-theme='dark'] .login-label-new {
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .login-input-new {
   background: var(--input-bg) !important;
   border-color: var(--border) !important;
+  color: var(--text) !important;
 }
 
-[data-theme='dark'] .login-captcha-number {
+[data-theme='dark'] .login-input-new:focus {
+  border-color: var(--accent-cyan) !important;
+}
+
+[data-theme='dark'] .login-captcha-question-new {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
   color: var(--accent-cyan) !important;
 }
 
-[data-theme='dark'] .login-captcha-operator,
-[data-theme='dark'] .login-captcha-equals {
-  color: var(--text) !important;
-}
-
-[data-theme='dark'] .login-captcha-refresh {
+[data-theme='dark'] .login-captcha-input-new {
   background: var(--input-bg) !important;
   border-color: var(--border) !important;
   color: var(--text) !important;
 }
 
-[data-theme='dark'] .login-submit-btn {
+[data-theme='dark'] .login-captcha-input-new:focus {
+  border-color: var(--accent-cyan) !important;
+}
+
+[data-theme='dark'] .login-captcha-refresh-new {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme='dark'] .login-captcha-refresh-new:hover {
+  color: var(--accent-cyan) !important;
+  border-color: var(--accent-cyan) !important;
+}
+
+[data-theme='dark'] .login-submit-btn-new {
   background: var(--accent-cyan) !important;
   color: #fff !important;
 }
 
-[data-theme='dark'] .login-password-toggle {
+[data-theme='dark'] .login-submit-btn-new:hover {
+  background: var(--accent-hover) !important;
+}
+
+[data-theme='dark'] .login-password-toggle-new {
   color: var(--muted) !important;
 }
 
-[data-theme='dark'] .login-password-toggle:hover {
+[data-theme='dark'] .login-password-toggle-new:hover {
   color: var(--accent-cyan) !important;
 }
 
 /* Responsive Login Page */
-@media (max-width: 768px) {
-  .login-page {
-    padding: 16px;
-    align-items: flex-start;
-    padding-top: 40px;
+@media (max-width: 1024px) {
+  .login-split-card {
+    width: 480px;
+    height: auto;
+    border-radius: 24px;
   }
-
-  .login-container {
+  .login-form-column-new {
     width: 100%;
-    max-width: 100%;
-    padding: 32px 24px 28px;
-    border-radius: 16px;
+    flex: 1 1 100%;
+    padding: 40px 30px;
   }
-
-  .login-title {
-    font-size: 22px;
-    margin-bottom: 24px;
-  }
-
-  .login-form {
-    gap: 12px;
-  }
-
-  .login-label {
-    font-size: 12px;
-    margin-bottom: 6px;
-  }
-
-  .login-input {
-    padding: 12px;
-    font-size: 16px;
-    /* منع التكبير التلقائي في iOS */
-  }
-
-  .login-password-input {
-    padding-left: 44px;
-  }
-
-  .login-password-toggle {
-    left: 12px;
-    padding: 10px;
-    min-width: 40px;
-    min-height: 40px;
-  }
-
-  .login-submit-btn {
-    margin-top: 16px;
-    padding: 13px 0;
-    font-size: 15px;
-    min-height: 48px;
-  }
-
-  .login-error {
-    font-size: 12px;
-    margin-top: 8px;
+  .login-image-column-new {
+    display: none;
   }
 }
 
 @media (max-width: 480px) {
-  .login-page {
+  .login-page-new {
     padding: 12px;
-    padding-top: 30px;
   }
-
-  .login-container {
-    padding: 24px 20px 24px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  .login-split-card {
+    border-radius: 18px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
   }
-
-  .login-title {
-    font-size: 20px;
-    margin-bottom: 20px;
+  .login-form-column-new {
+    padding: 30px 20px;
   }
-
-  .login-form {
-    gap: 10px;
+  .login-title-new {
+    font-size: 22px;
+  }
+  .login-submit-btn-new {
+    padding: 12px;
+    font-size: 15px;
   }
 
   .login-label {
@@ -11591,59 +11676,10 @@ tbody tr:last-child td {
 }
 
 /* Insurances Page */
-/* Insurances Hero */
-.insurances-hero {
-  margin-top: 80px;
-  background: linear-gradient(135deg, #014cb1 0%, #003173 50%, #003173 100%);
-  color: white;
-  padding: 6rem 0;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.insurances-hero::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.insurances-hero-content {
-  position: relative;
-  z-index: 1;
-}
-
-.insurances-hero h1 {
-  font-size: 3.5rem;
-  font-weight: 900;
-  margin-bottom: 1rem;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.insurances-hero-subtitle {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  opacity: 0.95;
-}
-
-.insurances-hero-description {
-  font-size: 1.25rem;
-  max-width: 800px;
-  margin: 0 auto;
-  line-height: 1.8;
-  opacity: 0.9;
-}
 
 .insurances-content {
   padding: 5rem 0;
-  background: #ffffff;
+  background: #f8fafc; /* Light elegant blue-grey background */
 }
 
 .insurances-intro {
@@ -11654,7 +11690,7 @@ tbody tr:last-child td {
 .insurances-intro .section-title {
   font-size: 2.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #003173;
   margin-bottom: 1.5rem;
   position: relative;
   padding-bottom: 1.5rem;
@@ -11666,9 +11702,9 @@ tbody tr:last-child td {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 100px;
-  height: 5px;
-  background: linear-gradient(90deg, #014cb1, #003173);
+  width: 80px;
+  height: 4px;
+  background: #139625;
   border-radius: 10px;
 }
 
@@ -11682,163 +11718,145 @@ tbody tr:last-child td {
 
 .insurances-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 2.5rem;
   margin-bottom: 5rem;
 }
 
 .insurance-card {
   background: #ffffff;
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 49, 115, 0.04);
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px solid transparent;
-  position: relative;
-}
-
-.insurance-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #014cb1, #003173);
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 0.5s ease;
-  z-index: 1;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
 }
 
 .insurance-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 12px 40px rgba(0, 43, 92, 0.15);
-  border-color: #014cb1;
+  transform: translateY(-8px);
+  box-shadow: 0 20px 45px rgba(0, 49, 115, 0.12);
+  border-color: #003173;
 }
 
-.insurance-card:hover::before {
-  transform: scaleX(1);
+.insurance-card-image {
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+  background: #f1f5f9;
+  position: relative;
+}
+
+.insurance-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.insurance-card:hover .insurance-card-image img {
+  transform: scale(1.06);
 }
 
 .insurance-card-inner {
   padding: 2rem;
   display: flex;
   flex-direction: column;
-  height: 100%;
-}
-
-.insurance-icon-wrapper {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  position: relative;
-}
-
-.insurance-icon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #014cb1 0%, #003173 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 8px 24px rgba(0, 43, 92, 0.15);
-  transition: all 0.4s ease;
-}
-
-.insurance-card:hover .insurance-icon {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 12px 32px rgba(1, 76, 177, 0.2);
-}
-
-.insurance-icon i {
-  font-size: 2rem;
-  color: white;
-}
-
-.insurance-content {
   flex: 1;
-  text-align: right;
+}
+
+.insurance-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
 }
 
 .insurance-title {
-  font-size: 1.375rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 1rem;
-  line-height: 1.3;
+  color: #003173;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  font-family: 'Cairo', sans-serif;
 }
 
 .insurance-description {
-  font-size: 0.9375rem;
-  color: #64748b;
+  font-size: 0.95rem;
+  color: #475569;
   margin-bottom: 1.5rem;
-  line-height: 1.7;
+  line-height: 1.6;
+  text-align: center;
+  font-family: 'Cairo', sans-serif;
 }
 
-.insurance-features {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  margin-bottom: 1.5rem;
-}
-
-.insurance-features li {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
+.insurance-details-scrollbox {
+  width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.8;
   color: #475569;
   text-align: right;
+  white-space: pre-line;
+  margin-bottom: 1.5rem;
+  box-sizing: border-box;
 }
 
-.insurance-features li i {
-  color: #014cb1;
-  font-size: 0.875rem;
-  flex-shrink: 0;
+[dir="ltr"] .insurance-details-scrollbox {
+  text-align: left;
 }
 
-.insurance-features li span {
-  flex: 1;
+.insurance-details-scrollbox::-webkit-scrollbar {
+  width: 6px;
+}
+
+.insurance-details-scrollbox::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.insurance-details-scrollbox::-webkit-scrollbar-thumb {
+  background: #003173;
+  border-radius: 10px;
+}
+
+.insurance-details-scrollbox::-webkit-scrollbar-thumb:hover {
+  background: #014cb1;
 }
 
 .insurance-footer {
   margin-top: auto;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e5f7ed;
+  width: 100%;
 }
 
 .insurance-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #014cb1, #003173);
-  color: #ffffff;
-  text-decoration: none;
+  padding: 0.875rem 1.5rem;
+  background: #139625;
+  color: #ffffff !important;
+  text-decoration: none !important;
   border-radius: 12px;
-  font-size: 0.9375rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 750;
   transition: all 0.3s ease;
   width: 100%;
-  justify-content: center;
+  box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(19, 150, 37, 0.15);
 }
 
 .insurance-link:hover {
-  transform: translateX(-4px);
-  box-shadow: 0 4px 12px rgba(1, 76, 177, 0.1);
-  gap: 0.75rem;
-}
-
-.insurance-link i {
-  transition: transform 0.3s ease;
-}
-
-.insurance-link:hover i {
-  transform: translateX(-4px);
+  background: #0e751d;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(14, 117, 29, 0.25);
 }
 
 .insurance-cta {
@@ -12886,19 +12904,6 @@ tbody tr:last-child td {
   .branches-stats {
     flex-direction: column;
     gap: 1.5rem;
-  }
-
-  .insurances-hero h1 {
-    font-size: 2.5rem;
-  }
-
-  .insurances-hero-subtitle {
-    font-size: 1.25rem;
-  }
-
-  .insurances-hero-description {
-    font-size: 1.125rem;
-    padding: 0 1rem;
   }
 
   .insurances-intro .section-title {
@@ -14788,7 +14793,6 @@ body,
 }
 
 /* secondary pages hero padding adjustments under new design */
-.website-layout.new-design .insurances-hero,
 .website-layout.new-design .management-hero,
 .website-layout.new-design .contact-hero,
 .website-layout.new-design .branches-hero {
@@ -14796,7 +14800,6 @@ body,
 }
 
 @media (max-width: 768px) {
-  .website-layout.new-design .insurances-hero,
   .website-layout.new-design .management-hero,
   .website-layout.new-design .contact-hero,
   .website-layout.new-design .branches-hero {

@@ -56,7 +56,7 @@ export default function InsurancesPage() {
         language === 'ar'
           ? 'نقدم مجموعة واسعة من خدمات التأمين المصممة خصيصاً لتلبية احتياجاتك المختلفة، مع ضمان الحماية الشاملة والخدمة المتميزة'
           : 'We offer a wide range of tailored insurance services to meet your needs, ensuring full protection and excellent service.',
-      introTitle: language === 'ar' ? 'أنواع التأمين المتاحة' : 'Available Insurance Types',
+      introTitle: language === 'ar' ? 'أنواع التأمين' : 'Insurance Types',
       introDesc:
         language === 'ar'
           ? 'اختر من بين مجموعة متنوعة من أنواع التأمين التي تناسب احتياجاتك المختلفة'
@@ -82,6 +82,7 @@ export default function InsurancesPage() {
         description: ins('إدارة السيارات بشركة المدار الليبي للتأمين تقوم بإصدار مجموعة من وثائق تأمين السيارات', 'The Car Insurance Department at Almadar Libya Insurance Company issues a range of car insurance documents'),
         icon: 'fas fa-car',
         color: '#667eea',
+        image: '/new/تامين السيارات .jpg',
         details: ins(
           `نفيدكم بأن إدارة السيارات بشركة المدار الليبي للتأمين تقوم بإصدار مجموعة من وثائق تأمين السيارات وهي مبينة على النحو التالي:
 
@@ -117,10 +118,11 @@ This coverage is issued in accordance with Law No. 28 of 1971 regarding civil li
         description: ins('إدارة التأمين الصحي تقوم بإصدار وثائق تأمين المسافرين من خلال إبرامها اتفاقيات مع شركات ذات سمعة طيبة', 'The Health Insurance Department issues travel insurance documents through agreements with reputable companies'),
         icon: 'fas fa-plane',
         color: '#f093fb',
+        image: '/new/تامين المسافرن.png',
         details: ins(
           `أن إدارة التأمين الصحي تقوم بإصدار وثائق تأمين المسافرين من خلال إبرامها اتفاقيات مع شركات ذات سمعة طيبة في هذا المجال وبأسعار منافسة جداً مقارنة بما هو متوفر في السوق الليبي و بأسلوب متطور و حضاري مما جعلها من الشركات المنافسة في هذا المجال.
 
-وذلك من خلال وثيقة تأمين المسافرين والتي تغطي الحالات الطارئة و بالميزات التالية:
+ذلك من خلال وثيقة تأمين المسافرين والتي تغطي الحالات الطارئة و بالميزات التالية:
 • ضمانات متعددة وبأقل الأسعار
 • سهولة الحصول على طلب المساعدة بالخارج
 • تغطية طبية عاجلة وشاملة نتيجة المرض المفاجئ أو الحوادث العرضية
@@ -146,6 +148,7 @@ Do not hesitate to obtain this document to get all the guarantees and facilities
         description: ins('وثيقة تأمين مصممة خصيصاً لزوار دولة ليبيا من المتطلبات الرسمية في الإدارة العامة للجوازات', 'Insurance document specially designed for visitors to Libya, an official requirement of the General Passports Administration'),
         icon: 'fas fa-passport',
         color: '#4facfe',
+        image: '/new/تامين زوار ليبيا.png',
         details: ins(
           `أهم مزايا تأمين وثيقة زوار ليبيا:
 
@@ -157,7 +160,7 @@ Do not hesitate to obtain this document to get all the guarantees and facilities
 
 توفر وثيقة "زوار ليبيا" التغطية التأمينية لزوار دولة ليبيا الذين يحملون تأشيرة دخول صالحة، وتحميهم في الحالات الطبية الطارئة والنفقات التي تترتب عليهم خلال مدة التأشيرة المصرح بها.
 
-وتبدأ التغطية التأمينية فور وصول المؤمن له إلى أحد المنافذ البرية أو الجوية أو البحرية للدولة.`,
+تبدأ التغطية التأمينية فور وصول المؤمن له إلى أحد المنافذ البرية أو الجوية أو البحرية للدولة.`,
           `Key features of Libya Visitors Insurance:
 
 It is one of the insurance documents designed by our company specifically for visitors to Libya, and it is an official requirement of the General Passports Administration to grant entry visas to foreigners heading to Libya such as:
@@ -177,6 +180,7 @@ Insurance coverage begins immediately upon the insured's arrival at one of the c
         description: ins('تقوم الإدارة بإصدار وثائق تأمين المسئولية الطبية وفق قانون المسئولية الطبية رقم 17 لسنة 1986', 'The Department issues medical liability insurance documents in accordance with Medical Liability Law No. 17 of 1986'),
         icon: 'fas fa-heartbeat',
         color: '#fa709a',
+        image: '/new/Local Health Insurance 1.png',
         details: ins(
           `تقوم الإدارة بإصدار وثائق تأمين المسئولية الطبية وفق قانون المسئولية الطبية رقم 17 لسنة 1986 والذي يمنح العناصر الطبية والطبية المساعدة الطمأنينة في مزاولة أعمالهم حيث توفير الغطاء التأميني لأي خطأ طبي يصدر عنهم.
 
@@ -196,6 +200,7 @@ Finally, we wish everyone continued health and wellness and a speedy recovery fo
         description: ins('التأمين على القوارب والدراجات البحرية وقوارب الصيد', 'Insurance for boats, jet skis, and fishing boats'),
         icon: 'fas fa-ship',
         color: '#43e97b',
+        image: '/new/تامين المراكب.png',
         details: ins(
           `التأمين على القوارب والدراجات البحرية وقوارب الصيد:
 
@@ -219,6 +224,7 @@ This coverage is issued in accordance with Law No. 28 of 1971 regarding civil li
         description: ins('وثيقة تأمين ضد الحوادث الشخصية لحماية مستقبلك من الحوادث المفاجئة', 'Personal accident insurance document to protect your future from sudden accidents'),
         icon: 'fas fa-user-injured',
         color: '#fee140',
+        image: '/new/الحوادث الشخصية.png',
         details: ins(
           `وثيقة تأمين ضد الحوادث الشخصية:
 
@@ -252,6 +258,7 @@ What you will get through our personal accident insurance:
         description: ins('وثيقة تأمين الحج والعمرة تشمل التغطية للحالات الصحية الطارئة وإصابات كوفيد-19', 'Hajj and Umrah insurance document includes coverage for emergency health cases and COVID-19 injuries'),
         icon: 'fas fa-kaaba',
         color: '#30cfd0',
+        image: '/new/تامين الحج.png',
         details: ins(
           `وثيقة تأمين الحج والعمرة:
 
@@ -267,6 +274,7 @@ The coverage it provides includes emergency health cases, emergency COVID-19 inj
         description: ins('وثيقة مدمجة وتحتوي على تغطيات المسؤولية المهنية والحوادث الشخصية لحماية العمالة الوافدة', 'Integrated document containing professional liability and personal accident coverage to protect expatriate workers'),
         icon: 'fas fa-users',
         color: '#ff6b6b',
+        image: '/new/تامين الوافدين.png',
         details: ins(
           `وثيقة تأمين وافدين للمقيمين:
 
@@ -300,15 +308,19 @@ This document covers death and permanent disability or partial permanent or temp
       <WebsiteTopBar />
       <WebsiteNavbar />
       
-      <section className="insurances-hero">
-        <div className="container">
-          <div className="insurances-hero-content">
-            <h1>{t.heroTitle}</h1>
-            <p className="insurances-hero-subtitle">{t.heroSubtitle}</p>
-            <p className="insurances-hero-description">
-              {t.heroDesc}
-            </p>
-          </div>
+      {/* Redesigned Premium Hero Section */}
+      <section className="about-hero-new">
+        <div className="about-hero-bg">
+          <img src="/new/قبل الفوتر 2.png" alt="Skyscraper Cityscape" />
+          <div className="about-hero-overlay"></div>
+        </div>
+        
+        <div className="about-hero-content-new">
+          <h2 className="about-hero-title-green">{t.heroTitle}</h2>
+          <h1 className="about-hero-title-white">{t.heroSubtitle}</h1>
+          <p className="about-hero-desc-new">
+            {t.heroDesc}
+          </p>
         </div>
       </section>
 
@@ -324,62 +336,29 @@ This document covers death and permanent disability or partial permanent or temp
           <div className="insurances-grid">
             {insuranceTypes.map((insurance) => (
               <div key={insurance.id} id={`insurance-${insurance.id}`} className="insurance-card">
-                <div className="insurance-card-inner">
-                  <div className="insurance-icon-wrapper">
-                    <div className="insurance-icon" style={{ backgroundColor: insurance.color + '20', color: insurance.color }}>
-                      <i className={insurance.icon}></i>
-                    </div>
+                {insurance.image && (
+                  <div className="insurance-card-image">
+                    <img src={insurance.image} alt={insurance.title} />
                   </div>
-                  <div
-                    className="insurance-content"
-                    style={{
-                      direction: language === 'en' ? 'ltr' : 'rtl',
-                      textAlign: language === 'en' ? 'left' : 'right',
-                    }}
-                  >
+                )}
+                <div className="insurance-card-inner">
+                  <div className="insurance-card-body">
                     <h3 className="insurance-title">{insurance.title}</h3>
                     <p className="insurance-description">{insurance.description}</p>
                     {insurance.details && (
-                      <div 
-                        className="insurance-details"
-                        style={{
-                          direction: language === 'en' ? 'ltr' : 'rtl',
-                          textAlign: language === 'en' ? 'left' : 'right',
-                          marginTop: '16px',
-                          padding: '16px',
-                          backgroundColor: '#f8f9fa',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          lineHeight: '1.8',
-                          whiteSpace: 'pre-line',
-                          maxHeight: '400px',
-                          overflowY: 'auto'
-                        }}
-                      >
+                      <div className="insurance-details-scrollbox">
                         {insurance.details}
                       </div>
                     )}
                   </div>
                   <div className="insurance-footer">
-                    <Link to="/contact-us" className="insurance-link">
-                      <span>{t.quote}</span>
-                      <i className="fas fa-arrow-left"></i>
+                    <Link to="/contact-us?subject=insurance" className="insurance-link">
+                      <span>+ {language === 'ar' ? 'اطلب خدمتك' : 'Request Service'}</span>
                     </Link>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-
-          <div className="insurance-cta">
-            <div className="cta-content">
-              <h2>{t.ctaTitle}</h2>
-              <p>{t.ctaDesc}</p>
-              <Link to="/contact-us" className="cta-button">
-                <span>{t.ctaButton}</span>
-                <i className="fas fa-arrow-left"></i>
-              </Link>
-            </div>
           </div>
         </div>
       </section>
@@ -388,4 +367,3 @@ This document covers death and permanent disability or partial permanent or temp
     </div>
   );
 }
-

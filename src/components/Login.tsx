@@ -11,25 +11,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Math CAPTCHA state
-  const [captchaNum1, setCaptchaNum1] = useState(0);
-  const [captchaNum2, setCaptchaNum2] = useState(0);
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  const [captchaError, setCaptchaError] = useState<string | null>(null);
-  
-  // Generate random CAPTCHA on mount and when needed
-  const generateCaptcha = () => {
-    const num1 = Math.floor(Math.random() * 10) + 1;
-    const num2 = Math.floor(Math.random() * 10) + 1;
-    setCaptchaNum1(num1);
-    setCaptchaNum2(num2);
-    setCaptchaAnswer('');
-    setCaptchaError(null);
-  };
-  
-  useEffect(() => {
-    generateCaptcha();
-  }, []);
+
 
   useEffect(() => {
     // تأكيد أن صفحة تسجيل الدخول تبقى باتجاه عربي حتى لو تم اختيار الإنجليزية للموقع
@@ -49,17 +31,7 @@ export default function Login() {
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setCaptchaError(null);
-    
-    // Validate CAPTCHA
-    const correctAnswer = captchaNum1 + captchaNum2;
-    const userAnswer = parseInt(captchaAnswer);
-    
-    if (isNaN(userAnswer) || userAnswer !== correctAnswer) {
-      setCaptchaError('الإجابة غير صحيحة. يرجى المحاولة مرة أخرى.');
-      generateCaptcha();
-      return;
-    }
+
     
     setLoading(true);
     try {
@@ -114,87 +86,93 @@ export default function Login() {
   };
 
   return (
-    <main className="login-page">
-      <section className="login-container">
-        <h2 className="login-title">تسجيل الدخول</h2>
-        <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
-          <label className="login-label">اسم المستخدم</label>
-          <input 
-            type="text"
-            value={username}
-            onChange={e=>setUsername(e.target.value)}
-            placeholder="أدخل اسم المستخدم" 
-            className="login-input"
-            required
-            autoFocus
-          />
-          <label className="login-label">كلمة المرور</label>
-          <div className="login-password-wrapper">
-            <input 
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={e=>setPassword(e.target.value)}
-              placeholder="أدخل كلمة المرور" 
-              className="login-input login-password-input"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="login-password-toggle"
-              aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-            >
-              <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-            </button>
+    <main className="login-page-new">
+      <div className="login-split-card">
+        {/* Left Side: Form Column */}
+        <div className="login-form-column-new">
+          <div className="login-logo-header">
+            <img src="/img/logo3.png" alt="المدار الليبي للتأمين" />
+            <h3>المدار الليبي للتأمين</h3>
+            <span className="logo-sub-text">Al Madar Libyan Insurance</span>
           </div>
           
-          {/* Math CAPTCHA */}
-          <div className="login-captcha">
-            <label className="login-label">التحقق من الهوية</label>
-            <div className="login-captcha-container">
-              <div className="login-captcha-question">
-                <span className="login-captcha-number">{captchaNum1}</span>
-                <span className="login-captcha-operator">+</span>
-                <span className="login-captcha-number">{captchaNum2}</span>
-                <span className="login-captcha-equals">=</span>
-              </div>
-              <div className="login-captcha-input-wrapper">
-                <input
-                  type="number"
-                  value={captchaAnswer}
-                  onChange={(e) => {
-                    setCaptchaAnswer(e.target.value);
-                    setCaptchaError(null);
-                  }}
-                  placeholder="?"
-                  className={`login-captcha-input ${captchaError ? 'error' : ''}`}
+          <h2 className="login-title-new">تسجيل الدخول</h2>
+          
+          <form onSubmit={handleSubmit} className="login-form-new" autoComplete="off">
+            <div className="form-group-new">
+              <label className="login-label-new">اسم المستخدم</label>
+              <div className="login-input-wrapper">
+                <i className="fa-solid fa-user input-icon"></i>
+                <input 
+                  type="text"
+                  value={username}
+                  onChange={e=>setUsername(e.target.value)}
+                  placeholder="أدخل اسم المستخدم" 
+                  className="login-input-new"
+                  style={{ paddingRight: '60px', paddingLeft: '60px' }}
                   required
-                  min="0"
+                  autoFocus
+                />
+              </div>
+            </div>
+            
+            <div className="form-group-new">
+              <label className="login-label-new">كلمة المرور</label>
+              <div className="login-input-wrapper">
+                <i className="fa-solid fa-lock input-icon"></i>
+                <input 
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e=>setPassword(e.target.value)}
+                  placeholder="أدخل كلمة المرور" 
+                  className="login-input-new login-password-input-new"
+                  style={{ paddingRight: '60px', paddingLeft: '60px' }}
+                  required
                 />
                 <button
                   type="button"
-                  onClick={generateCaptcha}
-                  className="login-captcha-refresh"
-                  aria-label="تحديث السؤال"
-                  title="تحديث السؤال"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="login-password-toggle-new"
+                  aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
                 >
-                  <i className="fa-solid fa-rotate"></i>
+                  <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                 </button>
               </div>
             </div>
-            {captchaError && <div className="login-error">{captchaError}</div>}
-          </div>
-          
-          <button 
-            type="submit" 
-            className="login-submit-btn"
-            disabled={loading}
-          >
-            {loading ? '... جاري التحقق' : (<><i className="fa-solid fa-arrow-right-to-bracket"></i> تسجيل الدخول</>)}
-          </button>
-          {error && <div className="login-error">{error}</div>}
-        </form>
-      </section>
+            
+
+            
+            <button 
+              type="submit" 
+              className="login-submit-btn-new"
+              disabled={loading}
+            >
+              {loading ? (
+                <span>... جاري التحقق</span>
+              ) : (
+                <>
+                  <i className="fa-solid fa-arrow-right-to-bracket icon-btn"></i> 
+                  <span>تسجيل الدخول</span>
+                </>
+              )}
+            </button>
+            {error && <div className="login-error-text-new">{error}</div>}
+          </form>
+        </div>
+        
+        {/* Right Side: Image Column */}
+        <div 
+          className="login-image-column-new" 
+          style={{ 
+            backgroundImage: "url('/new/Frame 148 (1) 1.png')",
+            backgroundSize: 'calc(100% + 40px) 100%',
+            backgroundPosition: '-40px center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: '#003173'
+          }}
+        >
+        </div>
+      </div>
     </main>
   );
 }
