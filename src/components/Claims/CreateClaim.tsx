@@ -212,6 +212,49 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     assessor_other_amount: claim?.assessor_other_amount || '',
   });
 
+  const [claimCurrency, setClaimCurrency] = useState(() => {
+    if (!claim?.assessor_other_amount) return 'دينار ليبي';
+    const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s+(.+)$/);
+    if (match) {
+      const parsedCurr = match[2].trim();
+      const standardCurrencies = [
+        'دينار ليبي', 'دينار تونسي', 'دولار أمريكي', 'يورو', 'جنيه مصري',
+        'درهم مغربي', 'دينار جزائري', 'دينار أردني', 'ليرة سورية',
+        'ليرة لبنانية', 'ريال سعودي', 'درهم إماراتي', 'ريال قطري',
+        'دينار كويتي', 'دينار بحريني', 'ريال عماني'
+      ];
+      if (standardCurrencies.includes(parsedCurr)) {
+        return parsedCurr;
+      }
+      return 'أخرى';
+    }
+    return 'دينار ليبي';
+  });
+
+  const [customCurrency, setCustomCurrency] = useState(() => {
+    if (!claim?.assessor_other_amount) return '';
+    const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s+(.+)$/);
+    if (match) {
+      const parsedCurr = match[2].trim();
+      const standardCurrencies = [
+        'دينار ليبي', 'دينار تونسي', 'دولار أمريكي', 'يورو', 'جنيه مصري',
+        'درهم مغربي', 'دينار جزائري', 'دينار أردني', 'ليرة سورية',
+        'ليرة لبنانية', 'ريال سعودي', 'درهم إماراتي', 'ريال قطري',
+        'دينار كويتي', 'دينار بحريني', 'ريال عماني'
+      ];
+      if (!standardCurrencies.includes(parsedCurr)) {
+        return parsedCurr;
+      }
+    }
+    return '';
+  });
+
+  const [foreignAmount, setForeignAmount] = useState(() => {
+    if (!claim?.assessor_other_amount) return '';
+    const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s+(.+)$/);
+    return match ? match[1] : '';
+  });
+
   const isDamageTypeSelected = (type: string) => {
     if (!claimData.damage_type) return false;
     return claimData.damage_type.split(/[،,]\s*/).includes(type);
@@ -417,8 +460,29 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
         finalClaimNumber = 'CLM-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
       }
 
-      Object.keys(claimData).forEach(key => {
-        const val = (claimData as any)[key];
+      let finalOtherAmount = '';
+      let finalAmountDollar = claimData.assessor_amount_dollar;
+      
+      if (claimCurrency === 'أخرى' && customCurrency && foreignAmount) {
+        finalOtherAmount = `${foreignAmount} ${customCurrency}`;
+      } else if (claimCurrency !== 'دينار ليبي' && claimCurrency !== 'أخرى' && foreignAmount) {
+        finalOtherAmount = `${foreignAmount} ${claimCurrency}`;
+      }
+      
+      if (claimCurrency === 'دولار أمريكي') {
+        finalAmountDollar = foreignAmount;
+      } else if (claimCurrency === 'دينار ليبي') {
+        finalAmountDollar = '';
+      }
+
+      const preparedClaimData = {
+        ...claimData,
+        assessor_other_amount: finalOtherAmount,
+        assessor_amount_dollar: finalAmountDollar
+      };
+
+      Object.keys(preparedClaimData).forEach(key => {
+        const val = (preparedClaimData as any)[key];
         if (key === 'claim_number') {
           formData.append(key, finalClaimNumber);
         } else if (key === 'claim_number_auto') {
@@ -1177,16 +1241,97 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
 
             {/* ===== تقرير مقدر الأضرار ===== */}
             <div className="section-card">
-              <div className="section-header"><i className="fa-solid fa-calculator"></i><h4>تقرير مقدر الأضرار</h4></div>
+              <div className="section-header"><i className="fa-solid fa-calculator"></i><h4>تقرير مقدر الأضرار والتعويض</h4></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                 <div className="field-group"><label className="premium-label">اسم مقدر الأضرار</label><input className="premium-field" value={claimData.assessor_name} onChange={e => setClaimData({ ...claimData, assessor_name: e.target.value })} placeholder="الاسم..." /></div>
                 <div className="field-group"><label className="premium-label">رقم الهاتف</label><input className="premium-field" value={claimData.assessor_phone} onChange={e => setClaimData({ ...claimData, assessor_phone: e.target.value })} placeholder="091..." /></div>
                 <div className="field-group"><label className="premium-label">تاريخ التقييم</label><input type="date" className="premium-field" value={claimData.assessor_date} onChange={e => setClaimData({ ...claimData, assessor_date: e.target.value })} /></div>
                 <div className="field-group"><label className="premium-label">نسبة تقدير الأضرار</label><input className="premium-field" value={claimData.assessor_percentage} onChange={e => setClaimData({ ...claimData, assessor_percentage: e.target.value })} placeholder="%75" /></div>
-                <div className="field-group"><label className="premium-label">قيمة الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.assessor_amount_dinar} onChange={e => setClaimData({ ...claimData, assessor_amount_dinar: e.target.value })} placeholder="0.000" /></div>
-                <div className="field-group"><label className="premium-label">قيمة الأضرار (دولار)</label><input type="number" className="premium-field" value={claimData.assessor_amount_dollar} onChange={e => setClaimData({ ...claimData, assessor_amount_dollar: e.target.value })} placeholder="0.00" /></div>
-                <div className="field-group"><label className="premium-label">أضف قيمة أخرى</label><input className="premium-field" value={claimData.assessor_other_amount} onChange={e => setClaimData({ ...claimData, assessor_other_amount: e.target.value })} placeholder="تونس. مصر" /></div>
-                <div className="field-group"><label className="premium-label">صورة تقرير المقدر</label><input type="file" accept="image/*" className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setAssessorReportPhoto(e.target.files?.[0] || null)} /></div>
+                
+                <div className="field-group">
+                  <label className="premium-label">عملة الحادث / المطالبة</label>
+                  <select 
+                    className="premium-field" 
+                    value={claimCurrency} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      setClaimCurrency(val);
+                      if (val === 'دينار ليبي') {
+                        setForeignAmount('');
+                        setCustomCurrency('');
+                      }
+                    }}
+                  >
+                    <option value="دينار ليبي">دينار ليبي (LYD)</option>
+                    <option value="دينار تونسي">دينار تونسي (TND)</option>
+                    <option value="دولار أمريكي">دولار أمريكي (USD)</option>
+                    <option value="يورو">يورو (EUR)</option>
+                    <option value="جنيه مصري">جنيه مصري (EGP)</option>
+                    <option value="درهم مغربي">درهم مغربي (MAD)</option>
+                    <option value="دينار جزائري">دينار جزائري (DZD)</option>
+                    <option value="دينار أردني">دينار أردني (JOD)</option>
+                    <option value="ليرة سورية">ليرة سورية (SYP)</option>
+                    <option value="ليرة لبنانية">ليرة لبنانية (LBP)</option>
+                    <option value="ريال سعودي">ريال سعودي (SAR)</option>
+                    <option value="درهم إماراتي">درهم إماراتي (AED)</option>
+                    <option value="ريال قطري">ريال قطري (QAR)</option>
+                    <option value="دينار كويتي">دينار كويتي (KWD)</option>
+                    <option value="دينار بحريني">دينار بحريني (BHD)</option>
+                    <option value="ريال عماني">ريال عماني (OMR)</option>
+                    <option value="أخرى">أخرى (إدخال يدوي)</option>
+                  </select>
+                </div>
+
+                {claimCurrency === 'أخرى' && (
+                  <div className="field-group">
+                    <label className="premium-label">اسم العملة المخصصة</label>
+                    <input 
+                      type="text" 
+                      className="premium-field" 
+                      value={customCurrency} 
+                      onChange={e => setCustomCurrency(e.target.value)} 
+                      placeholder="مثال: درهم سوداني" 
+                    />
+                  </div>
+                )}
+
+                {claimCurrency !== 'دينار ليبي' && (
+                  <div className="field-group">
+                    <label className="premium-label">المبلغ بالعملة الأجنبية ({claimCurrency === 'أخرى' ? customCurrency || 'المخصصة' : claimCurrency})</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      className="premium-field" 
+                      value={foreignAmount} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForeignAmount(val);
+                        if (claimCurrency === 'دولار أمريكي') {
+                          setClaimData({ ...claimData, assessor_amount_dollar: val });
+                        }
+                      }} 
+                      placeholder="0.00" 
+                    />
+                  </div>
+                )}
+
+                <div className="field-group">
+                  <label className="premium-label">
+                    {claimCurrency === 'دينار ليبي' ? 'قيمة الأضرار (دينار ليبي)' : 'ما يعادل بالدينار الليبي'}
+                  </label>
+                  <input 
+                    type="number" 
+                    className="premium-field" 
+                    value={claimData.assessor_amount_dinar} 
+                    onChange={e => setClaimData({ ...claimData, assessor_amount_dinar: e.target.value })} 
+                    placeholder="0.000" 
+                  />
+                </div>
+
+                <div className="field-group">
+                  <label className="premium-label">صورة تقرير المقدر</label>
+                  <input type="file" accept="image/*" className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setAssessorReportPhoto(e.target.files?.[0] || null)} />
+                </div>
               </div>
             </div>
 

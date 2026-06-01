@@ -116,13 +116,13 @@ export default function ClaimsList() {
     try {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const columns = [
-        { header: 'رقم المرجع/المطالبة', key: 'reference_number', width: 25 },
-        { header: 'تاريخ المطالبة', key: 'claim_date', width: 20 },
+        { header: 'رقم المطالبة', key: 'reference_number', width: 25 },
         { header: 'رقم الوثيقة', key: 'insurance_number', width: 25 },
-        { header: 'نوع الوثيقة', key: 'document_coverage', width: 20 },
+        { header: 'تاريخ الحادث', key: 'accident_date', width: 20 },
+        { header: 'تاريخ طلب التعويض', key: 'claim_date', width: 20 },
+        { header: 'القيمة المقدرة للتعويض', key: 'estimated_amount', width: 25 },
         { header: 'نوع الأضرار', key: 'damage_type', width: 15 },
         { header: 'مكان الحادث', key: 'accident_location', width: 25 },
-        { header: 'المبلغ المقدر', key: 'estimated_amount', width: 20 },
         { header: 'مبلغ التعويض النهائي', key: 'final_amount', width: 25 },
         { header: 'وين واصلة المطالبة', key: 'status', width: 25 },
         { header: 'تاريخ التسجيل', key: 'created_at', width: 20 },
@@ -141,6 +141,11 @@ export default function ClaimsList() {
           estimatedAmount = Number(settlementTransfer.details.total_value);
         }
 
+        let estimatedText = estimatedAmount ? `${toArabicNumerals(estimatedAmount.toLocaleString('en-US'))} د.ل` : '—';
+        if (claim.assessor_other_amount) {
+          estimatedText += ` (${claim.assessor_other_amount})`;
+        }
+
         // Extract Final Amount (from payment transfer)
         let finalAmount = 0;
         const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
@@ -149,13 +154,13 @@ export default function ClaimsList() {
         }
 
         return {
-          reference_number: toArabicNumerals(claim.reference_number || claim.claim_number),
-          claim_date: claim.claim_date ? toArabicNumerals(new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
+          reference_number: toArabicNumerals(claim.claim_number || claim.reference_number),
           insurance_number: toArabicNumerals(claim.document?.insurance_number || '—'),
-          document_coverage: claim.document_coverage || '—',
+          accident_date: claim.accident_date ? toArabicNumerals(new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
+          claim_date: claim.claim_date ? toArabicNumerals(new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
+          estimated_amount: estimatedText,
           damage_type: claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: string) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—',
           accident_location: claim.accident_location || '—',
-          estimated_amount: estimatedAmount ? `${toArabicNumerals(estimatedAmount.toLocaleString('en-US'))} د.ل` : '—',
           final_amount: finalAmount ? `${toArabicNumerals(finalAmount.toLocaleString('en-US'))} د.ل` : '—',
           status: getStatusLabel(claim.status),
           created_at: toArabicNumerals(new Date(claim.created_at).toLocaleDateString('en-GB')),
@@ -346,25 +351,39 @@ export default function ClaimsList() {
             <tr>
               <th style="width: 40px;">#</th>
               <th>رقم المطالبة</th>
-              <th>تاريخ المطالبة</th>
               <th>رقم الوثيقة</th>
+              <th>تاريخ الحادث</th>
+              <th>تاريخ طلب التعويض</th>
+              <th>القيمة المقدرة للتعويض</th>
               <th>مقدم المطالبة</th>
-              <th>نوع الأضرار</th>
               <th>الحالة</th>
             </tr>
           </thead>
           <tbody>
-            ${filteredClaims.map((claim, idx) => `
+            ${filteredClaims.map((claim, idx) => {
+              let estimatedAmountText = '—';
+              if (claim.assessor_amount_dinar) {
+                estimatedAmountText = `${Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل`;
+                if (claim.assessor_other_amount) {
+                  estimatedAmountText += ` (${claim.assessor_other_amount})`;
+                }
+              } else if (claim.assessor_other_amount) {
+                estimatedAmountText = claim.assessor_other_amount;
+              }
+
+              return `
               <tr>
                 <td>${idx + 1}</td>
                 <td><strong>${claim.claim_number}</strong></td>
-                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
                 <td>${claim.document?.insurance_number || 'غير متوفر'}</td>
+                <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
+                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
+                <td><span style="font-weight: bold; color: #059669;">${estimatedAmountText}</span></td>
                 <td>${claim.claimant_name}</td>
-                <td>${claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: string) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
                 <td>${getStatusLabel(claim.status)}</td>
               </tr>
-            `).join('')}
+            `;
+            }).join('')}
           </tbody>
         </table>
 
@@ -685,7 +704,13 @@ export default function ClaimsList() {
             <div class="section-title">بيانات التقييم المالي</div>
             <div class="grid-container">
               <div class="field-row"><div class="field-label">مقــــدر الأضــــرار</div><div class="field-input">${fullClaim.assessor_name || '---'}</div></div>
-              <div class="field-row"><div class="field-label">قيمــــة التقييـــــم</div><div class="field-input">${fullClaim.assessor_amount_dinar ? fullClaim.assessor_amount_dinar + ' د.ل' : '---'}</div></div>
+              <div class="field-row">
+                <div class="field-label">قيمــــة التقييـــــم</div>
+                <div class="field-input">
+                  ${fullClaim.assessor_amount_dinar ? Number(fullClaim.assessor_amount_dinar).toLocaleString('ar-LY') + ' د.ل' : '---'}
+                  ${fullClaim.assessor_other_amount ? ` (ما يعادل ${fullClaim.assessor_other_amount})` : ''}
+                </div>
+              </div>
             </div>
           </div>
           

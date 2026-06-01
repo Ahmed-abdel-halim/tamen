@@ -315,8 +315,9 @@ export default function ViewClaim() {
             <div class='data-item'><span class='label'>اسم المقدر:</span> <span class='value'>${claim.assessor_name}</span></div>
             ${claim.assessor_phone ? `<div class='data-item'><span class='label'>رقم الهاتف:</span> <span class='value'>${claim.assessor_phone}</span></div>` : ''}
             ${claim.assessor_date ? `<div class='data-item'><span class='label'>تاريخ التقييم:</span> <span class='value'>${claim.assessor_date}</span></div>` : ''}
-            ${claim.assessor_amount_dinar ? `<div class='data-item'><span class='label'>القيمة (دينار):</span> <span class='value'>${Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
-            ${claim.assessor_amount_dollar ? `<div class='data-item'><span class='label'>القيمة (دولار):</span> <span class='value'>$${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>` : ''}
+            ${claim.assessor_amount_dinar ? `<div class='data-item'><span class='label'>القيمة (بالدينار الليبي):</span> <span class='value'>${Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.assessor_other_amount ? `<div class='data-item'><span class='label'>القيمة بالعملة الأصلية:</span> <span class='value'>${claim.assessor_other_amount}</span></div>` : ''}
+            ${(!claim.assessor_other_amount && claim.assessor_amount_dollar) ? `<div class='data-item'><span class='label'>القيمة (دولار):</span> <span class='value'>$${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>` : ''}
           </div>
         </div>` : ''}
 
@@ -796,8 +797,9 @@ export default function ViewClaim() {
                 {claim.assessor_name && <div className="detail-item"><span className="label">اسم المقدر</span><span className="value">{claim.assessor_name}</span></div>}
                 {claim.assessor_phone && <div className="detail-item"><span className="label">رقم الهاتف</span><span className="value">{claim.assessor_phone}</span></div>}
                 {claim.assessor_date && <div className="detail-item"><span className="label">تاريخ التقييم</span><span className="value">{claim.assessor_date}</span></div>}
-                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (دينار)</span><span className="value fw-bold" style={{ color: '#059669' }}>{Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>}
-                {claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{ color: '#059669' }}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
+                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (بالدينار الليبي)</span><span className="value fw-bold" style={{ color: '#059669' }}>{Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>}
+                {claim.assessor_other_amount && <div className="detail-item"><span className="label">القيمة بالعملة الأصلية</span><span className="value fw-bold" style={{ color: '#059669' }}>{claim.assessor_other_amount}</span></div>}
+                {!claim.assessor_other_amount && claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{ color: '#059669' }}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
               </div>
               {claim.assessor_report_photo && (
                 <a href={`${BACKEND_URL}/storage/${claim.assessor_report_photo}`} target="_blank" rel="noreferrer" className="attachment-btn mt-2">
