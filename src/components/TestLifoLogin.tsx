@@ -12,15 +12,16 @@ export default function TestLifoLogin() {
   const [error, setError] = useState<string | null>(null);
 
   const getLoginUrl = () => {
+    const base = import.meta.env.DEV ? '' : API_BASE_URL;
     switch (loginType) {
       case "union":
-        return `${API_BASE_URL}/lifo-prod/login`;
+        return `${base}/lifo-prod/login`;
       case "company":
-        return `${API_BASE_URL}/lifo-prod/company/login`;
+        return `${base}/lifo-prod/company/login`;
       case "office":
-        return `${API_BASE_URL}/lifo-prod/office/login`;
+        return `${base}/lifo-prod/office/login`;
       default:
-        return `${API_BASE_URL}/lifo-prod/login`;
+        return `${base}/lifo-prod/login`;
     }
   };
 

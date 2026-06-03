@@ -70,8 +70,8 @@ export default function LifoReportsDashboard() {
   // LIFO connection environment state (Always Production)
   const connectionEnv = 'production';
 
-  // Shadow base URL for proxy
-  const EXTERNAL_API_BASE_URL = `${API_BASE_URL}/lifo-prod/api`;
+  // Shadow base URL for proxy (use Vite proxy in dev, Laravel proxy in prod)
+  const EXTERNAL_API_BASE_URL = import.meta.env.DEV ? '/lifo-prod/api' : `${API_BASE_URL}/lifo-prod/api`;
   
   // Credentials used for queries
   const credentials = getExternalCredentials();
