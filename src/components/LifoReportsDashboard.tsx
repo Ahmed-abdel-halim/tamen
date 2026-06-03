@@ -2,6 +2,7 @@ import { useEffect, useState, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { generatePremiumExcel } from "../utils/excelGenerator";
+import { API_BASE_URL } from "../config/api";
 
 // Default external credentials
 const EXTERNAL_API_CREDENTIALS = {
@@ -70,7 +71,7 @@ export default function LifoReportsDashboard() {
   const connectionEnv = 'production';
 
   // Shadow base URL for proxy
-  const EXTERNAL_API_BASE_URL = '/lifo-prod/api';
+  const EXTERNAL_API_BASE_URL = `${API_BASE_URL}/lifo-prod/api`;
   
   // Credentials used for queries
   const credentials = getExternalCredentials();

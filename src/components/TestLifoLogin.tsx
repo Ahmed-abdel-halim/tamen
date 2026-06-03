@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../config/api";
 
 type LoginType = "union" | "company" | "office";
 
@@ -13,13 +14,13 @@ export default function TestLifoLogin() {
   const getLoginUrl = () => {
     switch (loginType) {
       case "union":
-        return "/lifo-prod/login";
+        return `${API_BASE_URL}/lifo-prod/login`;
       case "company":
-        return "/lifo-prod/company/login";
+        return `${API_BASE_URL}/lifo-prod/company/login`;
       case "office":
-        return "/lifo-prod/office/login";
+        return `${API_BASE_URL}/lifo-prod/office/login`;
       default:
-        return "/lifo-prod/login";
+        return `${API_BASE_URL}/lifo-prod/login`;
     }
   };
 
