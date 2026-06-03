@@ -139,7 +139,9 @@ const HIGH_VALUE_ITEMS = [
 
 export default function CreateInternationalInsurance() {
   const navigate = useNavigate();
-  const EXTERNAL_API_BASE_URL = import.meta.env.DEV ? '/lifo-prod/api' : `${API_BASE_URL}/lifo-prod/api`;
+  const EXTERNAL_API_BASE_URL = import.meta.env.DEV
+    ? 'http://localhost:8000/api/lifo-prod/api'
+    : `${API_BASE_URL}/lifo-prod/api`;
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [externalCars, setExternalCars] = useState<ExternalCar[]>([]);
   const [externalCountries, setExternalCountries] = useState<ExternalCountry[]>([]);
