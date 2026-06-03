@@ -20,6 +20,8 @@ interface UserType {
   educational_certificate_url?: string;
   eidc_username?: string;
   eidc_password?: string;
+  lifo_username?: string;
+  lifo_password?: string;
   branch_agent?: {
     id: number;
     personal_photo?: string;
@@ -58,6 +60,8 @@ export default function ProfilePage() {
     confirm_password: '',
     eidc_username: '',
     eidc_password: '',
+    lifo_username: '',
+    lifo_password: '',
   });
 
   // Tab 2: Profile update request form
@@ -150,6 +154,8 @@ export default function ProfilePage() {
           email: data.email || '',
           eidc_username: data.eidc_username || '',
           eidc_password: data.eidc_password || '',
+          lifo_username: data.lifo_username || '',
+          lifo_password: data.lifo_password || '',
         });
         setIdentityFormData({
           name: data.name || '',
@@ -264,6 +270,27 @@ export default function ProfilePage() {
         if (!eidcRes.ok) {
           const errorData = await eidcRes.json().catch(() => ({}));
           throw new Error(errorData.message || 'فشل تحديث بيانات الهيئة');
+        }
+      }
+
+      // 4. Update LIFO credentials
+      if (formData.lifo_username !== (user.lifo_username || '') || formData.lifo_password !== (user.lifo_password || '')) {
+        const lifoRes = await fetch(`${API_BASE_URL}/users/${user.id}/lifo-credentials`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            lifo_username: formData.lifo_username,
+            lifo_password: formData.lifo_password,
+          }),
+        });
+
+        if (!lifoRes.ok) {
+          const errorData = await lifoRes.json().catch(() => ({}));
+          throw new Error(errorData.message || 'فشل تحديث بيانات الاتحاد (LIFO)');
         }
       }
 
@@ -519,6 +546,33 @@ export default function ProfilePage() {
                   value={formData.eidc_password}
                   onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
                   placeholder="أدخل كلمة المرور في منظومة الهيئة"
+                />
+              </div>
+            </div>
+
+            <div className="profile-section-divider">
+              <h3 className="profile-section-title">بيانات الدخول لمنظومة الاتحاد (LIFO)</h3>
+              <p className="profile-section-description">
+                أدخل بيانات حسابك الخاص في الاتحاد إذا كنت تمتلك حساباً، ليتم استخدامه عند إصدار وثائق التأمين الدولي باسمك.
+              </p>
+
+              <div className="form-group">
+                <label>اسم المستخدم في الاتحاد</label>
+                <input
+                  type="text"
+                  value={formData.lifo_username}
+                  onChange={(e) => setFormData({ ...formData, lifo_username: e.target.value })}
+                  placeholder="أدخل اسم المستخدم في منظومة الاتحاد"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>كلمة المرور في الاتحاد</label>
+                <input
+                  type="password"
+                  value={formData.lifo_password}
+                  onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
+                  placeholder="أدخل كلمة المرور في منظومة الاتحاد"
                 />
               </div>
             </div>

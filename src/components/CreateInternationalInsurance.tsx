@@ -70,13 +70,37 @@ type ExternalPrices = {
   increase?: number;
 };
 
-// بيانات الاعتماد للنظام الخارجي
+// بيانات الاعتماد للنظام الخارجي (البيئة التجريبية)
 const EXTERNAL_API_CREDENTIALS = {
   user_name: 'adminmli',
   pass_word: '12345678'
 };
 
-const EXTERNAL_API_BASE_URL = '/external-api';
+// Dynamic LIFO credentials helper
+const getExternalCredentials = () => {
+  const env = (localStorage.getItem('lifo_connection_env') as 'testing' | 'production') || 'testing';
+  if (env === 'production') {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const currentUser = JSON.parse(userStr);
+        if (currentUser.lifo_username && currentUser.lifo_password) {
+          return {
+            user_name: currentUser.lifo_username,
+            pass_word: currentUser.lifo_password
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing user for LIFO credentials:", e);
+    }
+    return {
+      user_name: 'adminmli',
+      pass_word: '20232024'
+    };
+  }
+  return EXTERNAL_API_CREDENTIALS;
+};
 
 // قائمة السنوات من 1960 إلى 2026
 const YEARS = Array.from({ length: 67 }, (_, i) => 1960 + i).reverse();
@@ -115,10 +139,12 @@ const HIGH_VALUE_ITEMS = [
 
 export default function CreateInternationalInsurance() {
   const navigate = useNavigate();
+  const connectionEnv = (localStorage.getItem('lifo_connection_env') as 'testing' | 'production') || 'testing';
+  const EXTERNAL_API_BASE_URL = connectionEnv === 'production' ? '/lifo-prod/api' : '/external-api';
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [externalCars, setExternalCars] = useState<ExternalCar[]>([]);
   const [externalCountries, setExternalCountries] = useState<ExternalCountry[]>([]);
-  const [externalCountriesConditions, setExternalCountriesConditions] = useState<ExternalCountryCondition[]>([]);
+  const [, setExternalCountriesConditions] = useState<ExternalCountryCondition[]>([]);
   const [externalVehicleNationalities, setExternalVehicleNationalities] = useState<ExternalVehicleNationality[]>([]);
   const [, setExternalInsuranceClauses] = useState<ExternalInsuranceClause[]>([]);
   const [, setExternalPrices] = useState<ExternalPrices | null>(null);
@@ -202,8 +228,8 @@ export default function CreateInternationalInsurance() {
     try {
       // Company Login يستخدم POST مع FormData (حسب استجابة الـ API)
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
       
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/auth/company`, {
         method: 'POST',
@@ -248,8 +274,8 @@ export default function CreateInternationalInsurance() {
   const fetchExternalCars = async () => {
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/cars/all`, {
         method: 'POST',
@@ -272,8 +298,8 @@ export default function CreateInternationalInsurance() {
   const fetchExternalCountries = async () => {
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/countries/all`, {
         method: 'POST',
@@ -319,8 +345,8 @@ export default function CreateInternationalInsurance() {
   const fetchExternalCountriesConditions = async () => {
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/countriescondition/all`, {
         method: 'POST',
@@ -376,8 +402,8 @@ export default function CreateInternationalInsurance() {
     setLoadingCarInfo(true);
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/cars/getinfo/${carId}`, {
         method: 'POST',
@@ -419,8 +445,8 @@ export default function CreateInternationalInsurance() {
   const fetchExternalVehicleNationalities = async () => {
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/vehiclenationality/all`, {
         method: 'POST',
@@ -472,8 +498,8 @@ export default function CreateInternationalInsurance() {
     setLoadingVehicleNationalityInfo(true);
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/vehiclenationality/getinfo/${nationalityId}`, {
         method: 'POST',
@@ -515,8 +541,8 @@ export default function CreateInternationalInsurance() {
   const fetchExternalInsuranceClauses = async () => {
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/insuranceclause/all`, {
         method: 'POST',
@@ -559,8 +585,8 @@ export default function CreateInternationalInsurance() {
   const fetchExternalPrices = async () => {
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/prices/getprice`, {
         method: 'POST',
@@ -613,8 +639,8 @@ export default function CreateInternationalInsurance() {
       console.log('🔍 التحقق من حالة الوثيقة:', policyNumber);
       
       const requestBody = {
-        user_name: EXTERNAL_API_CREDENTIALS.user_name,
-        pass_word: EXTERNAL_API_CREDENTIALS.pass_word,
+        user_name: getExternalCredentials().user_name,
+        pass_word: getExternalCredentials().pass_word,
         POL_OC_NO: policyNumber
       };
 
@@ -674,8 +700,8 @@ export default function CreateInternationalInsurance() {
     setLoadingCountryInfo(true);
     try {
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
 
       const res = await fetch(`${EXTERNAL_API_BASE_URL}/countries/getinfo/${countryId}`, {
         method: 'POST',
@@ -763,25 +789,25 @@ export default function CreateInternationalInsurance() {
     }
   }, [formData.start_date, formData.number_of_days]);
 
-  // حساب daily_premium و tax و supervision_fees و premium عند تغيير item_type
+  // حساب daily_premium و tax و supervision_fees و premium عند تغيير item_type أو number_of_days
   useEffect(() => {
     if (formData.item_type) {
       let dailyPremium = 0;
       let tax = 0;
       let supervisionFees = 0;
-      let premium = 0;
 
       if (LOW_VALUE_ITEMS.includes(formData.item_type)) {
         dailyPremium = 7;
         tax = 0.5;
         supervisionFees = 0.245;
-        premium = 49; // قيمة البند
       } else if (HIGH_VALUE_ITEMS.includes(formData.item_type)) {
         dailyPremium = 8;
         tax = 1.0;
         supervisionFees = 0.280;
-        premium = 56; // قيمة البند
       }
+
+      const days = parseInt(formData.number_of_days) || 0;
+      const premium = dailyPremium * days;
 
       setFormData(prev => ({
         ...prev,
@@ -791,7 +817,7 @@ export default function CreateInternationalInsurance() {
         premium: premium
       }));
     }
-  }, [formData.item_type]);
+  }, [formData.item_type, formData.number_of_days]);
 
   // حساب total عند تغيير أي من القيم المالية
   useEffect(() => {
@@ -868,6 +894,8 @@ export default function CreateInternationalInsurance() {
     }
     if (!formData.number_of_days || parseInt(formData.number_of_days) < 1) {
       errors.number_of_days = 'عدد الأيام مطلوب';
+    } else if (parseInt(formData.number_of_days) > 90) {
+      errors.number_of_days = 'عدد الأيام يجب ألا يتجاوز 90 يوماً';
     }
     if (!formData.end_date) {
       errors.end_date = 'إلي يوم مطلوب';
@@ -973,6 +1001,27 @@ export default function CreateInternationalInsurance() {
         
         // عرض رسالة نجاح مع رقم الوثيقة من النظام الخارجي إن وجد
         const policyNumber = externalResponse?.policyNumber || externalResponse?.data?.policyNumber || externalResponse?.data || '';
+        
+        // تحديث الوثيقة المحلية برقم الوثيقة الخارجية
+        if (policyNumber) {
+          try {
+            await fetch(`${API_BASE_URL}/international-insurance-documents/${data.id || data.data?.id}`, {
+              method: 'PUT',
+              headers: {
+                ...headers,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ...documentData,
+                external_policy_number: policyNumber
+              })
+            });
+            console.log('✅ تم تحديث رقم الوثيقة الخارجية محلياً:', policyNumber);
+          } catch (updateError) {
+            console.error('⚠️ فشل تحديث رقم الوثيقة الخارجية محلياً:', updateError);
+          }
+        }
+
         const successMessage = policyNumber 
           ? `تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي. رقم الوثيقة: ${policyNumber}`
           : 'تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي';
@@ -1044,8 +1093,8 @@ export default function CreateInternationalInsurance() {
 
       // إعداد البيانات للإرسال حسب الوثائق: POST /api/insurance/create
       const formData = new FormData();
-      formData.append('user_name', EXTERNAL_API_CREDENTIALS.user_name);
-      formData.append('pass_word', EXTERNAL_API_CREDENTIALS.pass_word);
+      formData.append('user_name', getExternalCredentials().user_name);
+      formData.append('pass_word', getExternalCredentials().pass_word);
       
       // الحقول المطلوبة حسب الوثائق (حسب المثال المرفق)
       // insurance_location: location of customer
@@ -1150,7 +1199,7 @@ export default function CreateInternationalInsurance() {
 
       // عرض جميع البيانات المرسلة في console
       const sentData = {
-        user_name: EXTERNAL_API_CREDENTIALS.user_name,
+        user_name: getExternalCredentials().user_name,
         pass_word: '***',
         insurance_location: insuranceLocation,
         insurance_name: insuranceName,
@@ -1348,396 +1397,416 @@ export default function CreateInternationalInsurance() {
     : '';
 
   return (
-    <section className="users-management">
-      <div className="users-breadcrumb">
-        <span>تأمين السيارات الدولي / إضافة وثيقة</span>
-      </div>
+    <section className="users-management" style={{ padding: '0', width: '100%', maxWidth: '100%', minHeight: '100vh', background: '#fff' }}>
+      <div className="users-card" style={{ width: '100%', maxWidth: '100%', margin: '0', borderRadius: '0', boxShadow: 'none', background: '#fff' }}>
+        <div className="form-page-container" style={{ width: '100%', maxWidth: '100%', padding: '0' }}>
+          <div className="modern-form-container animate-fade-in" style={{ borderRadius: '0', border: 'none', boxShadow: 'none' }}>
+            <style>{`
+                .modern-form-container {
+                  background: var(--panel, #fff);
+                  padding: 5px 0;
+                  width: 100%;
+                  margin: 0;
+                }
+                .modern-grid-4 {
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 8px 20px;
+                }
+                .grid-header {
+                  grid-column: span 4;
+                  font-size: 1.15rem;
+                  font-weight: 800;
+                  color: #fff;
+                  margin: 10px 0 8px;
+                  padding: 8px 20px;
+                  background: linear-gradient(90deg, #0f172a, #1e40af);
+                  border-radius: 8px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 12px;
+                  box-shadow: none;
+                  border: none;
+                }
+                .grid-header i {
+                  color: #38bdf8;
+                  font-size: 1.2rem;
+                }
+                .form-group {
+                  margin-bottom: 2px;
+                  min-width: 150px;
+                  position: relative;
+                }
+                .form-group label {
+                  font-size: 0.95rem !important;
+                  font-weight: 700 !important;
+                  color: var(--text, #334155) !important;
+                  margin-bottom: 2px !important;
+                  display: block !important;
+                }
+                .form-group input, 
+                .form-group select, 
+                .form-group textarea,
+                .select-display {
+                  font-size: 0.95rem !important;
+                  font-weight: 600 !important;
+                  height: 40px !important;
+                  border-radius: 6px !important;
+                  border: 1.5px solid var(--border, #cbd5e1) !important;
+                  background: var(--input-bg, #fff) !important;
+                  color: var(--text) !important;
+                  padding: 0 12px !important;
+                  width: 100% !important;
+                  appearance: none !important;
+                  -webkit-appearance: none !important;
+                  -moz-appearance: none !important;
+                  transition: all 0.2s ease;
+                }
+                .form-group input:focus, .form-group select:focus {
+                  border-color: #2563eb !important;
+                  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                  outline: none;
+                }
+                .select-display {
+                  display: flex;
+                  align-items: center;
+                  cursor: pointer;
+                  justify-content: flex-start;
+                  box-sizing: border-box !important;
+                }
+                .select-dropdown {
+                  position: absolute;
+                  top: calc(100% + 5px);
+                  right: 0;
+                  left: 0;
+                  background: var(--panel, #fff);
+                  border: 1.5px solid var(--border, #cbd5e1);
+                  border-radius: 8px;
+                  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                  z-index: 1000;
+                  max-height: 300px;
+                  overflow-y: auto;
+                }
+                .select-search {
+                  padding: 8px;
+                  position: sticky;
+                  top: 0;
+                  background: var(--panel, #fff);
+                  border-bottom: 1px solid var(--border, #f1f5f9);
+                }
+                .select-search input {
+                  height: 40px !important;
+                  font-size: 0.95rem !important;
+                  border: 1px solid var(--border, #e2e8f0) !important;
+                  background: var(--input-bg, #fff) !important;
+                  color: var(--text) !important;
+                  margin: 0 !important;
+                  width: 100% !important;
+                }
+                .select-option {
+                  padding: 10px 15px;
+                  cursor: pointer;
+                  font-size: 0.95rem;
+                  font-weight: 600;
+                  color: var(--text, #334155);
+                  transition: all 0.2s;
+                }
+                .select-option:hover {
+                  background: var(--input-bg, #f1f5f9);
+                  color: #2563eb;
+                }
+                .span-2 { grid-column: span 2; }
+                .span-4 { grid-column: 1 / -1; }
+                
+                .form-group.has-error input,
+                .form-group.has-error select,
+                .form-group.has-error .select-display {
+                  border-color: #ef4444 !important;
+                  background-color: #fef2f2 !important;
+                }
+                .error-message {
+                  color: #ef4444;
+                  font-size: 0.8rem;
+                  font-weight: 700;
+                  margin-bottom: 2px;
+                  display: block;
+                }
 
-      <div className="users-card">
-        {loading ? (
-          <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
-        ) : (
-          <div className="form-page-container">
-            <div className="form-page-header">
-              <h2 className="form-page-title">
-                إضافة وثيقة تأمين دولي جديدة
+                @media (max-width: 1400px) {
+                  .modern-grid-4 { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+                  .span-4, .grid-header { grid-column: 1 / -1; }
+                  .span-2 { grid-column: span 2; }
+                }
+
+                @media (max-width: 1024px) {
+                  .modern-grid-4 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+                  .span-2, .span-4, .grid-header { grid-column: 1 / -1; }
+                  .modern-form-container { padding: 5px 10px; }
+                }
+
+                @media (max-width: 768px) {
+                  .modern-grid-4 { grid-template-columns: 1fr; gap: 8px; }
+                  .span-2, .span-4, .grid-header { grid-column: 1 / -1; }
+                  .grid-header { font-size: 1.05rem; padding: 6px 15px; margin: 10px 0 8px; }
+                  .form-group label { font-size: 0.9rem !important; }
+                  .form-group input, .form-group select, .select-display { height: 38px !important; font-size: 0.9rem !important; }
+                  .form-actions { flex-direction: column; align-items: stretch; margin-top: 10px; }
+                  .btn-submit, .btn-cancel { width: 100% !important; min-width: 0 !important; margin: 0 !important; height: 45px !important; }
+                }
+            `}</style>
+            
+            <div className="form-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+              <h2 className="form-page-title" style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
+                إضافة وثيقة تأمين دولي جديدة (البطاقة البرتقالية)
               </h2>
               <button 
                 className="btn-cancel" 
+                type="button"
                 onClick={() => navigate('/international-insurance-documents')}
+                style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '6px', fontWeight: '600' }}
               >
                 <i className="fa-solid fa-arrow-right" style={{ marginLeft: '8px' }}></i>
                 العودة للقائمة
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="user-form" style={{ maxWidth: '100%' }}>
-              {/* بيانات المؤمن ومدة التأمين بجانب بعض */}
-              <div className="form-sections-container">
-                {/* بيانات المؤمن */}
-                <div className="form-section">
-                  <h3 className="form-section-title">بيانات المؤمن</h3>
+            {loading ? (
+              <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
+            ) : (
+              <form onSubmit={handleSubmit} className="user-form" style={{ width: '100%', maxWidth: '100%', padding: '0' }}>
+                <div className="modern-grid-4">
                   
-                  <div className="form-group">
-                    <label htmlFor="insured_name">اسم المؤمن <span className="required">*</span></label>
+                  {/* 1. بيانات المؤمن له والمشترك */}
+                  <div className="grid-header">
+                    <i className="fa-solid fa-user-shield"></i> بيانات المؤمن له والمشترك
+                  </div>
+                  
+                  <div className={`form-group span-2 ${formErrors.insured_name ? 'has-error' : ''}`}>
+                    <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
                     <input
                       type="text"
                       id="insured_name"
                       value={formData.insured_name}
                       onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
-                      className={formErrors.insured_name ? 'error' : ''}
                     />
                     {formErrors.insured_name && <span className="error-message">{formErrors.insured_name}</span>}
                   </div>
 
-                <div className="form-group">
-                  <label htmlFor="insured_address">العنوان <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="insured_address"
-                    value={formData.insured_address}
-                    onChange={(e) => setFormData({ ...formData, insured_address: e.target.value })}
-                    className={formErrors.insured_address ? 'error' : ''}
-                  />
-                  {formErrors.insured_address && <span className="error-message">{formErrors.insured_address}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="phone">الهاتف <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className={formErrors.phone ? 'error' : ''}
-                  />
-                  {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="whatsapp_number">رقم الواتساب الخاص بالمؤمن له <span className="required">*</span></label>
-                  <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px', fontWeight: '500' }}>
-                    يجب إضافة رقم الواتساب الخاص بالمؤمن له (إلزامي لإتمام الوثيقة)
-                  </p>
-                  <input
-                    type="text"
-                    id="whatsapp_number"
-                    value={formData.whatsapp_number}
-                    onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
-                    className={formErrors.whatsapp_number ? 'error' : ''}
-                    placeholder="مثال: 0910000000"
-                  />
-                  {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="chassis_number">رقم الهيكل <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="chassis_number"
-                    value={formData.chassis_number}
-                    onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
-                    className={formErrors.chassis_number ? 'error' : ''}
-                  />
-                  {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="plate_number">رقم اللوحة المعدنية <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="plate_number"
-                    value={formData.plate_number}
-                    onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
-                    className={formErrors.plate_number ? 'error' : ''}
-                  />
-                  {formErrors.plate_number && <span className="error-message">{formErrors.plate_number}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="motor_number">رقم المحرك <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="motor_number"
-                    value={formData.motor_number}
-                    onChange={(e) => setFormData({ ...formData, motor_number: e.target.value })}
-                    className={formErrors.motor_number ? 'error' : ''}
-                    required
-                  />
-                  {formErrors.motor_number && (
-                    <span className="error-message">{formErrors.motor_number}</span>
-                  )}
-                </div>
-
-                <div className="form-group" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="vehicle_type_id">نوع السيارة (بدون فئة) <span className="required">*</span></label>
-                  <div
-                    onClick={() => setShowVehicleTypeDropdown((v) => !v)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      background: '#fff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      minHeight: 42,
-                    }}
-                  >
-                    <span style={{ color: selectedBrand ? '#111827' : '#9ca3af' }}>
-                      {selectedBrand || 'اختر نوع السيارة...'}
-                    </span>
-                    <i
-                      className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}
-                      style={{ color: '#9ca3af' }}
-                    ></i>
+                  <div className={`form-group span-2 ${formErrors.insured_address ? 'has-error' : ''}`}>
+                    <label htmlFor="insured_address">العنوان التفصيلي <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="insured_address"
+                      value={formData.insured_address}
+                      onChange={(e) => setFormData({ ...formData, insured_address: e.target.value })}
+                    />
+                    {formErrors.insured_address && <span className="error-message">{formErrors.insured_address}</span>}
                   </div>
-                  {formErrors.vehicle_type_id && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.vehicle_type_id}</span>}
-                  {showVehicleTypeDropdown && (
+
+                  <div className={`form-group ${formErrors.phone ? 'has-error' : ''}`}>
+                    <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                    {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
+                  </div>
+
+                  <div className={`form-group span-2 ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
+                    <label htmlFor="whatsapp_number">رقم الواتساب <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="whatsapp_number"
+                      value={formData.whatsapp_number}
+                      onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                      placeholder="مثال: 0910000000"
+                    />
+                    {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
+                  </div>
+
+                  <div className={`form-group ${formErrors.start_date ? 'has-error' : ''}`}>
+                    <label htmlFor="start_date">من يوم <span className="required">*</span></label>
+                    <input
+                      type="date"
+                      id="start_date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    />
+                    {formErrors.start_date && <span className="error-message">{formErrors.start_date}</span>}
+                  </div>
+
+                  <div className={`form-group ${formErrors.number_of_days ? 'has-error' : ''}`}>
+                    <label htmlFor="number_of_days">عدد الأيام <span className="required">*</span></label>
+                    <input
+                      type="number"
+                      id="number_of_days"
+                      min="1"
+                      max="90"
+                      value={formData.number_of_days}
+                      onChange={(e) => setFormData({ ...formData, number_of_days: e.target.value })}
+                    />
+                    {formErrors.number_of_days && <span className="error-message">{formErrors.number_of_days}</span>}
+                  </div>
+
+                  <div className={`form-group ${formErrors.end_date ? 'has-error' : ''}`}>
+                    <label htmlFor="end_date">إلي يوم <span className="required">*</span></label>
+                    <input
+                      type="date"
+                      id="end_date"
+                      value={formData.end_date}
+                      disabled
+                      style={{ background: '#f3f4f6', color: '#6b7280' }}
+                    />
+                    {formErrors.end_date && <span className="error-message">{formErrors.end_date}</span>}
+                  </div>
+
+                  {/* 2. بيانات المركبة */}
+                  <div className="grid-header">
+                    <i className="fa-solid fa-car"></i> بيانات المركبة
+                  </div>
+
+                  <div className={`form-group span-2 ${formErrors.vehicle_type_id ? 'has-error' : ''}`} ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
+                    <label htmlFor="vehicle_type_id">ماركة السيارة <span className="required">*</span></label>
                     <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        background: '#fff',
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        marginTop: '4px',
-                        maxHeight: '300px',
-                        overflowY: 'auto',
-                        zIndex: 1000,
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                      }}
+                      onClick={() => setShowVehicleTypeDropdown((v) => !v)}
+                      className="select-display"
+                      style={{ justifyContent: 'space-between' }}
                     >
-                      <div style={{ padding: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="ابحث عن نوع السيارة..."
-                          value={vehicleTypeSearch}
-                          onChange={(e) => setVehicleTypeSearch(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid var(--border)',
-                            borderRadius: 6,
-                            marginBottom: '8px',
-                          }}
-                        />
-                      </div>
-                      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                        {uniqueCars.length === 0 ? (
-                          <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                            {loading ? 'جاري التحميل...' : 'لا توجد نتائج'}
-                          </div>
-                        ) : (
-                          uniqueCars.map((car) => {
-                            const carName = externalCars.length > 0 ? car.name : (car as any).name || '';
-                            const carId = externalCars.length > 0 ? car.id : (car as any).id || 0;
-                            const isSelected = externalCars.length > 0
-                              ? formData.external_car_id === car.id.toString()
-                              : formData.vehicle_type_id === carId.toString();
-                            
-                            return (
-                              <div
-                                key={carId}
-                                onClick={() => {
-                                  if (externalCars.length > 0) {
-                                    // استخدام بيانات النظام الخارجي
-                                    const selectedCarId = car.id;
-                                    setFormData({ 
-                                      ...formData, 
-                                      external_car_id: selectedCarId.toString(),
-                                      vehicle_type_id: '' // مسح ID المحلي إذا كان موجوداً
-                                    });
-                                    // جلب معلومات السيارة المختارة
-                                    fetchCarInfo(selectedCarId);
-                                  } else {
-                                    // استخدام البيانات المحلية كبديل
-                                    setFormData({ 
-                                      ...formData, 
-                                      vehicle_type_id: carId.toString() 
-                                    });
-                                    setSelectedCarInfo(null);
-                                  }
-                                  setShowVehicleTypeDropdown(false);
-                                  setVehicleTypeSearch('');
-                                }}
-                                style={{
-                                  padding: '10px 12px',
-                                  cursor: 'pointer',
-                                  borderBottom: '1px solid #f3f4f6',
-                                  backgroundColor: isSelected ? '#f3f4f6' : 'transparent',
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!isSelected) {
-                                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (!isSelected) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                  }
-                                }}
-                              >
-                                {carName}
-                                {externalCars.length > 0 && car.symbol && (
-                                  <span style={{ 
-                                    marginRight: '8px', 
-                                    color: '#6b7280', 
-                                    fontSize: '12px',
-                                    fontFamily: 'monospace'
-                                  }}>
-                                    ({car.symbol})
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
+                      <span style={{ color: selectedBrand ? '#111827' : '#9ca3af' }}>
+                        {selectedBrand || 'اختر ماركة السيارة...'}
+                      </span>
+                      <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
                     </div>
-                  )}
-                  {loadingCarInfo && (
-                    <small style={{ 
-                      display: 'block', 
-                      marginTop: '4px', 
-                      color: '#3b82f6', 
-                      fontSize: '12px' 
-                    }}>
-                      جاري جلب معلومات السيارة...
-                    </small>
-                  )}
-                  {selectedCarInfo && !loadingCarInfo && (
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '10px',
-                      backgroundColor: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      borderRadius: '6px',
-                      fontSize: '13px'
-                    }}>
-                      <div style={{ fontWeight: '600', marginBottom: '4px', color: '#1e40af' }}>
-                        معلومات السيارة المختارة:
-                      </div>
-                      <div style={{ color: '#374151' }}>
-                        <div><strong>الاسم:</strong> {selectedCarInfo.name}</div>
-                        {selectedCarInfo.symbol && (
-                          <div><strong>الرمز:</strong> {selectedCarInfo.symbol}</div>
-                        )}
-                        {selectedCarInfo.created_at && (
-                          <div><strong>تاريخ الإنشاء:</strong> {selectedCarInfo.created_at}</div>
-                        )}
-                        <div>
-                          <strong>الحالة:</strong>{' '}
-                          <span style={{
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: '500',
-                            backgroundColor: selectedCarInfo.active === 1 ? '#dcfce7' : '#fee2e2',
-                            color: selectedCarInfo.active === 1 ? '#166534' : '#991b1b'
-                          }}>
-                            {selectedCarInfo.active === 1 ? 'نشط' : 'غير نشط'}
-                          </span>
+                    {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
+                    
+                    {showVehicleTypeDropdown && (
+                      <div className="select-dropdown">
+                        <div className="select-search">
+                          <input
+                            type="text"
+                            placeholder="ابحث عن ماركة السيارة..."
+                            value={vehicleTypeSearch}
+                            onChange={(e) => setVehicleTypeSearch(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                          {uniqueCars.length === 0 ? (
+                            <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
+                              {loading ? 'جاري التحميل...' : 'لا توجد نتائج'}
+                            </div>
+                          ) : (
+                            uniqueCars.map((car) => {
+                              const carName = externalCars.length > 0 ? car.name : (car as any).name || '';
+                              const carId = externalCars.length > 0 ? car.id : (car as any).id || 0;
+                              const isSelected = externalCars.length > 0
+                                ? formData.external_car_id === car.id.toString()
+                                : formData.vehicle_type_id === carId.toString();
+                              
+                              return (
+                                <div
+                                  key={carId}
+                                  onClick={() => {
+                                    if (externalCars.length > 0) {
+                                      const selectedCarId = car.id;
+                                      setFormData({ 
+                                        ...formData, 
+                                        external_car_id: selectedCarId.toString(),
+                                        vehicle_type_id: ''
+                                      });
+                                      fetchCarInfo(selectedCarId);
+                                    } else {
+                                      setFormData({ 
+                                        ...formData, 
+                                        vehicle_type_id: carId.toString() 
+                                      });
+                                      setSelectedCarInfo(null);
+                                    }
+                                    setShowVehicleTypeDropdown(false);
+                                    setVehicleTypeSearch('');
+                                  }}
+                                  className="select-option"
+                                  style={{ backgroundColor: isSelected ? '#f3f4f6' : 'transparent' }}
+                                >
+                                  {carName}
+                                  {externalCars.length > 0 && car.symbol && (
+                                    <span style={{ marginRight: '8px', color: '#6b7280', fontSize: '12px', fontFamily: 'monospace' }}>
+                                      ({car.symbol})
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-group" ref={yearDropdownRef} style={{ position: 'relative' }}>
-                  <label htmlFor="year">السنة (1960-2026) <span className="required">*</span></label>
-                  <div
-                    onClick={() => setShowYearDropdown((v) => !v)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      background: '#fff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      minHeight: 42,
-                    }}
-                  >
-                    <span style={{ color: formData.year ? '#111827' : '#9ca3af' }}>
-                      {formData.year || 'اختر السنة...'}
-                    </span>
-                    <i
-                      className={`fa-solid fa-chevron-${showYearDropdown ? 'up' : 'down'}`}
-                      style={{ color: '#9ca3af' }}
-                    ></i>
+                    )}
+                    {loadingCarInfo && (
+                      <small style={{ display: 'block', marginTop: '4px', color: '#3b82f6', fontSize: '12px' }}>
+                        جاري جلب معلومات السيارة...
+                      </small>
+                    )}
+                    {selectedCarInfo && !loadingCarInfo && (
+                      <div style={{ marginTop: '8px', padding: '10px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '13px' }}>
+                        <div style={{ color: '#374151' }}>
+                          <strong>الاسم بالمنظومة:</strong> {selectedCarInfo.name}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {formErrors.year && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.year}</span>}
-                  {showYearDropdown && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        background: '#fff',
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        marginTop: '4px',
-                        maxHeight: '300px',
-                        overflowY: 'auto',
-                        zIndex: 1000,
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                      }}
-                    >
-                      <div style={{ padding: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="ابحث عن سنة..."
-                          value={yearSearch}
-                          onChange={(e) => setYearSearch(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid var(--border)',
-                            borderRadius: 6,
-                            marginBottom: '8px',
-                          }}
-                        />
-                      </div>
-                      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                        {filteredYears.length === 0 ? (
-                          <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                            لا توجد نتائج
-                          </div>
-                        ) : (
-                          filteredYears.map((year) => (
-                            <div
-                              key={year}
-                              onClick={() => {
-                                setFormData({ ...formData, year: year.toString() });
-                                setShowYearDropdown(false);
-                                setYearSearch('');
-                              }}
-                              style={{
-                                padding: '10px 12px',
-                                cursor: 'pointer',
-                                borderBottom: '1px solid #f3f4f6',
-                              }}
-                            >
-                              {year}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
 
-                  <div className="form-group">
+                  <div className={`form-group ${formErrors.year ? 'has-error' : ''}`} ref={yearDropdownRef} style={{ position: 'relative' }}>
+                    <label htmlFor="year">سنة الصنع <span className="required">*</span></label>
+                    <div
+                      onClick={() => setShowYearDropdown((v) => !v)}
+                      className="select-display"
+                      style={{ justifyContent: 'space-between' }}
+                    >
+                      <span style={{ color: formData.year ? '#111827' : '#9ca3af' }}>
+                        {formData.year || 'اختر سنة الصنع...'}
+                      </span>
+                      <i className={`fa-solid fa-chevron-${showYearDropdown ? 'up' : 'down'}`} style={{ color: '#9ca3af' }}></i>
+                    </div>
+                    {formErrors.year && <span className="error-message">{formErrors.year}</span>}
+                    
+                    {showYearDropdown && (
+                      <div className="select-dropdown">
+                        <div className="select-search">
+                          <input
+                            type="text"
+                            placeholder="ابحث عن سنة..."
+                            value={yearSearch}
+                            onChange={(e) => setYearSearch(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                          {filteredYears.length === 0 ? (
+                            <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>لا توجد نتائج</div>
+                          ) : (
+                            filteredYears.map((year) => (
+                              <div
+                                key={year}
+                                onClick={() => {
+                                    setFormData({ ...formData, year: year.toString() });
+                                    setShowYearDropdown(false);
+                                    setYearSearch('');
+                                }}
+                                className="select-option"
+                              >
+                                {year}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`form-group ${formErrors.vehicle_nationality ? 'has-error' : ''}`}>
                     <label htmlFor="vehicle_nationality">جنسية المركبة <span className="required">*</span></label>
                     <select
                       id="vehicle_nationality"
@@ -1745,254 +1814,129 @@ export default function CreateInternationalInsurance() {
                       onChange={(e) => {
                         const selectedNationality = externalVehicleNationalities.find(n => n.name === e.target.value);
                         const nationalityId = selectedNationality ? selectedNationality.id : null;
-                        
                         setFormData({ 
                           ...formData, 
                           vehicle_nationality: e.target.value,
                           external_vehicle_nationality_id: nationalityId ? nationalityId.toString() : ''
                         });
-
-                        // جلب معلومات الجنسية المختارة
-                        if (nationalityId) {
-                          fetchVehicleNationalityInfo(nationalityId);
-                        } else {
-                          setSelectedVehicleNationalityInfo(null);
-                        }
+                        if (nationalityId) fetchVehicleNationalityInfo(nationalityId);
+                        else setSelectedVehicleNationalityInfo(null);
                       }}
-                      disabled={loading}
-                      required
-                      className={formErrors.vehicle_nationality ? 'error' : ''}
                     >
-                      <option value="">
-                        {loading ? 'جاري تحميل الجنسيات...' : 'اختر جنسية المركبة'}
-                      </option>
+                      <option value="">{loading ? 'جاري التحميل...' : 'اختر جنسية المركبة'}</option>
                       {externalVehicleNationalities.length > 0 ? (
-                        externalVehicleNationalities.map((nationality) => (
-                          <option key={nationality.id} value={nationality.name}>
-                            {nationality.name}
-                            {nationality.symbol && ` (${nationality.symbol})`}
-                            {nationality.code && ` - ${nationality.code}`}
-                          </option>
+                        externalVehicleNationalities.map((n) => (
+                          <option key={n.id} value={n.name}>{n.name}</option>
                         ))
                       ) : (
                         <option value="ليبية- LBY">ليبية- LBY</option>
                       )}
                     </select>
-                    {externalVehicleNationalities.length > 0 && (
-                      <small style={{ 
-                        display: 'block', 
-                        marginTop: '4px', 
-                        color: '#6b7280', 
-                        fontSize: '12px' 
-                      }}>
-                        تم تحميل {externalVehicleNationalities.length} جنسية من النظام الخارجي
-                      </small>
-                    )}
+                    {formErrors.vehicle_nationality && <span className="error-message">{formErrors.vehicle_nationality}</span>}
                     {loadingVehicleNationalityInfo && (
-                      <small style={{ 
-                        display: 'block', 
-                        marginTop: '4px', 
-                        color: '#3b82f6', 
-                        fontSize: '12px' 
-                      }}>
+                      <small style={{ display: 'block', marginTop: '4px', color: '#3b82f6', fontSize: '12px' }}>
                         جاري جلب معلومات الجنسية...
                       </small>
                     )}
                     {selectedVehicleNationalityInfo && !loadingVehicleNationalityInfo && (
-                      <div style={{
-                        marginTop: '8px',
-                        padding: '10px',
-                        backgroundColor: '#fef3c7',
-                        border: '1px solid #fde047',
-                        borderRadius: '6px',
-                        fontSize: '13px'
-                      }}>
-                        <div style={{ fontWeight: '600', marginBottom: '4px', color: '#92400e' }}>
-                          معلومات الجنسية المختارة:
-                        </div>
+                      <div style={{ marginTop: '8px', padding: '10px', backgroundColor: '#fef3c7', border: '1px solid #fde047', borderRadius: '6px', fontSize: '13px' }}>
                         <div style={{ color: '#374151' }}>
-                          <div><strong>الاسم:</strong> {selectedVehicleNationalityInfo.name}</div>
-                          {selectedVehicleNationalityInfo.symbol && (
-                            <div><strong>الرمز:</strong> {selectedVehicleNationalityInfo.symbol}</div>
-                          )}
-                          {selectedVehicleNationalityInfo.code && (
-                            <div><strong>الكود:</strong> {selectedVehicleNationalityInfo.code}</div>
-                          )}
-                          {selectedVehicleNationalityInfo.created_at && (
-                            <div><strong>تاريخ الإنشاء:</strong> {selectedVehicleNationalityInfo.created_at}</div>
-                          )}
-                          <div>
-                            <strong>الحالة:</strong>{' '}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '500',
-                              backgroundColor: selectedVehicleNationalityInfo.active === 1 ? '#dcfce7' : '#fee2e2',
-                              color: selectedVehicleNationalityInfo.active === 1 ? '#166534' : '#991b1b'
-                            }}>
-                              {selectedVehicleNationalityInfo.active === 1 ? 'نشط' : 'غير نشط'}
-                            </span>
-                          </div>
+                          <strong>الاسم:</strong> {selectedVehicleNationalityInfo.name} {selectedVehicleNationalityInfo.symbol && `(${selectedVehicleNationalityInfo.symbol})`}
                         </div>
                       </div>
                     )}
                   </div>
 
-                <div className="form-group">
-                  <label htmlFor="visited_country">البلد المزار <span className="required">*</span></label>
-                  <select
-                    id="visited_country"
-                    value={formData.visited_country}
-                    onChange={(e) => {
-                      const selectedCountry = externalCountries.find(c => c.name === e.target.value);
-                      const countryId = selectedCountry ? selectedCountry.id : null;
-                      
-                      setFormData({ 
-                        ...formData, 
-                        visited_country: e.target.value,
-                        external_country_id: countryId ? countryId.toString() : ''
-                      });
-
-                      // جلب معلومات الدولة المختارة
-                      if (countryId) {
-                        fetchCountryInfo(countryId);
-                      } else {
-                        setSelectedCountryInfo(null);
-                      }
-                    }}
-                    disabled={loading}
-                    className={formErrors.visited_country ? 'error' : ''}
-                  >
-                    <option value="">
-                      {loading ? 'جاري تحميل الدول...' : 'اختر البلد المزار'}
-                    </option>
-                    {externalCountries.length > 0 ? (
-                      externalCountries.map((country) => (
-                        <option key={country.id} value={country.name}>
-                          {country.name}
-                          {country.symbol && ` (${country.symbol})`}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="تونس">تونس</option>
-                        <option value="الجزائر">الجزائر</option>
-                        <option value="تونس و الجزائر">تونس و الجزائر</option>
-                        <option value="مصر">مصر</option>
-                      </>
-                    )}
-                  </select>
-                  {externalCountries.length > 0 && (
-                    <small style={{ 
-                      display: 'block', 
-                      marginTop: '4px', 
-                      color: '#6b7280', 
-                      fontSize: '12px' 
-                    }}>
-                      تم تحميل {externalCountries.length} دولة من النظام الخارجي
-                      {externalCountriesConditions.length > 0 && (
-                        <span style={{ marginRight: '8px' }}>
-                          • {externalCountriesConditions.length} شرط دولة
-                        </span>
+                  <div className={`form-group ${formErrors.visited_country ? 'has-error' : ''}`}>
+                    <label htmlFor="visited_country">البلد المزار <span className="required">*</span></label>
+                    <select
+                      id="visited_country"
+                      value={formData.visited_country}
+                      onChange={(e) => {
+                        const selectedCountry = externalCountries.find(c => c.name === e.target.value);
+                        const countryId = selectedCountry ? selectedCountry.id : null;
+                        setFormData({ 
+                          ...formData, 
+                          visited_country: e.target.value,
+                          external_country_id: countryId ? countryId.toString() : ''
+                        });
+                        if (countryId) fetchCountryInfo(countryId);
+                        else setSelectedCountryInfo(null);
+                      }}
+                    >
+                      <option value="">{loading ? 'جاري التحميل...' : 'اختر البلد المزار'}</option>
+                      {externalCountries.length > 0 ? (
+                        externalCountries.map((c) => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="تونس">تونس</option>
+                          <option value="الجزائر">الجزائر</option>
+                          <option value="تونس و الجزائر">تونس و الجزائر</option>
+                          <option value="مصر">مصر</option>
+                        </>
                       )}
-                    </small>
-                  )}
-                  {loadingCountryInfo && (
-                    <small style={{ 
-                      display: 'block', 
-                      marginTop: '4px', 
-                      color: '#3b82f6', 
-                      fontSize: '12px' 
-                    }}>
-                      جاري جلب معلومات الدولة...
-                    </small>
-                  )}
-                  {selectedCountryInfo && !loadingCountryInfo && (
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '10px',
-                      backgroundColor: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: '6px',
-                      fontSize: '13px'
-                    }}>
-                      <div style={{ fontWeight: '600', marginBottom: '4px', color: '#166534' }}>
-                        معلومات الدولة المختارة:
+                    </select>
+                    {formErrors.visited_country && <span className="error-message">{formErrors.visited_country}</span>}
+                    {loadingCountryInfo && (
+                      <small style={{ display: 'block', marginTop: '4px', color: '#3b82f6', fontSize: '12px' }}>
+                        جاري جلب معلومات الدولة...
+                      </small>
+                    )}
+                    {selectedCountryInfo && !loadingCountryInfo && (
+                      <div style={{ marginTop: '8px', padding: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '13px' }}>
+                        <div style={{ color: '#374151' }}>
+                          <strong>الاسم:</strong> {selectedCountryInfo.name} {selectedCountryInfo.symbol && `(${selectedCountryInfo.symbol})`}
+                        </div>
                       </div>
-                      <div style={{ color: '#374151' }}>
-                        <div><strong>الاسم:</strong> {selectedCountryInfo.name}</div>
-                        {selectedCountryInfo.symbol && (
-                          <div><strong>الرمز:</strong> {selectedCountryInfo.symbol}</div>
-                        )}
-                        {selectedCountryInfo.created_at && (
-                          <div><strong>تاريخ الإنشاء:</strong> {selectedCountryInfo.created_at}</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {formErrors.visited_country && <span className="error-message" style={{ marginTop: '4px', display: 'block' }}>{formErrors.visited_country}</span>}
-                </div>
-                </div>
-
-                {/* مدة التأمين */}
-                <div className="form-section">
-                  <h3 className="form-section-title">مدة التأمين</h3>
-                  
-                  <div className="form-group">
-                    <label htmlFor="start_date">من يوم <span className="required">*</span></label>
-                    <input
-                      type="date"
-                      id="start_date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      className={formErrors.start_date ? 'error' : ''}
-                    />
-                    {formErrors.start_date && <span className="error-message">{formErrors.start_date}</span>}
+                    )}
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="number_of_days">عدد الأيام <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.chassis_number ? 'has-error' : ''}`}>
+                    <label htmlFor="chassis_number">رقم الهيكل <span className="required">*</span></label>
                     <input
-                      type="number"
-                      id="number_of_days"
-                      min="1"
-                      value={formData.number_of_days}
-                      onChange={(e) => setFormData({ ...formData, number_of_days: e.target.value })}
-                      className={formErrors.number_of_days ? 'error' : ''}
+                      type="text"
+                      id="chassis_number"
+                      value={formData.chassis_number}
+                      onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
                     />
-                    {formErrors.number_of_days && <span className="error-message">{formErrors.number_of_days}</span>}
+                    {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="end_date">إلي يوم <span className="required">*</span></label>
+                  <div className={`form-group ${formErrors.plate_number ? 'has-error' : ''}`}>
+                    <label htmlFor="plate_number">رقم اللوحة <span className="required">*</span></label>
                     <input
-                      type="date"
-                      id="end_date"
-                      value={formData.end_date}
-                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      className={formErrors.end_date ? 'error' : ''}
-                      disabled
-                      style={{ background: '#f3f4f6', color: '#6b7280' }}
+                      type="text"
+                      id="plate_number"
+                      value={formData.plate_number}
+                      onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
                     />
-                    {formErrors.end_date && <span className="error-message">{formErrors.end_date}</span>}
+                    {formErrors.plate_number && <span className="error-message">{formErrors.plate_number}</span>}
                   </div>
-                </div>
-              </div>
 
-              {/* احتساب القسط والقيمة المالية بجانب بعض */}
-              <div className="form-sections-container">
-                {/* احتساب القسط */}
-                <div className="form-section">
-                  <h3 className="form-section-title">احتساب القسط</h3>
-                  
-                  <div className="form-group">
+                  <div className={`form-group ${formErrors.motor_number ? 'has-error' : ''}`}>
+                    <label htmlFor="motor_number">رقم المحرك <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="motor_number"
+                      value={formData.motor_number}
+                      onChange={(e) => setFormData({ ...formData, motor_number: e.target.value })}
+                    />
+                    {formErrors.motor_number && <span className="error-message">{formErrors.motor_number}</span>}
+                  </div>
+
+                  {/* 3. احتساب القسط والقيمة المالية */}
+                  <div className="grid-header">
+                    <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط والقيمة المالية
+                  </div>
+
+                  <div className={`form-group span-2 ${formErrors.item_type ? 'has-error' : ''}`}>
                     <label htmlFor="item_type">البند <span className="required">*</span></label>
                     <select
                       id="item_type"
                       value={formData.item_type}
                       onChange={(e) => setFormData({ ...formData, item_type: e.target.value as any })}
-                      className={formErrors.item_type ? 'error' : ''}
                     >
                       <option value="">اختر البند</option>
                       {ITEM_TYPES.map((item) => (
@@ -2023,12 +1967,7 @@ export default function CreateInternationalInsurance() {
                       style={{ background: '#f3f4f6', color: '#6b7280' }}
                     />
                   </div>
-                </div>
 
-                {/* القيمة المالية */}
-                <div className="form-section">
-                  <h3 className="form-section-title">القيمة المالية</h3>
-                  
                   <div className="form-group">
                     <label htmlFor="premium">القسط</label>
                     <input
@@ -2094,35 +2033,39 @@ export default function CreateInternationalInsurance() {
                       style={{ background: '#f3f4f6', color: '#6b7280', fontWeight: 'bold' }}
                     />
                   </div>
-                </div>
-              </div>
 
-              <div className="form-actions" style={{ marginTop: '24px' }}>
-                <button
-                  type="submit"
-                  disabled={submitting || syncingExternal}
-                  className="btn-submit"
-                >
-                  {syncingExternal 
-                    ? 'جاري المزامنة مع النظام الخارجي...' 
-                    : submitting 
-                    ? 'جاري الحفظ...' 
-                    : 'حفظ'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/international-insurance-documents')}
-                  disabled={submitting}
-                  className="btn-cancel"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </form>
+                </div>
+
+                <div className="form-actions" style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+                  <button
+                    type="submit"
+                    disabled={submitting || syncingExternal}
+                    className="btn-submit"
+                    style={{ minWidth: '120px' }}
+                  >
+                    {syncingExternal 
+                      ? 'جاري المزامنة مع النظام الخارجي...' 
+                      : submitting 
+                      ? 'جاري الحفظ...' 
+                      : 'حفظ'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/international-insurance-documents')}
+                    disabled={submitting}
+                    className="btn-cancel"
+                    style={{ minWidth: '120px' }}
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </section>
   );
 }
+
 

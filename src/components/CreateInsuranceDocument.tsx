@@ -510,7 +510,7 @@ export default function CreateInsuranceDocument() {
     }
   };
 
-  // تأمين طلب احتساب القسط تلقائياً عند اختيار تصنيف المركبة في المرحلة الثالثة
+  // تأمين طلب احتساب القسط تلقائياً عند اختيار تصنيف المركبة في المرحلة الثالثة أو ملء بيانات العميل
   useEffect(() => {
     const shouldInquire = isMandatoryInsurance &&
       formData.eidc_vehicle_type_id &&
@@ -534,6 +534,9 @@ export default function CreateInsuranceDocument() {
     formData.license_purpose,
     formData.plate_number_manual,
     formData.chassis_number,
+    formData.phone,
+    formData.nid_passport,
+    formData.insured_name,
     isMandatoryInsurance
   ]);
 

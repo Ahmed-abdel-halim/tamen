@@ -122,6 +122,8 @@ export default function EditBranchAgent() {
     document_percentages: {} as Record<string, number>,
     eidc_username: '',
     eidc_password: '',
+    lifo_username: '',
+    lifo_password: '',
   });
 
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
@@ -260,6 +262,8 @@ export default function EditBranchAgent() {
         document_percentages: data.document_percentages || {},
         eidc_username: data.user?.eidc_username || '',
         eidc_password: data.user?.eidc_password || '',
+        lifo_username: data.user?.lifo_username || '',
+        lifo_password: data.user?.lifo_password || '',
       });
 
       if (data.city && !LIBYAN_CITIES.some(c => c.ar === data.city)) {
@@ -412,6 +416,8 @@ export default function EditBranchAgent() {
       formDataToSend.append('document_percentages', percentagesJson);
       if (formData.eidc_username) formDataToSend.append('eidc_username', formData.eidc_username);
       if (formData.eidc_password) formDataToSend.append('eidc_password', formData.eidc_password);
+      if (formData.lifo_username) formDataToSend.append('lifo_username', formData.lifo_username);
+      if (formData.lifo_password) formDataToSend.append('lifo_password', formData.lifo_password);
       formDataToSend.append('_method', 'PUT');
 
       const res = await fetch(`${API_BASE_URL}/branches-agents/${id}`, {
@@ -846,6 +852,32 @@ export default function EditBranchAgent() {
                     value={formData.eidc_password}
                     onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
                     placeholder="كلمة المرور في الهيئة"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                بيانات الدخول لمنظومة الاتحاد (LIFO)
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>اسم المستخدم في الاتحاد (LIFO Username)</label>
+                  <input
+                    type="text"
+                    value={formData.lifo_username}
+                    onChange={(e) => setFormData({ ...formData, lifo_username: e.target.value })}
+                    placeholder="اسم المستخدم المسجل في الاتحاد"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>كلمة المرور في الاتحاد</label>
+                  <input
+                    type="password"
+                    value={formData.lifo_password}
+                    onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
+                    placeholder="كلمة المرور في الاتحاد"
                   />
                 </div>
               </div>

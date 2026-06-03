@@ -33,7 +33,7 @@ export default defineConfig({
         },
       },
       '/lifo-prod': {
-        target: 'https://prod.lifo.ly',
+        target: 'https://prodapi.lifo.ly',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/lifo-prod/, ''),

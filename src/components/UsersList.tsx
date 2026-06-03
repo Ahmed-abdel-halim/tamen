@@ -79,6 +79,8 @@ type User = {
   eidc_username?: string | null;
   eidc_password?: string | null;
   eidc_api_key?: string | null;
+  lifo_username?: string | null;
+  lifo_password?: string | null;
   show_on_landing?: boolean;
 };
 
@@ -233,6 +235,8 @@ export default function UsersList() {
     eidc_username: '',
     eidc_password: '',
     eidc_api_key: '',
+    lifo_username: '',
+    lifo_password: '',
     show_on_landing: false,
   });
 
@@ -1236,6 +1240,8 @@ export default function UsersList() {
         eidc_username: showForm.user.eidc_username || '',
         eidc_password: showForm.user.eidc_password || '',
         eidc_api_key: showForm.user.eidc_api_key || '',
+        lifo_username: showForm.user.lifo_username || '',
+        lifo_password: showForm.user.lifo_password || '',
         show_on_landing: showForm.user.show_on_landing ?? false,
       });
     } else {
@@ -1296,6 +1302,8 @@ export default function UsersList() {
         eidc_username: '',
         eidc_password: '',
         eidc_api_key: '',
+        lifo_username: '',
+        lifo_password: '',
         show_on_landing: false,
       });
     }
@@ -1590,6 +1598,8 @@ export default function UsersList() {
         eidc_username: '',
         eidc_password: '',
         eidc_api_key: '',
+        lifo_username: '',
+        lifo_password: '',
         show_on_landing: false,
       });
       if (uploadError) {
@@ -2160,6 +2170,40 @@ export default function UsersList() {
                         onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
                         placeholder="اختياري للوكلاء"
                         style={{ border: '1px solid #7dd3fc' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* LIFO Credentials Section */}
+                <div className="form-row" style={{ marginTop: '15px', padding: '15px', background: '#faf5ff', borderRadius: '12px', border: '1px solid #e9d5ff' }}>
+                  <div className="form-group flex-1" style={{ marginBottom: 0 }}>
+                    <label style={{ color: '#7e22ce', fontWeight: '800' }}>
+                      <i className="fa-solid fa-id-card-clip"></i> اسم مستخدم الاتحاد (LIFO)
+                    </label>
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-user-shield" style={{ color: '#7e22ce' }}></i>
+                      <input
+                        type="text"
+                        value={formData.lifo_username}
+                        onChange={(e) => setFormData({ ...formData, lifo_username: e.target.value })}
+                        placeholder="اختياري للوكلاء"
+                        style={{ border: '1px solid #d8b4fe' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group flex-1" style={{ marginBottom: 0 }}>
+                    <label style={{ color: '#7e22ce', fontWeight: '800' }}>
+                      <i className="fa-solid fa-key"></i> كلمة مرور الاتحاد (LIFO)
+                    </label>
+                    <div className="input-with-icon">
+                      <i className="fa-solid fa-lock" style={{ color: '#7e22ce' }}></i>
+                      <input
+                        type="password"
+                        value={formData.lifo_password}
+                        onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
+                        placeholder="اختياري للوكلاء"
+                        style={{ border: '1px solid #d8b4fe' }}
                       />
                     </div>
                   </div>

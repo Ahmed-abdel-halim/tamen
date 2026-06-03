@@ -13,6 +13,7 @@ type VehicleType = {
 type InternationalInsuranceDocument = {
   id: number;
   document_number: string;
+  external_policy_number?: string;
   issue_date: string;
   vehicle_type?: VehicleType;
   insured_name: string;
@@ -237,6 +238,14 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
           )}
           <button
             className="primary add-user-btn"
+            onClick={() => navigate('/international-insurance-documents/lifo-dashboard')}
+            style={{ background: 'var(--sidebar)', marginRight: '10px' }}
+          >
+            <i className="fa-solid fa-chart-pie"></i>
+            بوابة الاتحاد (LIFO)
+          </button>
+          <button
+            className="primary add-user-btn"
             onClick={handleExportExcel}
             style={{ background: '#166534', marginRight: '10px' }}
           >
@@ -406,6 +415,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                     <th>القسط</th>
                     <th>نوع التأمين</th>
                     {isAdmin && <th>اسم الوكالة</th>}
+                    <th>الاتحاد (LIFO)</th>
                     <th>الإجراء</th>
                   </tr>
                 </thead>
@@ -434,6 +444,39 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                         {isAdmin && (
                           <td>{doc.agency_name || '-'}</td>
                         )}
+                        <td>
+                          {doc.external_policy_number ? (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: '#dcfce7',
+                              color: '#166534',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <i className="fa-solid fa-circle-check"></i>
+                              مربوط ({doc.external_policy_number})
+                            </span>
+                          ) : (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: '#fee2e2',
+                              color: '#991b1b',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <i className="fa-solid fa-triangle-exclamation"></i>
+                              غير مربوط
+                            </span>
+                          )}
+                        </td>
                         <td>
                           <div className="action-buttons">
                             <button
@@ -547,6 +590,34 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                             <span className="user-mobile-value">{doc.agency_name}</span>
                           </div>
                         )}
+                        <div className="user-mobile-row">
+                          <span className="user-mobile-label">الاتحاد (LIFO):</span>
+                          <span className="user-mobile-value">
+                            {doc.external_policy_number ? (
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                backgroundColor: '#dcfce7',
+                                color: '#166534',
+                                fontSize: '11px',
+                                fontWeight: 'bold'
+                              }}>
+                                مربوط ({doc.external_policy_number})
+                              </span>
+                            ) : (
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                backgroundColor: '#fee2e2',
+                                color: '#991b1b',
+                                fontSize: '11px',
+                                fontWeight: 'bold'
+                              }}>
+                                غير مربوط
+                              </span>
+                            )}
+                          </span>
+                        </div>
                         <div className="user-mobile-actions">
                           <button
                             onClick={() => {

@@ -1263,8 +1263,9 @@ export default function BranchAgentDetails() {
                     <h4 className="section-title-sm"><i className="fa-solid fa-user-lock"></i> بيانات الحساب المرتبط</h4>
                     <div className="info-grid" style={{ marginTop: '15px' }}>
                       <InfoItem label="اسم المستخدم" value={branchAgent.user.username} />
-                      <InfoItem label="الايميل في الهيئة (EIDC)" value={(branchAgent.user as any).eidc_username} icon="fa-envelope-circle-check" />
                       <InfoItem label="الاسم الكامل" value={branchAgent.user.name} />
+                      <InfoItem label="الايميل في الهيئة (EIDC)" value={(branchAgent.user as any).eidc_username} icon="fa-envelope-circle-check" />
+                      <InfoItem label="اسم المستخدم في الاتحاد (LIFO)" value={(branchAgent.user as any).lifo_username} icon="fa-envelope-circle-check" />
                     </div>
                   </div>
                 )}
