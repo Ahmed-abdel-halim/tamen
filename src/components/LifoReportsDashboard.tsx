@@ -9,9 +9,9 @@ const EXTERNAL_API_CREDENTIALS = {
   pass_word: '20232024'
 };
 
-// Dynamic LIFO credentials helper
+// Dynamic LIFO credentials helper (Always Production)
 const getExternalCredentials = () => {
-  const env = (localStorage.getItem('lifo_connection_env') as 'testing' | 'production') || 'testing';
+  const env = 'production';
   if (env === 'production') {
     try {
       const userStr = localStorage.getItem('user');
@@ -66,13 +66,11 @@ export default function LifoReportsDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // LIFO connection environment state
-  const [connectionEnv, setConnectionEnv] = useState<'testing' | 'production'>(() => {
-    return (localStorage.getItem('lifo_connection_env') as 'testing' | 'production') || 'testing';
-  });
+  // LIFO connection environment state (Always Production)
+  const connectionEnv = 'production';
 
   // Shadow base URL for proxy
-  const EXTERNAL_API_BASE_URL = connectionEnv === 'production' ? '/lifo-prod/api' : '/external-api';
+  const EXTERNAL_API_BASE_URL = '/lifo-prod/api';
   
   // Credentials used for queries
   const credentials = getExternalCredentials();
@@ -1470,129 +1468,109 @@ export default function LifoReportsDashboard() {
           <span style={{ color: 'var(--muted)' }}> / </span>
           <span style={{ fontWeight: '700' }}>بوابة الاستعلام والتقارير المباشرة (LIFO)</span>
         </div>
-        
-        {/* Environment Toggle Switch */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--panel)', padding: '6px 12px', borderRadius: '30px', border: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text)' }}>
-            بيئة الربط (LIFO):
-          </span>
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--input-bg)', padding: '2px', borderRadius: '20px' }}>
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.setItem('lifo_connection_env', 'testing');
-                setConnectionEnv('testing');
-                showToast('تم التحويل إلى البيئة التجريبية للاتحاد', 'success');
-              }}
-              style={{
-                padding: '4px 12px', borderRadius: '15px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold',
-                cursor: 'pointer', transition: 'all 0.2s ease',
-                background: connectionEnv === 'testing' ? '#ef4444' : 'transparent',
-                color: connectionEnv === 'testing' ? '#fff' : 'var(--muted)'
-              }}
-            >
-              تجريبية (Testing)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.setItem('lifo_connection_env', 'production');
-                setConnectionEnv('production');
-                showToast('تم التحويل إلى البيئة الفعلية للاتحاد', 'success');
-              }}
-              style={{
-                padding: '4px 12px', borderRadius: '15px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold',
-                cursor: 'pointer', transition: 'all 0.2s ease',
-                background: connectionEnv === 'production' ? '#22c55e' : 'transparent',
-                color: connectionEnv === 'production' ? '#fff' : 'var(--muted)'
-              }}
-            >
-              فعلية (Production)
-            </button>
-          </div>
-        </div>
-
-        <button className="btn-cancel" onClick={() => navigate(-1)}>
-          <i className="fa-solid fa-arrow-right" style={{ marginLeft: '8px' }}></i>
-          العودة
-        </button>
       </div>
 
       {/* Tabs Selector */}
-      <div className="profile-tabs-container" style={{ margin: '0 30px 20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('requests')}
-          className={`profile-tab-button ${activeTab === 'requests' ? 'active' : ''}`}
-          style={{
-            padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-            background: activeTab === 'requests' ? 'var(--sidebar)' : 'var(--panel)',
-            color: activeTab === 'requests' ? '#fff' : 'var(--text)',
-            cursor: 'pointer', transition: 'all 0.3s ease'
-          }}
-        >
-          <i className="fa-solid fa-file-invoice" style={{ marginLeft: '8px' }}></i>
-          طلب بطاقات التأمين
-        </button>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('inventory')}
-          className={`profile-tab-button ${activeTab === 'inventory' ? 'active' : ''}`}
-          style={{
-            padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-            background: activeTab === 'inventory' ? 'var(--sidebar)' : 'var(--panel)',
-            color: activeTab === 'inventory' ? '#fff' : 'var(--text)',
-            cursor: 'pointer', transition: 'all 0.3s ease'
-          }}
-        >
-          <i className="fa-solid fa-boxes-stacked" style={{ marginLeft: '8px' }}></i>
-          البطاقات
-        </button>
-        {isAdmin && (
+      <div className="profile-tabs-container" style={{ 
+        margin: '0 30px 20px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        flexWrap: 'wrap', 
+        gap: '15px' 
+      }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button 
             type="button"
-            onClick={() => setActiveTab('distribution')}
-            className={`profile-tab-button ${activeTab === 'distribution' ? 'active' : ''}`}
+            onClick={() => setActiveTab('requests')}
+            className={`profile-tab-button ${activeTab === 'requests' ? 'active' : ''}`}
             style={{
               padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-              background: activeTab === 'distribution' ? 'var(--sidebar)' : 'var(--panel)',
-              color: activeTab === 'distribution' ? '#fff' : 'var(--text)',
+              background: activeTab === 'requests' ? 'var(--sidebar)' : 'var(--panel)',
+              color: activeTab === 'requests' ? '#fff' : 'var(--text)',
               cursor: 'pointer', transition: 'all 0.3s ease'
             }}
           >
-            <i className="fa-solid fa-truck-ramp-box" style={{ marginLeft: '8px' }}></i>
-            إدارة التوزيع
+            <i className="fa-solid fa-file-invoice" style={{ marginLeft: '8px' }}></i>
+            طلب بطاقات التأمين
           </button>
-        )}
-        {isAdmin && (
           <button 
             type="button"
-            onClick={() => setActiveTab('refund')}
-            className={`profile-tab-button ${activeTab === 'refund' ? 'active' : ''}`}
+            onClick={() => setActiveTab('inventory')}
+            className={`profile-tab-button ${activeTab === 'inventory' ? 'active' : ''}`}
             style={{
               padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-              background: activeTab === 'refund' ? 'var(--sidebar)' : 'var(--panel)',
-              color: activeTab === 'refund' ? '#fff' : 'var(--text)',
+              background: activeTab === 'inventory' ? 'var(--sidebar)' : 'var(--panel)',
+              color: activeTab === 'inventory' ? '#fff' : 'var(--text)',
               cursor: 'pointer', transition: 'all 0.3s ease'
             }}
           >
-            <i className="fa-solid fa-rotate-left" style={{ marginLeft: '8px' }}></i>
-            إدارة الراجعات
+            <i className="fa-solid fa-boxes-stacked" style={{ marginLeft: '8px' }}></i>
+            البطاقات
           </button>
-        )}
+          {isAdmin && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('distribution')}
+              className={`profile-tab-button ${activeTab === 'distribution' ? 'active' : ''}`}
+              style={{
+                padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
+                background: activeTab === 'distribution' ? 'var(--sidebar)' : 'var(--panel)',
+                color: activeTab === 'distribution' ? '#fff' : 'var(--text)',
+                cursor: 'pointer', transition: 'all 0.3s ease'
+              }}
+            >
+              <i className="fa-solid fa-truck-ramp-box" style={{ marginLeft: '8px' }}></i>
+              إدارة التوزيع
+            </button>
+          )}
+          {isAdmin && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('refund')}
+              className={`profile-tab-button ${activeTab === 'refund' ? 'active' : ''}`}
+              style={{
+                padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
+                background: activeTab === 'refund' ? 'var(--sidebar)' : 'var(--panel)',
+                color: activeTab === 'refund' ? '#fff' : 'var(--text)',
+                cursor: 'pointer', transition: 'all 0.3s ease'
+              }}
+            >
+              <i className="fa-solid fa-rotate-left" style={{ marginLeft: '8px' }}></i>
+              إدارة الراجعات
+            </button>
+          )}
+          <button 
+            type="button"
+            onClick={() => setActiveTab('reports')}
+            className={`profile-tab-button ${activeTab === 'reports' ? 'active' : ''}`}
+            style={{
+              padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
+              background: activeTab === 'reports' ? 'var(--sidebar)' : 'var(--panel)',
+              color: activeTab === 'reports' ? '#fff' : 'var(--text)',
+              cursor: 'pointer', transition: 'all 0.3s ease'
+            }}
+          >
+            <i className="fa-solid fa-chart-pie" style={{ marginLeft: '8px' }}></i>
+            إدارة واستعلام التقارير
+          </button>
+        </div>
+
         <button 
-          type="button"
-          onClick={() => setActiveTab('reports')}
-          className={`profile-tab-button ${activeTab === 'reports' ? 'active' : ''}`}
+          className="btn-cancel" 
+          onClick={() => navigate(-1)}
           style={{
-            padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-            background: activeTab === 'reports' ? 'var(--sidebar)' : 'var(--panel)',
-            color: activeTab === 'reports' ? '#fff' : 'var(--text)',
-            cursor: 'pointer', transition: 'all 0.3s ease'
+            padding: '12px 24px',
+            borderRadius: '10px',
+            fontWeight: '800',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxSizing: 'border-box'
           }}
         >
-          <i className="fa-solid fa-chart-pie" style={{ marginLeft: '8px' }}></i>
-          إدارة واستعلام التقارير
+          <i className="fa-solid fa-arrow-right" style={{ marginLeft: '8px' }}></i>
+          العودة
         </button>
       </div>
 

@@ -76,9 +76,9 @@ const EXTERNAL_API_CREDENTIALS = {
   pass_word: '12345678'
 };
 
-// Dynamic LIFO credentials helper
+// Dynamic LIFO credentials helper (Always Production)
 const getExternalCredentials = () => {
-  const env = (localStorage.getItem('lifo_connection_env') as 'testing' | 'production') || 'testing';
+  const env = 'production';
   if (env === 'production') {
     try {
       const userStr = localStorage.getItem('user');
@@ -139,8 +139,7 @@ const HIGH_VALUE_ITEMS = [
 
 export default function CreateInternationalInsurance() {
   const navigate = useNavigate();
-  const connectionEnv = (localStorage.getItem('lifo_connection_env') as 'testing' | 'production') || 'testing';
-  const EXTERNAL_API_BASE_URL = connectionEnv === 'production' ? '/lifo-prod/api' : '/external-api';
+  const EXTERNAL_API_BASE_URL = '/lifo-prod/api';
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [externalCars, setExternalCars] = useState<ExternalCar[]>([]);
   const [externalCountries, setExternalCountries] = useState<ExternalCountry[]>([]);
