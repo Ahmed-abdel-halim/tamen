@@ -788,11 +788,21 @@ export default function CreateInsuranceDocument() {
   useEffect(() => {
     // في تأمين إجباري سيارات، لم تعد المدة مثبتة على سنة واحدة فقط بل تدعم خيارات الهيئة
     if (isMandatoryInsurance && !['سنة (365 يوم)', 'تأمين من شهرين إلى 3 أشهر', 'تأمين من شهر إلى شهرين', 'تأمين من 15 يوم إلى شهر', 'تأمين من 1 يوم إلى 15 يوم'].includes(formData.duration)) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
       setFormData(prev => ({
         ...prev,
         duration: 'سنة (365 يوم)',
+        start_date: prev.start_date || tomorrowStr,
         end_date: ''
       }));
+    } else if (isMandatoryInsurance && !formData.start_date) {
+      // تأكد من تعيين بكره كافتراضي إذا كان الحقل فارغاً
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setFormData(prev => ({ ...prev, start_date: tomorrow.toISOString().split('T')[0] }));
+
     } else if (isCustomsInsurance) {
       // في تأمين جمرك: بداية التأمين = تاريخ الإصدار (تاريخ اليوم)
       setFormData(prev => ({
@@ -814,8 +824,11 @@ export default function CreateInsuranceDocument() {
 
   // حساب نهاية التأمين عند تغيير المدة
   useEffect(() => {
-    // في تأمين إجباري سيارات أو تأمين جمرك، استخدم تاريخ اليوم كبداية التأمين
-    const startDateValue = (isMandatoryInsurance || isCustomsInsurance) ? getLocalDateString() : formData.start_date;
+    // في تأمين إجباري: تاريخ البدء هو تاريخ formData.start_date (غداً افتراضياً) وليس اليوم
+    // الهيئة ترفض نفس اليوم (قرار 126/2022)
+    const startDateValue = (isMandatoryInsurance || isCustomsInsurance)
+      ? (formData.start_date || (() => { const t = new Date(); t.setDate(t.getDate() + 1); return t.toISOString().split('T')[0]; })())
+      : formData.start_date;
     const durationValue = formData.duration;
 
     if (startDateValue && durationValue) {
@@ -2792,16 +2805,21 @@ export default function CreateInsuranceDocument() {
                   </div>
 
                   <div className="form-group">
-                    <label>تاريخ البدء</label>
+                    <label>تاريخ البدء <span className="required">*</span></label>
                     <input
-                      type="text"
-                      value={(() => {
+                      type="date"
+                      value={formData.start_date || (() => { const t = new Date(); t.setDate(t.getDate() + 1); return t.toISOString().split('T')[0]; })()}
+                      min={(() => { const t = new Date(); t.setDate(t.getDate() + 1); return t.toISOString().split('T')[0]; })()}
+                      onChange={(e) => {
+                        const selected = new Date(e.target.value);
                         const tomorrow = new Date();
                         tomorrow.setDate(tomorrow.getDate() + 1);
-                        return tomorrow.toLocaleDateString('ar-LY');
-                      })()}
-                      disabled
-                      style={{ background: '#f8fafc', color: '#64748b' }}
+                        tomorrow.setHours(0, 0, 0, 0);
+                        if (selected >= tomorrow) {
+                          setFormData({ ...formData, start_date: e.target.value });
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
                     />
                   </div>
 
