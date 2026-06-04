@@ -306,7 +306,9 @@ export default function CreateInsuranceDocument() {
   const [eidcPremiumData, setEidcPremiumData] = useState<any>(null);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+
 
   // Select2 states
   // const [plateSearch, setPlateSearch] = useState("");
@@ -366,7 +368,46 @@ export default function CreateInsuranceDocument() {
 
 
 
+
+
+  // ─── Real-time field validation helpers ───────────────────────────────────
+  const touchField = (name: string) => {
+    setTouchedFields(prev => { const s = new Set(prev); s.add(name); return s; });
+  };
+
+  /** Returns inline error message for a field if it has been touched and is invalid */
+  const getInlineError = (name: string): string => {
+    if (!touchedFields.has(name)) return formErrors[name] || '';
+    switch (name) {
+      case 'insured_name':
+        return !formData.insured_name?.trim() ? 'اسم المؤمن له مطلوب' : '';
+      case 'nid_passport':
+        if (!formData.nid_passport?.trim()) return 'رقم الهوية / الجواز مطلوب';
+        if (formData.nid_passport.trim().length < 6) return 'يجب أن يكون 6 أرقام على الأقل';
+        return '';
+      case 'phone':
+        if (!formData.phone?.trim()) return 'رقم الهاتف مطلوب';
+        if (!/^09[1-5]\d{7}$/.test(formData.phone.trim())) return 'يجب أن يبدأ بـ 091-095 وطوله 10 أرقام';
+        return '';
+      case 'plate_number_manual':
+        if (!formData.plate_number_manual?.trim()) return 'رقم اللوح مطلوب لاحتساب القسط';
+        if (formData.plate_number_manual.trim().length < 2) return 'رقم اللوح قصير جداً';
+        return '';
+      case 'chassis_number':
+        return !formData.chassis_number?.trim() ? 'رقم الشاصي مطلوب' : '';
+      default:
+        return formErrors[name] || '';
+    }
+  };
+
+  /** Returns CSS class for an input based on live validation state */
+  const getFieldClass = (name: string, base: string = ''): string => {
+    const err = getInlineError(name);
+    return [base, err ? 'has-error' : ''].filter(Boolean).join(' ').trim();
+  };
+
   // ─── EIDC Integration Logic ────────────────────────────────────────────────
+
 
   useEffect(() => {
     if (isMandatoryInsurance) {
@@ -514,7 +555,9 @@ export default function CreateInsuranceDocument() {
   useEffect(() => {
     const shouldInquire = isMandatoryInsurance &&
       formData.eidc_vehicle_type_id &&
-      formData.eidc_vehicle_spec_id;
+      formData.eidc_vehicle_spec_id &&
+      formData.plate_number_manual &&
+      formData.plate_number_manual.trim().length >= 2;
 
     if (shouldInquire) {
       const handler = setTimeout(() => {
@@ -586,6 +629,12 @@ export default function CreateInsuranceDocument() {
 
       // التحقق من طول الرقم الوطني / الجواز (6 أرقام على الأقل)
       if (formData.nid_passport.length < 6) {
+        setLoadingInquiry(false);
+        return;
+      }
+
+      // التحقق من رقم اللوح — الهيئة ترفض الطلب إذا كان فارغاً (خطأ 400: PlateNo غير صحيح)
+      if (!formData.plate_number_manual || formData.plate_number_manual.trim().length < 2) {
         setLoadingInquiry(false);
         return;
       }
@@ -2649,9 +2698,9 @@ export default function CreateInsuranceDocument() {
                   <div className="grid-header"><i className="fa-solid fa-user-shield"></i> بيانات المؤمن له والمشترك</div>
 
 
-                  <div className={`form-group span-2 ${formErrors.insured_name ? 'has-error' : ''}`}>
-                    {formErrors.insured_name ? (
-                      <span className="error-message">{formErrors.insured_name}</span>
+                  <div className={`form-group span-2 ${getFieldClass('insured_name')}`}>
+                    {getInlineError('insured_name') || formErrors.insured_name ? (
+                      <span className="error-message">{getInlineError('insured_name') || formErrors.insured_name}</span>
                     ) : (
                       <label htmlFor="insured_name">اسم المؤمن له / المشترك <span className="required">*</span></label>
                     )}
@@ -2660,6 +2709,7 @@ export default function CreateInsuranceDocument() {
                       id="insured_name"
                       value={formData.insured_name}
                       onChange={(e) => setFormData({ ...formData, insured_name: e.target.value })}
+                      onBlur={() => touchField('insured_name')}
                       placeholder="اسم المؤمن له كما في الإثبات"
                     />
                   </div>
@@ -2672,13 +2722,19 @@ export default function CreateInsuranceDocument() {
                     error={formErrors.nationality}
                   />
 
-                  <div className={`form-group ${formErrors.nid_passport ? 'has-error' : ''}`}>
-                    {formErrors.nid_passport ? (
-                      <span className="error-message">{formErrors.nid_passport}</span>
+                  <div className={`form-group ${getFieldClass('nid_passport')}`}>
+                    {getInlineError('nid_passport') || formErrors.nid_passport ? (
+                      <span className="error-message">{getInlineError('nid_passport') || formErrors.nid_passport}</span>
                     ) : (
                       <label htmlFor="nid_passport">رقم الهوية / الجواز <span className="required">*</span></label>
                     )}
-                    <input type="text" id="nid_passport" value={formData.nid_passport} onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })} />
+                    <input
+                      type="text"
+                      id="nid_passport"
+                      value={formData.nid_passport}
+                      onChange={(e) => setFormData({ ...formData, nid_passport: e.target.value })}
+                      onBlur={() => touchField('nid_passport')}
+                    />
                   </div>
 
                   <Combobox 
@@ -2690,13 +2746,20 @@ export default function CreateInsuranceDocument() {
                     type="email"
                   />
 
-                  <div className={`form-group ${formErrors.phone ? 'has-error' : ''}`}>
-                    {formErrors.phone ? (
-                      <span className="error-message">{formErrors.phone}</span>
+                  <div className={`form-group ${getFieldClass('phone')}`}>
+                    {getInlineError('phone') || formErrors.phone ? (
+                      <span className="error-message">{getInlineError('phone') || formErrors.phone}</span>
                     ) : (
                       <label htmlFor="phone">رقم الهاتف <span className="required">*</span></label>
                     )}
-                    <input type="text" id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    <input
+                      type="text"
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onBlur={() => touchField('phone')}
+                      placeholder="09XXXXXXXX"
+                    />
                   </div>
 
                   <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
@@ -2756,13 +2819,19 @@ export default function CreateInsuranceDocument() {
                     </select>
                   </div>
 
-                  <div className={`form-group ${formErrors.plate_number_manual ? 'has-error' : ''}`}>
-                    {formErrors.plate_number_manual ? (
-                      <span className="error-message">{formErrors.plate_number_manual}</span>
+                  <div className={`form-group ${getFieldClass('plate_number_manual')}`}>
+                    {getInlineError('plate_number_manual') || formErrors.plate_number_manual ? (
+                      <span className="error-message">{getInlineError('plate_number_manual') || formErrors.plate_number_manual}</span>
                     ) : (
                       <label>رقم اللوحة <span className="required">*</span></label>
                     )}
-                    <input type="text" value={formData.plate_number_manual} onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })} />
+                    <input
+                      type="text"
+                      value={formData.plate_number_manual}
+                      onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })}
+                      onBlur={() => touchField('plate_number_manual')}
+                      placeholder="مثال: 5-123456"
+                    />
                   </div>
 
                   <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
@@ -2950,62 +3019,99 @@ export default function CreateInsuranceDocument() {
                     </div>
                   </div>
 
-                  {/* تفاصيل المبالغ المالية من الهيئة */}
-                  <div className="form-group">
-                    <label>مصاريف الإصدار</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
+                  {/* ─── حالة الأسعار: من الهيئة فقط ─── */}
+                  {loadingInquiry ? (
+                    <div className="span-4" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe', color: '#1d4ed8', fontWeight: '600' }}>
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      جاري احتساب القسط من منظومة الهيئة...
                     </div>
-                  </div>
+                  ) : eidcPremiumData ? (
+                    // ✅ الهيئة رجعت أسعار — عرض تلقائي
+                    <>
+                      <div className="span-4" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', color: '#15803d', fontSize: '0.88rem', fontWeight: '600' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        تم احتساب القسط تلقائياً من منظومة الهيئة
+                      </div>
 
-                  <div className="form-group">
-                    <label>صافي القسط</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.netPremium || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
+                      <div className="form-group">
+                        <label>مصاريف الإصدار</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.issuingFees || 0).toFixed(3)} readOnly />
+                        </div>
+                      </div>
 
-                  <div className="form-group">
-                    <label>الضريبة</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.tax || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
+                      <div className="form-group">
+                        <label>صافي القسط</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.netPremium || 0).toFixed(3)} readOnly />
+                        </div>
+                      </div>
 
-                  <div className="form-group">
-                    <label>رسوم الإشراف</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.supervisionFees || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
+                      <div className="form-group">
+                        <label>الضريبة</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.tax || 0).toFixed(3)} readOnly />
+                        </div>
+                      </div>
 
-                  <div className="form-group">
-                    <label>الدمغة</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.stamp || 0.250).toFixed(3) : '0.250')} readOnly />
-                    </div>
-                  </div>
+                      <div className="form-group">
+                        <label>رسوم الإشراف</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.supervisionFees || 0).toFixed(3)} readOnly />
+                        </div>
+                      </div>
 
-                  <div className="form-group">
-                    <label>رسوم الإصدار (النهائي)</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.issuingFees || 0).toFixed(3) : '0.000')} readOnly />
-                    </div>
-                  </div>
+                      <div className="form-group">
+                        <label>الدمغة</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.stamp || 0.250).toFixed(3)} readOnly />
+                        </div>
+                      </div>
 
-                  <div className="form-group span-2" style={{ paddingTop: '5px' }}>
-                    <label style={{ color: '#1d4ed8', fontWeight: '800' }}>الإجمالي النهائي (شامل الرسوم والضرائب)</label>
-                    <div className="price-input-wrapper" style={{ border: '2px solid #2563eb', height: '40px', background: '#f0f9ff' }}>
-                      <span className="currency" style={{ background: '#2563eb', color: '#fff', fontSize: '13px' }}>د.ل</span>
-                      <input type="text" value={loadingInquiry ? 'جاري التحميل...' : (eidcPremiumData ? Number(eidcPremiumData.totalPremium || 0).toFixed(3) : '0.000')} readOnly style={{ fontWeight: '900', color: '#1d4ed8', fontSize: '1.2rem' }} />
-                    </div>
-                  </div>
+                      <div className="form-group">
+                        <label>رسوم الإصدار (النهائي)</label>
+                        <div className="price-input-wrapper">
+                          <span className="currency">د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.issuingFees || 0).toFixed(3)} readOnly />
+                        </div>
+                      </div>
+
+                      <div className="form-group span-2" style={{ paddingTop: '5px' }}>
+                        <label style={{ color: '#1d4ed8', fontWeight: '800' }}>الإجمالي النهائي (شامل الرسوم والضرائب)</label>
+                        <div className="price-input-wrapper" style={{ border: '2px solid #2563eb', height: '40px', background: '#f0f9ff' }}>
+                          <span className="currency" style={{ background: '#2563eb', color: '#fff', fontSize: '13px' }}>د.ل</span>
+                          <input type="text" value={Number(eidcPremiumData.totalPremium || 0).toFixed(3)} readOnly style={{ fontWeight: '900', color: '#1d4ed8', fontSize: '1.2rem' }} />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    // ⚠️ الاحتساب لم يتم بعد أو فشل — زر إعادة المحاولة فقط
+                    formData.eidc_vehicle_type_id && formData.eidc_vehicle_spec_id && (
+                      <div className="span-4" style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#92400e', fontWeight: '700', fontSize: '0.95rem' }}>
+                          <i className="fa-solid fa-triangle-exclamation"></i>
+                          لم يتم احتساب القسط من منظومة الهيئة بعد
+                        </div>
+                        <div style={{ color: '#78350f', fontSize: '0.85rem', lineHeight: '1.7' }}>
+                          تأكد من إدخال: <strong>رقم الهاتف (10 أرقام)</strong> و<strong>رقم الهوية (6 أرقام على الأقل)</strong> و<strong>اسم المؤمن له</strong> بشكل صحيح، ثم اضغط إعادة المحاولة.
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleEidcInquiry()}
+                          style={{ alignSelf: 'flex-start', background: '#d97706', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(217,119,6,0.25)' }}
+                        >
+                          <i className="fa-solid fa-rotate-right"></i>
+                          إعادة الاحتساب من الهيئة
+                        </button>
+                      </div>
+                    )
+                  )}
+
 
                   <style>{`
                         .price-input-wrapper {
