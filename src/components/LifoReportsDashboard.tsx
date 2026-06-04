@@ -131,14 +131,15 @@ export default function LifoReportsDashboard() {
   // Tab 2: Card Inventory State
   const [cardCategory, setCardCategory] = useState<CardCategory>('all');
   const [inventoryData, setInventoryData] = useState<any[]>([]);
+  const [inventoryTotal, setInventoryTotal] = useState(0);
   const [inventorySearchQuery, setInventorySearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Reset page when category or search changes
+  // Reset page when category changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [inventorySearchQuery, cardCategory]);
+  }, [cardCategory]);
 
 
   // Tab 3: Distribution State (Admin only)
@@ -804,43 +805,32 @@ export default function LifoReportsDashboard() {
     }
   };
 
-  // Tab 2: Fetch Card Inventory from LIFO
-  const handleFetchInventory = async (forceRefresh = false) => {
-    const cacheKey = `lifo_inventory_${cardCategory}`;
-
-    // Load from cache instantly if available and not forcing refresh
-    if (!forceRefresh) {
-      const cached = getCachedData(cacheKey);
-      if (cached && Array.isArray(cached) && cached.length > 0) {
-        setInventoryData(cached);
-        return;
-      }
-    }
-
+  // Tab 2: Fetch Card Inventory from LIFO (Server-Side Paginated)
+  const handleFetchInventory = async (page = 1, forceRefresh = false) => {
     setLoading(true);
-    setInventoryData([]);
 
-    // 45-second timeout to avoid hanging forever
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     try {
-      const formData = new FormData();
-      formData.append('user_name', credentials.user_name);
-      formData.append('pass_word', credentials.pass_word);
+      const payload = {
+        user_name: credentials.user_name,
+        pass_word: credentials.pass_word,
+        category: cardCategory,
+        page: page,
+        per_page: rowsPerPage,
+        search: inventorySearchQuery,
+        force_refresh: forceRefresh,
+      };
 
-      let endpoint = '';
-      switch (cardCategory) {
-        case 'all':    endpoint = '/cards/all';    break;
-        case 'active': endpoint = '/cards/active'; break;
-        case 'cancel': endpoint = '/cards/cancel'; break;
-        case 'sold':   endpoint = '/cards/sold';   break;
-      }
-
-      console.log(`📡 Fetching LIFO cards inventory: ${endpoint}`);
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}${endpoint}`, {
+      console.log(`📡 Fetching LIFO cards inventory paginated: page=${page}, category=${cardCategory}, search=${inventorySearchQuery}`);
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/cards-paginated`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
@@ -848,17 +838,17 @@ export default function LifoReportsDashboard() {
       if (!res.ok) throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
 
       const data = await res.json();
-      if (data.code === 1) {
-        const list = Array.isArray(data.data) ? data.data : [];
-        setInventoryData(list);
-        setCacheData(cacheKey, list); // cache for next open
-        if (list.length === 0) {
+      if (data.success) {
+        setInventoryData(data.data || []);
+        setInventoryTotal(data.total || 0);
+        setCurrentPage(data.page || 1);
+        if (data.total === 0) {
           showToast('لا توجد بطاقات في هذه الفئة حالياً', 'error');
-        } else {
-          showToast(`تم جلب ${list.length} بطاقة بنجاح`, 'success');
+        } else if (forceRefresh) {
+          showToast(`تم تحديث وجلب البيانات من خادم الاتحاد بنجاح`, 'success');
         }
       } else {
-        showToast(data.message || data.messages || 'فشل جلب البيانات', 'error');
+        showToast(data.message || 'فشل جلب البيانات', 'error');
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
@@ -872,19 +862,12 @@ export default function LifoReportsDashboard() {
     }
   };
 
-  // Load from cache on tab switch — NEVER auto-fetch from LIFO (avoids 3-min freeze)
-  // User must click the refresh button to fetch fresh data on first visit
+  // Fetch paginated inventory on activeTab, cardCategory, or currentPage changes
   useEffect(() => {
     if (activeTab === 'inventory') {
-      const cacheKey = `lifo_inventory_${cardCategory}`;
-      const cached = getCachedData(cacheKey);
-      if (cached && Array.isArray(cached) && cached.length > 0) {
-        setInventoryData(cached); // instant from cache
-      } else {
-        setInventoryData([]); // empty — user must click جلب البيانات
-      }
+      handleFetchInventory(currentPage);
     }
-  }, [activeTab, cardCategory, connectionEnv]);
+  }, [activeTab, cardCategory, currentPage]);
 
   // ======= CACHE HELPERS (5 min TTL) =======
   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -1467,19 +1450,10 @@ export default function LifoReportsDashboard() {
   };
 
 
-  // Filter inventory data based on search query
-  const filteredInventoryData = inventoryData.filter(card => {
-    const query = inventorySearchQuery.toLowerCase().trim();
-    if (!query) return true;
-    
-    const cardNum = (card.card_number || '').toLowerCase();
-    const reqNum = (card.request_numberr || '').toLowerCase();
-    const statusText = (card.cardstautesname || '').toLowerCase();
-    
-    return cardNum.includes(query) || reqNum.includes(query) || statusText.includes(query);
-  });
+  // Server-side filtered and paginated inventory data
+  const filteredInventoryData = inventoryData;
 
-  const totalPages = Math.ceil(filteredInventoryData.length / rowsPerPage);
+  const totalPages = Math.ceil(inventoryTotal / rowsPerPage);
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -3797,7 +3771,7 @@ export default function LifoReportsDashboard() {
             </div>
 
             {/* Search and export for Inventory */}
-            {inventoryData.length > 0 && (
+            {(inventoryData.length > 0 || inventorySearchQuery.trim() !== '') && (
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -3811,7 +3785,10 @@ export default function LifoReportsDashboard() {
                 padding: '15px 20px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <form 
+                  onSubmit={(e) => { e.preventDefault(); handleFetchInventory(1); }} 
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
                   <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                   <input
                     type="text"
@@ -3828,7 +3805,14 @@ export default function LifoReportsDashboard() {
                       fontSize: '0.85rem'
                     }}
                   />
-                </div>
+                  <button 
+                    type="submit" 
+                    className="primary" 
+                    style={{ padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', height: '37px', cursor: 'pointer', border: 'none' }}
+                  >
+                    بحث
+                  </button>
+                </form>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text)', fontSize: '0.9rem' }}>
@@ -3859,6 +3843,24 @@ export default function LifoReportsDashboard() {
                   
                   <button
                     type="button"
+                    onClick={() => handleFetchInventory(currentPage, true)}
+                    className="primary"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      background: 'var(--sidebar)',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    تحديث البيانات من سيرفر الاتحاد
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleExportInventoryExcel}
                     className="primary"
                     style={{
@@ -3882,7 +3884,7 @@ export default function LifoReportsDashboard() {
               </div>
             )}
 
-            {inventoryData.length > 0 && (
+            {inventoryData.length > 0 ? (
               <>
                 <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '500px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
@@ -3894,7 +3896,7 @@ export default function LifoReportsDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredInventoryData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage).map((card, idx) => (
+                      {filteredInventoryData.map((card, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{card.card_number || card.card_serial || '-'}</td>
                           <td style={{ padding: '12px 15px' }}>
@@ -3916,7 +3918,7 @@ export default function LifoReportsDashboard() {
                 {/* Pagination Controls */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '15px' }}>
                   <div style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold' }}>
-                    عرض {filteredInventoryData.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1} إلى {Math.min(currentPage * rowsPerPage, filteredInventoryData.length)} من أصل {filteredInventoryData.length.toLocaleString('ar-LY')} مدخل
+                    عرض {inventoryData.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1} إلى {Math.min(currentPage * rowsPerPage, inventoryTotal)} من أصل {inventoryTotal.toLocaleString('ar-LY')} مدخل
                   </div>
                   
                   {totalPages > 1 && (
@@ -3977,6 +3979,16 @@ export default function LifoReportsDashboard() {
                   )}
                 </div>
               </>
+            ) : (
+              !loading && (
+                <div style={{
+                  padding: '40px', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px',
+                  textAlign: 'center', color: 'var(--muted)', fontWeight: 'bold'
+                }}>
+                  <i className="fa-solid fa-boxes-stacked" style={{ fontSize: '40px', marginBottom: '15px', color: 'var(--muted)', display: 'block' }}></i>
+                  <span>لا توجد بطاقات لعرضها في هذه الفئة حالياً. انقر على "تحديث البيانات من سيرفر الاتحاد" لجلب البيانات الحية.</span>
+                </div>
+              )
             )}
           </div>
         )}
