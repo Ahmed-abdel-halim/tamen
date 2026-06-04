@@ -532,18 +532,10 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                           <div className="action-buttons">
                             <button
                               onClick={() => {
-                                const iframe = document.createElement('iframe');
-                                iframe.style.position = 'fixed';
-                                iframe.style.right = '-9999px';
-                                iframe.style.width = '0';
-                                iframe.style.height = '0';
-                                iframe.src = `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
-                                document.body.appendChild(iframe);
-                                setTimeout(() => {
-                                  if (document.body.contains(iframe)) {
-                                    document.body.removeChild(iframe);
-                                  }
-                                }, 5000);
+                                window.open(
+                                  `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`,
+                                  '_blank'
+                                );
                               }}
                               className="action-btn"
                               aria-label="طباعة وثيقة المدار"
@@ -685,18 +677,10 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                         <div className="user-mobile-actions">
                           <button
                             onClick={() => {
-                              const iframe = document.createElement('iframe');
-                              iframe.style.position = 'fixed';
-                              iframe.style.right = '-9999px';
-                              iframe.style.width = '0';
-                              iframe.style.height = '0';
-                              iframe.src = `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
-                              document.body.appendChild(iframe);
-                              setTimeout(() => {
-                                if (document.body.contains(iframe)) {
-                                  document.body.removeChild(iframe);
-                                }
-                              }, 5000);
+                              window.open(
+                                `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`,
+                                '_blank'
+                              );
                             }}
                             className="action-btn"
                             aria-label="طباعة وثيقة المدار"
