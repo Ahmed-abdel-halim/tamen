@@ -805,9 +805,24 @@ export default function LifoReportsDashboard() {
   };
 
   // Tab 2: Fetch Card Inventory from LIFO
-  const handleFetchInventory = async () => {
+  const handleFetchInventory = async (forceRefresh = false) => {
+    const cacheKey = `lifo_inventory_${cardCategory}`;
+
+    // Load from cache instantly if available and not forcing refresh
+    if (!forceRefresh) {
+      const cached = getCachedData(cacheKey);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setInventoryData(cached);
+        return;
+      }
+    }
+
     setLoading(true);
     setInventoryData([]);
+
+    // 45-second timeout to avoid hanging forever
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     try {
       const formData = new FormData();
@@ -816,55 +831,58 @@ export default function LifoReportsDashboard() {
 
       let endpoint = '';
       switch (cardCategory) {
-        case 'all':
-          endpoint = '/cards/all';
-          break;
-        case 'active':
-          endpoint = '/cards/active';
-          break;
-        case 'cancel':
-          endpoint = '/cards/cancel';
-          break;
-        case 'sold':
-          endpoint = '/cards/sold';
-          break;
+        case 'all':    endpoint = '/cards/all';    break;
+        case 'active': endpoint = '/cards/active'; break;
+        case 'cancel': endpoint = '/cards/cancel'; break;
+        case 'sold':   endpoint = '/cards/sold';   break;
       }
 
-      console.log(`📡 Fetching LIFO cards inventory from: ${endpoint}`);
+      console.log(`📡 Fetching LIFO cards inventory: ${endpoint}`);
       const res = await fetch(`${EXTERNAL_API_BASE_URL}${endpoint}`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
 
-      if (!res.ok) {
-        throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
-      }
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
 
       const data = await res.json();
-      console.log('LIFO inventory response:', data);
-
       if (data.code === 1) {
         const list = Array.isArray(data.data) ? data.data : [];
         setInventoryData(list);
+        setCacheData(cacheKey, list); // cache for next open
         if (list.length === 0) {
           showToast('لا توجد بطاقات في هذه الفئة حالياً', 'error');
         } else {
           showToast(`تم جلب ${list.length} بطاقة بنجاح`, 'success');
         }
       } else {
-        showToast(data.message || data.messages || 'فشل جلب البيانات، يرجى التحقق من الصلاحيات وبيانات الدخول', 'error');
+        showToast(data.message || data.messages || 'فشل جلب البيانات', 'error');
       }
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ أثناء تحميل مخزون البطاقات', 'error');
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        showToast('انتهت مدة الانتظار (45 ثانية) - خادم الاتحاد بطيء، حاول مرة تانية', 'error');
+      } else {
+        showToast(error.message || 'حدث خطأ أثناء تحميل مخزون البطاقات', 'error');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Automatically fetch inventory on tab change or category change
+  // Load from cache on tab switch — NEVER auto-fetch from LIFO (avoids 3-min freeze)
+  // User must click the refresh button to fetch fresh data on first visit
   useEffect(() => {
     if (activeTab === 'inventory') {
-      handleFetchInventory();
+      const cacheKey = `lifo_inventory_${cardCategory}`;
+      const cached = getCachedData(cacheKey);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setInventoryData(cached); // instant from cache
+      } else {
+        setInventoryData([]); // empty — user must click جلب البيانات
+      }
     }
   }, [activeTab, cardCategory, connectionEnv]);
 
