@@ -4,6 +4,26 @@ import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 
+// LIFO credentials helper (same as LifoReportsDashboard)
+const getLifoCredentials = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      if (u.lifo_username && u.lifo_password) {
+        return { user_name: u.lifo_username, pass_word: u.lifo_password };
+      }
+    }
+  } catch {}
+  return { user_name: 'adminmli', pass_word: '20232024' };
+};
+
+const getLifoBaseUrl = () =>
+  import.meta.env.DEV
+    ? 'http://localhost:8000/api/lifo-prod/api'
+    : `${API_BASE_URL}/lifo-prod/api`;
+
+
 type VehicleType = {
   id: number;
   brand: string;
@@ -168,6 +188,37 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
       setDeleting(false);
     }
   };
+
+  // طباعة وثيقة الاتحاد (LIFO) باستخدام رقم الكارت
+  const [printingLifo, setPrintingLifo] = useState<number | null>(null);
+  const handlePrintLifoCard = async (docId: number, cardNumber: string) => {
+    setPrintingLifo(docId);
+    try {
+      showToast('جاري تحميل وثيقة الاتحاد (LIFO)...', 'success');
+      const creds = getLifoCredentials();
+      const baseUrl = getLifoBaseUrl();
+      const res = await fetch(`${baseUrl}/insurance/orangecard/printcard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ user_name: creds.user_name, pass_word: creds.pass_word, card_number: cardNumber })
+      });
+      if (!res.ok) throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/pdf')) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        const data = await res.json();
+        showToast(data.message || data.messages || 'فشلت عملية جلب وثيقة الاتحاد', 'error');
+      }
+    } catch (error: any) {
+      showToast(error.message || 'حدث خطأ أثناء تحميل وثيقة الاتحاد', 'error');
+    } finally {
+      setPrintingLifo(null);
+    }
+  };
+
 
   const handleExportExcel = async () => {
     if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
@@ -488,7 +539,6 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                                 iframe.style.height = '0';
                                 iframe.src = `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
                                 document.body.appendChild(iframe);
-
                                 setTimeout(() => {
                                   if (document.body.contains(iframe)) {
                                     document.body.removeChild(iframe);
@@ -496,12 +546,26 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                                 }, 5000);
                               }}
                               className="action-btn"
-                              aria-label="طباعة الوثيقة"
-                              title="طباعة الوثيقة"
+                              aria-label="طباعة وثيقة المدار"
+                              title="طباعة وثيقة المدار"
                               style={{ background: '#3b82f6', color: '#fff' }}
                             >
                               <i className="fa-solid fa-print"></i>
                             </button>
+                            {doc.external_policy_number && (
+                              <button
+                                onClick={() => handlePrintLifoCard(doc.id, doc.external_policy_number!)}
+                                className="action-btn"
+                                aria-label="طباعة وثيقة الاتحاد"
+                                title={`طباعة وثيقة الاتحاد (${doc.external_policy_number})`}
+                                disabled={printingLifo === doc.id}
+                                style={{ background: '#f97316', color: '#fff', opacity: printingLifo === doc.id ? 0.6 : 1 }}
+                              >
+                                {printingLifo === doc.id
+                                  ? <i className="fa-solid fa-spinner fa-spin"></i>
+                                  : <i className="fa-solid fa-id-card"></i>}
+                              </button>
+                            )}
                             <button
                               onClick={() => navigate(`/international-insurance-documents/${doc.id}`)}
                               className="action-btn view"
@@ -628,7 +692,6 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                               iframe.style.height = '0';
                               iframe.src = `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
                               document.body.appendChild(iframe);
-
                               setTimeout(() => {
                                 if (document.body.contains(iframe)) {
                                   document.body.removeChild(iframe);
@@ -636,12 +699,26 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                               }, 5000);
                             }}
                             className="action-btn"
-                            aria-label="طباعة الوثيقة"
-                            title="طباعة الوثيقة"
+                            aria-label="طباعة وثيقة المدار"
+                            title="طباعة وثيقة المدار"
                             style={{ background: '#3b82f6', color: '#fff' }}
                           >
                             <i className="fa-solid fa-print"></i>
                           </button>
+                          {doc.external_policy_number && (
+                            <button
+                              onClick={() => handlePrintLifoCard(doc.id, doc.external_policy_number!)}
+                              className="action-btn"
+                              aria-label="طباعة وثيقة الاتحاد"
+                              title={`طباعة وثيقة الاتحاد (${doc.external_policy_number})`}
+                              disabled={printingLifo === doc.id}
+                              style={{ background: '#f97316', color: '#fff', opacity: printingLifo === doc.id ? 0.6 : 1 }}
+                            >
+                              {printingLifo === doc.id
+                                ? <i className="fa-solid fa-spinner fa-spin"></i>
+                                : <i className="fa-solid fa-id-card"></i>}
+                            </button>
+                          )}
                           <button
                             onClick={() => navigate(`/international-insurance-documents/${doc.id}`)}
                             className="action-btn view"
