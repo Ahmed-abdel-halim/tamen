@@ -534,7 +534,8 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                               onClick={() => {
                                 window.open(
                                   `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`,
-                                  '_blank'
+                                  'print_popup',
+                                  'width=850,height=750,toolbar=0,scrollbars=1,resizable=1'
                                 );
                               }}
                               className="action-btn"
@@ -679,7 +680,8 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                             onClick={() => {
                               window.open(
                                 `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`,
-                                '_blank'
+                                'print_popup',
+                                'width=850,height=750,toolbar=0,scrollbars=1,resizable=1'
                               );
                             }}
                             className="action-btn"
