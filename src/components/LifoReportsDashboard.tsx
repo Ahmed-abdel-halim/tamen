@@ -442,8 +442,7 @@ export default function LifoReportsDashboard() {
     } catch {
       setIsAdmin(false);
     }
-    // Pre-fetch cards map in the background
-    fetchCardsMap();
+    // NOTE: fetchCardsMap() removed from auto-load — only fetch on demand
   }, []);
 
   // Reset cached LIFO data when environment changes to avoid mixing environments
@@ -869,8 +868,32 @@ export default function LifoReportsDashboard() {
     }
   }, [activeTab, cardCategory, connectionEnv]);
 
-  // Tab 3: Fetch LIFO Offices
+  // ======= CACHE HELPERS (5 min TTL) =======
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const getCachedData = (key: string) => {
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      if (Date.now() - parsed.timestamp < CACHE_TTL) return parsed.data;
+      localStorage.removeItem(key);
+      return null;
+    } catch { return null; }
+  };
+  const setCacheData = (key: string, data: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data }));
+    } catch {}
+  };
+
+  // Tab 3: Fetch LIFO Offices (with cache)
   const fetchLifoOffices = async () => {
+    // Use cache if fresh
+    const cached = getCachedData('lifo_offices_cache');
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      setLifoOffices(cached);
+      return;
+    }
     setLoadingOffices(true);
     try {
       const formData = new FormData();
@@ -886,6 +909,7 @@ export default function LifoReportsDashboard() {
         const data = await res.json();
         if (data.code === 1 && Array.isArray(data.data)) {
           setLifoOffices(data.data);
+          setCacheData('lifo_offices_cache', data.data);
         }
       }
     } catch (e) {
@@ -897,6 +921,14 @@ export default function LifoReportsDashboard() {
 
   const fetchCardsMap = async () => {
     if (Object.keys(cardsMap).length > 0 || loadingCardsMap) return;
+    // Use cache if fresh
+    const cached = getCachedData('lifo_cards_map_cache');
+    if (cached && cached.map && Object.keys(cached.map).length > 0) {
+      setCardsMap(cached.map);
+      setAllCardsData(cached.allCards || []);
+      console.log(`✅ Loaded ${Object.keys(cached.map).length} cards from cache.`);
+      return;
+    }
     setLoadingCardsMap(true);
     try {
       const formData = new FormData();
@@ -920,6 +952,7 @@ export default function LifoReportsDashboard() {
           });
           setCardsMap(map);
           setAllCardsData(data.data);
+          setCacheData('lifo_cards_map_cache', { map, allCards: data.data });
           console.log(`✅ Cached ${data.data.length} cards for reports mapping.`);
         }
       }
