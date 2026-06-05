@@ -15445,9 +15445,11 @@ input:checked + .slider:before {
   background-color: #ef4444;
   color: #ffffff;
   border: 2px solid var(--panel);
-  border-radius: 50%;
-  width: 18px;
+  border-radius: 9px;
+  min-width: 18px;
+  width: auto;
   height: 18px;
+  padding: 0 4px;
   font-size: 10px;
   font-weight: 800;
   display: flex;
