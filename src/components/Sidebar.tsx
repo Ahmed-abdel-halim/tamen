@@ -6,7 +6,24 @@ type SidebarItem = {
   icon: string;
   to?: string;
   children?: SidebarItem[];
+  badge?: number;
 }
+
+const badgeStyle: React.CSSProperties = {
+  backgroundColor: '#10b981',
+  color: '#ffffff',
+  fontSize: '11px',
+  fontWeight: '700',
+  minWidth: '20px',
+  height: '20px',
+  borderRadius: '10px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0 6px',
+  marginRight: 'auto',
+  marginLeft: '4px',
+};
 
 type SidebarSection = {
   title: string;
@@ -185,6 +202,9 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                             >
                                               <i className={`sidebar-icon ${grandchild.icon}`} aria-hidden="true" style={{ fontSize: '13px' }} />
                                               <span>{grandchild.label}</span>
+                                              {grandchild.badge !== undefined && grandchild.badge > 0 && (
+                                                <span style={badgeStyle}>{grandchild.badge}</span>
+                                              )}
                                             </LinkTag>
                                           ) : (
                                             <button 
@@ -202,6 +222,9 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                             >
                                               <i className={`sidebar-icon ${grandchild.icon}`} aria-hidden="true" style={{ fontSize: '13px' }} />
                                               <span>{grandchild.label}</span>
+                                              {grandchild.badge !== undefined && grandchild.badge > 0 && (
+                                                <span style={badgeStyle}>{grandchild.badge}</span>
+                                              )}
                                             </button>
                                           )}
                                         </li>
@@ -227,6 +250,9 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                 >
                                   <i className={`sidebar-icon ${child.icon}`} aria-hidden="true" style={{ fontSize: '14px' }} />
                                   <span>{child.label}</span>
+                                  {child.badge !== undefined && child.badge > 0 && (
+                                    <span style={badgeStyle}>{child.badge}</span>
+                                  )}
                                 </LinkTag>
                               ) : (
                                 <button 
@@ -244,6 +270,9 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                                 >
                                   <i className={`sidebar-icon ${child.icon}`} aria-hidden="true" style={{ fontSize: '14px' }} />
                                   <span>{child.label}</span>
+                                  {child.badge !== undefined && child.badge > 0 && (
+                                    <span style={badgeStyle}>{child.badge}</span>
+                                  )}
                                 </button>
                               )}
                             </li>
@@ -266,11 +295,17 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                         >
                           <i className={`sidebar-icon ${item.icon}`} aria-hidden="true" />
                           <span>{item.label}</span>
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span style={badgeStyle}>{item.badge}</span>
+                          )}
                         </LinkTag>
                       ) : (
                         <button type="button">
                           <i className={`sidebar-icon ${item.icon}`} aria-hidden="true" />
                           <span>{item.label}</span>
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span style={badgeStyle}>{item.badge}</span>
+                          )}
                         </button>
                       )}
                     </>

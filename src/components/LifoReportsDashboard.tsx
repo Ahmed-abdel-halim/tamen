@@ -36,15 +36,6 @@ const getExternalCredentials = () => {
   return EXTERNAL_API_CREDENTIALS;
 };
 
-// Helper to convert HTML date YYYY-MM-DD to LIFO date format DD-MM-YYYY
-const formatLifoDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
-  }
-  return dateStr;
-};
 
 type ActiveTab = 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports';
 
@@ -82,25 +73,25 @@ export default function LifoReportsDashboard() {
 
   // Tab 1: Live Reports State
   const [customerName, setCustomerName] = useState('');
-  // Caching cards mapping for reports
-  const [cardsMap, setCardsMap] = useState<Record<number, string>>({});
-  const [loadingCardsMap, setLoadingCardsMap] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
   const [chassisNumber, setChassisNumber] = useState('');
   const [reportsData, setReportsData] = useState<any[]>([]);
+  const [reportsTotal, setReportsTotal] = useState(0);
+  const [reportsTotals, setReportsTotals] = useState<any>({
+    installment: '0.000',
+    tax: '0.000',
+    stamp: '0.000',
+    supervision: '0.000',
+    version: '0.000',
+    total: '0.000'
+  });
 
-  // Tab 1: Reports Pagination and Local Search State
-  const [reportsSearchQuery, setReportsSearchQuery] = useState('');
+  // Tab 1: Reports Pagination State
   const [reportsCurrentPage, setReportsCurrentPage] = useState(1);
   const [reportsRowsPerPage, setReportsRowsPerPage] = useState(10);
-
-  // Reset reports page when reportsData or search query changes
-  useEffect(() => {
-    setReportsCurrentPage(1);
-  }, [reportsData, reportsSearchQuery]);
 
   // Tab 1: Canceled Cards Report State
   const [canceledSearchOfficeId, setCanceledSearchOfficeId] = useState('');
@@ -114,9 +105,13 @@ export default function LifoReportsDashboard() {
   const [loadingCanceledCards, setLoadingCanceledCards] = useState(false);
   const [canceledCurrentPage, setCanceledCurrentPage] = useState(1);
   const [canceledRowsPerPage] = useState(10);
+  const [canceledTotal, setCanceledTotal] = useState(0);
 
-  // Tab 1: Cached all cards for stock reports
-  const [allCardsData, setAllCardsData] = useState<any[]>([]);
+  // Tab 1: Stock reports summary states
+  const [inventorySummary, setInventorySummary] = useState<any>(null);
+  const [loadingInventorySummary, setLoadingInventorySummary] = useState(false);
+  const [officesAggregatedData, setOfficesAggregatedData] = useState<any[]>([]);
+  const [loadingOfficesAggregated, setLoadingOfficesAggregated] = useState(false);
 
   // Tab 1: Offices Inventory Pagination and Local Search State
   const [officesInvSearchQuery, setOfficesInvSearchQuery] = useState('');
@@ -448,8 +443,6 @@ export default function LifoReportsDashboard() {
 
   // Reset cached LIFO data when environment changes to avoid mixing environments
   useEffect(() => {
-    setCardsMap({});
-    setAllCardsData([]);
     setLifoOffices([]);
     setDistributionLogs([]);
     setRefundLogs([]);
@@ -463,9 +456,6 @@ export default function LifoReportsDashboard() {
     if (activeTab === 'reports' || (isAdmin && (activeTab === 'distribution' || activeTab === 'refund'))) {
       fetchLifoOffices();
     }
-    if (activeTab === 'reports') {
-      fetchCardsMap();
-    }
     if (isAdmin) {
       if (activeTab === 'distribution') {
         fetchDistributionLogs();
@@ -474,6 +464,17 @@ export default function LifoReportsDashboard() {
       }
     }
   }, [activeTab, isAdmin, connectionEnv]);
+
+  // Fetch stock/aggregated summaries when reports sub-tabs are active
+  useEffect(() => {
+    if (activeTab === 'reports') {
+      if (reportSubTab === 'company_inventory' || reportSubTab === 'offices_inventory') {
+        fetchInventorySummary();
+      } else if (reportSubTab === 'offices_aggregated') {
+        fetchOfficesAggregated();
+      }
+    }
+  }, [activeTab, reportSubTab]);
 
   const formatDecimal = (val: any) => {
     if (val === undefined || val === null) return '0.000';
@@ -516,268 +517,124 @@ export default function LifoReportsDashboard() {
   };
 
   // Tab 1: Fetch Reports from LIFO
-  const handleFetchReports = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleFetchReports = async (pageOrEvent?: number | React.FormEvent, forceRefresh = false) => {
+    let targetPage = 1;
+    if (typeof pageOrEvent === 'number') {
+      targetPage = pageOrEvent;
+    } else if (pageOrEvent && 'preventDefault' in pageOrEvent) {
+      pageOrEvent.preventDefault();
+    } else {
+      targetPage = reportsCurrentPage;
+    }
+
     setLoading(true);
     setReportsData([]);
 
     try {
-      // 1. Ensure offices are loaded first
-      let currentOffices = lifoOffices;
-      if (currentOffices.length === 0) {
-        console.log('📡 Fetching LIFO offices list dynamically...');
-        const fd = new FormData();
-        fd.append('user_name', credentials.user_name);
-        fd.append('pass_word', credentials.pass_word);
-        const res = await fetch(`${EXTERNAL_API_BASE_URL}/offices/all`, {
-          method: 'POST',
-          body: fd
-        });
-        if (res.ok) {
-          const d = await res.json();
-          if (d.code === 1 && Array.isArray(d.data)) {
-            currentOffices = d.data;
-            setLifoOffices(currentOffices);
-          }
-        }
-      }
+      const payload = {
+        user_name: credentials.user_name,
+        pass_word: credentials.pass_word,
+        date_from: dateFrom || null,
+        date_to: dateTo || null,
+        search_office_id: searchOfficeId || null,
+        search_office_user_id: searchOfficeUserId || null,
+        customer_name: customerName || null,
+        card_number: cardNumber || null,
+        plate_number: plateNumber || null,
+        chassis_number: chassisNumber || null,
+        page: targetPage,
+        per_page: reportsRowsPerPage,
+        force_refresh: forceRefresh,
+      };
 
-      // 2. Ensure all cards data is loaded first
-      let currentCards = allCardsData;
-      if (currentCards.length === 0) {
-        console.log('📡 Fetching LIFO cards list dynamically...');
-        const fd = new FormData();
-        fd.append('user_name', credentials.user_name);
-        fd.append('pass_word', credentials.pass_word);
-        const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/all`, {
-          method: 'POST',
-          body: fd
-        });
-        if (res.ok) {
-          const d = await res.json();
-          if (d.code === 1 && Array.isArray(d.data)) {
-            currentCards = d.data;
-            setAllCardsData(currentCards);
-            const map: Record<number, string> = {};
-            d.data.forEach((card: any) => {
-              if (card.id) {
-                map[card.id] = card.card_number || card.card_serial || '-';
-              }
-            });
-            setCardsMap(map);
-          }
-        }
-      }
-
-      let fetchedReports: any[] = [];
-
-      if (searchOfficeId) {
-        // Query only this specific office
-        const endpoint = `/report/byoffice/${searchOfficeId}`;
-        const formData = new FormData();
-        formData.append('user_name', credentials.user_name);
-        formData.append('pass_word', credentials.pass_word);
-
-        console.log(`📡 Fetching LIFO reports for specific office: ${searchOfficeId}`);
-        const res = await fetch(`${EXTERNAL_API_BASE_URL}${endpoint}`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) {
-          throw new Error(`خطأ في خادم الاتحاد للمكتب: ${res.statusText}`);
-        }
-
-        const data = await res.json();
-        if (data.code === 1) {
-          const list = Array.isArray(data.data) ? data.data : (data.data?.data || []);
-          const officeObj = currentOffices.find(o => o.id.toString() === searchOfficeId.toString());
-          fetchedReports = list.map((doc: any) => ({
-            ...doc,
-            offices_id: searchOfficeId,
-            offices: doc.offices || { id: Number(searchOfficeId), name: officeObj ? officeObj.name : `مكتب ${searchOfficeId}` }
-          }));
-        } else {
-          showToast(data.message || data.messages || 'فشل جلب بيانات المكتب المحدد', 'error');
-        }
-      } else {
-        // Query company-level sales and all active offices in parallel
-        
-        // Find active office names from cards data
-        const activeOfficeNames = new Set<string>();
-        currentCards.forEach((card: any) => {
-          if (card.offices && (card.cardstautesname === 'البطاقات المباعة' || card.cardstautesname === 'البطاقات المصدرة')) {
-            const officeClean = card.offices.trim();
-            if (officeClean !== 'لدي الشركة') {
-              activeOfficeNames.add(officeClean);
-            }
-          }
-        });
-
-        // Filter office list to active ones only
-        const activeOffices = currentOffices.filter(office => {
-          return activeOfficeNames.has(office.name.trim());
-        });
-
-        console.log(`📡 Parallel fetching for company sales and ${activeOffices.length} active offices...`);
-
-        // A. Company-level promise
-        const companyFormData = new FormData();
-        companyFormData.append('user_name', credentials.user_name);
-        companyFormData.append('pass_word', credentials.pass_word);
-        let companyEndpoint = '/report/all';
-        if (dateFrom && dateTo) {
-          companyEndpoint = '/report/bydate';
-          companyFormData.append('from', formatLifoDate(dateFrom));
-          companyFormData.append('to', formatLifoDate(dateTo));
-        }
-
-        const companyPromise = fetch(`${EXTERNAL_API_BASE_URL}${companyEndpoint}`, {
-          method: 'POST',
-          body: companyFormData,
-        }).then(async res => {
-          if (!res.ok) return [];
-          const data = await res.json();
-          if (data.code === 1) {
-            const list = Array.isArray(data.data) ? data.data : (data.data?.data || []);
-            // Map company sales to have offices_id = null and offices = null (which falls back to الفرع الرئيسي)
-            return list.map((doc: any) => ({
-              ...doc,
-              offices_id: null,
-              offices: null
-            }));
-          }
-          return [];
-        }).catch(err => {
-          console.error('Error fetching company reports:', err);
-          return [];
-        });
-
-        // B. Office promises
-        const officePromises = activeOffices.map(office => {
-          const fd = new FormData();
-          fd.append('user_name', credentials.user_name);
-          fd.append('pass_word', credentials.pass_word);
-          return fetch(`${EXTERNAL_API_BASE_URL}/report/byoffice/${office.id}`, {
-            method: 'POST',
-            body: fd
-          }).then(async res => {
-            if (!res.ok) return [];
-            const data = await res.json();
-            if (data.code === 1) {
-              const list = Array.isArray(data.data) ? data.data : (data.data?.data || []);
-              return list.map((doc: any) => ({
-                ...doc,
-                offices_id: office.id,
-                offices: doc.offices || { id: office.id, name: office.name }
-              }));
-            }
-            return [];
-          }).catch(err => {
-            console.error(`Error fetching reports for office ${office.name}:`, err);
-            return [];
-          });
-        });
-
-        const allResults = await Promise.all([companyPromise, ...officePromises]);
-        allResults.forEach(list => {
-          fetchedReports.push(...list);
-        });
-      }
-
-      // Client-side filtering to apply all filled criteria concurrently
-      const filteredList = fetchedReports.filter((doc: any) => {
-        // 1. Office Filter
-        if (searchOfficeId) {
-          if (doc.offices_id?.toString() !== searchOfficeId.toString()) {
-            return false;
-          }
-        }
-        
-        // 2. Office User ID Filter
-        if (searchOfficeUserId.trim()) {
-          if (doc.office_users_id?.toString() !== searchOfficeUserId.trim()) {
-            return false;
-          }
-        }
-        
-        // 3. Customer Name Filter
-        if (customerName.trim()) {
-          const docCustName = (doc.insurance_name || '').toString().toLowerCase();
-          if (!docCustName.includes(customerName.trim().toLowerCase())) {
-            return false;
-          }
-        }
-        
-        // 4. Card Number Filter
-        if (cardNumber.trim()) {
-          const cardNo = (cardsMap[doc.cards_id] || doc.policyNumber || doc.card_number || '').toString().toLowerCase();
-          if (!cardNo.includes(cardNumber.trim().toLowerCase())) {
-            return false;
-          }
-        }
-        
-        // 5. Plate Number Filter
-        if (plateNumber.trim()) {
-          const docPlate = (doc.plate_number || '').toString().toLowerCase();
-          if (!docPlate.includes(plateNumber.trim().toLowerCase())) {
-            return false;
-          }
-        }
-        
-        // 6. Chassis Number Filter
-        if (chassisNumber.trim()) {
-          const docChassis = (doc.chassis_number || '').toString().toLowerCase();
-          if (!docChassis.includes(chassisNumber.trim().toLowerCase())) {
-            return false;
-          }
-        }
-        
-        // 7. Date Range Filter
-        if (dateFrom || dateTo) {
-          if (!doc.issuing_date) {
-            return false;
-          }
-          const datePart = doc.issuing_date.substring(0, 10); // YYYY-MM-DD
-          if (dateFrom && datePart < dateFrom) {
-            return false;
-          }
-          if (dateTo && datePart > dateTo) {
-            return false;
-          }
-        }
-        
-        return true;
+      console.log(`📡 Fetching LIFO paginated reports: page=${targetPage}, per_page=${reportsRowsPerPage}`);
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/reports-paginated`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
-      setReportsData(filteredList);
-      if (filteredList.length === 0) {
-        showToast('لا توجد بيانات مطابقة للفلاتر المحددة', 'error');
+      if (!res.ok) {
+        throw new Error(`خطأ في خادم النظام: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setReportsData(data.data || []);
+        setReportsTotal(data.total || 0);
+        setReportsTotals(data.totals || { installment: '0.000', tax: '0.000', stamp: '0.000', supervision: '0.000', version: '0.000', total: '0.000' });
+        setReportsCurrentPage(data.page || 1);
+        if (data.total === 0) {
+          showToast('لا توجد بيانات مطابقة للفلاتر المحددة', 'error');
+        } else {
+          showToast(`تم جلب وتصفية ${data.total} وثيقة بنجاح`, 'success');
+        }
       } else {
-        showToast(`تم جلب وتصفية ${filteredList.length} وثيقة بنجاح`, 'success');
+        showToast(data.message || 'فشل جلب التقارير', 'error');
       }
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ غير متوقع أثناء الاتصال بالاتحاد', 'error');
+      showToast(error.message || 'حدث خطأ غير متوقع أثناء جلب التقارير', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch paginated reports on page or rows-per-page changes
+  useEffect(() => {
+    if (activeTab === 'reports' && reportSubTab === 'sales_summary' && reportsData.length > 0) {
+      handleFetchReports(reportsCurrentPage);
+    }
+  }, [reportsCurrentPage, reportsRowsPerPage]);
+
   // Tab 1: Fetch Canceled Cards from LIFO
-  const handleFetchCanceledCards = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleFetchCanceledCards = async (pageOrEvent?: number | React.FormEvent, forceRefresh = false) => {
+    let targetPage = 1;
+    if (typeof pageOrEvent === 'number') {
+      targetPage = pageOrEvent;
+    } else if (pageOrEvent && 'preventDefault' in pageOrEvent) {
+      pageOrEvent.preventDefault();
+    } else {
+      targetPage = canceledCurrentPage;
+    }
+
     setLoadingCanceledCards(true);
     setCanceledCardsData([]);
 
     try {
-      const formData = new FormData();
-      formData.append('user_name', credentials.user_name);
-      formData.append('pass_word', credentials.pass_word);
+      // Find office name if ID is selected
+      let officeNameParam = '';
+      if (canceledSearchOfficeId) {
+        const office = lifoOffices.find(o => o.id.toString() === canceledSearchOfficeId.toString());
+        if (office) {
+          officeNameParam = office.name;
+        }
+      }
 
-      console.log('📡 Fetching LIFO canceled cards...');
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/cancel`, {
+      const payload = {
+        user_name: credentials.user_name,
+        pass_word: credentials.pass_word,
+        category: 'cancel',
+        page: targetPage,
+        per_page: canceledRowsPerPage,
+        office_name: officeNameParam || null,
+        card_number: canceledSearchCardNum || null,
+        request_number: canceledSearchReqNum || null,
+        date_from: canceledSearchDateFrom || null,
+        date_to: canceledSearchDateTo || null,
+        force_refresh: forceRefresh,
+      };
+
+      console.log(`📡 Fetching LIFO canceled cards: page=${targetPage}`);
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/cards-paginated`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -785,18 +642,17 @@ export default function LifoReportsDashboard() {
       }
 
       const data = await res.json();
-      console.log('LIFO canceled cards response:', data);
-
-      if (data.code === 1) {
-        const list = Array.isArray(data.data) ? data.data : [];
-        setCanceledCardsData(list);
-        if (list.length === 0) {
-          showToast('لا توجد بطاقات ملغية حالياً', 'error');
+      if (data.success) {
+        setCanceledCardsData(data.data || []);
+        setCanceledTotal(data.total || 0);
+        setCanceledCurrentPage(data.page || 1);
+        if (data.total === 0) {
+          showToast('لا توجد بطاقات ملغية مطابقة للفلاتر', 'error');
         } else {
-          showToast(`تم جلب ${list.length} بطاقة ملغية بنجاح`, 'success');
+          showToast(`تم جلب ${data.total} بطاقة ملغية بنجاح`, 'success');
         }
       } else {
-        showToast(data.message || data.messages || 'فشل جلب البيانات، يرجى التحقق من بيانات الدخول', 'error');
+        showToast(data.message || 'فشل جلب البيانات', 'error');
       }
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء تحميل البطاقات الملغية', 'error');
@@ -804,6 +660,13 @@ export default function LifoReportsDashboard() {
       setLoadingCanceledCards(false);
     }
   };
+
+  // Fetch paginated canceled cards on page or rows changes
+  useEffect(() => {
+    if (activeTab === 'reports' && reportSubTab === 'canceled_cards' && canceledCardsData.length > 0) {
+      handleFetchCanceledCards(canceledCurrentPage);
+    }
+  }, [canceledCurrentPage, canceledRowsPerPage]);
 
   // Tab 2: Fetch Card Inventory from LIFO (Server-Side Paginated)
   const handleFetchInventory = async (page = 1, forceRefresh = false) => {
@@ -920,47 +783,63 @@ export default function LifoReportsDashboard() {
     }
   };
 
-  const fetchCardsMap = async () => {
-    if (Object.keys(cardsMap).length > 0 || loadingCardsMap) return;
-    // Use cache if fresh
-    const cached = getCachedData('lifo_cards_map_cache');
-    if (cached && cached.map && Object.keys(cached.map).length > 0) {
-      setCardsMap(cached.map);
-      setAllCardsData(cached.allCards || []);
-      console.log(`✅ Loaded ${Object.keys(cached.map).length} cards from cache.`);
-      return;
-    }
-    setLoadingCardsMap(true);
+
+  const fetchInventorySummary = async (forceRefresh = false) => {
+    if (inventorySummary && !forceRefresh) return;
+    setLoadingInventorySummary(true);
     try {
-      const formData = new FormData();
-      formData.append('user_name', credentials.user_name);
-      formData.append('pass_word', credentials.pass_word);
-
-      console.log('📡 Caching LIFO cards for reports mapping...');
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/all`, {
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/inventory-summary`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          user_name: credentials.user_name,
+          pass_word: credentials.pass_word,
+          force_refresh: forceRefresh,
+        }),
       });
-
       if (res.ok) {
         const data = await res.json();
-        if (data.code === 1 && Array.isArray(data.data)) {
-          const map: Record<number, string> = {};
-          data.data.forEach((card: any) => {
-            if (card.id) {
-              map[card.id] = card.card_number || card.card_serial || '-';
-            }
-          });
-          setCardsMap(map);
-          setAllCardsData(data.data);
-          setCacheData('lifo_cards_map_cache', { map, allCards: data.data });
-          console.log(`✅ Cached ${data.data.length} cards for reports mapping.`);
+        if (data.success) {
+          setInventorySummary(data);
         }
       }
     } catch (e) {
-      console.error('Error fetching cards for map:', e);
+      console.error('Error fetching LIFO inventory summary:', e);
     } finally {
-      setLoadingCardsMap(false);
+      setLoadingInventorySummary(false);
+    }
+  };
+
+  const fetchOfficesAggregated = async (forceRefresh = false) => {
+    setLoadingOfficesAggregated(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/offices-aggregated`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          user_name: credentials.user_name,
+          pass_word: credentials.pass_word,
+          date_from: dateFrom || null,
+          date_to: dateTo || null,
+          force_refresh: forceRefresh,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setOfficesAggregatedData(data.data || []);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching LIFO offices aggregated:', e);
+    } finally {
+      setLoadingOfficesAggregated(false);
     }
   };
 
@@ -1173,7 +1052,7 @@ export default function LifoReportsDashboard() {
       ];
 
       const data = reportsData.map(doc => ({
-        policyNumber: cardsMap[doc.cards_id] || doc.policyNumber || doc.card_number || '-',
+        policyNumber: doc.resolved_card_number || doc.policyNumber || doc.card_number || '-',
         issuing_date: doc.issuing_date || '-',
         insurance_name: doc.insurance_name || '-',
         insurance_phone: doc.insurance_phone || '-',
@@ -2036,47 +1915,9 @@ export default function LifoReportsDashboard() {
                     <div>
                       <h4 style={{ marginBottom: '15px', color: 'var(--text)', fontWeight: 'bold' }}>عرض الكل</h4>
                       
+
                       {(() => {
-                        const filteredReportsData = reportsData.filter(doc => {
-                          const query = reportsSearchQuery.toLowerCase().trim();
-                          if (!query) return true;
-                          
-                          const cardNo = (cardsMap[doc.cards_id] || doc.policyNumber || doc.card_number || '').toLowerCase();
-                          const name = (doc.insurance_name || '').toLowerCase();
-                          const office = (doc.offices?.name || lifoOffices.find(o => o.id === doc.offices_id)?.name || '').toLowerCase();
-                          const issuer = (doc.company_users?.username || doc.office_users?.username || doc.users?.username || '').toLowerCase();
-                          
-                          return cardNo.includes(query) || name.includes(query) || office.includes(query) || issuer.includes(query);
-                        });
-
-                        const reportsTotals = (() => {
-                          let installmentSum = 0;
-                          let taxSum = 0;
-                          let stampSum = 0;
-                          let supervisionSum = 0;
-                          let versionSum = 0;
-                          let totalSum = 0;
-
-                          filteredReportsData.forEach(doc => {
-                            installmentSum += parseFloat(doc.insurance_installment) || 0;
-                            taxSum += parseFloat(doc.insurance_tax) || 0;
-                            stampSum += parseFloat(doc.insurance_stamp) || 0;
-                            supervisionSum += parseFloat(doc.insurance_supervision) || 0;
-                            versionSum += parseFloat(doc.insurance_version) || 0;
-                            totalSum += parseFloat(doc.insurance_total) || 0;
-                          });
-
-                          return {
-                            installment: installmentSum.toFixed(3),
-                            tax: taxSum.toFixed(3),
-                            stamp: stampSum.toFixed(3),
-                            supervision: supervisionSum.toFixed(3),
-                            version: versionSum.toFixed(3),
-                            total: totalSum.toFixed(3),
-                          };
-                        })();
-
-                        const reportsTotalPages = Math.ceil(filteredReportsData.length / reportsRowsPerPage);
+                        const reportsTotalPages = Math.ceil(reportsTotal / reportsRowsPerPage);
 
                         const getReportsPageNumbers = () => {
                           const pages: (number | string)[] = [];
@@ -2126,25 +1967,7 @@ export default function LifoReportsDashboard() {
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                               }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث في النتائج:</span>
-                                  <input
-                                    type="text"
-                                    placeholder="ابحث برقم البطاقة، المؤمن له، المكتب..."
-                                    value={reportsSearchQuery}
-                                    onChange={(e) => {
-                                      setReportsSearchQuery(e.target.value);
-                                      setReportsCurrentPage(1);
-                                    }}
-                                    style={{
-                                      padding: '8px 12px',
-                                      borderRadius: '8px',
-                                      border: '1px solid var(--border)',
-                                      background: 'var(--input-bg)',
-                                      color: 'var(--text)',
-                                      width: '280px',
-                                      fontSize: '0.85rem'
-                                    }}
-                                  />
+                                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>مجموع السجلات الحالية: {reportsTotal}</span>
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -2155,6 +1978,7 @@ export default function LifoReportsDashboard() {
                                       onChange={(e) => {
                                         setReportsRowsPerPage(parseInt(e.target.value));
                                         setReportsCurrentPage(1);
+                                        setTimeout(() => handleFetchReports(1), 50);
                                       }}
                                       style={{
                                         padding: '6px 10px',
@@ -2177,7 +2001,7 @@ export default function LifoReportsDashboard() {
                               </div>
                             )}
 
-                            {filteredReportsData.length > 0 ? (
+                            {reportsData.length > 0 ? (
                               <>
                                 <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
                                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
@@ -2199,9 +2023,9 @@ export default function LifoReportsDashboard() {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {filteredReportsData.slice((reportsCurrentPage - 1) * reportsRowsPerPage, reportsCurrentPage * reportsRowsPerPage).map((doc, idx) => {
+                                      {reportsData.map((doc, idx) => {
                                         const globalIdx = (reportsCurrentPage - 1) * reportsRowsPerPage + idx + 1;
-                                        const cardNo = cardsMap[doc.cards_id] || doc.policyNumber || doc.card_number || '-';
+                                        const cardNo = doc.resolved_card_number || doc.policyNumber || doc.card_number || '-';
                                         const issuer = doc.company_users?.username || doc.office_users?.username || doc.users?.username || doc.company_users_id || '-';
                                         const officeName = doc.offices?.name || lifoOffices.find((o: any) => o.id === doc.offices_id)?.name || '-';
 
@@ -2263,7 +2087,7 @@ export default function LifoReportsDashboard() {
                                 {/* Pagination Controls */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '15px' }}>
                                   <div style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold' }}>
-                                    عرض {filteredReportsData.length === 0 ? 0 : (reportsCurrentPage - 1) * reportsRowsPerPage + 1} إلى {Math.min(reportsCurrentPage * reportsRowsPerPage, filteredReportsData.length)} من أصل {filteredReportsData.length.toLocaleString('ar-LY')} مدخل
+                                    عرض {reportsData.length === 0 ? 0 : (reportsCurrentPage - 1) * reportsRowsPerPage + 1} إلى {Math.min(reportsCurrentPage * reportsRowsPerPage, reportsTotal)} من أصل {reportsTotal.toLocaleString('ar-LY')} مدخل
                                   </div>
                                   
                                   {reportsTotalPages > 1 && (
@@ -2271,7 +2095,11 @@ export default function LifoReportsDashboard() {
                                       <button
                                         type="button"
                                         disabled={reportsCurrentPage === 1}
-                                        onClick={() => setReportsCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        onClick={() => {
+                                          const prevPage = Math.max(reportsCurrentPage - 1, 1);
+                                          setReportsCurrentPage(prevPage);
+                                          handleFetchReports(prevPage);
+                                        }}
                                         style={{
                                           padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
                                           background: reportsCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
@@ -2291,7 +2119,12 @@ export default function LifoReportsDashboard() {
                                             key={idx}
                                             type="button"
                                             disabled={!isPageNumber}
-                                            onClick={() => isPageNumber && setReportsCurrentPage(page as number)}
+                                            onClick={() => {
+                                              if (isPageNumber) {
+                                                setReportsCurrentPage(page as number);
+                                                handleFetchReports(page as number);
+                                              }
+                                            }}
                                             style={{
                                               padding: '6px 12px', borderRadius: '6px',
                                               border: isPageNumber ? '1px solid var(--border)' : 'none',
@@ -2309,7 +2142,11 @@ export default function LifoReportsDashboard() {
                                       <button
                                         type="button"
                                         disabled={reportsCurrentPage === reportsTotalPages}
-                                        onClick={() => setReportsCurrentPage(prev => Math.min(prev + 1, reportsTotalPages))}
+                                        onClick={() => {
+                                          const nextPage = Math.min(reportsCurrentPage + 1, reportsTotalPages);
+                                          setReportsCurrentPage(nextPage);
+                                          handleFetchReports(nextPage);
+                                        }}
                                         style={{
                                           padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
                                           background: reportsCurrentPage === reportsTotalPages ? 'var(--input-bg)' : 'var(--panel)',
@@ -2460,33 +2297,8 @@ export default function LifoReportsDashboard() {
                     {/* Table results */}
                     <div>
                       {(() => {
-                        const filteredCanceledCards = canceledCardsData.filter(card => {
-                          if (canceledSearchOfficeId) {
-                            const office = lifoOffices.find(o => o.id.toString() === canceledSearchOfficeId);
-                            if (office && card.offices !== office.name) return false;
-                          }
-                          if (canceledSearchCompanyUser && canceledSearchCompanyUser !== 'adminmli') {
-                            return false;
-                          }
-                          if (canceledSearchReqNum.trim()) {
-                            if (!(card.request_numberr || '').toLowerCase().includes(canceledSearchReqNum.trim().toLowerCase())) return false;
-                          }
-                          if (canceledSearchCardNum.trim()) {
-                            const numStr = (card.card_number || card.card_serial || '').toString().toLowerCase();
-                            if (!numStr.includes(canceledSearchCardNum.trim().toLowerCase())) return false;
-                          }
-                          if (canceledSearchDateFrom) {
-                            const cardDate = (card.created_at || '').substring(0, 10);
-                            if (cardDate < canceledSearchDateFrom) return false;
-                          }
-                          if (canceledSearchDateTo) {
-                            const cardDate = (card.created_at || '').substring(0, 10);
-                            if (cardDate > canceledSearchDateTo) return false;
-                          }
-                          return true;
-                        });
-
-                        const totalCanceledPages = Math.ceil(filteredCanceledCards.length / canceledRowsPerPage);
+                        const filteredCanceledCards = canceledCardsData;
+                        const totalCanceledPages = Math.ceil(canceledTotal / canceledRowsPerPage);
 
                         const getCanceledPageNumbers = () => {
                           const pages: (number | string)[] = [];
@@ -2520,7 +2332,7 @@ export default function LifoReportsDashboard() {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {filteredCanceledCards.slice((canceledCurrentPage - 1) * canceledRowsPerPage, canceledCurrentPage * canceledRowsPerPage).map((card, idx) => {
+                                      {filteredCanceledCards.map((card, idx) => {
                                         const globalIdx = (canceledCurrentPage - 1) * canceledRowsPerPage + idx + 1;
                                         return (
                                           <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -2542,7 +2354,7 @@ export default function LifoReportsDashboard() {
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '15px' }}>
                                   <div style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold' }}>
-                                    عرض {(canceledCurrentPage - 1) * canceledRowsPerPage + 1} إلى {Math.min(canceledCurrentPage * canceledRowsPerPage, filteredCanceledCards.length)} من أصل {filteredCanceledCards.length.toLocaleString('ar-LY')} مدخل
+                                    عرض {(canceledCurrentPage - 1) * canceledRowsPerPage + 1} إلى {Math.min(canceledCurrentPage * canceledRowsPerPage, canceledTotal)} من أصل {canceledTotal.toLocaleString('ar-LY')} مدخل
                                   </div>
 
                                   {totalCanceledPages > 1 && (
@@ -2550,7 +2362,11 @@ export default function LifoReportsDashboard() {
                                       <button
                                         type="button"
                                         disabled={canceledCurrentPage === 1}
-                                        onClick={() => setCanceledCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        onClick={() => {
+                                          const prevPage = Math.max(canceledCurrentPage - 1, 1);
+                                          setCanceledCurrentPage(prevPage);
+                                          handleFetchCanceledCards(prevPage);
+                                        }}
                                         style={{
                                           padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
                                           background: canceledCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
@@ -2570,7 +2386,12 @@ export default function LifoReportsDashboard() {
                                             key={idx}
                                             type="button"
                                             disabled={!isPageNumber}
-                                            onClick={() => isPageNumber && setCanceledCurrentPage(page as number)}
+                                            onClick={() => {
+                                              if (isPageNumber) {
+                                                setCanceledCurrentPage(page as number);
+                                                handleFetchCanceledCards(page as number);
+                                              }
+                                            }}
                                             style={{
                                               padding: '6px 12px', borderRadius: '6px',
                                               border: isPageNumber ? '1px solid var(--border)' : 'none',
@@ -2588,7 +2409,11 @@ export default function LifoReportsDashboard() {
                                       <button
                                         type="button"
                                         disabled={canceledCurrentPage === totalCanceledPages}
-                                        onClick={() => setCanceledCurrentPage(prev => Math.min(prev + 1, totalCanceledPages))}
+                                        onClick={() => {
+                                          const nextPage = Math.min(canceledCurrentPage + 1, totalCanceledPages);
+                                          setCanceledCurrentPage(nextPage);
+                                          handleFetchCanceledCards(nextPage);
+                                        }}
                                         style={{
                                           padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
                                           background: canceledCurrentPage === totalCanceledPages ? 'var(--input-bg)' : 'var(--panel)',
@@ -2621,21 +2446,17 @@ export default function LifoReportsDashboard() {
                     <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>تقارير مخزون الشركة</h4>
                     
                     {(() => {
-                      const counts = { active: 0, sold: 0, canceled: 0 };
-                      allCardsData.forEach(card => {
-                        const officeClean = (card.offices || '').trim();
-                        if (officeClean === 'لدي الشركة') {
-                          if (card.cardstautesname === 'البطاقات المعينة' || card.cardstautesname === 'البطاقات النشطة') {
-                            counts.active++;
-                          } else if (card.cardstautesname === 'البطاقات المباعة' || card.cardstautesname === 'البطاقات المصدرة') {
-                            counts.sold++;
-                          } else if (card.cardstautesname === 'البطاقات الملغية') {
-                            counts.canceled++;
-                          }
-                        }
-                      });
+                      if (loadingInventorySummary) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
+                            <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '30px', marginBottom: '15px', color: 'var(--sidebar)' }}></i>
+                            <p style={{ fontWeight: '600' }}>جاري تحميل ملخص المخزون من الاتحاد...</p>
+                          </div>
+                        );
+                      }
 
-                      const hasData = allCardsData.length > 0;
+                      const counts = inventorySummary?.company_stock || { active: 0, sold: 0, canceled: 0 };
+                      const hasData = !!inventorySummary;
                       
                       // Filter row locally if search query is provided
                       const searchMatch = !inventorySearchQuery.trim() || 
@@ -2949,28 +2770,18 @@ export default function LifoReportsDashboard() {
                     <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>عرض مخزون المكاتب</h4>
                     
                     {(() => {
-                      const officesMap: Record<string, { office: string; active: number; sold: number; canceled: number }> = {};
-                      allCardsData.forEach(card => {
-                        if (card.offices) {
-                          const officeClean = card.offices.trim();
-                          if (officeClean === 'لدي الشركة') return; // Exclude company stock from offices list
-                          const officeName = card.offices;
-                          if (!officesMap[officeName]) {
-                            officesMap[officeName] = { office: officeName, active: 0, sold: 0, canceled: 0 };
-                          }
-                          if (card.cardstautesname === 'البطاقات المعينة' || card.cardstautesname === 'البطاقات النشطة') {
-                            officesMap[officeName].active++;
-                          } else if (card.cardstautesname === 'البطاقات المباعة' || card.cardstautesname === 'البطاقات المصدرة') {
-                            officesMap[officeName].sold++;
-                          } else if (card.cardstautesname === 'البطاقات الملغية') {
-                            officesMap[officeName].canceled++;
-                          }
-                        }
-                      });
+                      if (loadingInventorySummary) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
+                            <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '30px', marginBottom: '15px', color: 'var(--sidebar)' }}></i>
+                            <p style={{ fontWeight: '600' }}>جاري تحميل ملخص المخزون من الاتحاد...</p>
+                          </div>
+                        );
+                      }
 
-                      const officesList = Object.values(officesMap);
+                      const officesList = inventorySummary?.offices_stock || [];
 
-                      const filteredOfficesList = officesList.filter(item => {
+                      const filteredOfficesList = officesList.filter((item: any) => {
                         const query = officesInvSearchQuery.toLowerCase().trim();
                         if (!query) return true;
                         return item.office.toLowerCase().includes(query);
@@ -2994,7 +2805,7 @@ export default function LifoReportsDashboard() {
                         return pages;
                       };
 
-                      const hasData = allCardsData.length > 0;
+                      const hasData = !!inventorySummary;
 
                       const handlePrintOfficesStockPDF = () => {
                         const printable = window.open('', '_blank');
@@ -3012,7 +2823,7 @@ export default function LifoReportsDashboard() {
                           const printDateTime = `${year}/${month}/${date} ${hours}:${minutes}:${seconds} ${ampm}`;
 
                           // Construct rows html
-                          const rowsHtml = filteredOfficesList.map((item, idx) => `
+                          const rowsHtml = filteredOfficesList.map((item: any, idx: number) => `
                             <tr>
                               <td>${idx + 1}</td>
                               <td>${item.office}</td>
@@ -3116,7 +2927,7 @@ export default function LifoReportsDashboard() {
                             { header: 'بطاقة المصدرة', key: 'sold', width: 25 },
                             { header: 'بطاقة ملغية', key: 'canceled', width: 25 },
                           ];
-                          const data = filteredOfficesList.map(item => ({
+                          const data = filteredOfficesList.map((item: any) => ({
                             office: item.office,
                             active: `${item.active} بطاقة`,
                             sold: `${item.sold} بطاقة`,
@@ -3137,7 +2948,7 @@ export default function LifoReportsDashboard() {
                       };
 
                       const handleCopyOfficesStock = () => {
-                        const text = filteredOfficesList.map((item, idx) => 
+                        const text = filteredOfficesList.map((item: any, idx: number) => 
                           `${idx + 1}. ${item.office}: نشطة: ${item.active} | مصدرة: ${item.sold} | ملغية: ${item.canceled}`
                         ).join('\n');
                         navigator.clipboard.writeText(text);
@@ -3164,14 +2975,13 @@ export default function LifoReportsDashboard() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setCardsMap({});
-                                  fetchCardsMap();
+                                  fetchInventorySummary(true);
                                 }}
-                                disabled={loadingCardsMap}
+                                disabled={loadingInventorySummary}
                                 className="primary"
                                 style={{ padding: '6px 15px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
                               >
-                                {loadingCardsMap ? 'جاري التحديث...' : 'تحديث جرد المكاتب'}
+                                {loadingInventorySummary ? 'جاري التحديث...' : 'تحديث جرد المكاتب'}
                               </button>
                             </div>
                           </div>
@@ -3278,7 +3088,7 @@ export default function LifoReportsDashboard() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {filteredOfficesList.slice((officesInvCurrentPage - 1) * officesInvRowsPerPage, officesInvCurrentPage * officesInvRowsPerPage).map((item, idx) => (
+                                    {filteredOfficesList.slice((officesInvCurrentPage - 1) * officesInvRowsPerPage, officesInvCurrentPage * officesInvRowsPerPage).map((item: any, idx: number) => (
                                       <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{item.office}</td>
                                         <td style={{ padding: '12px 15px', color: '#166534', fontWeight: 'bold' }}>{item.active.toLocaleString('ar-LY')} بطاقة</td>
@@ -3377,54 +3187,7 @@ export default function LifoReportsDashboard() {
                     <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>تقرير المجمع لإصدارات المكاتب</h4>
                     
                     {(() => {
-                      const officeCanceledCounts: Record<string, number> = {};
-                      allCardsData.forEach(card => {
-                        if (card.offices && card.cardstautesname === 'البطاقات الملغية') {
-                          const officeClean = card.offices.trim();
-                          const officeKey = officeClean === 'لدي الشركة' ? 'الفرع الرئيسي' : card.offices;
-                          officeCanceledCounts[officeKey] = (officeCanceledCounts[officeKey] || 0) + 1;
-                        }
-                      });
-
-                      const map: Record<string, {
-                        officeName: string;
-                        soldCount: number;
-                        canceledCount: number;
-                        installment: number;
-                        tax: number;
-                        stamp: number;
-                        supervision: number;
-                        version: number;
-                        total: number;
-                      }> = {};
-
-                      reportsData.forEach(doc => {
-                        const officeName = doc.offices?.name || lifoOffices.find((o: any) => o.id === doc.offices_id)?.name || 'الفرع الرئيسي';
-                        if (!map[officeName]) {
-                          map[officeName] = {
-                            officeName,
-                            soldCount: 0,
-                            canceledCount: officeCanceledCounts[officeName] || 0,
-                            installment: 0,
-                            tax: 0,
-                            stamp: 0,
-                            supervision: 0,
-                            version: 0,
-                            total: 0
-                          };
-                        }
-                        
-                        const item = map[officeName];
-                        item.soldCount++;
-                        item.installment += parseFloat(doc.insurance_installment) || 0;
-                        item.tax += parseFloat(doc.insurance_tax) || 0;
-                        item.stamp += parseFloat(doc.insurance_stamp) || 0;
-                        item.supervision += parseFloat(doc.insurance_supervision) || 0;
-                        item.version += parseFloat(doc.insurance_version) || 0;
-                        item.total += parseFloat(doc.insurance_total) || 0;
-                      });
-
-                      const list = Object.values(map);
+                      const list = officesAggregatedData || [];
 
                       const filteredList = list.filter(item => {
                         const query = officesAggSearchQuery.toLowerCase().trim();
@@ -3464,9 +3227,18 @@ export default function LifoReportsDashboard() {
                         totals.total += item.total;
                       });
 
+                      if (loadingOfficesAggregated) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
+                            <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '30px', marginBottom: '15px', color: 'var(--sidebar)' }}></i>
+                            <p style={{ fontWeight: '600' }}>جاري تحميل وتجميع تقرير الفروع من الاتحاد...</p>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px' }}>
-                          <form onSubmit={(e) => { e.preventDefault(); handleFetchReports(); }} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '25px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
+                          <form onSubmit={(e) => { e.preventDefault(); fetchOfficesAggregated(); }} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '25px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
                             <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
                               <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>من</label>
                               <input 

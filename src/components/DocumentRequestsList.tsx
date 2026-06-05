@@ -110,6 +110,7 @@ export default function DocumentRequestsList() {
       }
       
       showToast("تم تقديم طلب الوثيقة بنجاح", 'success');
+      window.dispatchEvent(new CustomEvent('documentRequestsUpdated'));
       setShowRequestModal(false);
       setNewRequest({ request_type: 'modification', document_type: '', document_number: '', subject: '', description: '' });
       fetchRequests();
@@ -135,6 +136,7 @@ export default function DocumentRequestsList() {
       if (!res.ok) throw new Error("فشل تحديث حالة الطلب");
       
       showToast("تم تحديث حالة الطلب بنجاح", 'success');
+      window.dispatchEvent(new CustomEvent('documentRequestsUpdated'));
       setShowStatusModal(false);
       fetchRequests();
     } catch (error: any) {

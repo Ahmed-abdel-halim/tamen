@@ -132,6 +132,7 @@ export default function ProfileUpdateRequestsList() {
       }
 
       showToast(responseData.message || 'تم معالجة الطلب بنجاح', 'success');
+      window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
       setSelectedRequest(null);
       setAdminNotes('');
       setActionType(null);

@@ -964,6 +964,7 @@ export default function BranchesAgentsList() {
 
       const data = await res.json();
       showToast(data.message || 'تم التفعيل بنجاح', 'success');
+      window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
       fetchBranchesAgents();
     } catch (error: any) {
       showToast(error.message, 'error');

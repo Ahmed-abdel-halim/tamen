@@ -253,6 +253,7 @@ export default function AgentTransfers() {
       const json = await res.json();
       if (json.success) {
         showToast(json.message || 'تم حفظ المعاملة المالية بنجاح', 'success');
+        window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
         setShowAddModal(false);
         resetForm();
         loadData();
@@ -285,6 +286,7 @@ export default function AgentTransfers() {
       const json = await res.json();
       if (json.success) {
         showToast('تمت مطابقة وتأكيد الحوالة بنجاح وتوليد سند القبض القيادي', 'success');
+        window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
         loadData();
       } else {
         showToast(json.message || 'فشلت مطابقة الحوالة', 'error');
@@ -323,6 +325,7 @@ export default function AgentTransfers() {
       const json = await res.json();
       if (json.success) {
         showToast('تم رفض الحوالة بنجاح وإشعار الوكيل بالسبب', 'success');
+        window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
         setRejectId(null);
         loadData();
       } else {
@@ -350,6 +353,7 @@ export default function AgentTransfers() {
       const json = await res.json();
       if (json.success) {
         showToast('تم حذف التحويل المالي بنجاح', 'success');
+        window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
         loadData();
       } else {
         showToast(json.message || 'فشل حذف التحويل', 'error');

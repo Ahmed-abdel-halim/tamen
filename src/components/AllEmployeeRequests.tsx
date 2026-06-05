@@ -90,6 +90,7 @@ export default function AllEmployeeRequests() {
       if (!res.ok) throw new Error("فشل تحديث حالة الطلب");
       
       showToast(selectedRequest.status === 'approved' ? "تمت الموافقة على الطلب" : "تم رفض الطلب", 'success');
+      window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
       setShowStatusModal(false);
       fetchRequests();
     } catch (error: any) {

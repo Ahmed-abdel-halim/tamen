@@ -9,6 +9,7 @@ type SidebarItem = {
   icon: string;
   to?: string;
   children?: SidebarItem[];
+  badge?: number;
 }
 
 type SidebarSection = {
@@ -412,11 +413,88 @@ const createMenuSections = (
   authorizedDocs: string[] | null,
   isAdmin: boolean,
   branchAgentId?: number | null,
-  userId?: number | null
+  userId?: number | null,
+  pendingDocsCount: number = 0,
+  adminCounts?: {
+    new_agents: number;
+    agent_requests: number;
+    agency_cancellations: number;
+    agent_profile_updates: number;
+    employee_requests: number;
+    employee_profile_updates: number;
+    agent_transfers?: number;
+  }
 ): SidebarSection[] => {
   // إذا كان المستخدم admin، أظهر كل شيء
   if (isAdmin) {
-    return menuSections;
+    return menuSections.map(section => ({
+      ...section,
+      items: section.items.map(item => {
+        if (item.label === 'إدارة الوثائق' && item.children) {
+          return {
+            ...item,
+            children: item.children.map(child => {
+              if (child.label === 'طلبات الوثائق') {
+                return { ...child, badge: pendingDocsCount };
+              }
+              return child;
+            })
+          };
+        }
+        if (item.label === 'إدارة الفروع والوكلاء' && item.children) {
+          return {
+            ...item,
+            children: item.children.map(child => {
+              if (child.label === 'الوكلاء الجدد') {
+                return { ...child, badge: adminCounts?.new_agents };
+              }
+              if (child.label === 'طلبات الوكلاء') {
+                return { ...child, badge: adminCounts?.agent_requests };
+              }
+              if (child.label === 'إلغاء الوكالات') {
+                return { ...child, badge: adminCounts?.agency_cancellations };
+              }
+              if (child.label === 'طلبات تعديل بيانات الوكلاء') {
+                return { ...child, badge: adminCounts?.agent_profile_updates };
+              }
+              return child;
+            })
+          };
+        }
+        if (item.label === 'إدارة الموظفين' && item.children) {
+          return {
+            ...item,
+            children: item.children.map(child => {
+              if (child.label === 'طلبات الموظفين') {
+                return { ...child, badge: adminCounts?.employee_requests };
+              }
+              if (child.label === 'طلبات تعديل بيانات الموظفين') {
+                return { ...child, badge: adminCounts?.employee_profile_updates };
+              }
+              return child;
+            })
+          };
+        }
+        if (item.label === 'المحاسب المالي' && item.children) {
+          return {
+            ...item,
+            children: item.children.map(child => {
+              if (child.label === 'حوالات الوكلاء المالية') {
+                return { ...child, badge: adminCounts?.agent_transfers };
+              }
+              if (child.label === 'إدارة المصروفات' && child.children) {
+                return {
+                  ...child,
+                  children: child.children.map(grandchild => grandchild)
+                };
+              }
+              return child;
+            })
+          };
+        }
+        return item;
+      })
+    }));
   }
 
   // خريطة الصلاحيات إلى العناصر الجانبية
@@ -445,16 +523,18 @@ const createMenuSections = (
     'تأمين حماية طلاب المدارس': { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
     'تأمين نقل النقدية': { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
     'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
-    'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
+    'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests', badge: pendingDocsCount },
     'إدارة الفروع والوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
-      { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
-      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
-      { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
+      { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
+      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+      { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+      { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
     ],
     'إدارة الموظفين': [
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
-      { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+      { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
+      { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
     ],
     'دليل الجهات الخارجية': { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
     'البريد الصادر والوارد': [
@@ -480,7 +560,7 @@ const createMenuSections = (
       { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
       { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
       { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
-      { label: 'حوالات الوكلاء المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/reports/agent-transfers' },
+      { label: 'حوالات الوكلاء المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/reports/agent-transfers', badge: adminCounts?.agent_transfers },
       { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
       { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
       { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
@@ -845,7 +925,7 @@ const createMenuSections = (
           { label: 'بيانات الوكالة', icon: 'fa-solid fa-building-user', to: `/branches-agents/${branchAgentId}?tab=agency` },
           { label: 'المحفظة والنقاط (Loyalty)', icon: 'fa-solid fa-wallet', to: `/branches-agents/${branchAgentId}?tab=wallet` },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
-          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests` },
+          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests`, badge: pendingDocsCount },
           { label: 'إلغاء الوكالة', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
           { label: 'التحويلات المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/agent-transfers' },
           { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
@@ -873,6 +953,121 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [branchAgentId, setBranchAgentId] = useState<number | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [pendingDocsCount, setPendingDocsCount] = useState<number>(0);
+  const [adminPendingCounts, setAdminPendingCounts] = useState<{
+    new_agents: number;
+    agent_requests: number;
+    agency_cancellations: number;
+    agent_profile_updates: number;
+    employee_requests: number;
+    employee_profile_updates: number;
+    agent_transfers: number;
+  }>({
+    new_agents: 0,
+    agent_requests: 0,
+    agency_cancellations: 0,
+    agent_profile_updates: 0,
+    employee_requests: 0,
+    employee_profile_updates: 0,
+    agent_transfers: 0,
+  });
+
+  const fetchPendingDocsCount = async () => {
+    const userStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    if (!userStr) return;
+
+    try {
+      const user = JSON.parse(userStr);
+      const userId = user.id;
+      const res = await fetch(`${API_BASE_URL}/document-requests/pending-count?user_id=${userId}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingDocsCount(data.count || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching pending docs count:', error);
+    }
+  };
+
+  const hasPendingCountsAccess = isAdmin || (
+    authorizedDocuments !== null && (
+      authorizedDocuments.includes('إدارة الفروع والوكلاء') ||
+      authorizedDocuments.includes('إدارة الموظفين') ||
+      authorizedDocuments.includes('المحاسب المالي')
+    )
+  );
+
+  const fetchAdminPendingCounts = async () => {
+    const userStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    if (!userStr) return;
+
+    try {
+      const user = JSON.parse(userStr);
+      const hasAccess = user.is_admin || (
+        Array.isArray(user.authorized_documents) && (
+          user.authorized_documents.includes('إدارة الفروع والوكلاء') ||
+          user.authorized_documents.includes('إدارة الموظفين') ||
+          user.authorized_documents.includes('المحاسب المالي')
+        )
+      );
+      if (!hasAccess) return;
+
+      const userId = user.id;
+      const res = await fetch(`${API_BASE_URL}/branches-agents/pending-counts?user_id=${userId}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminPendingCounts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching admin pending counts:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchPendingDocsCount();
+      const interval = setInterval(fetchPendingDocsCount, 30000);
+
+      const handleUpdate = () => {
+        fetchPendingDocsCount();
+      };
+      window.addEventListener('documentRequestsUpdated', handleUpdate);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('documentRequestsUpdated', handleUpdate);
+      };
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (currentUserId && hasPendingCountsAccess) {
+      fetchAdminPendingCounts();
+      const interval = setInterval(fetchAdminPendingCounts, 30000);
+
+      const handleUpdate = () => {
+        fetchAdminPendingCounts();
+      };
+      window.addEventListener('adminPendingCountsUpdated', handleUpdate);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('adminPendingCountsUpdated', handleUpdate);
+      };
+    }
+  }, [currentUserId, hasPendingCountsAccess]);
 
   useEffect(() => {
     const html = document.documentElement
@@ -979,7 +1174,7 @@ export default function App() {
 
   const getMenuSectionsSafely = () => {
     try {
-      return createMenuSections(authorizedDocuments, isAdmin, branchAgentId, currentUserId);
+      return createMenuSections(authorizedDocuments, isAdmin, branchAgentId, currentUserId, pendingDocsCount, adminPendingCounts);
     } catch (e) {
       console.error('Error creating menu sections:', e);
       return [];
