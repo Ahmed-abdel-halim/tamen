@@ -472,6 +472,10 @@ export default function EditInsuranceDocument() {
   const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
   const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
 
+  const selectedVehicleType = vehicleTypes.find(vt => vt.id.toString() === formData.vehicle_type_id);
+  const selectedBrand = selectedVehicleType ? selectedVehicleType.brand : '';
+  const uniqueBrands = Array.from(new Set(vehicleTypes.map(vt => vt.brand))).sort();
+
   useEffect(() => {
     if (isMandatoryInsurance) {
       fetchEidcVehicleTypes();
@@ -1900,19 +1904,22 @@ export default function EditInsuranceDocument() {
                       {formErrors.plate_number_manual && <span className="error-message">{formErrors.plate_number_manual}</span>}
                     </div>
 
-                    <div className={`form-group ${formErrors.vehicle_type_id ? 'has-error' : ''}`}>
-                      <label>ماركة السيارة <span className="required">*</span></label>
-                      <select
-                        value={formData.vehicle_type_id}
-                        disabled={isSynced && isMandatoryInsurance}
-                        onChange={(e) => setFormData({ ...formData, vehicle_type_id: e.target.value })}
-                      >
-                        <option value="">-- اختر الماركة --</option>
-                        {Array.from(new Set(vehicleTypes.map(v => v.brand))).map(brand => (
-                          <option key={brand} value={vehicleTypes.find(v => v.brand === brand)?.id.toString()}>{brand}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <Combobox 
+                      label="نوع المركبة" 
+                      value={selectedBrand} 
+                      options={uniqueBrands} 
+                      onChange={(val) => {
+                        const firstOfType = vehicleTypes.find(vt => vt.brand === val);
+                        if (firstOfType) { 
+                          setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() }); 
+                        } else {
+                          setFormData({ ...formData, vehicle_type_id: '' }); 
+                        }
+                      }} 
+                      error={formErrors.vehicle_type_id}
+                      disabled={isSynced && isMandatoryInsurance}
+                      placeholder="اختر نوع المركبة..."
+                    />
 
                     {!isMandatoryInsurance && (
                       <div className={`form-group ${formErrors.vehicle_type_id ? 'has-error' : ''}`}>

@@ -123,7 +123,8 @@ const Combobox = ({
   onChange, 
   error, 
   placeholder = "اختر من القائمة...",
-  type = "text"
+  type = "text",
+  disabled = false
 }: { 
   label: string, 
   value: string, 
@@ -131,7 +132,8 @@ const Combobox = ({
   onChange: (val: string) => void, 
   error?: string,
   placeholder?: string,
-  type?: string
+  type?: string,
+  disabled?: boolean
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isManual, setIsManual] = useState(false);
@@ -161,12 +163,13 @@ const Combobox = ({
             ref={inputRef}
             type={type}
             value={value}
+            disabled={disabled}
             onChange={(e) => {
               onChange(e.target.value);
               if (e.target.value === "") setIsManual(true);
             }}
-            onFocus={() => !isManual && setIsOpen(true)}
-            onClick={() => !isManual && setIsOpen(true)}
+            onFocus={() => !isManual && !disabled && setIsOpen(true)}
+            onClick={() => !isManual && !disabled && setIsOpen(true)}
             placeholder={isManual ? "أدخل القيمة الجديدة..." : placeholder}
             autoComplete="off"
           />
@@ -174,7 +177,7 @@ const Combobox = ({
             <i 
               className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} 
               style={{ position: 'absolute', left: '10px', cursor: 'pointer', color: '#64748b' }}
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={() => !disabled && setIsOpen(!isOpen)}
             ></i>
           ) : (
             <i 
@@ -182,6 +185,7 @@ const Combobox = ({
               style={{ position: 'absolute', left: '10px', cursor: 'pointer', color: '#2563eb', fontSize: '0.8rem' }}
               title="العودة للقائمة"
               onClick={() => {
+                if (disabled) return;
                 setIsManual(false);
                 setIsOpen(true);
                 onChange("");
@@ -315,9 +319,7 @@ export default function CreateInsuranceDocument() {
   const [_showPlateDropdown, setShowPlateDropdown] = useState(false);
   const plateDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [vehicleTypeSearch, setVehicleTypeSearch] = useState("");
-  const [showVehicleTypeDropdown, setShowVehicleTypeDropdown] = useState(false);
-  const vehicleTypeDropdownRef = useRef<HTMLDivElement>(null);
+
   // const [newVehicleTypeBrand, setNewVehicleTypeBrand] = useState("");
   // const [newVehicleTypeCategory, setNewVehicleTypeCategory] = useState("");
   // const [useCustomVehicleTypeBrand, setUseCustomVehicleTypeBrand] = useState(false);
@@ -806,9 +808,7 @@ export default function CreateInsuranceDocument() {
       if (plateDropdownRef.current && !plateDropdownRef.current.contains(event.target as Node)) {
         setShowPlateDropdown(false);
       }
-      if (vehicleTypeDropdownRef.current && !vehicleTypeDropdownRef.current.contains(event.target as Node)) {
-        setShowVehicleTypeDropdown(false);
-      }
+
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
         setShowCategoryDropdown(false);
       }
@@ -2028,7 +2028,6 @@ export default function CreateInsuranceDocument() {
 
   // الحصول على قائمة فريدة من العلامات التجارية
   const uniqueBrands = Array.from(new Set(vehicleTypes.map(vt => vt.brand)))
-    .filter(brand => brand.toLowerCase().includes(vehicleTypeSearch.toLowerCase()))
     .sort();
 
   const selectedVehicleType = vehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
@@ -2905,32 +2904,23 @@ export default function CreateInsuranceDocument() {
                     />
                   </div>
 
-                  <div className="form-group relative" ref={vehicleTypeDropdownRef} style={{ position: 'relative' }}>
-                    <label>ماركة السيارة <span className="required">*</span></label>
-                    <div className={`searchable-select ${formErrors.vehicle_type_id ? 'has-error' : ''}`} onClick={() => setShowVehicleTypeDropdown(!showVehicleTypeDropdown)}>
-                      {formErrors.vehicle_type_id ? (
-                        <span className="error-message">{formErrors.vehicle_type_id}</span>
-                      ) : (
-                        <label>ماركة السيارة <span className="required">*</span></label>
-                      )}
-                      <div className="select-display">{selectedBrand || 'اختر الماركة...'}</div>
-                      <i className={`fa-solid fa-chevron-${showVehicleTypeDropdown ? 'up' : 'down'}`}></i>
-                    </div>
-                    {showVehicleTypeDropdown && (
-                      <div className="select-dropdown animate-fade-in">
-                        <div className="select-search"><input type="text" placeholder="بحث..." value={vehicleTypeSearch} onChange={(e) => setVehicleTypeSearch(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus /></div>
-                        <div className="select-options">
-                          {uniqueBrands.map(brand => (
-                            <div key={brand} className="select-option" onClick={() => {
-                              const firstOfType = vehicleTypes.find(vt => vt.brand === brand);
-                              if (firstOfType) { setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() }); setSelectedCategory(firstOfType.category); }
-                              setShowVehicleTypeDropdown(false);
-                            }}>{brand}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <Combobox 
+                    label="نوع المركبة" 
+                    value={selectedBrand} 
+                    options={uniqueBrands} 
+                    onChange={(val) => {
+                      const firstOfType = vehicleTypes.find(vt => vt.brand === val);
+                      if (firstOfType) { 
+                        setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() }); 
+                        setSelectedCategory(firstOfType.category); 
+                      } else {
+                        setFormData({ ...formData, vehicle_type_id: '' }); 
+                        setSelectedCategory(''); 
+                      }
+                    }} 
+                    error={formErrors.vehicle_type_id}
+                    placeholder="اختر نوع المركبة..."
+                  />
 
                   {!isMandatoryInsurance && (
                     <div className="form-group">
