@@ -166,9 +166,21 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
     setDeleting(true);
     try {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
+
+      const headers: HeadersInit = { 'Accept': 'application/json' };
+      if (userId) {
+        headers['X-User-Id'] = userId.toString();
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/insurance-documents/${showDeleteModal.id}`, {
         method: 'DELETE',
-        headers: { 'Accept': 'application/json' }
+        headers
       });
 
       if (!res.ok) {
@@ -324,7 +336,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
               إضافة وثيقة
             </button>
           )}
-          {!isArchive && (
+          {!isArchive && isAdmin && (
             <button
               className="primary add-user-btn"
               onClick={handleGlobalSync}
