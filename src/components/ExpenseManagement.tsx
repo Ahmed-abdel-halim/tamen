@@ -263,7 +263,7 @@ export default function ExpenseManagement({
           }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="main-border">
           <table class="header-table">
             <tr>
@@ -379,7 +379,7 @@ export default function ExpenseManagement({
           @media print { .no-print { display: none; } }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="header">
           <div><h1>شركة المدار الليبي للتأمين</h1><p>${title}</p></div>
           <img src="/img/logo.png" style="height: 60px;">
@@ -471,7 +471,7 @@ export default function ExpenseManagement({
           .footer-meta { position: absolute; bottom: 20px; left: 20px; right: 20px; text-align: center; font-size: 10px; color: #666; border-top: 2px solid #000; padding-top: 10px; }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="main-border">
           <table class="header-table">
             <tr>

@@ -1076,7 +1076,7 @@ export default function TreasuryAndBanksPage() {
           .footer-note { font-size: 10px; color: #64748b; text-align: center; margin-top: 40px; }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="voucher-card">
           <div class="header-box">
             <div style="display: flex; align-items: center; gap: 15px;">
@@ -1276,7 +1276,7 @@ export default function TreasuryAndBanksPage() {
           .footer-note { font-size: 10px; color: #64748b; text-align: center; margin-top: 40px; }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="voucher-card">
           <div class="header-box">
             <div style="display: flex; align-items: center; gap: 15px;">

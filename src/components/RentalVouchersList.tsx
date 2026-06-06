@@ -290,7 +290,7 @@ export default function RentalVouchersList() {
             .footer-meta { position: absolute; bottom: 20px; left: 20px; right: 20px; text-align: center; font-size: 10px; color: #666; border-top: 2px solid #000; padding-top: 10px; }
           </style>
         </head>
-        <body onload="window.print(); window.close();">
+        <body onload="window.print(); window.onafterprint = () => window.close();">
           <div class="main-border">
             <table class="header-table">
               <tr>

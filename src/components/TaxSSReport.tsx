@@ -226,7 +226,7 @@ export function TaxSSReport({ type }: { type: 'tax' | 'social_security' }) {
           }
         </style>
       </head>
-      <body onload="window.print(); window.close();">
+      <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="header">
           <div class="header-left" style="text-align: right; font-size: 13px; color: #4a5568;">
             التاريخ: ${new Date().toLocaleDateString('ar-LY')}<br/>
