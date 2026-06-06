@@ -627,7 +627,7 @@ export default function CreateInsuranceDocument() {
     if (missingFields.length > 0) {
       setLoadingInquiry(false);
       if (showErrors) {
-        showToast(`يرجى إكمال البيانات التالية لاحتساب القسط: ${missingFields.join('، ')}`, 'warning');
+        showToast(`يرجى إكمال البيانات التالية لاحتساب القسط: ${missingFields.join('، ')}`, 'error');
       }
       return;
     }
