@@ -557,7 +557,9 @@ export default function CreateInsuranceDocument() {
       formData.eidc_vehicle_type_id &&
       formData.eidc_vehicle_spec_id &&
       formData.plate_number_manual &&
-      formData.plate_number_manual.trim().length >= 2;
+      formData.plate_number_manual.trim().length >= 2 &&
+      formData.color &&
+      formData.year;
 
     if (shouldInquire) {
       const handler = setTimeout(() => {
@@ -580,6 +582,8 @@ export default function CreateInsuranceDocument() {
     formData.phone,
     formData.nid_passport,
     formData.insured_name,
+    formData.color,
+    formData.year,
     isMandatoryInsurance
   ]);
 
@@ -616,7 +620,7 @@ export default function CreateInsuranceDocument() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const fromNoonOf = getLocalDateString(tomorrow);
 
-      if (!formData.phone || !formData.nid_passport || !formData.insured_name) {
+      if (!formData.phone || !formData.nid_passport || !formData.insured_name || !formData.color || !formData.year) {
         setLoadingInquiry(false);
         return;
       }
