@@ -45,7 +45,15 @@ export default function ViewClaim() {
   }, [id]);
 
   const handleDetailChange = (key: string, value: any) => {
-    setTransferDetails({ ...transferDetails, [key]: value });
+    setTransferDetails((prev: any) => {
+      const updated = { ...prev, [key]: value };
+      if (key === 'compensation_value' || key === 'additional_expenses') {
+        const comp = Number(key === 'compensation_value' ? value : updated.compensation_value) || 0;
+        const add = Number(key === 'additional_expenses' ? value : updated.additional_expenses) || 0;
+        updated.financial_value = comp + add;
+      }
+      return updated;
+    });
   };
 
   const handleTransferSubmit = async (e: React.FormEvent) => {
@@ -324,11 +332,30 @@ export default function ViewClaim() {
         <div class="section">
           <div class="section-header">بيانات الوثيقة المربوطة</div>
           <div class="data-grid">
-            <div class="data-item"><span class="label">رقم الوثيقة:</span> <span class="value">${claim.document?.insurance_number || '---'}</span></div>
-            <div class="data-item"><span class="label">اسم المؤمن له:</span> <span class="value">${claim.document?.insured_name || '---'}</span></div>
-            <div class="data-item"><span class="label">تغطية الوثيقة:</span> <span class="value">${claim.document_coverage || '---'}</span></div>
+            <div class="data-item"><span class="label">رقم الوثيقة:</span> <span class="value">${claim.document?.insurance_number || claim.document_manual_data?.insurance_number || '---'}</span></div>
+            <div class="data-item"><span class="label">اسم المؤمن له:</span> <span class="value">${claim.document?.insured_name || claim.document_manual_data?.insured_name || '---'}</span></div>
+            <div class="data-item"><span class="label">تغطية الوثيقة:</span> <span class="value">${claim.document_coverage || claim.document_manual_data?.document_coverage || '---'}</span></div>
           </div>
         </div>
+
+        ${claim.additional_documents && claim.additional_documents.length > 0 ? `
+        <div class="section">
+          <div class="section-header">وثائق التأمين الإضافية</div>
+          ${claim.additional_documents.map((doc: any, index: number) => `
+            <div style="padding: 10px; border-bottom: ${index === claim.additional_documents.length - 1 ? 'none' : '1px dashed #e2e8f0'}">
+              <div style="font-weight: 800; margin-bottom: 5px; color: #1e293b;">وثيقة إضافية #${index + 1}</div>
+              <div class="data-grid">
+                <div class="data-item"><span class="label">رقم الوثيقة:</span> <span class="value">${doc.insurance_number || '---'}</span></div>
+                <div class="data-item"><span class="label">اسم المؤمن له:</span> <span class="value">${doc.insured_name || '---'}</span></div>
+                <div class="data-item"><span class="label">نوع السيارة:</span> <span class="value">${doc.vehicle_type || '---'}</span></div>
+                <div class="data-item"><span class="label">رقم اللوحة:</span> <span class="value">${doc.plate_number || '---'}</span></div>
+                <div class="data-item"><span class="label">تاريخ الإصدار:</span> <span class="value">${doc.issue_date || '---'}</span></div>
+                <div class="data-item"><span class="label">تاريخ الانتهاء:</span> <span class="value">${doc.end_date || '---'}</span></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
 
         ${claim.transfers && claim.transfers.length > 0 ? `
           <div class="section">
@@ -451,8 +478,21 @@ export default function ViewClaim() {
         return (
           <>
             <div className="field-group"><label>رقم الكتاب</label><input type="text" onChange={e => handleDetailChange('book_number', e.target.value)} /></div>
-            <div className="field-group"><label>القيمة المالية</label><input type="number" onChange={e => handleDetailChange('financial_value', e.target.value)} /></div>
-            <div className="field-group"><label>اسم المستلم</label><input type="text" onChange={e => handleDetailChange('recipient_name', e.target.value)} /></div>
+            <div className="field-group">
+              <label>طريقة السداد</label>
+              <select onChange={e => handleDetailChange('payment_method', e.target.value)}>
+                <option value="">اختر طريقة السداد...</option>
+                <option value="خصم من وديعة">خصم من وديعة</option>
+                <option value="شيك (صك)">شيك (صك)</option>
+                <option value="كاش">كاش</option>
+                <option value="حوالة مصرفية">حوالة مصرفية</option>
+              </select>
+            </div>
+            <div className="field-group"><label>رقم المستند المالي (صك-حوالة)</label><input type="text" onChange={e => handleDetailChange('document_number', e.target.value)} /></div>
+            <div className="field-group"><label>اسم مستلم التعويض</label><input type="text" onChange={e => handleDetailChange('recipient_name', e.target.value)} /></div>
+            <div className="field-group"><label>قيمة التعويض</label><input type="number" step="any" onChange={e => handleDetailChange('compensation_value', Number(e.target.value))} /></div>
+            <div className="field-group"><label>مصاريف إضافية (إدارية - ضرائب - إلخ)</label><input type="number" step="any" onChange={e => handleDetailChange('additional_expenses', Number(e.target.value))} /></div>
+            <div className="field-group"><label>إجمالي القيمة المسددة</label><input type="number" step="any" value={transferDetails.financial_value || ''} readOnly /></div>
             <div className="field-group full"><label>إثبات القيمة (صورة)</label><input type="file" onChange={e => handleDetailChange('financial_value_image', e.target.files?.[0])} /></div>
           </>
         );
@@ -610,6 +650,10 @@ export default function ViewClaim() {
               <div className="detail-item">
                 <span className="label">تاريخ الحادث</span>
                 <span className="value">{claim.accident_date}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">نوع الحادث</span>
+                <span className="value">{claim.accident_type || '---'}</span>
               </div>
               <div className="detail-item">
                 <span className="label">الرقم الإشاري</span>
@@ -818,22 +862,75 @@ export default function ViewClaim() {
             <div className="details-grid">
               <div className="detail-item">
                 <span className="label">رقم الوثيقة</span>
-                <span className="value text-primary fw-bold">{claim.document?.insurance_number || 'غير متوفر'}</span>
+                <span className="value text-primary fw-bold">{claim.document?.insurance_number || claim.document_manual_data?.insurance_number || 'غير متوفر'}</span>
               </div>
               <div className="detail-item">
                 <span className="label">تغطية الوثيقة</span>
-                <span className="value">{claim.document_coverage || '---'}</span>
+                <span className="value">{claim.document_coverage || claim.document_manual_data?.document_coverage || '---'}</span>
               </div>
               <div className="detail-item">
                 <span className="label">اسم المؤمن له</span>
-                <span className="value">{claim.document?.insured_name || '---'}</span>
+                <span className="value">{claim.document?.insured_name || claim.document_manual_data?.insured_name || '---'}</span>
               </div>
               <div className="detail-item">
                 <span className="label">تاريخ الإصدار</span>
-                <span className="value">{claim.document?.issue_date ? new Date(claim.document.issue_date).toLocaleDateString('ar-EG') : '---'}</span>
+                <span className="value">
+                  {claim.document?.issue_date 
+                    ? new Date(claim.document.issue_date).toLocaleDateString('ar-EG') 
+                    : (claim.document_manual_data?.issue_date 
+                        ? new Date(claim.document_manual_data.issue_date).toLocaleDateString('ar-EG') 
+                        : '---')}
+                </span>
               </div>
             </div>
           </section>
+
+          {/* Section 3.1: Additional Documents Info */}
+          {claim.additional_documents && claim.additional_documents.length > 0 && (
+            <section className="dashboard-card highlight-card" style={{ borderRightColor: '#ef4444' }}>
+              <div className="card-header">
+                <i className="fa-solid fa-file-invoice text-danger"></i>
+                <h3>وثائق التأمين الإضافية المرفقة</h3>
+              </div>
+              {claim.additional_documents.map((doc: any, index: number) => (
+                <div key={index} className="additional-doc-item" style={{ marginBottom: index === claim.additional_documents.length - 1 ? 0 : '16px', borderBottom: index === claim.additional_documents.length - 1 ? 'none' : '1px dashed var(--border)', paddingBottom: index === claim.additional_documents.length - 1 ? 0 : '16px' }}>
+                  <h5 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '8px' }}>وثيقة إضافية #{index + 1}</h5>
+                  <div className="details-grid">
+                    <div className="detail-item">
+                      <span className="label">رقم الوثيقة</span>
+                      <span className="value text-primary fw-bold">{doc.insurance_number || 'غير متوفر'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">اسم المؤمن له</span>
+                      <span className="value">{doc.insured_name || '---'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">نوع السيارة</span>
+                      <span className="value">{doc.vehicle_type || '---'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">رقم اللوحة المعدنية</span>
+                      <span className="value">{doc.plate_number || '---'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">تاريخ الإصدار</span>
+                      <span className="value">{doc.issue_date ? new Date(doc.issue_date).toLocaleDateString('ar-EG') : '---'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">تاريخ الانتهاء</span>
+                      <span className="value">{doc.end_date ? new Date(doc.end_date).toLocaleDateString('ar-EG') : '---'}</span>
+                    </div>
+                    {doc.notes && (
+                      <div className="detail-item" style={{ gridColumn: 'span 3' }}>
+                        <span className="label">ملاحظات</span>
+                        <span className="value">{doc.notes}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
 
           {/* Section 4: Transfer History (Timeline) */}
           <section className="dashboard-card timeline-card">

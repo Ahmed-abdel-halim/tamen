@@ -147,12 +147,17 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [insuranceNumber, setInsuranceNumber] = useState('');
   const [documentData, setDocumentData] = useState<any>(null);
-  const [documentCoverage] = useState(claim?.document_coverage || '');
 
-  const [documentManualData, setDocumentManualData] = useState<any>(claim?.document_manual_data || {
-    insurance_number: '', issue_date: '', vehicle_type: '', plate_number: '',
-    insured_name: '', end_date: '', year: '', chassis_number: '',
-    purpose: '', insurance_type: '', document_coverage: '', phone: '', notes: ''
+  const [documentManualData, setDocumentManualData] = useState<any>(() => {
+    const data = claim?.document_manual_data || {
+      insurance_number: '', issue_date: '', vehicle_type: '', plate_number: '',
+      insured_name: '', end_date: '', year: '', chassis_number: '',
+      purpose: '', insurance_type: '', document_coverage: '', phone: '', notes: ''
+    };
+    if (claim?.document_coverage && !data.document_coverage) {
+      data.document_coverage = claim.document_coverage;
+    }
+    return data;
   });
   const [additionalDocuments, setAdditionalDocuments] = useState<any[]>(claim?.additional_documents || []);
 
@@ -164,6 +169,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     admin_number: claim?.admin_number || '',
     claim_date: claim?.claim_date || new Date().toISOString().split('T')[0],
     accident_date: claim?.accident_date || '',
+    accident_type: claim?.accident_type || '',
     accident_location: claim?.accident_location || '',
     accident_time: claim?.accident_time || '',
     has_fatalities: claim?.has_fatalities || false,
@@ -409,7 +415,8 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
         chassis_number: data.chassis_number || '',
         purpose: data.purpose_of_license || data.purpose || '',
         insurance_type: data.insurance_type || documentType || '',
-        phone: data.phone_number || data.phone || ''
+        phone: data.phone_number || data.phone || '',
+        document_coverage: data.insurance_type || documentType || ''
       });
 
       showToast('تم العثور على الوثيقة بنجاح', 'success');
@@ -496,7 +503,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
       });
       formData.append('document_type', documentType);
       if (documentData) formData.append('document_id', documentData.id);
-      formData.append('document_coverage', documentCoverage);
+      formData.append('document_coverage', documentManualData.document_coverage || '');
 
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (user.id && !claim) formData.append('branch_agent_id', user.branch_agent_id || user.id);
@@ -1034,16 +1041,38 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                   />
                 </div>
 
+                <div className="field-group">
+                  <label className="premium-label">نوع الحادث</label>
+                  <input type="text" list="accident-types" className="premium-field"
+                    value={claimData.accident_type}
+                    onChange={(e) => setClaimData({ ...claimData, accident_type: e.target.value })}
+                    placeholder="اختر أو اكتب نوع الحادث..."
+                  />
+                  <datalist id="accident-types">
+                    <option value="تصادم مركبات" />
+                    <option value="انقلاب" />
+                    <option value="حريق" />
+                    <option value="سرقة" />
+                  </datalist>
+                </div>
+
                 <div className="field-group" style={{ gridColumn: 'span 2' }}>
                   <label className="premium-label">نوع الأضرار</label>
                   <div className="d-flex gap-3 align-items-center p-2 rounded-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)', minHeight: '44px' }}>
-                    {['بدني', 'مادي', 'معنوي'].map(type => (
+                    {['بدني', 'مادي', 'وفاة', 'معنوي', 'كلي', 'جزئي'].map(type => (
                       <label key={type} className="m-0 d-flex align-items-center gap-2 cursor-pointer px-3 py-1 rounded-pill"
                         style={{ background: isDamageTypeSelected(type) ? 'var(--accent-cyan)' : 'transparent', color: isDamageTypeSelected(type) ? 'white' : 'inherit', transition: 'all 0.2s' }}>
                         <input type="checkbox" className="form-check-input m-0 d-none"
                           checked={isDamageTypeSelected(type)}
                           onChange={() => toggleDamageType(type)} />
-                        <i className={`fa-solid ${type === 'بدني' ? 'fa-user-injured' : type === 'مادي' ? 'fa-car-burst' : 'fa-brain'} ${isDamageTypeSelected(type) ? 'text-white' : 'var(--accent-cyan)'}`}></i>
+                        <i className={`fa-solid ${
+                          type === 'بدني' ? 'fa-user-injured' :
+                          type === 'مادي' ? 'fa-car-burst' :
+                          type === 'وفاة' ? 'fa-skull-crossbones' :
+                          type === 'معنوي' ? 'fa-brain' :
+                          type === 'كلي' ? 'fa-circle-xmark' :
+                          'fa-screwdriver-wrench'
+                        } ${isDamageTypeSelected(type) ? 'text-white' : 'var(--accent-cyan)'}`}></i>
                         <span className="fw-bold small">{type}</span>
                       </label>
                     ))}
