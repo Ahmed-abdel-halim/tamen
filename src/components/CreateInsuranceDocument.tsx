@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
@@ -113,6 +113,51 @@ const VEHICLE_WEIGHTS = [
   '500 كيلو', '1 طن', '2 طن', '3 طن', '4 طن', '5 طن', '6 طن', '7 طن', '8 طن', '9 طن', '10 طن'
 ];
 
+// قائمة الماركات الأكثر اختياراً في ليبيا بالترتيب
+const POPULAR_BRANDS = [
+  'هونداي',
+  'تويوتا',
+  'كيا',
+  'مرسيدس',
+  'بي إم دبليو',
+  'نيسان',
+  'جيب',
+  'بيجو',
+  'أودي',
+  'هوندا',
+  'سيتروين',
+  'إيفيكو (Iveco)',
+  'دايو',
+  'داف (DAF)',
+  'جاكوار',
+  'جي ام سي (GMC)'
+];
+
+// دالة لتوحيد وتصحيح أسماء الماركات وتجميع المكرر منها
+const normalizeBrand = (brand: string): string => {
+  if (!brand) return '';
+  const b = brand.trim().toLowerCase();
+  
+  if (b.includes('هيونداي') || b.includes('هونداي') || b.includes('هواندي')) return 'هونداي';
+  if (b.includes('تويوتا') || b.includes('تيوتا') || b.includes('تايوتا')) return 'تويوتا';
+  if (b.includes('كيا')) return 'كيا';
+  if (b.includes('مرسيدس')) return 'مرسيدس';
+  if (b.includes('بي إم دبليو') || b.includes('بي ام دبليو') || b.includes('بى ام دبليو') || b.includes('bmw')) return 'بي إم دبليو';
+  if (b.includes('نيسان')) return 'نيسان';
+  if (b.includes('جيب')) return 'جيب';
+  if (b.includes('بيجو')) return 'بيجو';
+  if (b.includes('أودي') || b.includes('اودي')) return 'أودي';
+  if (b.includes('هوندا')) return 'هوندا';
+  if (b.includes('ستيروين') || b.includes('سيتروين') || b.includes('شتروين') || b.includes('ستروين')) return 'سيتروين';
+  if (b.includes('افيكو') || b.includes('ايفكو') || b.includes('ايفيكو') || b.includes('ايقكو')) return 'إيفيكو (Iveco)';
+  if (b.includes('دايو') || b.includes('داوو') || b.includes('داو لاسيتس') || b.includes('داو كالوس')) return 'دايو';
+  if (b.includes('داف') || b.includes('daf')) return 'داف (DAF)';
+  if (b.includes('جاكوار') || b.includes('جكوار')) return 'جاكوار';
+  if (b.includes('جمس') || b.includes('جي ام سي') || b.includes('gmc')) return 'جي ام سي (GMC)';
+  
+  return brand.trim();
+};
+
 /**
  * مكون Combobox يسمح بالاختيار من قائمة أو إدخال قيمة جديدة
  */
@@ -195,19 +240,33 @@ const Combobox = ({
         </div>
         {isOpen && (
           <div className="combobox-dropdown animate-fade-in">
-            {options.map((opt, i) => (
-              <div 
-                key={i} 
-                className="combobox-option"
-                onClick={() => {
-                  onChange(opt);
-                  setIsManual(false);
-                  setIsOpen(false);
-                }}
-              >
-                {opt}
-              </div>
-            ))}
+            {options.map((opt, i) => {
+              const isHeader = opt.startsWith('--') && opt.endsWith('--');
+              return (
+                <div 
+                  key={i} 
+                  className={`combobox-option ${isHeader ? 'combobox-header-option' : ''}`}
+                  style={isHeader ? { 
+                    pointerEvents: 'none', 
+                    background: 'var(--table-header, #f8fafc)', 
+                    color: 'var(--muted, #64748b)', 
+                    fontSize: '0.85rem', 
+                    fontWeight: 'bold',
+                    padding: '6px 12px',
+                    borderBottom: '1px solid var(--border)',
+                    borderTop: i > 0 ? '1px solid var(--border)' : 'none'
+                  } : {}}
+                  onClick={() => {
+                    if (isHeader) return;
+                    onChange(opt);
+                    setIsManual(false);
+                    setIsOpen(false);
+                  }}
+                >
+                  {opt}
+                </div>
+              );
+            })}
             <div 
               className="combobox-option add-new"
               onClick={() => {
@@ -2069,17 +2128,36 @@ export default function CreateInsuranceDocument() {
     p.city.name_en.toLowerCase().includes(plateSearch.toLowerCase())
   ); */
 
-  // الحصول على قائمة فريدة من العلامات التجارية
-  const uniqueBrands = Array.from(new Set(vehicleTypes.map(vt => vt.brand)))
-    .sort();
+  // تجميع وتصحيح وتصفية ماركات السيارات لتسهيل الاختيار ودعم المظهر
+  const normalizedVehicleTypes = useMemo(() => {
+    return vehicleTypes.map(vt => ({
+      ...vt,
+      normalizedBrand: normalizeBrand(vt.brand)
+    }));
+  }, [vehicleTypes]);
 
-  const selectedVehicleType = vehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
-  const selectedBrand = selectedVehicleType ? selectedVehicleType.brand : '';
+  const uniqueBrands = useMemo(() => {
+    const brandsSet = new Set(normalizedVehicleTypes.map(vt => vt.normalizedBrand));
+    brandsSet.delete('');
+    const allBrands = Array.from(brandsSet);
+    const popular = POPULAR_BRANDS.filter(pb => brandsSet.has(pb));
+    const others = allBrands.filter(b => !POPULAR_BRANDS.includes(b)).sort();
+
+    return [
+      '-- الأكثر اختياراً --',
+      ...popular,
+      '-- باقي الماركات --',
+      ...others
+    ];
+  }, [normalizedVehicleTypes]);
+
+  const selectedVehicleType = normalizedVehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
+  const selectedBrand = selectedVehicleType ? selectedVehicleType.normalizedBrand : '';
   const [_selectedCategory, setSelectedCategory] = useState('');
 
   // عرض الفئات الخاصة بالعلامة التجارية المختارة
   const filteredCategories = selectedBrand
-    ? vehicleTypes.filter(vt => vt.brand === selectedBrand)
+    ? normalizedVehicleTypes.filter(vt => vt.normalizedBrand === selectedBrand)
     : [];
 
   useEffect(() => {
@@ -2674,6 +2752,44 @@ export default function CreateInsuranceDocument() {
                 @keyframes slideDown {
                   from { opacity: 0; transform: translateY(-5px); }
                   to { opacity: 1; transform: translateY(0); }
+                }                .combobox-container {
+                  position: relative;
+                  width: 100%;
+                }
+                .combobox-input-wrapper {
+                  position: relative;
+                  display: flex;
+                  align-items: center;
+                }
+                .combobox-dropdown {
+                  position: absolute;
+                  top: 100%;
+                  left: 0;
+                  right: 0;
+                  background: var(--panel, #ffffff);
+                  border: 1.5px solid var(--border, #cbd5e1);
+                  border-radius: 8px;
+                  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                  z-index: 1000;
+                  max-height: 250px;
+                  overflow-y: auto;
+                }
+                .combobox-option {
+                  padding: 10px 15px;
+                  cursor: pointer;
+                  font-size: 0.95rem;
+                  font-weight: 600;
+                  color: var(--text, #334155);
+                  transition: all 0.2s;
+                }
+                .combobox-option:hover {
+                  background: var(--input-bg, #f1f5f9);
+                  color: #2563eb;
+                }
+                .combobox-option.add-new {
+                  color: #2563eb;
+                  border-top: 1px solid var(--border, #e2e8f0);
+                  font-style: italic;
                 }
 
 
@@ -2947,7 +3063,7 @@ export default function CreateInsuranceDocument() {
                     value={selectedBrand} 
                     options={uniqueBrands} 
                     onChange={(val) => {
-                      const firstOfType = vehicleTypes.find(vt => vt.brand === val);
+                      const firstOfType = normalizedVehicleTypes.find(vt => vt.normalizedBrand === val);
                       if (firstOfType) { 
                         setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() }); 
                         setSelectedCategory(firstOfType.category); 
