@@ -254,6 +254,9 @@ export default function ClaimsList() {
 
     const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
 
+    const qrData = `تقرير المطالبات التفصيلي - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nالفترة: ${dateText}\nعدد المطالبات: ${filteredClaims.length}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
+
     // Calculate totals dynamically
     let totalReserveLYD = 0;
     const currencySums: { [key: string]: number } = {};
@@ -326,20 +329,44 @@ export default function ClaimsList() {
             font-size: 10px;
             direction: rtl;
           }
-          .report-header {
-            text-align: center;
+          .report-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 10px;
           }
-          .report-header h2 {
+          .header-right {
+            width: 150px;
+            text-align: right;
+          }
+          .header-right .logo {
+            height: 60px;
+            width: auto;
+          }
+          .header-center {
+            text-align: center;
+            flex: 1;
+          }
+          .header-center h2 {
             margin: 0;
             font-size: 16px;
             font-weight: 900;
           }
-          .report-header h3 {
+          .header-center h3 {
             margin: 5px 0 0 0;
             font-size: 13px;
             font-weight: 700;
             color: #4b5563;
+          }
+          .header-left {
+            width: 150px;
+            text-align: left;
+          }
+          .header-left .qr-code {
+            height: 60px;
+            width: 60px;
           }
           .meta-info {
             display: flex;
@@ -409,9 +436,17 @@ export default function ClaimsList() {
         </style>
       </head>
       <body onload="setTimeout(() => { window.print(); }, 500);">
-        <div class="report-header">
-          <h2>شركة المدار الليبي للتأمين</h2>
-          <h3>إدارة المطالبات والحوادث - تقرير تفصيلي</h3>
+        <div class="report-header-container">
+          <div class="header-right">
+            <img src="/img/logo.png" class="logo" onerror="this.style.display='none'" />
+          </div>
+          <div class="header-center">
+            <h2>شركة المدار الليبي للتأمين</h2>
+            <h3>إدارة المطالبات والحوادث - تقرير تفصيلي</h3>
+          </div>
+          <div class="header-left">
+            <img src="${qrApiUrl}" class="qr-code" />
+          </div>
         </div>
 
         <div class="meta-info">
@@ -531,6 +566,9 @@ export default function ClaimsList() {
 
     const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
 
+    const qrData = `تقرير تعويضات الحوادث - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nالفترة: ${dateText}\nعدد الحالات: ${filteredClaims.length}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
+
     // Calculate totals dynamically
     let totalCompensation = 0;
     let totalAdditionalExpenses = 0;
@@ -566,20 +604,44 @@ export default function ClaimsList() {
             font-size: 10px;
             direction: rtl;
           }
-          .report-header {
-            text-align: center;
+          .report-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 10px;
           }
-          .report-header h2 {
+          .header-right {
+            width: 150px;
+            text-align: right;
+          }
+          .header-right .logo {
+            height: 60px;
+            width: auto;
+          }
+          .header-center {
+            text-align: center;
+            flex: 1;
+          }
+          .header-center h2 {
             margin: 0;
             font-size: 16px;
             font-weight: 900;
           }
-          .report-header h3 {
+          .header-center h3 {
             margin: 5px 0 0 0;
             font-size: 13px;
             font-weight: 700;
             color: #4b5563;
+          }
+          .header-left {
+            width: 150px;
+            text-align: left;
+          }
+          .header-left .qr-code {
+            height: 60px;
+            width: 60px;
           }
           .meta-info {
             display: flex;
@@ -649,9 +711,17 @@ export default function ClaimsList() {
         </style>
       </head>
       <body onload="setTimeout(() => { window.print(); }, 500);">
-        <div class="report-header">
-          <h2>شركة المدار الليبي للتأمين</h2>
-          <h3>تقرير تعويضات الحوادث</h3>
+        <div class="report-header-container">
+          <div class="header-right">
+            <img src="/img/logo.png" class="logo" onerror="this.style.display='none'" />
+          </div>
+          <div class="header-center">
+            <h2>شركة المدار الليبي للتأمين</h2>
+            <h3>تقرير تعويضات الحوادث</h3>
+          </div>
+          <div class="header-left">
+            <img src="${qrApiUrl}" class="qr-code" />
+          </div>
         </div>
 
         <div class="meta-info">
