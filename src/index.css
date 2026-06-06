@@ -15972,3 +15972,58 @@ input:checked + .slider:before {
   resize: none;
   margin-top: 8px;
 }
+
+/* Combobox Styles */
+.combobox-container {
+  position: relative;
+  width: 100%;
+}
+.combobox-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.combobox-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--panel, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.combobox-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text, #003173);
+}
+.combobox-option:hover {
+  background-color: var(--hover-bg, #f1f5f9);
+}
+.combobox-option.add-new {
+  color: var(--accent-cyan, #2563eb);
+  border-top: 1px solid var(--border, #e2e8f0);
+  font-style: italic;
+}
+
+/* Error Field Dark Mode Support */
+[data-theme='dark'] .form-group.has-error input,
+[data-theme='dark'] .form-group.has-error select,
+[data-theme='dark'] .form-group.has-error .select-display {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-color: #ef4444 !important;
+}
+
+/* Global Disabled Form Elements Support */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: var(--border) !important;
+  color: var(--muted) !important;
+  cursor: not-allowed;
+}

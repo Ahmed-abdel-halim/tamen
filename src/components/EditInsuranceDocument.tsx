@@ -204,7 +204,7 @@ const Combobox = ({
             onClick={() => !isManual && !disabled && setIsOpen(true)}
             placeholder={isManual ? "أدخل القيمة الجديدة..." : placeholder}
             autoComplete="off"
-            style={disabled ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
+            style={disabled ? { background: 'var(--border)', color: 'var(--muted)', cursor: 'not-allowed' } : {}}
           />
           {!disabled && (
             !isManual ? (

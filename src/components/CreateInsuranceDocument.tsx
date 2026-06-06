@@ -2675,41 +2675,7 @@ export default function CreateInsuranceDocument() {
                   from { opacity: 0; transform: translateY(-5px); }
                   to { opacity: 1; transform: translateY(0); }
                 }
-                .combobox-container {
-                  position: relative;
-                  width: 100%;
-                }
-                .combobox-input-wrapper {
-                  position: relative;
-                  display: flex;
-                  align-items: center;
-                }
-                .combobox-dropdown {
-                  position: absolute;
-                  top: 100%;
-                  left: 0;
-                  right: 0;
-                  background: white;
-                  border: 1px solid #cbd5e1;
-                  border-radius: 6px;
-                  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-                  z-index: 50;
-                  max-height: 200px;
-                  overflow-y: auto;
-                }
-                .combobox-option {
-                  padding: 8px 12px;
-                  cursor: pointer;
-                  font-weight: 600;
-                }
-                .combobox-option:hover {
-                  background-color: #f1f5f9;
-                }
-                .combobox-option.add-new {
-                  color: #2563eb;
-                  border-top: 1px solid #e2e8f0;
-                  font-style: italic;
-                }
+
 
                 .price-input-wrapper .currency {
                   font-size: 12px !important;
@@ -3119,7 +3085,7 @@ export default function CreateInsuranceDocument() {
                     </div>
                   )}
 
-                  <div className="span-4 modern-grid-3" style={{ background: '#f1f5f9', padding: '15px', borderRadius: '10px', marginTop: '10px' }}>
+                  <div className="span-4 modern-grid-3" style={{ background: 'var(--input-bg, #f1f5f9)', border: '1px solid var(--border, #e5e8f2)', padding: '15px', borderRadius: '10px', marginTop: '10px' }}>
                     <div className="form-group">
                       <label>نوع المركبة (هيئة) <span className="required">*</span></label>
                       <select 
