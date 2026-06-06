@@ -2235,7 +2235,7 @@ export default function CreateInsuranceDocument() {
     if (!formData.plate_number_manual || !formData.plate_number_manual.trim()) {
       errors.plate_number_manual = 'رقم اللوحة المعدنية مطلوب';
     }
-    if (!formData.vehicle_type_id) {
+    if (!isMandatoryInsurance && !formData.vehicle_type_id) {
       errors.vehicle_type_id = 'نوع السيارة مطلوب';
     }
     if (!formData.color || !formData.color.trim()) {
@@ -2279,10 +2279,12 @@ export default function CreateInsuranceDocument() {
       errors.email = 'البريد الإلكتروني مطلوب';
     }
 
-    if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
-      errors.whatsapp_number = 'رقم الواتساب مطلوب';
-    } else if (formData.whatsapp_number.length < 10) {
-      errors.whatsapp_number = 'رقم الواتساب يجب أن يكون 10 أرقام على الأقل';
+    if (!isMandatoryInsurance) {
+      if (!formData.whatsapp_number || !formData.whatsapp_number.trim()) {
+        errors.whatsapp_number = 'رقم الواتساب مطلوب';
+      } else if (formData.whatsapp_number.length < 10) {
+        errors.whatsapp_number = 'رقم الواتساب يجب أن يكون 10 أرقام على الأقل';
+      }
     }
 
     if (!formData.nationality || !formData.nationality.trim()) {
@@ -2298,14 +2300,16 @@ export default function CreateInsuranceDocument() {
     }
 
     // التحقق من الحقول التي تدعم الإدخال اليدوي
-    if (!formData.engine_number || !formData.engine_number.trim()) {
-      errors.engine_number = 'رقم المحرك مطلوب';
-    }
-    if (!formData.engine_cc || !formData.engine_cc.trim()) {
-      errors.engine_cc = 'سعة المحرك (CC) مطلوبة';
-    }
-    if (!formData.vehicle_weight || !formData.vehicle_weight.trim()) {
-      errors.vehicle_weight = 'وزن المركبة مطلوب';
+    if (!isMandatoryInsurance) {
+      if (!formData.engine_number || !formData.engine_number.trim()) {
+        errors.engine_number = 'رقم المحرك مطلوب';
+      }
+      if (!formData.engine_cc || !formData.engine_cc.trim()) {
+        errors.engine_cc = 'سعة المحرك (CC) مطلوبة';
+      }
+      if (!formData.vehicle_weight || !formData.vehicle_weight.trim()) {
+        errors.vehicle_weight = 'وزن المركبة مطلوب';
+      }
     }
 
     if (isMandatoryInsurance) {
@@ -2395,7 +2399,9 @@ export default function CreateInsuranceDocument() {
         load_capacity: loadCapacityValue,
         insured_name: formData.insured_name || null,
         phone: formData.phone ? formData.phone.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null,
-        whatsapp_number: formData.whatsapp_number ? formData.whatsapp_number.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null,
+        whatsapp_number: isMandatoryInsurance 
+          ? (formData.phone ? formData.phone.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null)
+          : (formData.whatsapp_number ? formData.whatsapp_number.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null),
         driving_license_number: formData.driving_license_number || null,
         premium: premiumValue,
         tax: eidcPremiumData ? eidcPremiumData.tax : 1.0,
@@ -2814,14 +2820,22 @@ export default function CreateInsuranceDocument() {
                     />
                   </div>
 
-                  <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
-                    {formErrors.whatsapp_number ? (
-                      <span className="error-message">{formErrors.whatsapp_number}</span>
-                    ) : (
-                      <label htmlFor="whatsapp_number">رقم الواتساب <span className="required">*</span></label>
-                    )}
-                    <input type="text" id="whatsapp_number" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} />
-                  </div>
+                  {!isMandatoryInsurance && (
+                    <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
+                      {formErrors.whatsapp_number ? (
+                        <span className="error-message">{formErrors.whatsapp_number}</span>
+                      ) : (
+                        <label htmlFor="whatsapp_number">رقم الواتساب <span className="required">*</span></label>
+                      )}
+                      <input 
+                        type="text" 
+                        id="whatsapp_number" 
+                        value={formData.whatsapp_number} 
+                        onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} 
+                        placeholder="09XXXXXXXX"
+                      />
+                    </div>
+                  )}
 
                   <Combobox 
                     label="العنوان التفصيلي" 
@@ -2918,16 +2932,18 @@ export default function CreateInsuranceDocument() {
                     )}
                   </div>
 
-                  <div className="form-group">
-                    <label>فئة السيارة <span className="required">*</span></label>
-                    <select value={formData.vehicle_type_id} onChange={(e) => {
-                      const vt = vehicleTypes.find(v => v.id.toString() === e.target.value);
-                      if (vt) { setFormData({ ...formData, vehicle_type_id: e.target.value }); setSelectedCategory(vt.category); }
-                    }} disabled={!selectedBrand}>
-                      <option value="">-- اختر الفئة --</option>
-                      {filteredCategories.map(vt => <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>)}
-                    </select>
-                  </div>
+                  {!isMandatoryInsurance && (
+                    <div className="form-group">
+                      <label>فئة السيارة <span className="required">*</span></label>
+                      <select value={formData.vehicle_type_id} onChange={(e) => {
+                        const vt = vehicleTypes.find(v => v.id.toString() === e.target.value);
+                        if (vt) { setFormData({ ...formData, vehicle_type_id: e.target.value }); setSelectedCategory(vt.category); }
+                      }} disabled={!selectedBrand}>
+                        <option value="">-- اختر الفئة --</option>
+                        {filteredCategories.map(vt => <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>)}
+                      </select>
+                    </div>
+                  )}
 
                   <div className={`form-group ${formErrors.chassis_number ? 'has-error' : ''}`}>
                     {formErrors.chassis_number ? (
@@ -2938,13 +2954,15 @@ export default function CreateInsuranceDocument() {
                     <input type="text" value={formData.chassis_number} onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })} />
                   </div>
 
-                  <Combobox 
-                    label="رقم المحرك" 
-                    value={formData.engine_number} 
-                    options={ENGINE_NUMBERS} 
-                    onChange={(val) => setFormData({ ...formData, engine_number: val })} 
-                    error={formErrors.engine_number}
-                  />
+                  {!isMandatoryInsurance && (
+                    <Combobox 
+                      label="رقم المحرك" 
+                      value={formData.engine_number} 
+                      options={ENGINE_NUMBERS} 
+                      onChange={(val) => setFormData({ ...formData, engine_number: val })} 
+                      error={formErrors.engine_number}
+                    />
+                  )}
 
                   <div className={`form-group ${formErrors.year ? 'has-error' : ''}`}>
                     {formErrors.year ? (
@@ -2991,13 +3009,15 @@ export default function CreateInsuranceDocument() {
                     type="text"
                   />
 
-                  <Combobox 
-                    label="سعة المحرك (CC)" 
-                    value={formData.engine_cc} 
-                    options={ENGINE_CC_LIST} 
-                    onChange={(val) => setFormData({ ...formData, engine_cc: val })} 
-                    error={formErrors.engine_cc}
-                  />
+                  {!isMandatoryInsurance && (
+                    <Combobox 
+                      label="سعة المحرك (CC)" 
+                      value={formData.engine_cc} 
+                      options={ENGINE_CC_LIST} 
+                      onChange={(val) => setFormData({ ...formData, engine_cc: val })} 
+                      error={formErrors.engine_cc}
+                    />
+                  )}
 
                   <Combobox 
                     label="عدد الركاب" 
@@ -3017,13 +3037,15 @@ export default function CreateInsuranceDocument() {
                     <input type="number" value={formData.load_capacity} onChange={(e) => setFormData({ ...formData, load_capacity: e.target.value })} />
                   </div>
 
-                  <Combobox 
-                    label="وزن المركبة" 
-                    value={formData.vehicle_weight} 
-                    options={VEHICLE_WEIGHTS} 
-                    onChange={(val) => setFormData({ ...formData, vehicle_weight: val })} 
-                    error={formErrors.vehicle_weight}
-                  />
+                  {!isMandatoryInsurance && (
+                    <Combobox 
+                      label="وزن المركبة" 
+                      value={formData.vehicle_weight} 
+                      options={VEHICLE_WEIGHTS} 
+                      onChange={(val) => setFormData({ ...formData, vehicle_weight: val })} 
+                      error={formErrors.vehicle_weight}
+                    />
+                  )}
 
                   <div className="grid-header">
                     <i className="fa-solid fa-calculator"></i> بيانات احتساب القسط والاشتراك (EIDC)

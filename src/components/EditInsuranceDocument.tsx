@@ -1549,7 +1549,7 @@ export default function EditInsuranceDocument() {
       errors.phone = 'رقم الهاتف مطلوب';
     }
     
-    if (!formData.whatsapp_number?.trim()) {
+    if (!isMandatoryInsurance && !formData.whatsapp_number?.trim()) {
       errors.whatsapp_number = 'رقم الواتساب مطلوب';
     }
     
@@ -1616,7 +1616,9 @@ export default function EditInsuranceDocument() {
           address: formData.address || null,
           email: formData.email || null,
           phone: formData.phone ? formData.phone.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null,
-          whatsapp_number: formData.whatsapp_number ? formData.whatsapp_number.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null,
+          whatsapp_number: isMandatoryInsurance 
+            ? (formData.phone ? formData.phone.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null)
+            : (formData.whatsapp_number ? formData.whatsapp_number.replace(/[\s\-\(\)\+]/g, '').replace(/^(00218|218)/, '0') : null),
           nationality: formData.nationality || null,
           nid_passport: formData.nid_passport || null,
           eidc_vehicle_type_id: formData.eidc_vehicle_type_id || null,
@@ -1852,11 +1854,13 @@ export default function EditInsuranceDocument() {
                       {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                     </div>
 
-                    <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
-                      <label>رقم الواتساب <span className="required">*</span></label>
-                      <input type="text" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} placeholder="09X XXX XXXX" />
-                      {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
-                    </div>
+                    {!isMandatoryInsurance && (
+                      <div className={`form-group ${formErrors.whatsapp_number ? 'has-error' : ''}`}>
+                        <label>رقم الواتساب <span className="required">*</span></label>
+                        <input type="text" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} placeholder="09X XXX XXXX" />
+                        {formErrors.whatsapp_number && <span className="error-message">{formErrors.whatsapp_number}</span>}
+                      </div>
+                    )}
 
                     <Combobox 
                       label="العنوان التفصيلي" 
@@ -1910,20 +1914,22 @@ export default function EditInsuranceDocument() {
                       </select>
                     </div>
 
-                    <div className={`form-group ${formErrors.vehicle_type_id ? 'has-error' : ''}`}>
-                      <label>فئة السيارة <span className="required">*</span></label>
-                      <select
-                        value={formData.vehicle_type_id}
-                        disabled={isSynced && isMandatoryInsurance}
-                        onChange={(e) => setFormData({ ...formData, vehicle_type_id: e.target.value })}
-                      >
-                        <option value="">-- اختر الفئة --</option>
-                        {vehicleTypes.filter(v => v.brand === vehicleTypes.find(vt => vt.id.toString() === formData.vehicle_type_id)?.brand).map(vt => (
-                          <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>
-                        ))}
-                      </select>
-                      {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
-                    </div>
+                    {!isMandatoryInsurance && (
+                      <div className={`form-group ${formErrors.vehicle_type_id ? 'has-error' : ''}`}>
+                        <label>فئة السيارة <span className="required">*</span></label>
+                        <select
+                          value={formData.vehicle_type_id}
+                          disabled={isSynced && isMandatoryInsurance}
+                          onChange={(e) => setFormData({ ...formData, vehicle_type_id: e.target.value })}
+                        >
+                          <option value="">-- اختر الفئة --</option>
+                          {vehicleTypes.filter(v => v.brand === vehicleTypes.find(vt => vt.id.toString() === formData.vehicle_type_id)?.brand).map(vt => (
+                            <option key={vt.id} value={vt.id.toString()}>{vt.category}</option>
+                          ))}
+                        </select>
+                        {formErrors.vehicle_type_id && <span className="error-message">{formErrors.vehicle_type_id}</span>}
+                      </div>
+                    )}
 
                     <div className={`form-group ${formErrors.chassis_number ? 'has-error' : ''}`}>
                       <label>رقم الهيكل <span className="required">*</span></label>
@@ -1936,14 +1942,16 @@ export default function EditInsuranceDocument() {
                       {formErrors.chassis_number && <span className="error-message">{formErrors.chassis_number}</span>}
                     </div>
 
-                    <Combobox 
-                      label="رقم المحرك" 
-                      value={formData.engine_number} 
-                      options={ENGINE_NUMBERS} 
-                      onChange={(val) => setFormData({ ...formData, engine_number: val })} 
-                      error={formErrors.engine_number}
-                      disabled={isSynced && isMandatoryInsurance}
-                    />
+                    {!isMandatoryInsurance && (
+                      <Combobox 
+                        label="رقم المحرك" 
+                        value={formData.engine_number} 
+                        options={ENGINE_NUMBERS} 
+                        onChange={(val) => setFormData({ ...formData, engine_number: val })} 
+                        error={formErrors.engine_number}
+                        disabled={isSynced && isMandatoryInsurance}
+                      />
+                    )}
 
                     <div className={`form-group ${formErrors.year ? 'has-error' : ''}`}>
                       <label>سنة الصنع <span className="required">*</span></label>
@@ -1999,14 +2007,16 @@ export default function EditInsuranceDocument() {
                       {formErrors.engine_power && <span className="error-message">{formErrors.engine_power}</span>}
                     </div>
 
-                    <Combobox 
-                      label="سعة المحرك (CC)" 
-                      value={formData.engine_cc} 
-                      options={ENGINE_CC_LIST} 
-                      onChange={(val) => setFormData({ ...formData, engine_cc: val })} 
-                      error={formErrors.engine_cc}
-                      disabled={isSynced && isMandatoryInsurance}
-                    />
+                    {!isMandatoryInsurance && (
+                      <Combobox 
+                        label="سعة المحرك (CC)" 
+                        value={formData.engine_cc} 
+                        options={ENGINE_CC_LIST} 
+                        onChange={(val) => setFormData({ ...formData, engine_cc: val })} 
+                        error={formErrors.engine_cc}
+                        disabled={isSynced && isMandatoryInsurance}
+                      />
+                    )}
 
                     <Combobox 
                       label="عدد الركاب" 
@@ -2028,14 +2038,16 @@ export default function EditInsuranceDocument() {
                       {formErrors.load_capacity && <span className="error-message">{formErrors.load_capacity}</span>}
                     </div>
 
-                    <Combobox 
-                      label="وزن المركبة" 
-                      value={formData.vehicle_weight} 
-                      options={VEHICLE_WEIGHTS} 
-                      onChange={(val) => setFormData({ ...formData, vehicle_weight: val })} 
-                      error={formErrors.vehicle_weight}
-                      disabled={isSynced && isMandatoryInsurance}
-                    />
+                    {!isMandatoryInsurance && (
+                      <Combobox 
+                        label="وزن المركبة" 
+                        value={formData.vehicle_weight} 
+                        options={VEHICLE_WEIGHTS} 
+                        onChange={(val) => setFormData({ ...formData, vehicle_weight: val })} 
+                        error={formErrors.vehicle_weight}
+                        disabled={isSynced && isMandatoryInsurance}
+                      />
+                    )}
 
                     {isMandatoryInsurance && (
                       <>
