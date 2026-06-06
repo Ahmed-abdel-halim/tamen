@@ -558,12 +558,18 @@ export default function CreateInsuranceDocument() {
       formData.eidc_vehicle_spec_id &&
       formData.plate_number_manual &&
       formData.plate_number_manual.trim().length >= 2 &&
+      formData.chassis_number &&
       formData.color &&
-      formData.year;
+      formData.year &&
+      formData.insured_name &&
+      formData.phone &&
+      formData.phone.replace(/[\s\-\(\)\+]/g, '').length >= 10 &&
+      formData.nid_passport &&
+      formData.nid_passport.trim().length >= 6;
 
     if (shouldInquire) {
       const handler = setTimeout(() => {
-        handleEidcInquiry();
+        handleEidcInquiry(false);
       }, 600); // Debounce for 600ms to avoid spamming the EIDC API
 
       return () => clearTimeout(handler);
@@ -587,10 +593,44 @@ export default function CreateInsuranceDocument() {
     isMandatoryInsurance
   ]);
 
-  const handleEidcInquiry = async () => {
+  const handleEidcInquiry = async (showErrors = false) => {
     setLoadingInquiry(true);
     // Clear previous premium data to avoid confusion during fetch
     setEidcPremiumData(null);
+
+    // التحقق من الحقول المطلوبة للهيئة وتنبيه المستخدم بالناقص منها عند الضغط على الزر يدوياً
+    const missingFields: string[] = [];
+    if (!formData.insured_name?.trim()) missingFields.push('اسم المؤمن له');
+    
+    const cleanPhoneVal = (formData.phone || '').replace(/[\s\-\(\)\+]/g, '');
+    if (!formData.phone?.trim()) {
+      missingFields.push('رقم الهاتف');
+    } else if (cleanPhoneVal.length < 10) {
+      missingFields.push('رقم الهاتف (يجب أن يكون 10 أرقام)');
+    }
+    
+    if (!formData.nid_passport?.trim()) {
+      missingFields.push('رقم الهوية / الجواز');
+    } else if (formData.nid_passport.trim().length < 6) {
+      missingFields.push('رقم الهوية (6 أرقام على الأقل)');
+    }
+    
+    if (!formData.plate_number_manual?.trim() || formData.plate_number_manual.trim().length < 2) {
+      missingFields.push('رقم اللوحة');
+    }
+    if (!formData.chassis_number?.trim()) missingFields.push('رقم الهيكل');
+    if (!formData.color) missingFields.push('اللون');
+    if (!formData.year) missingFields.push('سنة الصنع');
+    if (!formData.eidc_vehicle_type_id) missingFields.push('نوع المركبة (الهيئة)');
+    if (!formData.eidc_vehicle_spec_id) missingFields.push('النوع المحدد (الهيئة)');
+
+    if (missingFields.length > 0) {
+      setLoadingInquiry(false);
+      if (showErrors) {
+        showToast(`يرجى إكمال البيانات التالية لاحتساب القسط: ${missingFields.join('، ')}`, 'warning');
+      }
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -619,11 +659,6 @@ export default function CreateInsuranceDocument() {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       const fromNoonOf = getLocalDateString(tomorrow);
-
-      if (!formData.phone || !formData.nid_passport || !formData.insured_name || !formData.color || !formData.year) {
-        setLoadingInquiry(false);
-        return;
-      }
 
       // التحقق من طول رقم الهاتف (يجب أن يكون 10 أرقام على الأقل للهيئة)
       if (formData.phone.length < 10) {
@@ -3120,11 +3155,11 @@ export default function CreateInsuranceDocument() {
                           لم يتم احتساب القسط من منظومة الهيئة بعد
                         </div>
                         <div style={{ color: '#78350f', fontSize: '0.85rem', lineHeight: '1.7' }}>
-                          تأكد من إدخال: <strong>رقم الهاتف (10 أرقام)</strong> و<strong>رقم الهوية (6 أرقام على الأقل)</strong> و<strong>اسم المؤمن له</strong> بشكل صحيح، ثم اضغط إعادة المحاولة.
+                          تأكد من إدخال: <strong>اسم المؤمن له</strong>، و<strong>رقم الهاتف (10 أرقام)</strong>، و<strong>رقم الهوية</strong>، و<strong>بيانات السيارة (اللوحة، الهيكل، اللون، وسنة الصنع)</strong> بشكل صحيح، ثم اضغط إعادة المحاولة.
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleEidcInquiry()}
+                          onClick={() => handleEidcInquiry(true)}
                           style={{ alignSelf: 'flex-start', background: '#d97706', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(217,119,6,0.25)' }}
                         >
                           <i className="fa-solid fa-rotate-right"></i>
