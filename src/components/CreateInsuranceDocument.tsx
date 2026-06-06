@@ -276,11 +276,11 @@ export default function CreateInsuranceDocument() {
     authorized_passengers: '4',
     load_capacity: '0',
     insured_name: '',
-    phone: '',
+    phone: '0910000000',
     whatsapp_number: '',
     email: 'info@mli.ly',
     driving_license_number: '',
-    nid_passport: '',
+    nid_passport: '123456',
     premium: '',
     // EIDC vehicle classification fields
     eidc_vehicle_type_id: '',
@@ -291,7 +291,7 @@ export default function CreateInsuranceDocument() {
     engine_cc: '2000',
     vehicle_weight: '1500',
     notes: '',
-    address: '',
+    address: 'طرابلس',
     branch_agent_id: '',
   });
 
@@ -351,6 +351,15 @@ export default function CreateInsuranceDocument() {
     fetchColors();
     loadUserPermissions();
   }, []);
+
+  useEffect(() => {
+    if (plates.length > 0 && !formData.plate_id) {
+      const tripoliPlate = plates.find(p => p.city?.name_ar === 'طرابلس');
+      if (tripoliPlate) {
+        setFormData(prev => ({ ...prev, plate_id: tripoliPlate.id.toString() }));
+      }
+    }
+  }, [plates]);
 
   const loadUserPermissions = () => {
     try {
