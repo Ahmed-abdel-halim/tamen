@@ -472,6 +472,33 @@ export default function EditInsuranceDocument() {
   const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
   const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
 
+  // Get city code helper
+  const selectedPlateObj = plates.find(p => p.id.toString() === formData.plate_id);
+  const cityCode = selectedPlateObj ? selectedPlateObj.plate_number : "";
+
+  const getPlateNumberRaw = (fullPlate: string, code: string) => {
+    if (!fullPlate) return "";
+    if (code && fullPlate.endsWith(`-${code}`)) {
+      return fullPlate.substring(0, fullPlate.length - code.length - 1);
+    }
+    if (fullPlate.includes("-")) {
+      return fullPlate.split("-")[0];
+    }
+    return fullPlate;
+  };
+
+  const handlePlateIdChange = (newPlateId: string) => {
+    const nextPlate = plates.find(p => p.id.toString() === newPlateId);
+    const nextCode = nextPlate ? nextPlate.plate_number : "";
+    const currentRaw = getPlateNumberRaw(formData.plate_number_manual, cityCode);
+    const newFullPlate = nextCode ? `${currentRaw}-${nextCode}` : currentRaw;
+    setFormData(prev => ({ 
+      ...prev, 
+      plate_id: newPlateId, 
+      plate_number_manual: newFullPlate 
+    }));
+  };
+
   const selectedVehicleType = vehicleTypes.find(vt => vt.id.toString() === formData.vehicle_type_id);
   const selectedBrand = selectedVehicleType ? selectedVehicleType.brand : '';
   const uniqueBrands = Array.from(new Set(vehicleTypes.map(vt => vt.brand))).sort();
@@ -1884,7 +1911,7 @@ export default function EditInsuranceDocument() {
                         <select
                           value={formData.plate_id}
                           disabled={isSynced && isMandatoryInsurance}
-                          onChange={(e) => setFormData({ ...formData, plate_id: e.target.value })}
+                          onChange={(e) => handlePlateIdChange(e.target.value)}
                         >
                           <option value="">اختر الجهة...</option>
                           {plates.map(p => <option key={p.id} value={p.id.toString()}>{p.city.name_ar} - {p.plate_number}</option>)}
@@ -1895,12 +1922,41 @@ export default function EditInsuranceDocument() {
 
                     <div className={`form-group ${formErrors.plate_number_manual ? 'has-error' : ''}`}>
                       <label>رقم اللوحة <span className="required">*</span></label>
-                      <input
-                        type="text"
-                        value={formData.plate_number_manual}
-                        disabled={isSynced && isMandatoryInsurance}
-                        onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'stretch', direction: 'ltr' }}>
+                        <input
+                          type="text"
+                          value={getPlateNumberRaw(formData.plate_number_manual, cityCode)}
+                          disabled={isSynced && isMandatoryInsurance}
+                          onChange={(e) => {
+                            const rawVal = e.target.value.replace(/[\-]/g, "");
+                            const newFullPlate = cityCode ? `${rawVal}-${cityCode}` : rawVal;
+                            setFormData(prev => ({ ...prev, plate_number_manual: newFullPlate }));
+                          }}
+                          style={{ 
+                            borderRadius: cityCode ? '6px 0 0 6px' : '6px', 
+                            borderRight: cityCode ? 'none' : undefined,
+                            textAlign: 'left',
+                            flex: 1
+                          }}
+                        />
+                        {cityCode && (
+                          <span style={{ 
+                            padding: '0 12px', 
+                            background: '#f1f5f9', 
+                            border: '1.5px solid var(--border, #cbd5e1)', 
+                            borderLeft: 'none',
+                            borderRadius: '0 6px 6px 0',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            color: '#475569',
+                            fontWeight: 'bold',
+                            fontSize: '0.95rem',
+                            userSelect: 'none'
+                          }}>
+                            -{cityCode}
+                          </span>
+                        )}
+                      </div>
                       {formErrors.plate_number_manual && <span className="error-message">{formErrors.plate_number_manual}</span>}
                     </div>
 
