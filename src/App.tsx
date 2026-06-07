@@ -111,6 +111,8 @@ import MailManagement from './components/MailManagement';
 import ViewMailDocument from './components/ViewMailDocument';
 import ClaimsList from './components/Claims/ClaimsList';
 import ViewClaim from './components/Claims/ViewClaim';
+import CompensationsList from './components/Claims/CompensationsList';
+import FinanceClaimsList from './components/Claims/FinanceClaimsList';
 import AgencyCancellations from './components/AgencyCancellations';
 import CompanyDocuments from './components/CompanyDocuments';
 import RentalVouchersList from './components/RentalVouchersList';
@@ -195,6 +197,7 @@ function hasAccessToRoute(
       '/reports/bank-reconciliation',
       '/reports/expenses',
       '/reports/indemnities',
+      '/reports/finance-claims',
       '/reports/union-balances',
       '/reports/rental-vouchers',
       '/reports/employee-salaries',
@@ -378,6 +381,7 @@ const menuSections: SidebarSection[] = [
             label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
               { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
               { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
+              { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
             ]
           },
           { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
@@ -385,6 +389,7 @@ const menuSections: SidebarSection[] = [
           { label: 'حوالات الوكلاء المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/reports/agent-transfers' },
           { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
           { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+          { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
           ...(SHOW_BANK_RECONCILIATION
             ? [{ label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const }]
             : []),
@@ -566,6 +571,7 @@ const createMenuSections = (
       { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
       { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
       { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
+      { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     ],
     'الشؤون الفنية': [
       { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
@@ -613,6 +619,7 @@ const createMenuSections = (
     ...(SHOW_BANK_RECONCILIATION ? ['/reports/bank-reconciliation'] : []),
     '/reports/financial-archive',
     '/reports/indemnities',
+    '/reports/finance-claims',
     '/reports/union-balances',
     '/reports/rental-vouchers',
     '/reports/expenses',
@@ -851,6 +858,7 @@ const createMenuSections = (
       i.to === '/reports/outstanding-debts' ||
       i.to === '/reports/employee-salaries' ||
       i.to === '/reports/financial-archive' ||
+      i.to === '/reports/finance-claims' ||
       i.to === '/reports/treasury-banks'
     );
 
@@ -1378,7 +1386,8 @@ export default function App() {
                   <Route path="/reports/social-security" element={<AuthorizedRoute requiredPath="/reports/social-security"><TaxSSReport type="social_security" /></AuthorizedRoute>} />
                   <Route path="/reports/expenses" element={<Navigate to="/reports/treasury-banks?tab=expenses" replace />} />
                   <Route path="/reports/expenses/:id" element={<AuthorizedRoute requiredPath="/reports/expenses"><ViewExpenseDetails /></AuthorizedRoute>} />
-                  <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><ExpenseManagement activeTabOverride="indemnities" /></AuthorizedRoute>} />
+                  <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><CompensationsList /></AuthorizedRoute>} />
+                  <Route path="/reports/finance-claims" element={<AuthorizedRoute requiredPath="/reports/finance-claims"><FinanceClaimsList /></AuthorizedRoute>} />
                   <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
                   {/* ورقة الإيجارات */}
                   <Route path="/reports/rental-vouchers" element={<RentalVouchersList />} />

@@ -448,6 +448,8 @@ export default function ViewClaim() {
       case 'تحويل الى النيابة': return { bg: '#f3e8ff', color: '#6b21a8', text: 'بالنيابة العامة' };
       case 'تحويل الى المحكمة': return { bg: '#fee2e2', color: '#991b1b', text: 'بالمحكمة المختصة' };
       case 'استئناف في حكم المحكمة': return { bg: '#ffedd5', color: '#9a3412', text: 'قيد الاستئناف' };
+      case 'التعويضات': return { bg: '#fdf2f8', color: '#db2777', text: 'معلق بالتعويضات' };
+      case 'مدفوع': return { bg: '#dcfce7', color: '#166534', text: 'تم الدفع والقبول المالي' };
       case 'للتسديد - الشؤون المالية': return { bg: '#ecfdf5', color: '#059669', text: 'جاهزة للتسديد' };
       default: return { bg: '#eff6ff', color: '#2563eb', text: status };
     }
@@ -522,6 +524,12 @@ export default function ViewClaim() {
             <div className="field-group"><label>محكمة الاستئناف</label><input type="text" onChange={e => handleDetailChange('appeal_court', e.target.value)} /></div>
             <div className="field-group full"><label>صورة من حكم المحكمة السابق</label><input type="file" onChange={e => handleDetailChange('previous_judgment_image', e.target.files?.[0])} /></div>
           </>
+        );
+      case 'التعويضات':
+        return (
+          <div className="field-group full" style={{ color: '#166534', fontWeight: 'bold', padding: '10px', background: '#dcfce7', borderRadius: '8px', textAlign: 'center', gridColumn: 'span 2' }}>
+            سيتم تحويل هذا الملف إلى قسم التعويضات للتسوية المالية وإدخال التكاليف.
+          </div>
         );
       case 'اخر':
         return (
@@ -607,6 +615,7 @@ export default function ViewClaim() {
                   <label>اختر الوجهة</label>
                   <select value={transferType} onChange={e => setTransferType(e.target.value)}>
                     <option value="تسويه وديه">تسويه وديه</option>
+                    <option value="التعويضات">التعويضات</option>
                     <option value="تحويل الى مركز الشرطة">تحويل الى مركز الشرطة</option>
                     <option value="تحويل الى النيابة">تحويل الى النيابة</option>
                     <option value="تحويل الى المحكمة">تحويل الى المحكمة</option>
@@ -635,6 +644,57 @@ export default function ViewClaim() {
 
         {/* Left Column: Data Sections */}
         <div className="dashboard-main-col">
+
+          {claim.compensation_value && (
+            <section className="dashboard-card" style={{ border: '2px solid #139625' }}>
+              <div className="card-header" style={{ borderBottom: '1px solid #139625', paddingBottom: '10px' }}>
+                <i className="fa-solid fa-money-bill-wave text-success"></i>
+                <h3 style={{ color: '#139625' }}>البيانات المالية للتعويض</h3>
+              </div>
+              <div className="details-grid">
+                <div className="detail-item">
+                  <span className="label">اسم مستلم التعويض</span>
+                  <span className="value fw-bold">{claim.recipient_name}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">طريقة السداد</span>
+                  <span className="value">{claim.payment_method}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">رقم المستند المالي</span>
+                  <span className="value">{claim.document_number || '---'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">قيمة التعويض</span>
+                  <span className="value fw-bold" style={{ color: '#014cb1' }}>{Number(claim.compensation_value).toLocaleString()} {claim.currency === 'USD' ? '$' : 'د.ل'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">مصاريف إضافية</span>
+                  <span className="value">{Number(claim.additional_expenses).toLocaleString()} د.ل</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">إجمالي القيمة المسددة</span>
+                  <span className="value fw-bold" style={{ color: '#139625', fontSize: '1.1rem' }}>{Number(claim.total_paid).toLocaleString()} {claim.currency === 'USD' ? '$' : 'د.ل'}</span>
+                </div>
+                {claim.finance_status && (
+                  <div className="detail-item">
+                    <span className="label">حالة الصرف بالمالية</span>
+                    <span className="value fw-bold" style={{ 
+                      color: claim.finance_status === 'approved' ? '#139625' : (claim.finance_status === 'rejected' ? '#ef4444' : '#d97706') 
+                    }}>
+                      {claim.finance_status === 'approved' ? 'تم الصرف والقبول المالي ✅' : (claim.finance_status === 'rejected' ? 'مرفوض ماليًا ❌' : 'قيد التدقيق المالي ⏳')}
+                    </span>
+                  </div>
+                )}
+                {claim.finance_notes && (
+                  <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                    <span className="label">ملاحظات المالية / سبب الرفض</span>
+                    <span className="value" style={{ color: '#ef4444' }}>{claim.finance_notes}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Section 1: Claim Info */}
           <section className="dashboard-card">

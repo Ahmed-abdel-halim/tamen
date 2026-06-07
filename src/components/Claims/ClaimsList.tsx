@@ -556,6 +556,7 @@ export default function ClaimsList() {
     printWindow.document.close();
   };
 
+  // @ts-ignore
   const handlePrintCompensationsReport = () => {
     const printWindow = window.open('', '', 'width=1200,height=900');
     if (!printWindow) return;
@@ -790,7 +791,7 @@ export default function ClaimsList() {
                 <td><strong>${claim.claim_number}</strong></td>
                 
                 <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : '—'}</td>
-                <td>${claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
+                <td>${claim.damage_type ? claim.damage_type.split(/[,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
                 <td>${claim.document?.insurance_number || claim.document_manual_data?.insurance_number || (claim.additional_documents && claim.additional_documents[0]?.insurance_number) || '—'}</td>
                 <td>${claim.document?.insured_name || claim.document_manual_data?.insured_name || (claim.additional_documents && claim.additional_documents[0]?.insured_name) || '—'}</td>
                 
@@ -1203,15 +1204,7 @@ export default function ClaimsList() {
                 <i className="fa-solid fa-print"></i>
                 <span>تقرير المطالبات التفصيلي</span>
               </button>
-              <button
-                className="print-report-btn"
-                onClick={handlePrintCompensationsReport}
-                style={{ background: '#d97706' }}
-                title="طباعة تقرير تعويضات الحوادث"
-              >
-                <i className="fa-solid fa-print"></i>
-                <span>تقرير تعويضات الحوادث</span>
-              </button>
+
               <button
                 className="export-excel-btn"
                 onClick={exportToExcel}
