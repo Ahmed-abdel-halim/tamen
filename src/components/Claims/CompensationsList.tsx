@@ -140,7 +140,9 @@ export default function CompensationsList() {
 
   const handleOpenCompensationModal = (claim: any) => {
     setSelectedClaim(claim);
-    setCompensationValue(claim.compensation_value || '');
+    const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+    const defaultCompensation = claim.compensation_value || settlementTransfer?.details?.total_value || '';
+    setCompensationValue(defaultCompensation);
     setAdditionalExpenses(claim.additional_expenses || '');
     setRecipientName(claim.recipient_name || claim.claimant_name || '');
     setPaymentMethod(claim.payment_method || 'خصم من وديعة');
@@ -270,9 +272,14 @@ export default function CompensationsList() {
     let totalTot = 0;
 
     filteredCompensations.forEach((c) => {
-      totalComp += Number(c.compensation_value) || 0;
-      totalAdd += Number(c.additional_expenses) || 0;
-      totalTot += Number(c.total_paid) || 0;
+      const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+      const compVal = Number(c.compensation_value) || Number(settlement?.details?.total_value) || 0;
+      const addExp = Number(c.additional_expenses) || 0;
+      const totPaid = Number(c.total_paid) || (compVal + addExp);
+      
+      totalComp += compVal;
+      totalAdd += addExp;
+      totalTot += totPaid;
     });
 
     printWindow.document.write(`
@@ -460,14 +467,19 @@ export default function CompensationsList() {
               const claimDate = c.claim_date ? new Date(c.claim_date).toLocaleDateString('ar-EG') : '—';
               const accidentDate = c.accident_date ? new Date(c.accident_date).toLocaleDateString('ar-EG') : '—';
               
-              const recipient = c.recipient_name || '—';
+              const recipient = c.recipient_name || c.claimant_name || '—';
               const payMethod = c.payment_method || '—';
               const docNum = c.document_number || '—';
               const subCat = c.sub_category || 'التعويضات';
               
-              const compVal = c.compensation_value ? `${Number(c.compensation_value).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
-              const addExp = c.additional_expenses ? `${Number(c.additional_expenses).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
-              const totalVal = c.total_paid ? `${Number(c.total_paid).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+              const rawComp = c.compensation_value || settlement?.details?.total_value;
+              const rawAdd = c.additional_expenses;
+              const rawTot = c.total_paid || (rawComp ? (Number(rawComp) + (Number(rawAdd) || 0)) : null);
+
+              const compVal = rawComp ? `${Number(rawComp).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const addExp = rawAdd ? `${Number(rawAdd).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const totalVal = rawTot ? `${Number(rawTot).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
               
               const statusDisplay = getStatusLabel(c.status, c.finance_status);
 
@@ -546,21 +558,28 @@ export default function CompensationsList() {
         { header: 'الحالة', key: 'status', width: 25 },
       ];
 
-      const data = filteredCompensations.map((c) => ({
-        claim_number: c.claim_number,
-        claim_date: c.claim_date,
-        claimant_name: c.claimant_name,
-        insurance_number: c.document?.insurance_number || c.document_manual_data?.insurance_number || '—',
-        insured_name: c.document?.insured_name || c.document_manual_data?.insured_name || '—',
-        accident_date: c.accident_date,
-        recipient_name: c.recipient_name || '—',
-        payment_method: c.payment_method || '—',
-        document_number: c.document_number || '—',
-        compensation_value: c.compensation_value ? `${c.compensation_value} د.ل` : '—',
-        additional_expenses: c.additional_expenses ? `${c.additional_expenses} د.ل` : '—',
-        total_paid: c.total_paid ? `${c.total_paid} د.ل` : '—',
-        status: getStatusLabel(c.status, c.finance_status),
-      }));
+      const data = filteredCompensations.map((c) => {
+        const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+        const rawComp = c.compensation_value || settlement?.details?.total_value;
+        const rawAdd = c.additional_expenses;
+        const rawTot = c.total_paid || (rawComp ? (Number(rawComp) + (Number(rawAdd) || 0)) : null);
+
+        return {
+          claim_number: c.claim_number,
+          claim_date: c.claim_date,
+          claimant_name: c.claimant_name,
+          insurance_number: c.document?.insurance_number || c.document_manual_data?.insurance_number || '—',
+          insured_name: c.document?.insured_name || c.document_manual_data?.insured_name || '—',
+          accident_date: c.accident_date,
+          recipient_name: c.recipient_name || c.claimant_name || '—',
+          payment_method: c.payment_method || '—',
+          document_number: c.document_number || '—',
+          compensation_value: rawComp ? `${Number(rawComp).toLocaleString()} د.ل` : '—',
+          additional_expenses: rawAdd ? `${Number(rawAdd).toLocaleString()} د.ل` : '—',
+          total_paid: rawTot ? `${Number(rawTot).toLocaleString()} د.ل` : '—',
+          status: getStatusLabel(c.status, c.finance_status),
+        };
+      });
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - سجل تعويضات الحوادث',
@@ -676,13 +695,39 @@ export default function CompensationsList() {
                         <td>{c.accident_date}</td>
                         <td>{c.document?.insurance_number || c.document_manual_data?.insurance_number || '—'}</td>
                         <td>{c.document?.insured_name || c.document_manual_data?.insured_name || '—'}</td>
-                        <td>{c.recipient_name || '—'}</td>
+                        <td>{c.recipient_name || c.claimant_name || '—'}</td>
                         <td>{c.payment_method || '—'}</td>
                         <td>{c.document_number || '—'}</td>
                         <td>{c.sub_category || 'التعويضات'}</td>
-                        <td style={{ fontWeight: 800 }}>{c.compensation_value ? `${parseFloat(c.compensation_value).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—'}</td>
+                        <td style={{ fontWeight: 800 }}>
+                          {c.compensation_value 
+                            ? `${parseFloat(c.compensation_value).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` 
+                            : (() => {
+                                const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+                                const sVal = settlement?.details?.total_value;
+                                return sVal ? (
+                                  <span style={{ color: '#0284c7', fontStyle: 'italic' }} title="قيمة مقترحة من التسوية الودية">
+                                    {parseFloat(sVal).toLocaleString()} د.ل *
+                                  </span>
+                                ) : '—';
+                              })()
+                          }
+                        </td>
                         <td>{c.additional_expenses ? `${parseFloat(c.additional_expenses).toLocaleString()} د.ل` : '—'}</td>
-                        <td style={{ fontWeight: 850, color: '#166534' }}>{c.total_paid ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—'}</td>
+                        <td style={{ fontWeight: 850, color: '#166534' }}>
+                          {c.total_paid 
+                            ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` 
+                            : (() => {
+                                const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+                                const sVal = settlement?.details?.total_value;
+                                return sVal ? (
+                                  <span style={{ color: '#166534', fontStyle: 'italic' }} title="قيمة مقترحة من التسوية الودية">
+                                    {parseFloat(sVal).toLocaleString()} د.ل *
+                                  </span>
+                                ) : '—';
+                              })()
+                          }
+                        </td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
                             <span style={{
