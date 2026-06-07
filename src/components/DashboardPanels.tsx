@@ -326,14 +326,17 @@ export function DashboardPanels({}: DashboardPanelsProps) {
 
     // إضافة الخدمات العامة للجميع (مثل ملفي الوظيفي للموظفين)
     let currentUserId = '';
+    let isAgent = false;
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
-        currentUserId = JSON.parse(userStr).id;
+        const u = JSON.parse(userStr);
+        currentUserId = u.id;
+        isAgent = !!u.branch_agent_id;
       } catch (e) {}
     }
 
-    const personalServices: ServiceCard[] = [
+    const personalServices: ServiceCard[] = isAgent ? [] : [
       { label: 'ملفي الوظيفي وطلباتي', icon: 'fa-solid fa-address-card', route: `/users/${currentUserId}`, color: 'blue' }
     ];
 
