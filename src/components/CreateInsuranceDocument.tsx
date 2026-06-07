@@ -126,9 +126,9 @@ const POPULAR_BRANDS = [
   'أودي',
   'هوندا',
   'سيتروين',
-  'إيفيكو (Iveco)',
+  'إيفيكو',
   'دايو',
-  'داف (DAF)',
+  'داف',
   'جاكوار',
   'جي ام سي (GMC)'
 ];
@@ -139,21 +139,47 @@ const normalizeBrand = (brand: string): string => {
   const b = brand.trim().toLowerCase();
   
   if (b.includes('هيونداي') || b.includes('هونداي') || b.includes('هواندي')) return 'هونداي';
-  if (b.includes('تويوتا') || b.includes('تيوتا') || b.includes('تايوتا')) return 'تويوتا';
+  if (b.includes('تويوتا') || b.includes('تيوتا') || b.includes('taiyota') || b.includes('تايوتا')) return 'تويوتا';
   if (b.includes('كيا')) return 'كيا';
   if (b.includes('مرسيدس')) return 'مرسيدس';
-  if (b.includes('بي إم دبليو') || b.includes('بي ام دبليو') || b.includes('بى ام دبليو') || b.includes('bmw')) return 'بي إم دبليو';
+  if (b.includes('بي إم دبليو') || b.includes('بي ام دبليو') || b.includes('بى ام دبليو') || b.includes('bmw') || b.includes('بى إم')) return 'بي إم دبليو';
   if (b.includes('نيسان')) return 'نيسان';
   if (b.includes('جيب')) return 'جيب';
   if (b.includes('بيجو')) return 'بيجو';
   if (b.includes('أودي') || b.includes('اودي')) return 'أودي';
   if (b.includes('هوندا')) return 'هوندا';
   if (b.includes('ستيروين') || b.includes('سيتروين') || b.includes('شتروين') || b.includes('ستروين')) return 'سيتروين';
-  if (b.includes('افيكو') || b.includes('ايفكو') || b.includes('ايفيكو') || b.includes('ايقكو')) return 'إيفيكو (Iveco)';
-  if (b.includes('دايو') || b.includes('داوو') || b.includes('داو لاسيتس') || b.includes('داو كالوس')) return 'دايو';
-  if (b.includes('داف') || b.includes('daf')) return 'داف (DAF)';
+  if (b.includes('افيكو') || b.includes('ايفكو') || b.includes('ايفيكو') || b.includes('ايقكو')) return 'إيفيكو';
+  if (b.includes('دايو') || b.includes('داوو') || b.includes('داو لاسيتس') || b.includes('داو كالوس') || b.includes('داو')) return 'دايو';
+  if (b.includes('داف') || b.includes('daf')) return 'داف';
   if (b.includes('جاكوار') || b.includes('جكوار')) return 'جاكوار';
-  if (b.includes('جمس') || b.includes('جي ام سي') || b.includes('gmc')) return 'جي ام سي (GMC)';
+  if (b.includes('جمس') || b.includes('جي ام سي') || b.includes('gmc') || b.includes('جي إم')) return 'جي ام سي (GMC)';
+  
+  if (b.includes('سوزوكي') || b.includes('suzuki')) return 'سوزوكي';
+  if (b.includes('سامسونج') || b.includes('samsung')) return 'سامسونج';
+  if (b.includes('اوبل') || b.includes('opel')) return 'اوبل';
+  if (b.includes('انفنتي') || b.includes('انفنيتي') || b.includes('انفينتي') || b.includes('infinity')) return 'انفينيتي';
+  if (b.includes('ام جي') || b.includes('mg')) return 'ام جي';
+  if (b.includes('سانج يونج') || b.includes('سانغ يونغ') || b.includes('sang young')) return 'سانغ يونغ';
+  if (b.includes('داسيا') || b.includes('dacia')) return 'داسيا';
+  if (b.includes('سكانيا') || b.includes('scania')) return 'سكانيا';
+  if (b.includes('ايسوزو') || b.includes('isuzu')) return 'ايسوزو';
+  if (b.includes('شفروليه') || b.includes('شفرولية') || b.includes('شفرليت') || b.includes('chevrolet')) return 'شفروليه';
+  if (b.includes('شيري') || b.includes('chery')) return 'شيري';
+  if (b.includes('فولفو') || b.includes('volvo')) return 'فولفو';
+  if (b.includes('فولكس') || b.includes('volkswagen')) return 'فولكس فاجن';
+  if (b.includes('فيات') || b.includes('fiat')) return 'فيات';
+  if (b.includes('دودج') || b.includes('dodge')) return 'دودج';
+  if (b.includes('مازدا') || b.includes('mazda')) return 'مازدا';
+  if (b.includes('سوبارو') || b.includes('subaru')) return 'سوبارو';
+  if (b.includes('بنتلي') || b.includes('bentley')) return 'بنتلي';
+  if (b.includes('بورش') || b.includes('porsche')) return 'بورش';
+  
+  // تصفية أي حروف إنجليزية من الاسم إذا كان يحتوي على حروف عربية (لإزالة التكرار مثل "أبارث Abarth")
+  const arabicPart = brand.replace(/[a-zA-Z]/g, '').trim();
+  if (arabicPart) {
+    return arabicPart.replace(/\s+/g, ' ');
+  }
   
   return brand.trim();
 };
