@@ -190,48 +190,54 @@ export default function LifoReportsDashboard() {
   const [cardRequests, setCardRequests] = useState<any[]>([]);
   const [searchResult, setSearchResult] = useState<any | null>(null);
 
+  // Fetch card requests dynamically from backend
+  const fetchCardRequests = async (forceRefresh = false) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/requests-list`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          user_name: credentials.user_name,
+          pass_word: credentials.pass_word,
+          force_refresh: forceRefresh,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          // Merge local requests (like newly submitted pending requests from localStorage)
+          const localRequestsStr = localStorage.getItem('lifo_card_requests');
+          const localRequests: any[] = localRequestsStr ? JSON.parse(localRequestsStr) : [];
+          
+          const apiRequestNumbers = new Set(data.data.map((r: any) => r.requestnumber));
+          // Keep local requests that aren't yet present in the LIFO API cards list
+          const pendingRequests = localRequests.filter((r: any) => !apiRequestNumbers.has(r.requestnumber));
+          
+          const combined = [...pendingRequests, ...data.data];
+          setCardRequests(combined);
+          localStorage.setItem('lifo_card_requests', JSON.stringify(combined));
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching card requests:', e);
+    }
+  };
+
   // Load and initialize requests list
   useEffect(() => {
     try {
       const stored = localStorage.getItem('lifo_card_requests');
       if (stored) {
         setCardRequests(JSON.parse(stored));
-      } else {
-        const defaultRequests = [
-          {
-            requestnumber: 'RQ/26/579177',
-            company: 'المدار الليبي للتأمين',
-            username: 'adminmli',
-            numberofcards: 250,
-            status: 'تم القبول',
-            created_at: '2026-06-02 13:51:02',
-            download_date: '2026-06-02 14:08:15'
-          },
-          {
-            requestnumber: 'RQ/26/521381',
-            company: 'المدار الليبي للتأمين',
-            username: 'adminmli',
-            numberofcards: 500,
-            status: 'تم القبول',
-            created_at: '2026-05-17 16:01:37',
-            download_date: '2026-05-17 19:58:06'
-          },
-          {
-            requestnumber: 'RQ/26/491380',
-            company: 'المدار الليبي للتأمين',
-            username: 'adminmli',
-            numberofcards: 500,
-            status: 'تم القبول',
-            created_at: '2026-05-07 17:00:50',
-            download_date: '2026-05-07 19:25:33'
-          }
-        ];
-        setCardRequests(defaultRequests);
-        localStorage.setItem('lifo_card_requests', JSON.stringify(defaultRequests));
       }
     } catch (e) {
       console.error('Error loading card requests:', e);
     }
+    fetchCardRequests();
   }, []);
 
   // Load and initialize distribution logs
