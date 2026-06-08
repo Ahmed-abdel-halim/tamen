@@ -907,7 +907,11 @@ export default function LifoReportsDashboard() {
       if (res.ok) {
         const data = await res.json();
         if (data.code === 1) {
-          const list = Array.isArray(data.data) ? data.data : [];
+          const list = Array.isArray(data.data)
+            ? data.data
+            : (Array.isArray(data.message)
+              ? data.message
+              : (Array.isArray(data.messages) ? data.messages : []));
           setDistributionLogs(list);
           localStorage.setItem('lifo_distribution_logs', JSON.stringify(list));
         } else {
@@ -945,7 +949,11 @@ export default function LifoReportsDashboard() {
       if (res.ok) {
         const data = await res.json();
         if (data.code === 1) {
-          const list = Array.isArray(data.data) ? data.data : [];
+          const list = Array.isArray(data.data)
+            ? data.data
+            : (Array.isArray(data.message)
+              ? data.message
+              : (Array.isArray(data.messages) ? data.messages : []));
           setRefundLogs(list);
           localStorage.setItem('lifo_refund_logs', JSON.stringify(list));
         } else {
