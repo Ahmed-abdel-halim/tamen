@@ -130,7 +130,7 @@ export default function ViewClaim() {
     const displayStatus = statusMap[claim.status] || claim.status;
 
 
-    const qrData = `مطالبة رقم: ${claim.claim_number}\nمقدم المطالبة: ${claim.claimant_name}\nرقم الوثيقة: ${claim.document?.insurance_number || '---'}\nالتاريخ: ${new Date().toLocaleString('ar-LY')}`;
+    const qrData = `مطالبة رقم: ${claim.claim_number}\nمقدم المطالبة: ${claim.claimant_name}\nرقم الوثيقة: ${claim.document?.insurance_number || '---'}\nالتاريخ: ${new Date().toLocaleString('en-GB')}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
 
     printWindow.document.write(`
@@ -308,11 +308,11 @@ export default function ViewClaim() {
             ${claim.damaged_vehicle_model ? `<div class='data-item'><span class='label'>موديل السيارة:</span> <span class='value'>${claim.damaged_vehicle_model}</span></div>` : ''}
             ${claim.damaged_vehicle_plate ? `<div class='data-item'><span class='label'>رقم اللوحة:</span> <span class='value'>${claim.damaged_vehicle_plate}</span></div>` : ''}
             ${claim.damaged_vehicle_repair_shop ? `<div class='data-item'><span class='label'>ورشة التصليح:</span> <span class='value'>${claim.damaged_vehicle_repair_shop}</span></div>` : ''}
-            ${claim.damaged_vehicle_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.damaged_vehicle_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_vehicle_amount).toLocaleString('en-US')} د.ل</span></div>` : ''}
             ${claim.damaged_person_name ? `<div class='data-item'><span class='label'>اسم المتضرر:</span> <span class='value'>${claim.damaged_person_name}</span></div>` : ''}
-            ${claim.damaged_person_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.damaged_person_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_person_amount).toLocaleString('en-US')} د.ل</span></div>` : ''}
             ${claim.damaged_building_description ? `<div class='data-item'><span class='label'>وصف المبنى:</span> <span class='value'>${claim.damaged_building_description}</span></div>` : ''}
-            ${claim.damaged_building_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.damaged_building_amount ? `<div class='data-item'><span class='label'>مبلغ الأضرار:</span> <span class='value'>${Number(claim.damaged_building_amount).toLocaleString('en-US')} د.ل</span></div>` : ''}
           </div>
         </div>` : ''}
 
@@ -323,7 +323,7 @@ export default function ViewClaim() {
             <div class='data-item'><span class='label'>اسم المقدر:</span> <span class='value'>${claim.assessor_name}</span></div>
             ${claim.assessor_phone ? `<div class='data-item'><span class='label'>رقم الهاتف:</span> <span class='value'>${claim.assessor_phone}</span></div>` : ''}
             ${claim.assessor_date ? `<div class='data-item'><span class='label'>تاريخ التقييم:</span> <span class='value'>${claim.assessor_date}</span></div>` : ''}
-            ${claim.assessor_amount_dinar ? `<div class='data-item'><span class='label'>القيمة (بالدينار الليبي):</span> <span class='value'>${Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>` : ''}
+            ${claim.assessor_amount_dinar ? `<div class='data-item'><span class='label'>القيمة (بالدينار الليبي):</span> <span class='value'>${Number(claim.assessor_amount_dinar).toLocaleString('en-US')} د.ل</span></div>` : ''}
             ${claim.assessor_other_amount ? `<div class='data-item'><span class='label'>القيمة بالعملة الأصلية:</span> <span class='value'>${claim.assessor_other_amount}</span></div>` : ''}
             ${(!claim.assessor_other_amount && claim.assessor_amount_dollar) ? `<div class='data-item'><span class='label'>القيمة (دولار):</span> <span class='value'>$${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>` : ''}
           </div>
@@ -405,7 +405,7 @@ export default function ViewClaim() {
 
       return `
                     <tr>
-                      <td>${new Date(t.created_at).toLocaleDateString('ar-LY')}</td>
+                      <td>${new Date(t.created_at).toLocaleDateString('en-GB')}</td>
                       <td>${t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</td>
                       <td>${detailsText}</td>
                     </tr>
@@ -432,7 +432,7 @@ export default function ViewClaim() {
         </div>
 
         <div class="print-meta">
-          تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+          تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
         </div>
       </body>
       </html>
@@ -827,7 +827,7 @@ export default function ViewClaim() {
                     {claim.damaged_vehicle_model && <div className="detail-item"><span className="label">موديل السيارة</span><span className="value">{claim.damaged_vehicle_model}</span></div>}
                     {claim.damaged_vehicle_plate && <div className="detail-item"><span className="label">رقم اللوحة</span><span className="value">{claim.damaged_vehicle_plate}</span></div>}
                     {claim.damaged_vehicle_repair_shop && <div className="detail-item"><span className="label">ورشة التصليح</span><span className="value">{claim.damaged_vehicle_repair_shop}</span></div>}
-                    {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_vehicle_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                    {claim.damaged_vehicle_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_vehicle_amount).toLocaleString('en-US')} د.ل</span></div>}
                   </div>
                 </div>
               )}
@@ -836,7 +836,7 @@ export default function ViewClaim() {
                   <h5 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '10px' }}><i className="fa-solid fa-person me-2"></i>أضرار الشخص/الإصابة الجسدية</h5>
                   <div className="details-grid">
                     {claim.damaged_person_name && <div className="detail-item"><span className="label">اسم المتضرر</span><span className="value">{claim.damaged_person_name}</span></div>}
-                    {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_person_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                    {claim.damaged_person_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_person_amount).toLocaleString('en-US')} د.ل</span></div>}
                   </div>
                 </div>
               )}
@@ -845,7 +845,7 @@ export default function ViewClaim() {
                   <h5 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '10px' }}><i className="fa-solid fa-building me-2"></i>أضرار المبنى/الممتلكات</h5>
                   <div className="details-grid">
                     {claim.damaged_building_description && <div className="detail-item" style={{ gridColumn: 'span 2' }}><span className="label">وصف المبنى</span><span className="value">{claim.damaged_building_description}</span></div>}
-                    {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_building_amount).toLocaleString('ar-LY')} د.ل</span></div>}
+                    {claim.damaged_building_amount && <div className="detail-item"><span className="label">مبلغ الأضرار</span><span className="value fw-bold" style={{ color: '#ef4444' }}>{Number(claim.damaged_building_amount).toLocaleString('en-US')} د.ل</span></div>}
                   </div>
                 </div>
               )}
@@ -901,7 +901,7 @@ export default function ViewClaim() {
                 {claim.assessor_name && <div className="detail-item"><span className="label">اسم المقدر</span><span className="value">{claim.assessor_name}</span></div>}
                 {claim.assessor_phone && <div className="detail-item"><span className="label">رقم الهاتف</span><span className="value">{claim.assessor_phone}</span></div>}
                 {claim.assessor_date && <div className="detail-item"><span className="label">تاريخ التقييم</span><span className="value">{claim.assessor_date}</span></div>}
-                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (بالدينار الليبي)</span><span className="value fw-bold" style={{ color: '#059669' }}>{Number(claim.assessor_amount_dinar).toLocaleString('ar-LY')} د.ل</span></div>}
+                {claim.assessor_amount_dinar && <div className="detail-item"><span className="label">القيمة (بالدينار الليبي)</span><span className="value fw-bold" style={{ color: '#059669' }}>{Number(claim.assessor_amount_dinar).toLocaleString('en-US')} د.ل</span></div>}
                 {claim.assessor_other_amount && <div className="detail-item"><span className="label">القيمة بالعملة الأصلية</span><span className="value fw-bold" style={{ color: '#059669' }}>{claim.assessor_other_amount}</span></div>}
                 {!claim.assessor_other_amount && claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{ color: '#059669' }}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
               </div>
@@ -936,9 +936,9 @@ export default function ViewClaim() {
                 <span className="label">تاريخ الإصدار</span>
                 <span className="value">
                   {claim.document?.issue_date 
-                    ? new Date(claim.document.issue_date).toLocaleDateString('ar-EG') 
+                    ? new Date(claim.document.issue_date).toLocaleDateString('en-GB') 
                     : (claim.document_manual_data?.issue_date 
-                        ? new Date(claim.document_manual_data.issue_date).toLocaleDateString('ar-EG') 
+                        ? new Date(claim.document_manual_data.issue_date).toLocaleDateString('en-GB') 
                         : '---')}
                 </span>
               </div>
@@ -974,11 +974,11 @@ export default function ViewClaim() {
                     </div>
                     <div className="detail-item">
                       <span className="label">تاريخ الإصدار</span>
-                      <span className="value">{doc.issue_date ? new Date(doc.issue_date).toLocaleDateString('ar-EG') : '---'}</span>
+                      <span className="value">{doc.issue_date ? new Date(doc.issue_date).toLocaleDateString('en-GB') : '---'}</span>
                     </div>
                     <div className="detail-item">
                       <span className="label">تاريخ الانتهاء</span>
-                      <span className="value">{doc.end_date ? new Date(doc.end_date).toLocaleDateString('ar-EG') : '---'}</span>
+                      <span className="value">{doc.end_date ? new Date(doc.end_date).toLocaleDateString('en-GB') : '---'}</span>
                     </div>
                     {doc.notes && (
                       <div className="detail-item" style={{ gridColumn: 'span 3' }}>
@@ -1009,7 +1009,7 @@ export default function ViewClaim() {
                     <div className="timeline-content">
                       <div className="item-head">
                         <h4>{t.transfer_type === 'اخر' ? t.other_transfer_type : t.transfer_type}</h4>
-                        <span className="time">{new Date(t.created_at).toLocaleString('ar-EG')}</span>
+                        <span className="time">{new Date(t.created_at).toLocaleString('en-GB')}</span>
                       </div>
                       <div className="item-details-box">
                         <div className="details-inline">

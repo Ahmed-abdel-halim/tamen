@@ -122,7 +122,7 @@ export default function FinanceClaimsList() {
     const printWindow = window.open('', '', 'width=1000,height=850');
     if (!printWindow) return;
 
-    const qrData = `وصل صرف تعويض حادث\nرقم المطالبة: ${claim.claim_number}\nالمستلم: ${claim.recipient_name}\nالقيمة الكلية: ${claim.total_paid} ${claim.currency}\nالتاريخ: ${new Date().toLocaleDateString('ar-LY')}`;
+    const qrData = `وصل صرف تعويض حادث\nرقم المطالبة: ${claim.claim_number}\nالمستلم: ${claim.recipient_name}\nالقيمة الكلية: ${claim.total_paid} ${claim.currency}\nالتاريخ: ${new Date().toLocaleDateString('en-GB')}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
 
     printWindow.document.write(`
@@ -187,7 +187,7 @@ export default function FinanceClaimsList() {
               <div class="label">رقم المطالبة:</div>
               <div class="value">${claim.claim_number}</div>
               <div class="label">تاريخ الصرف:</div>
-              <div class="value">${claim.finance_approved_at ? new Date(claim.finance_approved_at).toLocaleDateString('ar-LY') : new Date().toLocaleDateString('ar-LY')}</div>
+              <div class="value">${claim.finance_approved_at ? new Date(claim.finance_approved_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</div>
             </div>
             <div class="row">
               <div class="label">اسم المستلم:</div>
@@ -195,7 +195,7 @@ export default function FinanceClaimsList() {
             </div>
             <div class="row">
               <div class="label">مبلغا وقدره:</div>
-              <div class="value amount-highlight">${Number(claim.total_paid).toLocaleString('ar-EG')} ${claim.currency === 'USD' ? 'دولار أمريكي' : 'دينار ليبي'}</div>
+              <div class="value amount-highlight">${Number(claim.total_paid).toLocaleString('en-US')} ${claim.currency === 'USD' ? 'دولار أمريكي' : 'دينار ليبي'}</div>
             </div>
             <div class="row">
               <div class="label">طريقة السداد:</div>
@@ -246,7 +246,7 @@ export default function FinanceClaimsList() {
     const printWindow = window.open('', '', 'width=1200,height=900');
     if (!printWindow) return;
 
-    const qrData = `تقرير تسديدات تعويضات الحوادث\nعدد المعاملات: ${filteredClaims.length}\nالتاريخ: ${new Date().toLocaleDateString('ar-LY')}`;
+    const qrData = `تقرير تسديدات تعويضات الحوادث\nعدد المعاملات: ${filteredClaims.length}\nالتاريخ: ${new Date().toLocaleDateString('en-GB')}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
 
     let totalVal = filteredClaims.reduce((sum, c) => sum + (Number(c.total_paid) || 0), 0);
@@ -280,7 +280,7 @@ export default function FinanceClaimsList() {
         </div>
 
         <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 8px; border: 1px solid #000; margin-bottom: 10px; font-weight: bold;">
-          <div>تاريخ استخراج الكشف: ${new Date().toLocaleString('ar-LY')}</div>
+          <div>تاريخ استخراج الكشف: ${new Date().toLocaleString('en-GB')}</div>
           <div>عدد المعاملات المسددة: ${filteredClaims.length}</div>
         </div>
 
@@ -311,7 +311,7 @@ export default function FinanceClaimsList() {
                 <td>${Number(c.compensation_value).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}</td>
                 <td>${Number(c.additional_expenses).toLocaleString()} د.ل</td>
                 <td style="color: #166534; font-weight: bold;">${Number(c.total_paid).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}</td>
-                <td>${c.finance_approved_at ? new Date(c.finance_approved_at).toLocaleDateString('ar-LY') : '—'}</td>
+                <td>${c.finance_approved_at ? new Date(c.finance_approved_at).toLocaleDateString('en-GB') : '—'}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
@@ -353,19 +353,19 @@ export default function FinanceClaimsList() {
         recipient_name: c.recipient_name,
         payment_method: c.payment_method,
         document_number: c.document_number || '—',
-        compensation_value: `${Number(c.compensation_value).toLocaleString()} د.ل`,
-        additional_expenses: `${Number(c.additional_expenses).toLocaleString()} د.ل`,
-        total_paid: `${Number(c.total_paid).toLocaleString()} د.ل`,
-        approved_at: c.finance_approved_at ? new Date(c.finance_approved_at).toLocaleDateString('ar-LY') : '—',
+        compensation_value: `${Number(c.compensation_value).toLocaleString('en-US')} د.ل`,
+        additional_expenses: `${Number(c.additional_expenses).toLocaleString('en-US')} د.ل`,
+        total_paid: `${Number(c.total_paid).toLocaleString('en-US')} د.ل`,
+        approved_at: c.finance_approved_at ? new Date(c.finance_approved_at).toLocaleDateString('en-GB') : '—',
       }));
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - كشف تسديد تعويضات الحوادث (المالية)',
-        subtitle: `عدد الحوالات: ${filteredClaims.length} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        subtitle: `عدد الحوالات: ${filteredClaims.length} - تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}`,
         columns,
         data,
         fileName: 'تقرير_تسديدات_التعويضات',
-        qrData: `كشف تسديدات الحوادث\nإجمالي: ${filteredClaims.reduce((sum, c) => sum + (Number(c.total_paid) || 0), 0).toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'المالية'}`
+        qrData: `كشف تسديدات الحوادث\nإجمالي: ${filteredClaims.reduce((sum, c) => sum + (Number(c.total_paid) || 0), 0).toLocaleString('en-US')} د.ل\nبواسطة: ${currentUser.name || 'المالية'}`
       });
 
       showToast('تم تصدير كشف التسديدات بنجاح', 'success');

@@ -132,7 +132,7 @@ const safeFormatDate = (dateStr: string | null | undefined): string => {
     // Convert MySQL datetime (space separator) to ISO format (T separator)
     const d = new Date(String(dateStr).replace(' ', 'T'));
     if (isNaN(d.getTime())) return String(dateStr);
-    return d.toLocaleDateString('ar-EG');
+    return d.toLocaleDateString('en-GB');
   } catch {
     return String(dateStr);
   }

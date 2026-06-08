@@ -264,7 +264,7 @@ export default function CompensationsList() {
 
     const statusText = statusFilter !== 'الكل' ? `حسب الحالة: ${statusFilter}` : 'كل الحالات';
 
-    const qrData = `تقرير تعويضات الحوادث - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nعدد المطالبات: ${filteredCompensations.length}`;
+    const qrData = `تقرير تعويضات الحوادث - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nعدد المطالبات: ${filteredCompensations.length}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
 
     let totalComp = 0;
@@ -424,7 +424,7 @@ export default function CompensationsList() {
         </div>
 
         <div class="meta-info">
-          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</div>
+          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}</div>
           <div>${dateText}</div>
           <div>${statusText}</div>
           <div>إجمالي الملفات: ${filteredCompensations.length}</div>
@@ -464,8 +464,8 @@ export default function CompensationsList() {
               const claimant = c.claimant_name || '—';
               const insuranceNumber = c.document?.insurance_number || c.document_manual_data?.insurance_number || '—';
               const insuredName = c.document?.insured_name || c.document_manual_data?.insured_name || '—';
-              const claimDate = c.claim_date ? new Date(c.claim_date).toLocaleDateString('ar-EG') : '—';
-              const accidentDate = c.accident_date ? new Date(c.accident_date).toLocaleDateString('ar-EG') : '—';
+              const claimDate = c.claim_date ? new Date(c.claim_date).toLocaleDateString('en-GB') : '—';
+              const accidentDate = c.accident_date ? new Date(c.accident_date).toLocaleDateString('en-GB') : '—';
               
               const recipient = c.recipient_name || c.claimant_name || '—';
               const payMethod = c.payment_method || '—';
@@ -477,9 +477,9 @@ export default function CompensationsList() {
               const rawAdd = c.additional_expenses;
               const rawTot = c.total_paid || (rawComp ? (Number(rawComp) + (Number(rawAdd) || 0)) : null);
 
-              const compVal = rawComp ? `${Number(rawComp).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
-              const addExp = rawAdd ? `${Number(rawAdd).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
-              const totalVal = rawTot ? `${Number(rawTot).toLocaleString('ar-EG')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const compVal = rawComp ? `${Number(rawComp).toLocaleString('en-US')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const addExp = rawAdd ? `${Number(rawAdd).toLocaleString('en-US')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const totalVal = rawTot ? `${Number(rawTot).toLocaleString('en-US')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
               
               const statusDisplay = getStatusLabel(c.status, c.finance_status);
 
@@ -509,9 +509,9 @@ export default function CompensationsList() {
             
             <tr class="totals-row">
               <td colspan="11" style="text-align: center; font-weight: 900;">المجمـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــوع العـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــام</td>
-              <td style="color: #1e3a8a; font-weight: bold;">${totalComp.toLocaleString('ar-EG')} د.ل</td>
-              <td style="color: #4b5563;">${totalAdd.toLocaleString('ar-EG')} د.ل</td>
-              <td style="color: #166534; font-weight: bold;">${totalTot.toLocaleString('ar-EG')} د.ل</td>
+              <td style="color: #1e3a8a; font-weight: bold;">${totalComp.toLocaleString('en-US')} د.ل</td>
+              <td style="color: #4b5563;">${totalAdd.toLocaleString('en-US')} د.ل</td>
+              <td style="color: #166534; font-weight: bold;">${totalTot.toLocaleString('en-US')} د.ل</td>
               <td>—</td>
             </tr>
           </tbody>
@@ -531,7 +531,7 @@ export default function CompensationsList() {
         </div>
 
         <div class="print-meta">
-          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
         </div>
       </body>
       </html>
@@ -583,7 +583,7 @@ export default function CompensationsList() {
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - سجل تعويضات الحوادث',
-        subtitle: `تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        subtitle: `تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}`,
         columns,
         data,
         fileName: 'سجل_تعويضات_الحوادث',

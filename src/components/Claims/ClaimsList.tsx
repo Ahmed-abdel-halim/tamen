@@ -129,8 +129,7 @@ export default function ClaimsList() {
       ];
 
       const toArabicNumerals = (str: string | number) => {
-        const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-        return String(str).replace(/[0-9]/g, w => arabicNumbers[parseInt(w)]);
+        return String(str);
       };
 
       const data = filteredClaims.map(claim => {
@@ -169,11 +168,11 @@ export default function ClaimsList() {
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - إدارة المطالبات',
-        subtitle: `تقرير المطالبات المسجلة - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        subtitle: `تقرير المطالبات المسجلة - تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}`,
         columns,
         data,
         fileName: 'تقرير_المطالبات',
-        qrData: `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير التقرير بنجاح', 'success');
@@ -254,7 +253,7 @@ export default function ClaimsList() {
 
     const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
 
-    const qrData = `تقرير المطالبات التفصيلي - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nالفترة: ${dateText}\nعدد المطالبات: ${filteredClaims.length}`;
+    const qrData = `تقرير المطالبات التفصيلي - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nالفترة: ${dateText}\nعدد المطالبات: ${filteredClaims.length}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
 
     // Calculate totals dynamically
@@ -292,7 +291,7 @@ export default function ClaimsList() {
     });
 
     const originalCurrencySumText = Object.entries(currencySums)
-      .map(([curr, sum]) => `${sum.toLocaleString('ar-EG')} ${curr}`)
+      .map(([curr, sum]) => `${sum.toLocaleString('en-US')} ${curr}`)
       .join(' + ') || '—';
 
     const documentTypeLabelMap: any = {
@@ -450,7 +449,7 @@ export default function ClaimsList() {
         </div>
 
         <div class="meta-info">
-          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</div>
+          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}</div>
           <div>${dateText}</div>
           <div>${statusText}</div>
           <div>إجمالي المطالبات: ${filteredClaims.length}</div>
@@ -491,14 +490,14 @@ export default function ClaimsList() {
               if (claim.assessor_other_amount) {
                 reserveForeign = claim.assessor_other_amount;
               } else if (claim.assessor_amount_dollar) {
-                reserveForeign = `${Number(claim.assessor_amount_dollar).toLocaleString('ar-EG')} دولار أمريكي`;
+                reserveForeign = `${Number(claim.assessor_amount_dollar).toLocaleString('en-US')} دولار أمريكي`;
               } else if (claim.assessor_amount_dinar) {
-                reserveForeign = `${Number(claim.assessor_amount_dinar).toLocaleString('ar-EG')} دينار ليبي`;
+                reserveForeign = `${Number(claim.assessor_amount_dinar).toLocaleString('en-US')} دينار ليبي`;
               }
 
               const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
               const settlementValue = settlementTransfer?.details?.total_value;
-              const settlementValueText = settlementValue ? `${Number(settlementValue).toLocaleString('ar-EG')} دينار ليبي` : '—';
+              const settlementValueText = settlementValue ? `${Number(settlementValue).toLocaleString('en-US')} دينار ليبي` : '—';
 
               const docTypeLabel = documentTypeLabelMap[claim.document_type] || claim.document_manual_data?.insurance_type || claim.document_type || '—';
 
@@ -507,11 +506,11 @@ export default function ClaimsList() {
               return `
               <tr>
                 <td>${idx + 1}</td>
-                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : '—'}</td>
+                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB') : '—'}</td>
                 <td>${claim.claimant_name || '—'}</td>
                 <td><strong>${claim.claim_number}</strong></td>
                 
-                <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : '—'}</td>
+                <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('en-GB') : '—'}</td>
                 <td>${claim.accident_type || 'غير محدد'}</td>
                 <td>${damages}</td>
                 
@@ -521,7 +520,7 @@ export default function ClaimsList() {
                 <td>${claim.document?.insured_name || claim.document_manual_data?.insured_name || (claim.additional_documents && claim.additional_documents[0]?.insured_name) || '—'}</td>
                 
                 <td style="color: #059669; font-weight: bold;">${reserveForeign}</td>
-                <td style="color: #059669; font-weight: bold;">${claim.assessor_amount_dinar ? `${Number(claim.assessor_amount_dinar).toLocaleString('ar-EG')} دينار ليبي` : '—'}</td>
+                <td style="color: #059669; font-weight: bold;">${claim.assessor_amount_dinar ? `${Number(claim.assessor_amount_dinar).toLocaleString('en-US')} دينار ليبي` : '—'}</td>
                 <td style="color: #000; font-weight: bold;">${settlementValueText}</td>
                 
                 <td>${getStatusLabel(claim.status)}</td>
@@ -532,8 +531,8 @@ export default function ClaimsList() {
             <tr class="totals-row">
               <td colspan="11" style="text-align: center; font-weight: 900;">المجمـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــوع العـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــام</td>
               <td style="color: #059669; font-weight: bold;">${originalCurrencySumText}</td>
-              <td style="color: #059669; font-weight: bold;">${totalReserveLYD ? `${totalReserveLYD.toLocaleString('ar-EG')} دينار ليبي` : '—'}</td>
-              <td style="color: #000; font-weight: bold;">${totalSettlementLYD ? `${totalSettlementLYD.toLocaleString('ar-EG')} دينار ليبي` : '—'}</td>
+              <td style="color: #059669; font-weight: bold;">${totalReserveLYD ? `${totalReserveLYD.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
+              <td style="color: #000; font-weight: bold;">${totalSettlementLYD ? `${totalSettlementLYD.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
               <td>—</td>
             </tr>
           </tbody>
@@ -548,7 +547,7 @@ export default function ClaimsList() {
         </div>
 
         <div class="print-meta">
-          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
         </div>
       </body>
       </html>
@@ -567,7 +566,7 @@ export default function ClaimsList() {
 
     const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
 
-    const qrData = `تقرير تعويضات الحوادث - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('ar-LY')}\nالفترة: ${dateText}\nعدد الحالات: ${filteredClaims.length}`;
+    const qrData = `تقرير تعويضات الحوادث - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nالفترة: ${dateText}\nعدد الحالات: ${filteredClaims.length}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
 
     // Calculate totals dynamically
@@ -726,7 +725,7 @@ export default function ClaimsList() {
         </div>
 
         <div class="meta-info">
-          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}</div>
+          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}</div>
           <div>${dateText}</div>
           <div>${statusText}</div>
           <div>إجمالي المطالبات: ${filteredClaims.length}</div>
@@ -772,13 +771,13 @@ export default function ClaimsList() {
               const category = paymentTransfer ? 'التعويضات' : '—';
               
               const compVal = paymentTransfer?.details?.compensation_value;
-              const compValText = compVal ? `${Number(compVal).toLocaleString('ar-EG')} د.ل` : '—';
+              const compValText = compVal ? `${Number(compVal).toLocaleString('en-US')} د.ل` : '—';
               
               const addExp = paymentTransfer?.details?.additional_expenses;
-              const addExpText = addExp ? `${Number(addExp).toLocaleString('ar-EG')} د.ل` : '—';
+              const addExpText = addExp ? `${Number(addExp).toLocaleString('en-US')} د.ل` : '—';
               
               const totPaid = paymentTransfer?.details?.financial_value || paymentTransfer?.details?.total_paid;
-              const totPaidText = totPaid ? `${Number(totPaid).toLocaleString('ar-EG')} د.ل` : '—';
+              const totPaidText = totPaid ? `${Number(totPaid).toLocaleString('en-US')} د.ل` : '—';
               
               const isPaid = claim.status === 'للتسديد - الشؤون المالية' || paymentTransfer;
               const displayStatus = isPaid ? 'مدفوع' : getStatusLabel(claim.status);
@@ -786,11 +785,11 @@ export default function ClaimsList() {
               return `
               <tr>
                 <td>${idx + 1}</td>
-                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : '—'}</td>
+                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB') : '—'}</td>
                 <td>${claim.claimant_name || '—'}</td>
                 <td><strong>${claim.claim_number}</strong></td>
                 
-                <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : '—'}</td>
+                <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('en-GB') : '—'}</td>
                 <td>${claim.damage_type ? claim.damage_type.split(/[,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
                 <td>${claim.document?.insurance_number || claim.document_manual_data?.insurance_number || (claim.additional_documents && claim.additional_documents[0]?.insurance_number) || '—'}</td>
                 <td>${claim.document?.insured_name || claim.document_manual_data?.insured_name || (claim.additional_documents && claim.additional_documents[0]?.insured_name) || '—'}</td>
@@ -815,9 +814,9 @@ export default function ClaimsList() {
             
             <tr class="totals-row">
               <td colspan="12" style="text-align: center; font-weight: 900;">المجمـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــوع العـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــام</td>
-              <td style="color: #000; font-weight: bold;">${totalCompensation ? `${totalCompensation.toLocaleString('ar-EG')} دينار ليبي` : '—'}</td>
-              <td style="color: #4b5563;">${totalAdditionalExpenses ? `${totalAdditionalExpenses.toLocaleString('ar-EG')} دينار ليبي` : '—'}</td>
-              <td style="color: #059669; font-weight: bold;">${totalPaid ? `${totalPaid.toLocaleString('ar-EG')} دينار ليبي` : '—'}</td>
+              <td style="color: #000; font-weight: bold;">${totalCompensation ? `${totalCompensation.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
+              <td style="color: #4b5563;">${totalAdditionalExpenses ? `${totalAdditionalExpenses.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
+              <td style="color: #059669; font-weight: bold;">${totalPaid ? `${totalPaid.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
               <td>—</td>
             </tr>
           </tbody>
@@ -832,7 +831,7 @@ export default function ClaimsList() {
         </div>
 
         <div class="print-meta">
-          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
         </div>
       </body>
       </html>
@@ -857,7 +856,7 @@ export default function ClaimsList() {
     const printWindow = window.open('', '', 'width=1000,height=900');
     if (!printWindow) return;
 
-    const qrData = `مطالبة رقم: ${fullClaim.claim_number}\nمقدم المطالبة: ${fullClaim.claimant_name}\nرقم الوثيقة: ${fullClaim.document?.insurance_number || fullClaim.document_manual_data?.insurance_number || (fullClaim.additional_documents && fullClaim.additional_documents[0]?.insurance_number) || '---'}\nالتاريخ: ${new Date().toLocaleString('ar-LY')}`;
+    const qrData = `مطالبة رقم: ${fullClaim.claim_number}\nمقدم المطالبة: ${fullClaim.claimant_name}\nرقم الوثيقة: ${fullClaim.document?.insurance_number || fullClaim.document_manual_data?.insurance_number || (fullClaim.additional_documents && fullClaim.additional_documents[0]?.insurance_number) || '---'}\nالتاريخ: ${new Date().toLocaleString('en-GB')}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
 
     printWindow.document.write(`
@@ -1155,7 +1154,7 @@ export default function ClaimsList() {
               <div class="field-row">
                 <div class="field-label">قيمــــة التقييـــــم</div>
                 <div class="field-input">
-                  ${fullClaim.assessor_amount_dinar ? Number(fullClaim.assessor_amount_dinar).toLocaleString('ar-LY') + ' د.ل' : '---'}
+                  ${fullClaim.assessor_amount_dinar ? Number(fullClaim.assessor_amount_dinar).toLocaleString('en-US') + ' د.ل' : '---'}
                   ${fullClaim.assessor_other_amount ? ` (ما يعادل ${fullClaim.assessor_other_amount})` : ''}
                 </div>
               </div>
@@ -1175,7 +1174,7 @@ export default function ClaimsList() {
           
           <div class="footer-note">
             أي كشط أو تعديل يلغي هذه الوثيقة<br/>
-            طبع بواسطة نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+            طبع بواسطة نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
           </div>
           
         </div>
@@ -1621,7 +1620,7 @@ export default function ClaimsList() {
                   <tr key={claim.id}>
                     <td>{startIndex + index + 1}</td>
                     <td><span className="fw-bold">{claim.claim_number}</span></td>
-                    <td>{claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
+                    <td>{claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB') : 'غير متوفر'}</td>
                     <td>{claim.document?.insurance_number || claim.document_manual_data?.insurance_number || (claim.additional_documents && claim.additional_documents[0]?.insurance_number) || 'غير متوفر'}</td>
                     <td>{claim.claimant_name}</td>
                     <td>{claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—'}</td>
