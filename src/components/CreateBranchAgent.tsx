@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import SearchableSelect from "./SearchableSelect";
 
 
 
@@ -411,223 +412,241 @@ export default function CreateBranchAgent() {
       <div className="users-card">
         <div className="form-page-container">
           <form onSubmit={handleSubmit} className="user-form">
-            <div className="form-group">
-              <label>النوع *</label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'وكيل' | 'فرع من شركة' })}
-              >
-                <option value="وكيل">وكيل</option>
-                <option value="فرع من شركة">فرع من شركة</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>اسم الوكالة *</label>
-              <input
-                type="text"
-                value={formData.agency_name}
-                onChange={(e) => setFormData({ ...formData, agency_name: e.target.value })}
-                placeholder="اسم الوكالة"
-              />
-              {formErrors.agency_name && <span className="error-message">{formErrors.agency_name}</span>}
-            </div>
-
-            <div className="form-group">
-              <label>اسم الوكيل *</label>
-              <input
-                type="text"
-                value={formData.agent_name}
-                onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
-                placeholder="اسم الوكيل"
-              />
-              {formErrors.agent_name && <span className="error-message">{formErrors.agent_name}</span>}
-            </div>
-
-            <div className="form-group">
-              <label>نشاط الوكيل</label>
-              <select
-                value={formData.activity}
-                onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
-              >
-                <option value="">اختر نشاط الوكيل</option>
-                {AGENT_ACTIVITIES.map((activity, index) => (
-                  <option key={index} value={activity}>
-                    {activity}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>رقم الوكالة</label>
-                <input
-                  type="text"
-                  value={formData.agency_number}
-                  onChange={(e) => setFormData({ ...formData, agency_number: e.target.value })}
-                  placeholder="رقم الوكالة"
-                />
-              </div>
-              <div className="form-group">
-                <label>رقم الختم</label>
-                <input
-                  type="text"
-                  value={formData.stamp_number}
-                  onChange={(e) => setFormData({ ...formData, stamp_number: e.target.value })}
-                  placeholder="رقم الختم"
-                />
-              </div>
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>تاريخ التعاقد *</label>
-                <input
-                  type="date"
-                  value={formData.contract_date}
-                  onChange={(e) => setFormData({ ...formData, contract_date: e.target.value })}
-                />
-                {formErrors.contract_date && <span className="error-message">{formErrors.contract_date}</span>}
-              </div>
-              <div className="form-group">
-                <label>تاريخ انتهاء العقد</label>
-                <input
-                  type="date"
-                  value={formData.contract_end_date}
-                  onChange={(e) => setFormData({ ...formData, contract_end_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>مدة العقد</label>
-              <input
-                type="text"
-                value={formData.contract_duration}
-                onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })}
-                placeholder="سيتم حسابها تلقائياً عند اختيار تاريخ انتهاء العقد"
-                readOnly={!!(formData.contract_date && formData.contract_end_date)}
-                style={formData.contract_date && formData.contract_end_date ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>المدينة *</label>
-              {isCustomCity ? (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="اكتب اسم المدينة الجديدة"
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomCity(false);
-                      setFormData({ ...formData, city: '' });
-                    }}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#f3f4f6',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      color: '#374151',
-                      fontWeight: '500'
-                    }}
-                  >
-                    إلغاء
-                  </button>
-                </div>
-              ) : (
-                <select
-                  value={formData.city}
-                  onChange={(e) => {
-                    if (e.target.value === 'other') {
-                      setIsCustomCity(true);
-                      setFormData({ ...formData, city: '' });
-                    } else {
-                      setFormData({ ...formData, city: e.target.value });
-                    }
-                  }}
-                >
-                  <option value="">اختر المدينة</option>
-                  {LIBYAN_CITIES.map((city, index) => (
-                    <option key={index} value={city.ar}>
-                      {city.ar} - {city.en}
-                    </option>
-                  ))}
-                  <option value="other">أخرى (إضافة مدينة جديدة...)</option>
-                </select>
-              )}
-              {formErrors.city && <span className="error-message">{formErrors.city}</span>}
-            </div>
-
-            <div className="form-group">
-              <label>العنوان</label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="العنوان"
-                rows={3}
-              />
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>رقم الهاتف</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="رقم الهاتف"
-                />
-              </div>
-              <div className="form-group">
-                <label>الجنسية</label>
-                <input
-                  type="text"
-                  value={formData.nationality}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                  placeholder="الجنسية"
-                />
-              </div>
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>الرقم الوطني</label>
-                <input
-                  type="text"
-                  value={formData.national_id}
-                  onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
-                  placeholder="الرقم الوطني"
-                  maxLength={50}
-                />
-                {formErrors.national_id && <span className="error-message">{formErrors.national_id}</span>}
-              </div>
-              <div className="form-group">
-                <label>رقم إثبات الشخصية</label>
-                <input
-                  type="text"
-                  value={formData.identity_number}
-                  onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
-                  placeholder="حروف وأرقام"
-                />
-              </div>
-            </div>
-
-
-            {/* رفع المستندات والأوراق الثبوتية */}
-            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                <i className="fa-solid fa-paperclip" style={{ marginLeft: '8px', color: '#2563eb' }}></i>
-                المستندات والأوراق الثبوتية للوكيل
+            {/* 1. البيانات الأساسية للوكالة/الفرع */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-circle-info" style={{ color: '#3b82f6' }}></i>
+                البيانات الأساسية للوكالة/الفرع
               </h3>
               <div className="form-grid">
+                <div className="form-group">
+                  <label>النوع *</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'وكيل' | 'فرع من شركة' })}
+                  >
+                    <option value="وكيل">وكيل</option>
+                    <option value="فرع من شركة">فرع من شركة</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>نشاط الوكيل</label>
+                  <select
+                    value={formData.activity}
+                    onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
+                  >
+                    <option value="">اختر نشاط الوكيل</option>
+                    {AGENT_ACTIVITIES.map((activity, index) => (
+                      <option key={index} value={activity}>
+                        {activity}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>اسم الوكالة *</label>
+                  <input
+                    type="text"
+                    value={formData.agency_name}
+                    onChange={(e) => setFormData({ ...formData, agency_name: e.target.value })}
+                    placeholder="اسم الوكالة"
+                  />
+                  {formErrors.agency_name && <span className="error-message">{formErrors.agency_name}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label>اسم الوكيل *</label>
+                  <input
+                    type="text"
+                    value={formData.agent_name}
+                    onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
+                    placeholder="اسم الوكيل"
+                  />
+                  {formErrors.agent_name && <span className="error-message">{formErrors.agent_name}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label>المدينة *</label>
+                  {isCustomCity ? (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        placeholder="اكتب اسم المدينة الجديدة"
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomCity(false);
+                          setFormData({ ...formData, city: '' });
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#f3f4f6',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          color: '#374151',
+                          fontWeight: '500'
+                        }}
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.city}
+                      onChange={(e) => {
+                        if (e.target.value === 'other') {
+                          setIsCustomCity(true);
+                          setFormData({ ...formData, city: '' });
+                        } else {
+                          setFormData({ ...formData, city: e.target.value });
+                        }
+                      }}
+                    >
+                      <option value="">اختر المدينة</option>
+                      {LIBYAN_CITIES.map((city, index) => (
+                        <option key={index} value={city.ar}>
+                          {city.ar} - {city.en}
+                        </option>
+                      ))}
+                      <option value="other">أخرى (إضافة مدينة جديدة...)</option>
+                    </select>
+                  )}
+                  {formErrors.city && <span className="error-message">{formErrors.city}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label>رقم الهاتف</label>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="رقم الهاتف"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>الجنسية</label>
+                  <input
+                    type="text"
+                    value={formData.nationality}
+                    onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                    placeholder="الجنسية"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>العنوان</label>
+                  <textarea
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="العنوان"
+                    rows={1}
+                    style={{ minHeight: '45px' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. بيانات التعاقد والعقد */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-file-signature" style={{ color: '#10b981' }}></i>
+                بيانات التعاقد والعقد
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>رقم الوكالة</label>
+                  <input
+                    type="text"
+                    value={formData.agency_number}
+                    onChange={(e) => setFormData({ ...formData, agency_number: e.target.value })}
+                    placeholder="رقم الوكالة"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>رقم الختم</label>
+                  <input
+                    type="text"
+                    value={formData.stamp_number}
+                    onChange={(e) => setFormData({ ...formData, stamp_number: e.target.value })}
+                    placeholder="رقم الختم"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>تاريخ التعاقد *</label>
+                  <input
+                    type="date"
+                    value={formData.contract_date}
+                    onChange={(e) => setFormData({ ...formData, contract_date: e.target.value })}
+                  />
+                  {formErrors.contract_date && <span className="error-message">{formErrors.contract_date}</span>}
+                </div>
+                <div className="form-group">
+                  <label>تاريخ انتهاء العقد</label>
+                  <input
+                    type="date"
+                    value={formData.contract_end_date}
+                    onChange={(e) => setFormData({ ...formData, contract_end_date: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>مدة العقد</label>
+                  <input
+                    type="text"
+                    value={formData.contract_duration}
+                    onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })}
+                    placeholder="سيتم حسابها تلقائياً عند اختيار تاريخ انتهاء العقد"
+                    readOnly={!!(formData.contract_date && formData.contract_end_date)}
+                    style={formData.contract_date && formData.contract_end_date ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. الهوية والبيانات الشخصية للوكيل */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-id-card" style={{ color: '#8b5cf6' }}></i>
+                الهوية والبيانات الشخصية للوكيل
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>الرقم الوطني</label>
+                  <input
+                    type="text"
+                    value={formData.national_id}
+                    onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
+                    placeholder="الرقم الوطني"
+                    maxLength={50}
+                  />
+                  {formErrors.national_id && <span className="error-message">{formErrors.national_id}</span>}
+                </div>
+                <div className="form-group">
+                  <label>رقم إثبات الشخصية</label>
+                  <input
+                    type="text"
+                    value={formData.identity_number}
+                    onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
+                    placeholder="حروف وأرقام"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 4. رفع المستندات والأوراق الثبوتية */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-folder-open" style={{ color: '#14b8a6' }}></i>
+                المستندات والأوراق الثبوتية للوكيل
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
                 {[
                   { ref: personalPhotoRef, state: personalPhoto, setter: setPersonalPhoto, label: 'صورة شخصية', accept: 'image/*,.pdf,.doc,.docx' },
                   { ref: identityPhotoRef, state: identityPhoto, setter: setIdentityPhoto, label: 'صورة إثبات الهوية', accept: 'image/*,.pdf,.doc,.docx' },
@@ -642,8 +661,18 @@ export default function CreateBranchAgent() {
                   { ref: academicQualificationRef, state: academicQualification, setter: setAcademicQualification, label: 'المؤهل العلمي', accept: 'image/*,.pdf,.doc,.docx' },
                   { ref: activityLicenseRef, state: activityLicense, setter: setActivityLicense, label: 'إذن مزاولة نشاط', accept: 'image/*,.pdf,.doc,.docx' },
                 ].map((doc, idx) => (
-                  <div key={idx} className="form-group">
-                    <label>{doc.label}</label>
+                  <div key={idx} className="form-group" style={{ 
+                    border: doc.state ? '1px solid #10b981' : '1px dashed #cbd5e1', 
+                    borderRadius: '12px', 
+                    padding: '16px', 
+                    background: doc.state ? '#f0fdf4' : '#f8fafc',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}>
+                    <label style={{ margin: 0, fontWeight: 'bold', fontSize: '14px', color: 'var(--text)' }}>{doc.label}</label>
                     <input
                       ref={doc.ref}
                       type="file"
@@ -655,7 +684,25 @@ export default function CreateBranchAgent() {
                       type="button"
                       onClick={() => doc.ref.current?.click()}
                       className={doc.state ? 'btn-submit' : 'btn-cancel'}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      style={{ 
+                        width: '100%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '8px', 
+                        padding: '10px',
+                        borderRadius: '8px',
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        boxShadow: 'none',
+                        border: '1px solid',
+                        borderColor: doc.state ? '#10b981' : '#d1d5db',
+                        background: doc.state ? '#10b981' : '#ffffff',
+                        color: doc.state ? '#ffffff' : '#374151',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
                     >
                       <i className={`fa-solid ${doc.state ? 'fa-circle-check' : 'fa-upload'}`}></i>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -667,53 +714,62 @@ export default function CreateBranchAgent() {
               </div>
             </div>
 
-            <div className="form-grid">
-              <div className="form-group">
-                <label>اسم المستخدم *</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="اسم المستخدم"
-                />
-                {formErrors.username && <span className="error-message">{formErrors.username}</span>}
-              </div>
-              <div className="form-group">
-                <label>كلمة المرور *</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            {/* 5. بيانات حساب الدخول للوحة التحكم */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-user-lock" style={{ color: '#f59e0b' }}></i>
+                بيانات حساب الدخول للوحة التحكم
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>اسم المستخدم *</label>
                   <input
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="كلمة المرور"
-                    style={{ width: '100%', paddingLeft: '40px' }}
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="اسم المستخدم"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      left: '10px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      color: '#6b7280'
-                    }}
-                  >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
+                  {formErrors.username && <span className="error-message">{formErrors.username}</span>}
                 </div>
-                {formErrors.password && <span className="error-message">{formErrors.password}</span>}
+                <div className="form-group">
+                  <label>كلمة المرور *</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="كلمة المرور"
+                      style={{ width: '100%', paddingLeft: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        left: '10px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        color: '#6b7280'
+                      }}
+                    >
+                      {showPassword ? '👁' : '👁‍🗨'}
+                    </button>
+                  </div>
+                  {formErrors.password && <span className="error-message">{formErrors.password}</span>}
+                </div>
               </div>
             </div>
 
-            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+            {/* 6. منظومة الهيئة (EIDC) */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-globe" style={{ color: '#6366f1' }}></i>
                 بيانات الدخول لمنظومة الهيئة (EIDC)
               </h3>
               <div className="form-grid">
@@ -738,8 +794,10 @@ export default function CreateBranchAgent() {
               </div>
             </div>
 
-            <div className="profile-section-divider" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+            {/* 7. منظومة الاتحاد (LIFO) */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-network-wired" style={{ color: '#ec4899' }}></i>
                 بيانات الدخول لمنظومة الاتحاد (LIFO)
               </h3>
               <div className="form-grid">
@@ -761,58 +819,66 @@ export default function CreateBranchAgent() {
                     placeholder="كلمة المرور في الاتحاد"
                   />
                 </div>
-                <div className="form-group">
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label>مكتب الاتحاد المرتبط (LIFO Office)</label>
-                  <select
+                  <SearchableSelect
+                    options={lifoOffices.map((office) => ({
+                      value: office.id,
+                      label: `${office.name} (معرف: ${office.id})`
+                    }))}
+                    placeholder="اختر مكتب الاتحاد..."
                     value={formData.lifo_office_id}
-                    onChange={(e) => setFormData({ ...formData, lifo_office_id: e.target.value })}
+                    onChange={(val) => setFormData({ ...formData, lifo_office_id: val })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 8. شروط وحالة العقد */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-sliders" style={{ color: '#64748b' }}></i>
+                شروط وحالة العقد
+              </h3>
+              <div className="form-grid">
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>شروط العقد</label>
+                  <textarea
+                    value={formData.contract_conditions}
+                    onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })}
+                    placeholder="أدخل شروط العقد هنا..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>ملاحظات عن الوكيل</label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="ملاحظات"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>الحالة</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'نشط' | 'غير نشط' })}
                   >
-                    <option value="">اختر مكتب الاتحاد...</option>
-                    {lifoOffices.map((office) => (
-                      <option key={office.id} value={office.id}>
-                        {office.name} (معرف: {office.id})
-                      </option>
-                    ))}
+                    <option value="نشط">نشط</option>
+                    <option value="غير نشط">غير نشط</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            <div className="form-group">
-              <label>شروط العقد</label>
-              <textarea
-                value={formData.contract_conditions}
-                onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })}
-                placeholder="أدخل شروط العقد هنا..."
-                rows={4}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>ملاحظات عن الوكيل</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="ملاحظات"
-                rows={3}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>الحالة</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'نشط' | 'غير نشط' })}
-              >
-                <option value="نشط">نشط</option>
-                <option value="غير نشط">غير نشط</option>
-              </select>
-            </div>
-
-            {/* الوثائق المصرح بها */}
-            <div className="form-section" style={{ marginTop: '24px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                الوثائق المصرح بها
+            {/* 9. الوثائق المصرح بها */}
+            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
+                <i className="fa-solid fa-shield-halved" style={{ color: '#0ea5e9' }}></i>
+                الوثائق المصرح بها والنسب
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
@@ -843,7 +909,7 @@ export default function CreateBranchAgent() {
                 })}
               </div>
 
-              <h3 className="form-section-title" style={{ marginTop: '24px', marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+              <h3 className="form-section-title" style={{ marginTop: '24px', marginBottom: '16px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', margin: '24px 0 16px 0' }}>
                 تقارير وصلاحيات إضافية
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
@@ -883,7 +949,7 @@ export default function CreateBranchAgent() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {/* عرض "تأمين سيارات" إذا كان "تأمين سيارات إجباري" محدد */}
                     {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>تأمين سيارات:</label>
                         <select
                           value={formData.document_percentages['تأمين سيارات'] || 0}
@@ -906,7 +972,7 @@ export default function CreateBranchAgent() {
                     )}
                     {/* عرض باقي الوثائق المصرح بها (عدا "تأمين سيارات إجباري") */}
                     {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
-                      <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                      <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
                         <select
                           value={formData.document_percentages[docType] || 0}
@@ -932,11 +998,11 @@ export default function CreateBranchAgent() {
               )}
             </div>
 
-            <div className="form-actions">
-              <button type="button" onClick={() => navigate('/branches-agents')} className="btn-cancel">
+            <div className="form-actions" style={{ marginTop: '30px', display: 'flex', gap: '12px', justifyContent: 'flex-start' }}>
+              <button type="button" onClick={() => navigate('/branches-agents')} className="btn-cancel" style={{ minWidth: '120px', padding: '12px' }}>
                 إلغاء
               </button>
-              <button type="submit" className="btn-submit" disabled={submitting}>
+              <button type="submit" className="btn-submit" disabled={submitting} style={{ minWidth: '150px', padding: '12px', background: 'var(--accent, #3b82f6)' }}>
                 {submitting ? 'جاري الحفظ...' : 'إنشاء السجل'}
               </button>
             </div>
