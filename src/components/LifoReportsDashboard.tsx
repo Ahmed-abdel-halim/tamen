@@ -142,6 +142,7 @@ export default function LifoReportsDashboard() {
   const [lifoOffices, setLifoOffices] = useState<LIFOOffice[]>([]);
   const [distributionLogs, setDistributionLogs] = useState<any[]>([]);
   const [loadingOffices, setLoadingOffices] = useState(false);
+  const [loadingDistribution, setLoadingDistribution] = useState(false);
   const [distSearchQuery, setDistSearchQuery] = useState('');
   const [distCurrentPage, setDistCurrentPage] = useState(1);
   const [distRowsPerPage, setDistRowsPerPage] = useState(10);
@@ -159,6 +160,7 @@ export default function LifoReportsDashboard() {
 
   // Tab 4: Refunds/Returns State (Admin only)
   const [refundLogs, setRefundLogs] = useState<any[]>([]);
+  const [loadingRefund, setLoadingRefund] = useState(false);
   const [refundSearchQuery, setRefundSearchQuery] = useState('');
   const [refundCurrentPage, setRefundCurrentPage] = useState(1);
   const [refundRowsPerPage, setRefundRowsPerPage] = useState(10);
@@ -971,6 +973,7 @@ export default function LifoReportsDashboard() {
   // Tab 3: Fetch Distribution Logs
   const fetchDistributionLogs = async () => {
     setDistError(null);
+    setLoadingDistribution(true);
     try {
       const formData = new FormData();
       formData.append('user_name', credentials.user_name);
@@ -1007,12 +1010,15 @@ export default function LifoReportsDashboard() {
       console.error('Error fetching LIFO distribution logs:', e);
       setDistError(translateLifoError(e.message || 'تعذر الاتصال بسيرفر الاتحاد. يرجى التحقق من الشبكة.'));
       setDistributionLogs([]);
+    } finally {
+      setLoadingDistribution(false);
     }
   };
 
   // Tab 4: Fetch Refund Logs
   const fetchRefundLogs = async () => {
     setRefundError(null);
+    setLoadingRefund(true);
     try {
       const formData = new FormData();
       formData.append('user_name', credentials.user_name);
@@ -1049,6 +1055,8 @@ export default function LifoReportsDashboard() {
       console.error('Error fetching LIFO refund logs:', e);
       setRefundError(translateLifoError(e.message || 'تعذر الاتصال بسيرفر الاتحاد. يرجى التحقق من الشبكة.'));
       setRefundLogs([]);
+    } finally {
+      setLoadingRefund(false);
     }
   };
 
@@ -4417,11 +4425,20 @@ export default function LifoReportsDashboard() {
                         )}
                       </Fragment>
                     ))}
-                    {filteredDistributions.length === 0 && (
+                    {loadingDistribution && filteredDistributions.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '30px', textAlign: 'center', color: 'var(--text)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <i className="fa-solid fa-spinner fa-spin"></i>
+                            <span>جاري تحميل البيانات...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : !loadingDistribution && filteredDistributions.length === 0 ? (
                       <tr>
                         <td colSpan={3} style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>لا توجد حركات توزيع مسجلة</td>
                       </tr>
-                    )}
+                    ) : null}
                   </tbody>
                 </table>
               </div>
@@ -4734,11 +4751,20 @@ export default function LifoReportsDashboard() {
                         )}
                       </Fragment>
                     ))}
-                    {filteredRefunds.length === 0 && (
+                    {loadingRefund && filteredRefunds.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--text)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <i className="fa-solid fa-spinner fa-spin"></i>
+                            <span>جاري تحميل البيانات...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : !loadingRefund && filteredRefunds.length === 0 ? (
                       <tr>
                         <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>لا توجد حركات استرجاع مسجلة</td>
                       </tr>
-                    )}
+                    ) : null}
                   </tbody>
                 </table>
               </div>
