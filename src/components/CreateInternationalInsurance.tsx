@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { translateLifoError } from "../utils/translateLifoError";
 
 // Helper to get local date string YYYY-MM-DD
 const getLocalDateString = (date: Date = new Date()) => {
@@ -102,6 +103,44 @@ const getExternalCredentials = () => {
   return EXTERNAL_API_CREDENTIALS;
 };
 
+// Get current logged in user LIFO Office ID
+const getLifoOfficeId = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const currentUser = JSON.parse(userStr);
+      if (currentUser.lifo_office_id) {
+        return currentUser.lifo_office_id.toString();
+      }
+      // Fallback for ahmed2
+      if (currentUser.lifo_username === 'ahmed2') {
+        return '2403';
+      }
+    }
+  } catch (e) {
+    console.error("Error reading lifo_office_id:", e);
+  }
+  return null;
+};
+
+// Get current logged in user LIFO Username
+const getLifoUsername = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const currentUser = JSON.parse(userStr);
+      if (currentUser.lifo_username) {
+        return currentUser.lifo_username;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading lifo_username:", e);
+  }
+  return null;
+};
+
+
+
 // قائمة السنوات من 1960 إلى 2026
 const YEARS = Array.from({ length: 67 }, (_, i) => 1960 + i).reverse();
 
@@ -142,13 +181,48 @@ export default function CreateInternationalInsurance() {
   const EXTERNAL_API_BASE_URL = import.meta.env.DEV
     ? 'http://localhost:8000/api/lifo-prod/api'
     : `${API_BASE_URL}/lifo-prod/api`;
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [externalCars, setExternalCars] = useState<ExternalCar[]>([]);
-  const [externalCountries, setExternalCountries] = useState<ExternalCountry[]>([]);
-  const [, setExternalCountriesConditions] = useState<ExternalCountryCondition[]>([]);
-  const [externalVehicleNationalities, setExternalVehicleNationalities] = useState<ExternalVehicleNationality[]>([]);
-  const [, setExternalInsuranceClauses] = useState<ExternalInsuranceClause[]>([]);
-  const [, setExternalPrices] = useState<ExternalPrices | null>(null);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>(() => {
+    try {
+      const stored = localStorage.getItem('cache_vehicle_types');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [externalCars, setExternalCars] = useState<ExternalCar[]>(() => {
+    try {
+      const stored = localStorage.getItem('cache_external_cars');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [externalCountries, setExternalCountries] = useState<ExternalCountry[]>(() => {
+    try {
+      const stored = localStorage.getItem('cache_external_countries');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [, setExternalCountriesConditions] = useState<ExternalCountryCondition[]>(() => {
+    try {
+      const stored = localStorage.getItem('cache_external_countries_conditions');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [externalVehicleNationalities, setExternalVehicleNationalities] = useState<ExternalVehicleNationality[]>(() => {
+    try {
+      const stored = localStorage.getItem('cache_external_vehicle_nationalities');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [, setExternalInsuranceClauses] = useState<ExternalInsuranceClause[]>(() => {
+    try {
+      const stored = localStorage.getItem('cache_external_insurance_clauses');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [, setExternalPrices] = useState<ExternalPrices | null>(() => {
+    try {
+      const stored = localStorage.getItem('cache_external_prices');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
   const [selectedCountryInfo, setSelectedCountryInfo] = useState<ExternalCountry | null>(null);
   const [selectedCarInfo, setSelectedCarInfo] = useState<ExternalCar | null>(null);
   const [selectedVehicleNationalityInfo, setSelectedVehicleNationalityInfo] = useState<ExternalVehicleNationality | null>(null);
@@ -206,8 +280,15 @@ export default function CreateInternationalInsurance() {
 
   // جلب البيانات من النظام الخارجي
   const fetchExternalData = async () => {
+    const hasCache = 
+      localStorage.getItem('cache_external_cars') && 
+      localStorage.getItem('cache_external_countries') &&
+      localStorage.getItem('cache_external_vehicle_nationalities');
+
     try {
-      setLoading(true);
+      if (!hasCache) {
+        setLoading(true);
+      }
       // جلب السيارات والدول وشروط الدول وجنسيات المركبات وبنود التأمين والأسعار من النظام الخارجي
       await Promise.all([
         fetchExternalCars(),
@@ -224,15 +305,19 @@ export default function CreateInternationalInsurance() {
     }
   };
 
-  // تسجيل الدخول إلى النظام الخارجي (Company Login)
+  // تسجيل الدخول إلى النظام الخارجي (Company or Office Login)
   const authenticateExternalAPI = async (): Promise<boolean> => {
     try {
-      // Company Login يستخدم POST مع FormData (حسب استجابة الـ API)
+      const creds = getExternalCredentials();
+      const isCompany = creds.user_name === 'adminmli';
+      const endpoint = isCompany ? '/auth/company' : '/auth/offices';
+
       const formData = new FormData();
-      formData.append('user_name', getExternalCredentials().user_name);
-      formData.append('pass_word', getExternalCredentials().pass_word);
+      formData.append('user_name', creds.user_name);
+      formData.append('pass_word', creds.pass_word);
       
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/auth/company`, {
+      console.log(`🔐 محاولة تسجيل الدخول إلى الاتحاد كـ ${creds.user_name} عبر ${endpoint}...`);
+      const res = await fetch(`${EXTERNAL_API_BASE_URL}${endpoint}`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -257,16 +342,16 @@ export default function CreateInternationalInsurance() {
 
       const isAuthenticated = data.code === 1 && (data.statues === true || data.status === true);
       if (isAuthenticated) {
-        console.log('✅ Company Login successful');
+        console.log(`✅ تم تسجيل الدخول بنجاح كـ ${creds.user_name}`);
         if (data.data) {
-          console.log('📋 بيانات المستخدم:', data.data);
+          console.log('📋 بيانات المستخدم من الاتحاد:', data.data);
         }
       } else {
-        console.warn('⚠️ Company Login failed:', data);
+        console.warn(`⚠️ فشل تسجيل الدخول كـ ${creds.user_name}:`, data);
       }
       return isAuthenticated;
     } catch (error) {
-      console.error('❌ Company Login error:', error);
+      console.error('❌ خطأ أثناء تسجيل الدخول إلى الاتحاد:', error);
       return false;
     }
   };
@@ -287,6 +372,7 @@ export default function CreateInternationalInsurance() {
       if (data.code === 1 && data.data && Array.isArray(data.data)) {
         const cars = data.data.filter((car: ExternalCar) => car.active === 1);
         setExternalCars(cars);
+        localStorage.setItem('cache_external_cars', JSON.stringify(cars));
         // حفظ السيارات محلياً
         await syncCarsToLocal(cars);
       }
@@ -333,6 +419,7 @@ export default function CreateInternationalInsurance() {
             (a.name || '').localeCompare(b.name || '')
           );
         setExternalCountries(activeCountries);
+        localStorage.setItem('cache_external_countries', JSON.stringify(activeCountries));
         console.log('Fetched external countries:', activeCountries.length);
       } else {
         console.warn('Failed to fetch countries:', data);
@@ -384,6 +471,7 @@ export default function CreateInternationalInsurance() {
             return (a.name || '').localeCompare(b.name || '');
           });
         setExternalCountriesConditions(activeConditions);
+        localStorage.setItem('cache_external_countries_conditions', JSON.stringify(activeConditions));
         console.log('Fetched external countries conditions:', activeConditions.length);
       } else {
         console.warn('Failed to fetch countries conditions:', data);
@@ -480,6 +568,7 @@ export default function CreateInternationalInsurance() {
             (a.name || '').localeCompare(b.name || '')
           );
         setExternalVehicleNationalities(activeNationalities);
+        localStorage.setItem('cache_external_vehicle_nationalities', JSON.stringify(activeNationalities));
         console.log('Fetched external vehicle nationalities:', activeNationalities.length);
       } else {
         console.warn('Failed to fetch vehicle nationalities:', data);
@@ -568,6 +657,7 @@ export default function CreateInternationalInsurance() {
       if (data.code === 1 && data.data && Array.isArray(data.data)) {
         const clauses = data.data.filter((clause: ExternalInsuranceClause) => clause.active !== 0);
         setExternalInsuranceClauses(clauses);
+        localStorage.setItem('cache_external_insurance_clauses', JSON.stringify(clauses));
         console.log('Fetched external insurance clauses:', clauses.length);
         
         // استخدام أول بند تأمين نشط كقيمة افتراضية
@@ -611,6 +701,7 @@ export default function CreateInternationalInsurance() {
 
       if (data.code === 1 && data.data) {
         setExternalPrices(data.data);
+        localStorage.setItem('cache_external_prices', JSON.stringify(data.data));
         console.log('Fetched external prices:', data.data);
         
         // تحديث الأسعار في formData إذا كانت موجودة
@@ -837,6 +928,7 @@ export default function CreateInternationalInsurance() {
       if (res.ok) {
         const data = await res.json();
         setVehicleTypes(data);
+        localStorage.setItem('cache_vehicle_types', JSON.stringify(data));
       }
     } catch (error) {
       console.error('Error fetching vehicle types:', error);
@@ -968,12 +1060,45 @@ export default function CreateInternationalInsurance() {
         'المجموع': documentData.total,
       });
 
-      // 1. حفظ الوثيقة في النظام المحلي أولاً
+      // 1. إرسال الوثيقة إلى النظام الخارجي (الاتحاد) أولاً للتحقق والمزامنة
+      setSyncingExternal(true);
+      let policyNumber = '';
+      try {
+        console.log('📡 جاري إرسال الوثيقة إلى النظام الخارجي أولاً...');
+        const externalResponse = await sendDocumentToExternalAPI(documentData, 0);
+        let extractedNumber = externalResponse?.policyNumber || externalResponse?.data?.policyNumber || externalResponse?.data || '';
+        if (extractedNumber && typeof extractedNumber === 'object') {
+          extractedNumber = extractedNumber.policyNumber || '';
+        }
+        policyNumber = typeof extractedNumber === 'string' ? extractedNumber.trim() : '';
+
+        if (!policyNumber) {
+          throw new Error('لم يتم إرجاع رقم وثيقة صالح من خادم الاتحاد.');
+        }
+
+        console.log('✅ تم إرسال الوثيقة بنجاح إلى النظام الخارجي! رقم الوثيقة:', policyNumber);
+      } catch (externalError: any) {
+        const errorMsg = externalError.message || '';
+        console.error('❌ فشلت المزامنة مع الاتحاد، لن يتم حفظ الوثيقة محلياً:', errorMsg);
+        showToast(translateLifoError(errorMsg) || 'فشلت المزامنة مع الاتحاد، تم إلغاء العملية ولم تُحفظ الوثيقة محلياً.', 'error');
+        setSubmitting(false);
+        setSyncingExternal(false);
+        return; // خروج فوري لمنع حفظ الوثيقة محلياً
+      } finally {
+        setSyncingExternal(false);
+      }
+
+      // 2. حفظ الوثيقة في النظام المحلي مع رقم وثيقة الاتحاد المكتسبة
       console.log('💾 جاري حفظ الوثيقة في النظام المحلي...');
+      const localDocumentPayload = {
+        ...documentData,
+        external_policy_number: policyNumber
+      };
+
       const res = await fetch(`${API_BASE_URL}/international-insurance-documents`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(documentData),
+        body: JSON.stringify(localDocumentPayload),
       });
 
       const data = await res.json();
@@ -981,87 +1106,24 @@ export default function CreateInternationalInsurance() {
       if (!res.ok) {
         console.error('❌ خطأ في حفظ الوثيقة محلياً:');
         console.error('Validation errors:', data.errors);
-        console.error('Request data:', documentData);
         
         if (data.errors) {
           setFormErrors(data.errors);
-          // عرض تفاصيل الأخطاء للمستخدم
           const errorMessages = Object.values(data.errors).flat().join(', ');
-          throw new Error(`خطأ في التحقق من البيانات: ${errorMessages}`);
+          throw new Error(`خطأ في التحقق من البيانات المحلية: ${errorMessages}`);
         }
-        throw new Error(data.message || 'حدث خطأ أثناء إنشاء الوثيقة');
+        throw new Error(data.message || 'حدث خطأ أثناء حفظ الوثيقة محلياً');
       }
 
       console.log('✅ تم حفظ الوثيقة في النظام المحلي بنجاح');
       console.log('📄 رقم الوثيقة المحلية:', data.id || data.data?.id);
 
-      // 2. إرسال الوثيقة إلى النظام الخارجي
-      setSyncingExternal(true);
-      try {
-        const externalResponse = await sendDocumentToExternalAPI(documentData, data.id || data.data?.id);
-        
-        // عرض رسالة نجاح مع رقم الوثيقة من النظام الخارجي إن وجد
-        const policyNumber = externalResponse?.policyNumber || externalResponse?.data?.policyNumber || externalResponse?.data || '';
-        
-        // تحديث الوثيقة المحلية برقم الوثيقة الخارجية
-        if (policyNumber) {
-          try {
-            await fetch(`${API_BASE_URL}/international-insurance-documents/${data.id || data.data?.id}`, {
-              method: 'PUT',
-              headers: {
-                ...headers,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                ...documentData,
-                external_policy_number: policyNumber
-              })
-            });
-            console.log('✅ تم تحديث رقم الوثيقة الخارجية محلياً:', policyNumber);
-          } catch (updateError) {
-            console.error('⚠️ فشل تحديث رقم الوثيقة الخارجية محلياً:', updateError);
-          }
-        }
-
-        const successMessage = policyNumber 
-          ? `تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي. رقم الوثيقة: ${policyNumber}`
-          : 'تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي';
-        
-        showToast(successMessage, 'success');
-        
-        console.log('✅ تم حفظ الوثيقة محلياً وإرسالها إلى النظام الخارجي بنجاح');
-        console.log('📄 رقم الوثيقة المحلية:', data.id || data.data?.id);
-        console.log('🌐 استجابة النظام الخارجي:', externalResponse);
-        
-        // ملخص نهائي
-        console.log('═══════════════════════════════════════════════════════');
-        console.log('✅ تمت العملية بنجاح!');
-        console.log('📄 رقم الوثيقة المحلية:', data.id || data.data?.id);
-        if (policyNumber) {
-          console.log('🎫 رقم الوثيقة في النظام الخارجي:', policyNumber);
-        }
-        console.log('═══════════════════════════════════════════════════════');
-      } catch (externalError: any) {
-        // إذا فشل الإرسال للخارجي، الوثيقة محفوظة محلياً بنجاح
-        console.warn('⚠️ فشل المزامنة مع النظام الخارجي:', externalError.message);
-        console.warn('📋 الوثيقة محفوظة محلياً برقم:', data.id || data.data?.id);
-        
-        // ملخص نهائي مع تحذير
-        console.log('═══════════════════════════════════════════════════════');
-        console.log('⚠️ تم حفظ الوثيقة محلياً فقط');
-        console.log('📄 رقم الوثيقة المحلية:', data.id || data.data?.id);
-        console.log('❌ فشل المزامنة مع النظام الخارجي:', externalError.message);
-        console.log('═══════════════════════════════════════════════════════');
-        
-        // عرض رسالة تحذيرية بدلاً من خطأ
-        showToast(
-          `تم إنشاء الوثيقة محلياً بنجاح. تحذير: فشل المزامنة مع النظام الخارجي - ${externalError.message}`, 
-          'error' 
-        );
-      } finally {
-        setSyncingExternal(false);
-      }
-
+      const successMessage = policyNumber 
+        ? `تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي. رقم الوثيقة: ${policyNumber}`
+        : 'تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي';
+      
+      showToast(successMessage, 'success');
+      
       setTimeout(() => {
         navigate('/international-insurance-documents');
       }, 1500);
@@ -1071,7 +1133,7 @@ export default function CreateInternationalInsurance() {
       console.error('خطأ:', error.message);
       console.error('═══════════════════════════════════════════════════════');
       
-      showToast(error.message || 'حدث خطأ أثناء إنشاء الوثيقة', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء إنشاء الوثيقة', 'error');
     } finally {
       setSubmitting(false);
       setSyncingExternal(false);
@@ -1092,10 +1154,68 @@ export default function CreateInternationalInsurance() {
       }
       console.log('✅ تم تسجيل الدخول بنجاح');
 
+      const creds = getExternalCredentials();
+      const officeId = getLifoOfficeId();
+      const officeUsername = getLifoUsername();
+
+      // جلب رقم معرف مستخدم المكتب من الاتحاد رقمياً
+      let solvedOfficeUserId: string | null = null;
+      if (officeId && officeUsername && creds.user_name !== 'adminmli') {
+        try {
+          console.log(`🔍 جاري جلب مستخدمي المكتب ${officeId} من الاتحاد لمعرفة المعرف الرقمي...`);
+          const usersFormData = new FormData();
+          usersFormData.append('user_name', 'adminmli');
+          usersFormData.append('pass_word', '20232024');
+          
+          const usersRes = await fetch(`${EXTERNAL_API_BASE_URL}/offices/getusers/${officeId}`, {
+            method: 'POST',
+            body: usersFormData
+          });
+          
+          if (usersRes.ok) {
+            const usersData = await usersRes.json();
+            if (usersData.code === 1 && Array.isArray(usersData.data)) {
+              const matchedUser = usersData.data.find(
+                (u: any) => u.username?.toLowerCase() === officeUsername.toLowerCase()
+              );
+              if (matchedUser) {
+                solvedOfficeUserId = matchedUser.id.toString();
+                console.log(`✅ تم العثور على المعرف الرقمي للمستخدم (${officeUsername}) وهو: ${solvedOfficeUserId}`);
+              } else {
+                console.warn(`⚠️ لم يتم العثور على المستخدم (${officeUsername}) في قائمة مستخدمي الاتحاد للمكتب ${officeId}`);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('⚠️ فشل جلب المعرف الرقمي لمستخدم المكتب من الاتحاد:', e);
+        }
+      }
+
       // إعداد البيانات للإرسال حسب الوثائق: POST /api/insurance/create
       const formData = new FormData();
-      formData.append('user_name', getExternalCredentials().user_name);
-      formData.append('pass_word', getExternalCredentials().pass_word);
+      formData.append('user_name', creds.user_name);
+      formData.append('pass_word', creds.pass_word);
+      
+      // إرسال معرف المكتب للوكيل الحالي لتسجيل الوثيقة باسمه
+      if (officeId) {
+        formData.append('offices_id', officeId);
+        formData.append('office_id', officeId);
+        formData.append('branch_id', officeId);
+        formData.append('branch_agent_id', officeId);
+      }
+
+      const finalOfficeUserId = solvedOfficeUserId || officeUsername;
+
+      if (officeUsername) {
+        formData.append('office_username', officeUsername);
+        formData.append('office_user', officeUsername);
+      }
+
+      if (finalOfficeUserId) {
+        formData.append('office_users_id', finalOfficeUserId);
+        formData.append('office_user_id', finalOfficeUserId);
+        formData.append('user_id', finalOfficeUserId);
+      }
       
       // الحقول المطلوبة حسب الوثائق (حسب المثال المرفق)
       // insurance_location: location of customer
@@ -1200,8 +1320,9 @@ export default function CreateInternationalInsurance() {
 
       // عرض جميع البيانات المرسلة في console
       const sentData = {
-        user_name: getExternalCredentials().user_name,
+        user_name: creds.user_name,
         pass_word: '***',
+        offices_id: getLifoOfficeId(),
         insurance_location: insuranceLocation,
         insurance_name: insuranceName,
         insurance_phone: insurancePhone,
@@ -1298,16 +1419,25 @@ export default function CreateInternationalInsurance() {
         }
       }
       
-      // التحقق من نجاح العملية (code === 1 يعني نجاح)
-      if (!res.ok || (responseData.code !== undefined && responseData.code !== 1)) {
-        const errorMessage = responseData.message || responseData.messages || 'فشل إرسال الوثيقة إلى النظام الخارجي';
+      // Extract policy number from response
+      let policyNumber = responseData.policyNumber || responseData.data?.policyNumber || responseData.data;
+      if (policyNumber && typeof policyNumber === 'object') {
+        policyNumber = policyNumber.policyNumber || '';
+      }
+
+      const isCodeSuccess = responseData.code === 1 || responseData.code === '1';
+      const isStatusSuccess = responseData.statues === true || responseData.statues === 'true' || responseData.status === true || responseData.status === 'true';
+      const hasPolicyNumber = typeof policyNumber === 'string' && policyNumber.trim().length > 0;
+
+      // التحقق من نجاح العملية (يجب أن يكون code === 1 أو status === true، ويجب وجود رقم وثيقة صالح)
+      if (!res.ok || (!isCodeSuccess && !isStatusSuccess) || !hasPolicyNumber) {
+        const errorMessage = responseData.message || responseData.messages || responseData.error || 'فشل إرسال الوثيقة إلى النظام الخارجي أو لم يتم إرجاع رقم وثيقة صالح من الاتحاد';
         console.error('❌ خطأ من النظام الخارجي:', responseData);
         throw new Error(errorMessage);
       }
 
       // في حالة النجاح، الـ response يحتوي على policy number
       console.log('✅ تم إرسال الوثيقة بنجاح إلى النظام الخارجي!');
-      const policyNumber = responseData.policyNumber || responseData.data?.policyNumber || responseData.data;
       console.log('🎫 رقم الوثيقة في النظام الخارجي:', policyNumber);
       
       // عرض تفاصيل الوثيقة المُنشأة

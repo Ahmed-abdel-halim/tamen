@@ -121,7 +121,10 @@ export default function CreateBranchAgent() {
     eidc_password: '',
     lifo_username: '',
     lifo_password: '',
+    lifo_office_id: '',
   });
+
+  const [lifoOffices, setLifoOffices] = useState<{ id: string; name: string }[]>([]);
 
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
@@ -192,6 +195,36 @@ export default function CreateBranchAgent() {
       }
     }
   }, [formData.contract_date, formData.contract_end_date]);
+
+  useEffect(() => {
+    const fetchLifoOffices = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/lifo-prod/api/offices/all`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            user_name: 'adminmli',
+            pass_word: '20232024'
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.code === 1 && Array.isArray(data.data)) {
+            setLifoOffices(data.data.map((o: any) => ({
+              id: o.id.toString(),
+              name: o.name
+            })));
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching LIFO offices:', e);
+      }
+    };
+    fetchLifoOffices();
+  }, []);
 
   const handleDocumentToggle = (documentType: string) => {
     const isSelected = formData.authorized_documents.includes(documentType);
@@ -317,6 +350,7 @@ export default function CreateBranchAgent() {
       if (formData.eidc_password) formDataToSend.append('eidc_password', formData.eidc_password);
       if (formData.lifo_username) formDataToSend.append('lifo_username', formData.lifo_username);
       if (formData.lifo_password) formDataToSend.append('lifo_password', formData.lifo_password);
+      if (formData.lifo_office_id) formDataToSend.append('lifo_office_id', formData.lifo_office_id);
 
       const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         method: 'POST',
@@ -726,6 +760,20 @@ export default function CreateBranchAgent() {
                     onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
                     placeholder="كلمة المرور في الاتحاد"
                   />
+                </div>
+                <div className="form-group">
+                  <label>مكتب الاتحاد المرتبط (LIFO Office)</label>
+                  <select
+                    value={formData.lifo_office_id}
+                    onChange={(e) => setFormData({ ...formData, lifo_office_id: e.target.value })}
+                  >
+                    <option value="">اختر مكتب الاتحاد...</option>
+                    {lifoOffices.map((office) => (
+                      <option key={office.id} value={office.id}>
+                        {office.name} (معرف: {office.id})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>

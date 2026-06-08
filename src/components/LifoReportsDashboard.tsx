@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import { API_BASE_URL } from "../config/api";
+import { translateLifoError } from "../utils/translateLifoError";
 
 // Default external credentials
 const EXTERNAL_API_CREDENTIALS = {
@@ -168,9 +169,10 @@ export default function LifoReportsDashboard() {
   const [refundError, setRefundError] = useState<string | null>(null);
 
   // Reports sub-tab & search states
-  const [reportSubTab, setReportSubTab] = useState<'sales_summary' | 'sales_detailed' | 'canceled_cards' | 'company_inventory' | 'offices_inventory' | 'offices_aggregated'>('sales_summary');
+  const [reportSubTab, setReportSubTab] = useState<'sales_summary' | 'sales_detailed' | 'canceled_cards' | 'company_inventory' | 'offices_inventory' | 'offices_aggregated'>('sales_detailed');
   const [searchOfficeId, setSearchOfficeId] = useState('');
   const [searchOfficeUserId, setSearchOfficeUserId] = useState('');
+  const [officeUsers, setOfficeUsers] = useState<any[]>([]);
 
   // Reset refund page when search changes
   useEffect(() => {
@@ -307,7 +309,7 @@ export default function LifoReportsDashboard() {
       if (data.code === 1) {
         showToast(`تم إرسال طلب البطاقات بنجاح برقم: ${reqNum}`, 'success');
       } else {
-        showToast(data.message || data.messages || 'تم إرسال الطلب وحفظه محلياً بنجاح (قيد المراجعة بالاتحاد)', 'success');
+        showToast(translateLifoError(data.message || data.messages || 'تم إرسال الطلب وحفظه محلياً بنجاح (قيد المراجعة بالاتحاد)'), 'error');
       }
       setReqNumOfCards('');
     } catch (error: any) {
@@ -413,17 +415,18 @@ export default function LifoReportsDashboard() {
 
         showToast(`حالة الطلب الحالية: ${parsedStatus}`, 'success');
       } else {
+        const errMsg = translateLifoError(data.message || data.messages || 'لم يتم العثور على الطلب في منظومة الاتحاد.');
         setSearchResult({
           requestnumber: requestnumber,
           status: 'غير موجود بالاتحاد',
-          message: data.message || data.messages || 'لم يتم العثور على الطلب في منظومة الاتحاد.',
+          message: errMsg,
           queryTime: new Date().toLocaleTimeString('ar-LY'),
           isError: true
         });
-        showToast(data.message || data.messages || 'لم يتم العثور على الطلب بالاتحاد', 'error');
+        showToast(errMsg, 'error');
       }
     } catch (error: any) {
-      showToast('حدث خطأ أثناء الاستعلام من الاتحاد', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء الاستعلام من الاتحاد', 'error');
     }
   };
 
@@ -433,10 +436,15 @@ export default function LifoReportsDashboard() {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const u = JSON.parse(userStr);
-        setIsAdmin(u.is_admin || false);
+        const adminStatus = u.is_admin || false;
+        setIsAdmin(adminStatus);
+        if (!adminStatus) {
+          setActiveTab('inventory');
+        }
       }
     } catch {
       setIsAdmin(false);
+      setActiveTab('inventory');
     }
     // NOTE: fetchCardsMap() removed from auto-load — only fetch on demand
   }, []);
@@ -499,7 +507,14 @@ export default function LifoReportsDashboard() {
       });
 
       if (!res.ok) {
-        throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
+        let errorMsg = `خطأ في خادم الاتحاد: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errorMsg = translateLifoError(errData.message);
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const contentType = res.headers.get('content-type') || '';
@@ -509,10 +524,10 @@ export default function LifoReportsDashboard() {
         window.open(url, '_blank');
       } else {
         const data = await res.json();
-        showToast(data.message || data.messages || 'فشلت عملية جلب وثيقة الطباعة', 'error');
+        showToast(translateLifoError(data.message || data.messages || 'فشلت عملية جلب وثيقة الطباعة'), 'error');
       }
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ أثناء تحميل وثيقة الطباعة من الاتحاد', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء تحميل وثيقة الطباعة من الاتحاد', 'error');
     }
   };
 
@@ -558,7 +573,14 @@ export default function LifoReportsDashboard() {
       });
 
       if (!res.ok) {
-        throw new Error(`خطأ في خادم النظام: ${res.statusText}`);
+        let errorMsg = `خطأ في خادم النظام: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errorMsg = translateLifoError(errData.message);
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const data = await res.json();
@@ -567,16 +589,19 @@ export default function LifoReportsDashboard() {
         setReportsTotal(data.total || 0);
         setReportsTotals(data.totals || { installment: '0.000', tax: '0.000', stamp: '0.000', supervision: '0.000', version: '0.000', total: '0.000' });
         setReportsCurrentPage(data.page || 1);
+        if (data.office_users) {
+          setOfficeUsers(data.office_users);
+        }
         if (data.total === 0) {
           showToast('لا توجد بيانات مطابقة للفلاتر المحددة', 'error');
         } else {
           showToast(`تم جلب وتصفية ${data.total} وثيقة بنجاح`, 'success');
         }
       } else {
-        showToast(data.message || 'فشل جلب التقارير', 'error');
+        showToast(translateLifoError(data.message) || 'فشل جلب التقارير', 'error');
       }
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ غير متوقع أثناء جلب التقارير', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ غير متوقع أثناء جلب التقارير', 'error');
     } finally {
       setLoading(false);
     }
@@ -588,6 +613,13 @@ export default function LifoReportsDashboard() {
       handleFetchReports(reportsCurrentPage);
     }
   }, [reportsCurrentPage, reportsRowsPerPage]);
+
+  // Fetch reports automatically for non-admins to populate reports list and office users dropdown
+  useEffect(() => {
+    if (activeTab === 'reports' && !isAdmin) {
+      handleFetchReports(1);
+    }
+  }, [activeTab, reportSubTab, isAdmin]);
 
   // Tab 1: Fetch Canceled Cards from LIFO
   const handleFetchCanceledCards = async (pageOrEvent?: number | React.FormEvent, forceRefresh = false) => {
@@ -638,7 +670,14 @@ export default function LifoReportsDashboard() {
       });
 
       if (!res.ok) {
-        throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
+        let errorMsg = `خطأ في خادم الاتحاد: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errorMsg = translateLifoError(errData.message);
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const data = await res.json();
@@ -652,10 +691,10 @@ export default function LifoReportsDashboard() {
           showToast(`تم جلب ${data.total} بطاقة ملغية بنجاح`, 'success');
         }
       } else {
-        showToast(data.message || 'فشل جلب البيانات', 'error');
+        showToast(translateLifoError(data.message) || 'فشل جلب البيانات', 'error');
       }
     } catch (error: any) {
-      showToast(error.message || 'حدث خطأ أثناء تحميل البطاقات الملغية', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء تحميل البطاقات الملغية', 'error');
     } finally {
       setLoadingCanceledCards(false);
     }
@@ -698,7 +737,16 @@ export default function LifoReportsDashboard() {
       });
 
       clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`خطأ في خادم الاتحاد: ${res.statusText}`);
+      if (!res.ok) {
+        let errorMsg = `خطأ في خادم الاتحاد: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errorMsg = translateLifoError(errData.message);
+          }
+        } catch {}
+        throw new Error(errorMsg);
+      }
 
       const data = await res.json();
       if (data.success) {
@@ -711,14 +759,14 @@ export default function LifoReportsDashboard() {
           showToast(`تم تحديث وجلب البيانات من خادم الاتحاد بنجاح`, 'success');
         }
       } else {
-        showToast(data.message || 'فشل جلب البيانات', 'error');
+        showToast(translateLifoError(data.message) || 'فشل جلب البيانات', 'error');
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
         showToast('انتهت مدة الانتظار (45 ثانية) - خادم الاتحاد بطيء، حاول مرة تانية', 'error');
       } else {
-        showToast(error.message || 'حدث خطأ أثناء تحميل مخزون البطاقات', 'error');
+        showToast(translateLifoError(error.message) || 'حدث خطأ أثناء تحميل مخزون البطاقات', 'error');
       }
     } finally {
       setLoading(false);
@@ -851,7 +899,7 @@ export default function LifoReportsDashboard() {
       formData.append('user_name', credentials.user_name);
       formData.append('pass_word', credentials.pass_word);
 
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/distribution/all`, {
+      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/distribution/all`, {
         method: 'POST',
         body: formData,
       });
@@ -863,20 +911,20 @@ export default function LifoReportsDashboard() {
           setDistributionLogs(list);
           localStorage.setItem('lifo_distribution_logs', JSON.stringify(list));
         } else {
-          setDistError(data.message || data.messages || 'فشل جلب البيانات من الاتحاد');
+          setDistError(translateLifoError(data.message || data.messages || 'فشل جلب البيانات من الاتحاد'));
           setDistributionLogs([]);
         }
       } else {
         if (res.status === 404) {
           setDistError('خطأ 404: رابط جلب التوزيعات (/api/distribution/all) غير موجود أو غير مفعل على خادم الاتحاد حالياً.');
         } else {
-          setDistError(`خطأ من خادم الاتحاد: ${res.status} ${res.statusText}`);
+          setDistError(translateLifoError(`خطأ من خادم الاتحاد: ${res.status} ${res.statusText}`));
         }
         setDistributionLogs([]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error fetching LIFO distribution logs:', e);
-      setDistError('تعذر الاتصال بسيرفر الاتحاد. يرجى التحقق من الشبكة.');
+      setDistError(translateLifoError(e.message || 'تعذر الاتصال بسيرفر الاتحاد. يرجى التحقق من الشبكة.'));
       setDistributionLogs([]);
     }
   };
@@ -889,7 +937,7 @@ export default function LifoReportsDashboard() {
       formData.append('user_name', credentials.user_name);
       formData.append('pass_word', credentials.pass_word);
 
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/refund/all`, {
+      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/refund/all`, {
         method: 'POST',
         body: formData,
       });
@@ -901,20 +949,20 @@ export default function LifoReportsDashboard() {
           setRefundLogs(list);
           localStorage.setItem('lifo_refund_logs', JSON.stringify(list));
         } else {
-          setRefundError(data.message || data.messages || 'فشل جلب البيانات من الاتحاد');
+          setRefundError(translateLifoError(data.message || data.messages || 'فشل جلب البيانات من الاتحاد'));
           setRefundLogs([]);
         }
       } else {
         if (res.status === 404) {
           setRefundError('خطأ 404: رابط جلب الراجعات (/api/refund/all) غير موجود أو غير مفعل على خادم الاتحاد حالياً.');
         } else {
-          setRefundError(`خطأ من خادم الاتحاد: ${res.status} ${res.statusText}`);
+          setRefundError(translateLifoError(`خطأ من خادم الاتحاد: ${res.status} ${res.statusText}`));
         }
         setRefundLogs([]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error fetching LIFO refund logs:', e);
-      setRefundError('تعذر الاتصال بسيرفر الاتحاد. يرجى التحقق من الشبكة.');
+      setRefundError(translateLifoError(e.message || 'تعذر الاتصال بسيرفر الاتحاد. يرجى التحقق من الشبكة.'));
       setRefundLogs([]);
     }
   };
@@ -935,7 +983,7 @@ export default function LifoReportsDashboard() {
       formData.append('numerofcard', distributeNumOfCards);
       formData.append('offices_id', distributeOfficesId);
 
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/distribution`, {
+      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/distribution`, {
         method: 'POST',
         body: formData,
       });
@@ -948,11 +996,11 @@ export default function LifoReportsDashboard() {
         fetchDistributionLogs();
       } else {
         const errMsg = data.message || data.messages || 'فشل إجراء عملية التوزيع على خادم الاتحاد';
-        showToast(`خطأ من الاتحاد: ${errMsg}`, 'error');
+        showToast(translateLifoError(errMsg), 'error');
       }
     } catch (error: any) {
       console.error('Error submitting LIFO distribution:', error);
-      showToast('حدث خطأ أثناء الاتصال بالاتحاد لإرسال التوزيع', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء الاتصال بالاتحاد لإرسال التوزيع', 'error');
     } finally {
       setSubmittingDistribute(false);
     }
@@ -973,7 +1021,7 @@ export default function LifoReportsDashboard() {
       formData.append('pass_word', credentials.pass_word);
       formData.append('offices_id', refundOfficesId);
 
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/refund`, {
+      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/refund`, {
         method: 'POST',
         body: formData,
       });
@@ -985,11 +1033,11 @@ export default function LifoReportsDashboard() {
         fetchRefundLogs();
       } else {
         const errMsg = data.message || data.messages || 'فشل استرجاع البطاقات على خادم الاتحاد';
-        showToast(`خطأ من الاتحاد: ${errMsg}`, 'error');
+        showToast(translateLifoError(errMsg), 'error');
       }
     } catch (error: any) {
       console.error('Error submitting LIFO refund:', error);
-      showToast('حدث خطأ أثناء الاتصال بالاتحاد لإتمام الاسترجاع', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء الاتصال بالاتحاد لإتمام الاسترجاع', 'error');
     } finally {
       setSubmittingRefund(false);
     }
@@ -1004,7 +1052,7 @@ export default function LifoReportsDashboard() {
       formData.append('pass_word', credentials.pass_word);
       formData.append('offices_id', officeId.toString());
 
-      const res = await fetch(`${EXTERNAL_API_BASE_URL}/refund`, {
+      const res = await fetch(`${EXTERNAL_API_BASE_URL}/cards/refund`, {
         method: 'POST',
         body: formData,
       });
@@ -1019,11 +1067,11 @@ export default function LifoReportsDashboard() {
         }
       } else {
         const errMsg = data.message || data.messages || 'فشل استرجاع البطاقات على خادم الاتحاد';
-        showToast(`خطأ من الاتحاد: ${errMsg}`, 'error');
+        showToast(translateLifoError(errMsg), 'error');
       }
     } catch (error: any) {
       console.error('Error submitting LIFO refund for office:', error);
-      showToast('حدث خطأ أثناء الاتصال بالاتحاد للاسترجاع من المكتب', 'error');
+      showToast(translateLifoError(error.message) || 'حدث خطأ أثناء الاتصال بالاتحاد للاسترجاع من المكتب', 'error');
     } finally {
       setLoading(false);
     }
@@ -1389,20 +1437,22 @@ export default function LifoReportsDashboard() {
         gap: '15px' 
       }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button 
-            type="button"
-            onClick={() => setActiveTab('requests')}
-            className={`profile-tab-button ${activeTab === 'requests' ? 'active' : ''}`}
-            style={{
-              padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-              background: activeTab === 'requests' ? 'var(--sidebar)' : 'var(--panel)',
-              color: activeTab === 'requests' ? '#fff' : 'var(--text)',
-              cursor: 'pointer', transition: 'all 0.3s ease'
-            }}
-          >
-            <i className="fa-solid fa-file-invoice" style={{ marginLeft: '8px' }}></i>
-            طلب بطاقات التأمين
-          </button>
+          {isAdmin && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('requests')}
+              className={`profile-tab-button ${activeTab === 'requests' ? 'active' : ''}`}
+              style={{
+                padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
+                background: activeTab === 'requests' ? 'var(--sidebar)' : 'var(--panel)',
+                color: activeTab === 'requests' ? '#fff' : 'var(--text)',
+                cursor: 'pointer', transition: 'all 0.3s ease'
+              }}
+            >
+              <i className="fa-solid fa-file-invoice" style={{ marginLeft: '8px' }}></i>
+              طلب بطاقات التأمين
+            </button>
+          )}
           <button 
             type="button"
             onClick={() => setActiveTab('inventory')}
@@ -1491,7 +1541,7 @@ export default function LifoReportsDashboard() {
           </div>
         )}
 
-        {!loading && activeTab === 'requests' && (
+        {!loading && isAdmin && activeTab === 'requests' && (
           <div>
             <h3 style={{ borderBottom: '2px solid var(--border)', paddingBottom: '12px', marginBottom: '20px', color: 'var(--text)' }}>
               طلب بطاقات التأمين البرتقالية من الاتحاد الليبي للتأمين (LIFO)
@@ -1685,6 +1735,21 @@ export default function LifoReportsDashboard() {
             }}>
               <button
                 type="button"
+                onClick={() => setReportSubTab('sales_detailed')}
+                style={{
+                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                  background: reportSubTab === 'sales_detailed' ? 'var(--sidebar)' : 'var(--panel)',
+                  color: reportSubTab === 'sales_detailed' ? '#fff' : 'var(--text)',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                <i className="fa-solid fa-file-invoice-dollar"></i>
+                تقارير المبيعات
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setReportSubTab('sales_summary')}
                 style={{
                   padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
@@ -1698,72 +1763,99 @@ export default function LifoReportsDashboard() {
                 تقارير المبيعات [المختصر]
               </button>
 
-              <button
-                type="button"
-                onClick={() => setReportSubTab('canceled_cards')}
-                style={{
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                  background: reportSubTab === 'canceled_cards' ? 'var(--sidebar)' : 'var(--panel)',
-                  color: reportSubTab === 'canceled_cards' ? '#fff' : 'var(--text)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
-              >
-                <i className="fa-solid fa-rectangle-xmark"></i>
-                تقارير البطاقات الملغية
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('canceled_cards')}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                    background: reportSubTab === 'canceled_cards' ? 'var(--sidebar)' : 'var(--panel)',
+                    color: reportSubTab === 'canceled_cards' ? '#fff' : 'var(--text)',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <i className="fa-solid fa-rectangle-xmark"></i>
+                  تقارير البطاقات الملغية
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setReportSubTab('company_inventory')}
-                style={{
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                  background: reportSubTab === 'company_inventory' ? 'var(--sidebar)' : 'var(--panel)',
-                  color: reportSubTab === 'company_inventory' ? '#fff' : 'var(--text)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
-              >
-                <i className="fa-solid fa-warehouse"></i>
-                تقارير مخزون الشركة
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('company_inventory')}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                    background: reportSubTab === 'company_inventory' ? 'var(--sidebar)' : 'var(--panel)',
+                    color: reportSubTab === 'company_inventory' ? '#fff' : 'var(--text)',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <i className="fa-solid fa-warehouse"></i>
+                  تقارير مخزون الشركة
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setReportSubTab('offices_inventory')}
-                style={{
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                  background: reportSubTab === 'offices_inventory' ? 'var(--sidebar)' : 'var(--panel)',
-                  color: reportSubTab === 'offices_inventory' ? '#fff' : 'var(--text)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
-              >
-                <i className="fa-solid fa-store"></i>
-                تقارير مخزون المكاتب
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('offices_inventory')}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                    background: reportSubTab === 'offices_inventory' ? 'var(--sidebar)' : 'var(--panel)',
+                    color: reportSubTab === 'offices_inventory' ? '#fff' : 'var(--text)',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <i className="fa-solid fa-store"></i>
+                  تقارير مخزون المكاتب
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setReportSubTab('offices_aggregated')}
-                style={{
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                  background: reportSubTab === 'offices_aggregated' ? 'var(--sidebar)' : 'var(--panel)',
-                  color: reportSubTab === 'offices_aggregated' ? '#fff' : 'var(--text)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
-              >
-                <i className="fa-solid fa-boxes-packing"></i>
-                تقرير المجمع لإصدارات المكاتب
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('offices_aggregated')}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                    background: reportSubTab === 'offices_aggregated' ? 'var(--sidebar)' : 'var(--panel)',
+                    color: reportSubTab === 'offices_aggregated' ? '#fff' : 'var(--text)',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <i className="fa-solid fa-boxes-packing"></i>
+                  تقرير المجمع لإصدارات المكاتب
+                </button>
+              )}
+
+              {!isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('company_inventory')}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
+                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                    background: reportSubTab === 'company_inventory' ? 'var(--sidebar)' : 'var(--panel)',
+                    color: reportSubTab === 'company_inventory' ? '#fff' : 'var(--text)',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <i className="fa-solid fa-warehouse"></i>
+                  تقرير المخزون
+                </button>
+              )}
             </div>
 
             {/* Main Content Area - Full Width */}
             <div style={{ width: '100%' }}>
-                {reportSubTab === 'sales_summary' && (
+                {(reportSubTab === 'sales_summary' || reportSubTab === 'sales_detailed') && (
                   <div>
-                    <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>تقارير المبيعات [المختصر]</h4>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>
+                      {reportSubTab === 'sales_detailed' ? 'تقارير المبيعات' : 'تقارير المبيعات [المختصر]'}
+                    </h4>
 
                     <form onSubmit={handleFetchReports} style={{
                       background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px', marginBottom: '30px'
@@ -1772,44 +1864,63 @@ export default function LifoReportsDashboard() {
                         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '20px'
                       }}>
                         {/* Row 1 */}
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>الشركة</label>
-                          <select disabled style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}>
-                            <option>المدار الليبي للتأمين (adminmli)</option>
-                          </select>
-                        </div>
+                        {isAdmin && (
+                          <>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>الشركة</label>
+                              <select disabled style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}>
+                                <option>المدار الليبي للتأمين (adminmli)</option>
+                              </select>
+                            </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم الشركة</label>
-                          <select style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}>
-                            <option value="">اختر مستخدم الشركة...</option>
-                            <option value="adminmli">adminmli</option>
-                          </select>
-                        </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم الشركة</label>
+                              <select style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}>
+                                <option value="">اختر مستخدم الشركة...</option>
+                                <option value="adminmli">adminmli</option>
+                              </select>
+                            </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>المكتب</label>
-                          <select 
-                            value={searchOfficeId} 
-                            onChange={(e) => setSearchOfficeId(e.target.value)} 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
-                          >
-                            <option value="">Choose one</option>
-                            {lifoOffices.map((office) => (
-                              <option key={office.id} value={office.id}>{office.name}</option>
-                            ))}
-                          </select>
-                        </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>المكتب</label>
+                              <select 
+                                value={searchOfficeId} 
+                                onChange={(e) => setSearchOfficeId(e.target.value)} 
+                                style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                              >
+                                <option value="">Choose one</option>
+                                {lifoOffices.map((office) => (
+                                  <option key={office.id} value={office.id}>{office.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
 
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم المكتب</label>
-                          <input 
-                            type="text" 
-                            value={searchOfficeUserId} 
-                            onChange={(e) => setSearchOfficeUserId(e.target.value)}
-                            placeholder="معرف مستخدم المكتب" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
-                          />
+                          {isAdmin ? (
+                            <input 
+                              type="text" 
+                              value={searchOfficeUserId} 
+                              onChange={(e) => setSearchOfficeUserId(e.target.value)}
+                              placeholder="معرف مستخدم المكتب" 
+                              style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            />
+                          ) : (
+                            <select
+                              value={searchOfficeUserId}
+                              onChange={(e) => setSearchOfficeUserId(e.target.value)}
+                              style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            >
+                              <option value="">الكل</option>
+                              {officeUsers.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                  {user.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </div>
 
                         {/* Row 2 */}
@@ -2013,11 +2124,15 @@ export default function LifoReportsDashboard() {
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المؤمن له</th>
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>تاريخ الاصدار</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>صافي القسط</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الضريبة</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رسم الدمغة</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإشراف</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإصدار</th>
+                                        {reportSubTab === 'sales_detailed' && (
+                                          <>
+                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>صافي القسط</th>
+                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الضريبة</th>
+                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رسم الدمغة</th>
+                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإشراف</th>
+                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإصدار</th>
+                                          </>
+                                        )}
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الاجمالي</th>
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>عرض الوثيقة</th>
                                       </tr>
@@ -2037,11 +2152,15 @@ export default function LifoReportsDashboard() {
                                             <td style={{ padding: '12px 15px' }}>{officeName}</td>
                                             <td style={{ padding: '12px 15px' }}>{doc.insurance_name || '-'}</td>
                                             <td style={{ padding: '12px 15px' }}>{doc.issuing_date || '-'}</td>
-                                            <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_installment)}</td>
-                                            <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_tax)}</td>
-                                            <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_stamp)}</td>
-                                            <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_supervision)}</td>
-                                            <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_version)}</td>
+                                            {reportSubTab === 'sales_detailed' && (
+                                              <>
+                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_installment)}</td>
+                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_tax)}</td>
+                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_stamp)}</td>
+                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_supervision)}</td>
+                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_version)}</td>
+                                              </>
+                                            )}
                                             <td style={{ padding: '12px 15px', fontWeight: 'bold', color: 'var(--sidebar)' }}>{formatDecimal(doc.insurance_total)}</td>
                                             <td style={{ padding: '12px 15px', textAlign: 'center' }}>
                                               {cardNo !== '-' ? (
@@ -2072,11 +2191,15 @@ export default function LifoReportsDashboard() {
                                     <tfoot>
                                       <tr style={{ background: 'var(--table-header)', borderTop: '2px solid var(--border)', fontWeight: 'bold' }}>
                                         <td colSpan={6} style={{ padding: '12px 15px', textAlign: 'left' }}>الإجمالي</td>
-                                        <td style={{ padding: '12px 15px' }}>{reportsTotals.installment}</td>
-                                        <td style={{ padding: '12px 15px' }}>{reportsTotals.tax}</td>
-                                        <td style={{ padding: '12px 15px' }}>{reportsTotals.stamp}</td>
-                                        <td style={{ padding: '12px 15px' }}>{reportsTotals.supervision}</td>
-                                        <td style={{ padding: '12px 15px' }}>{reportsTotals.version}</td>
+                                        {reportSubTab === 'sales_detailed' && (
+                                          <>
+                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.installment}</td>
+                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.tax}</td>
+                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.stamp}</td>
+                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.supervision}</td>
+                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.version}</td>
+                                          </>
+                                        )}
                                         <td style={{ padding: '12px 15px', fontWeight: 'bold', color: 'var(--sidebar)' }}>{reportsTotals.total}</td>
                                         <td></td>
                                       </tr>
@@ -2443,7 +2566,7 @@ export default function LifoReportsDashboard() {
 
                 {reportSubTab === 'company_inventory' && (
                   <div>
-                    <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>تقارير مخزون الشركة</h4>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>{isAdmin ? 'تقارير مخزون الشركة' : 'تقرير المخزون'}</h4>
                     
                     {(() => {
                       if (loadingInventorySummary) {
@@ -2603,7 +2726,7 @@ export default function LifoReportsDashboard() {
                         <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px' }}>
                           
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h4 style={{ fontWeight: 'bold', color: 'var(--text)', margin: 0, fontSize: '1.1rem' }}>عرض مخزون الشركة</h4>
+                            <h4 style={{ fontWeight: 'bold', color: 'var(--text)', margin: 0, fontSize: '1.1rem' }}>{isAdmin ? 'عرض مخزون الشركة' : 'عرض مخزون المكتب'}</h4>
                             <button
                               type="button"
                               onClick={handlePrintCompanyStockPDF}
@@ -2693,7 +2816,7 @@ export default function LifoReportsDashboard() {
                                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
                                     <thead>
                                       <tr style={{ background: 'var(--table-header)' }}>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة معينة (مخزون الشركة)</th>
+                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>{isAdmin ? 'بطاقة معينة (مخزون الشركة)' : 'بطاقة معينة (مخزون المكتب)'}</th>
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة المصدرة</th>
                                         <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة ملغية</th>
                                       </tr>
