@@ -188,6 +188,8 @@ export default function LifoReportsDashboard() {
   const [reqNumOfCards, setReqNumOfCards] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [cardRequests, setCardRequests] = useState<any[]>([]);
+  const [reqCurrentPage, setReqCurrentPage] = useState(1);
+  const [reqRowsPerPage] = useState(10);
   const [searchResult, setSearchResult] = useState<any | null>(null);
 
   // Fetch card requests dynamically from backend
@@ -1350,6 +1352,39 @@ export default function LifoReportsDashboard() {
     return pages;
   };
 
+  const reqTotalPages = Math.ceil(cardRequests.length / reqRowsPerPage);
+
+  const getReqPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (reqTotalPages <= 7) {
+      for (let i = 1; i <= reqTotalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      
+      if (reqCurrentPage > 3) {
+        pages.push('...');
+      }
+      
+      const start = Math.max(2, reqCurrentPage - 1);
+      const end = Math.min(reqTotalPages - 1, reqCurrentPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+      
+      if (reqCurrentPage < reqTotalPages - 2) {
+        pages.push('...');
+      }
+      
+      if (!pages.includes(reqTotalPages)) {
+        pages.push(reqTotalPages);
+      }
+    }
+    return pages;
+  };
+
   // Filter distribution data based on search query
   const filteredDistributions = aggregatedDistributions.filter(dist => {
     const query = distSearchQuery.toLowerCase().trim();
@@ -1697,7 +1732,7 @@ export default function LifoReportsDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cardRequests.map((req, idx) => (
+                    {cardRequests.slice((reqCurrentPage - 1) * reqRowsPerPage, reqCurrentPage * reqRowsPerPage).map((req, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{req.requestnumber}</td>
                         <td style={{ padding: '12px 15px' }}>{req.company}</td>
@@ -1724,9 +1759,80 @@ export default function LifoReportsDashboard() {
                         </td>
                       </tr>
                     ))}
+                    {cardRequests.length === 0 && (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>لا توجد طلبات بطاقات مسجلة</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {cardRequests.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '15px' }}>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold' }}>
+                    عرض {cardRequests.length === 0 ? 0 : (reqCurrentPage - 1) * reqRowsPerPage + 1} إلى {Math.min(reqCurrentPage * reqRowsPerPage, cardRequests.length)} من أصل {cardRequests.length.toLocaleString('ar-LY')} مدخل
+                  </div>
+                  
+                  {reqTotalPages > 1 && (
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        disabled={reqCurrentPage === 1}
+                        onClick={() => setReqCurrentPage(prev => Math.max(prev - 1, 1))}
+                        style={{
+                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
+                          background: reqCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
+                          color: reqCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
+                          cursor: reqCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                          fontWeight: 'bold', fontSize: '0.85rem'
+                        }}
+                      >
+                        السابق
+                      </button>
+                      
+                      {getReqPageNumbers().map((page, idx) => {
+                        const isPageNumber = typeof page === 'number';
+                        const isActive = page === reqCurrentPage;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            disabled={!isPageNumber}
+                            onClick={() => isPageNumber && setReqCurrentPage(page as number)}
+                            style={{
+                              padding: '6px 12px', borderRadius: '6px',
+                              border: isPageNumber ? '1px solid var(--border)' : 'none',
+                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
+                              color: isActive ? '#fff' : 'var(--text)',
+                              cursor: isPageNumber ? 'pointer' : 'default',
+                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
+                            }}
+                          >
+                            {isPageNumber ? page.toLocaleString('ar-LY') : page}
+                          </button>
+                        );
+                      })}
+                      
+                      <button
+                        type="button"
+                        disabled={reqCurrentPage === reqTotalPages}
+                        onClick={() => setReqCurrentPage(prev => Math.min(prev + 1, reqTotalPages))}
+                        style={{
+                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
+                          background: reqCurrentPage === reqTotalPages ? 'var(--input-bg)' : 'var(--panel)',
+                          color: reqCurrentPage === reqTotalPages ? 'var(--muted)' : 'var(--text)',
+                          cursor: reqCurrentPage === reqTotalPages ? 'not-allowed' : 'pointer',
+                          fontWeight: 'bold', fontSize: '0.85rem'
+                        }}
+                      >
+                        التالي
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
