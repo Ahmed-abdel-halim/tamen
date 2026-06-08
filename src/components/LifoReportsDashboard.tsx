@@ -1813,6 +1813,25 @@ export default function LifoReportsDashboard() {
                 padding: '15px 20px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
               }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
+                  <input
+                    type="text"
+                    placeholder="ابحث برقم الطلب، الشركة أو الحالة..."
+                    value={reqSearchQuery}
+                    onChange={(e) => setReqSearchQuery(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)',
+                      width: '280px',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                </div>
+
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <button
                     type="button"
@@ -1878,25 +1897,6 @@ export default function LifoReportsDashboard() {
                     </select>
                     <span>مدخلات</span>
                   </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
-                  <input
-                    type="text"
-                    placeholder="ابحث برقم الطلب، الشركة أو الحالة..."
-                    value={reqSearchQuery}
-                    onChange={(e) => setReqSearchQuery(e.target.value)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      width: '280px',
-                      fontSize: '0.85rem'
-                    }}
-                  />
                 </div>
               </div>
 
