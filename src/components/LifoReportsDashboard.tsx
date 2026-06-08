@@ -189,7 +189,8 @@ export default function LifoReportsDashboard() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [cardRequests, setCardRequests] = useState<any[]>([]);
   const [reqCurrentPage, setReqCurrentPage] = useState(1);
-  const [reqRowsPerPage] = useState(10);
+  const [reqRowsPerPage, setReqRowsPerPage] = useState(10);
+  const [reqSearchQuery, setReqSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<any | null>(null);
 
   // Fetch card requests dynamically from backend
@@ -241,6 +242,11 @@ export default function LifoReportsDashboard() {
     }
     fetchCardRequests();
   }, []);
+
+  // Reset card requests page when search query changes
+  useEffect(() => {
+    setReqCurrentPage(1);
+  }, [reqSearchQuery]);
 
   // Load and initialize distribution logs
   useEffect(() => {
@@ -435,6 +441,69 @@ export default function LifoReportsDashboard() {
       }
     } catch (error: any) {
       showToast(translateLifoError(error.message) || 'حدث خطأ أثناء الاستعلام من الاتحاد', 'error');
+    }
+  };
+
+  // Copy card requests to clipboard as Tab-Separated Values (Excel compatible)
+  const handleCopyCardRequests = () => {
+    if (cardRequests.length === 0) {
+      showToast('لا توجد بيانات لنسخها', 'error');
+      return;
+    }
+    const headers = ['رقم الطلب', 'الشركة', 'المستخدم', 'عدد البطاقات', 'حالة الطلب', 'تاريخ الطلب', 'تاريخ التنزيل'];
+    const rows = cardRequests.map(req => [
+      req.requestnumber || '-',
+      req.company || '-',
+      req.username || '-',
+      req.numberofcards || 0,
+      req.status || '-',
+      req.created_at || '-',
+      req.download_date || '-'
+    ]);
+    const text = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
+    navigator.clipboard.writeText(text);
+    showToast('تم نسخ جدول الطلبات إلى الحافظة', 'success');
+  };
+
+  // Export card requests to Excel
+  const handleExportCardRequestsExcel = async () => {
+    if (cardRequests.length === 0) {
+      showToast('لا توجد بيانات لتصديرها', 'error');
+      return;
+    }
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    try {
+      const columns = [
+        { header: 'رقم الطلب', key: 'requestnumber', width: 25 },
+        { header: 'الشركة', key: 'company', width: 30 },
+        { header: 'المستخدم', key: 'username', width: 20 },
+        { header: 'عدد البطاقات', key: 'numberofcards', width: 15 },
+        { header: 'حالة الطلب', key: 'status', width: 15 },
+        { header: 'تاريخ الطلب', key: 'created_at', width: 20 },
+        { header: 'تاريخ التنزيل', key: 'download_date', width: 20 },
+      ];
+
+      const data = cardRequests.map(req => ({
+        requestnumber: req.requestnumber || '-',
+        company: req.company || '-',
+        username: req.username || '-',
+        numberofcards: req.numberofcards || 0,
+        status: req.status || '-',
+        created_at: req.created_at || '-',
+        download_date: req.download_date || '-',
+      }));
+
+      await generatePremiumExcel({
+        title: 'سجل طلبات البطاقات البرتقالية LIFO',
+        subtitle: `المستخدم: ${currentUser.name || currentUser.username} | تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        columns,
+        data,
+        fileName: 'سجل_طلبات_البطاقات_LIFO',
+      });
+      showToast('تم تصدير ملف الإكسل بنجاح', 'success');
+    } catch (e) {
+      console.error('Error exporting requests excel:', e);
+      showToast('حدث خطأ أثناء تصدير ملف الإكسل', 'error');
     }
   };
 
@@ -1352,7 +1421,19 @@ export default function LifoReportsDashboard() {
     return pages;
   };
 
-  const reqTotalPages = Math.ceil(cardRequests.length / reqRowsPerPage);
+  // Filter card requests based on search query
+  const filteredCardRequests = cardRequests.filter(req => {
+    const query = reqSearchQuery.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      (req.requestnumber || '').toLowerCase().includes(query) ||
+      (req.company || '').toLowerCase().includes(query) ||
+      (req.username || '').toLowerCase().includes(query) ||
+      (req.status || '').toLowerCase().includes(query)
+    );
+  });
+
+  const reqTotalPages = Math.ceil(filteredCardRequests.length / reqRowsPerPage);
 
   const getReqPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -1717,6 +1798,108 @@ export default function LifoReportsDashboard() {
             {/* Requests History List */}
             <div style={{ marginTop: '20px' }}>
               <h4 style={{ marginBottom: '15px', color: 'var(--text)', fontWeight: 'bold' }}>عرض الطلبات (LIFO Card Requests)</h4>
+              
+              {/* Controls Box */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px',
+                gap: '15px',
+                flexWrap: 'wrap',
+                background: 'var(--panel)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '15px 20px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+              }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleExportCardRequestsExcel}
+                    className="primary"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      background: '#7c2d12', // Rust color
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <i className="fa-solid fa-file-excel"></i>
+                    تصدير Excel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyCardRequests}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      background: '#78350f', // Rust color
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    نسخ
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text)', fontSize: '0.9rem', marginRight: '15px' }}>
+                    <span>عرض</span>
+                    <select
+                      value={reqRowsPerPage}
+                      onChange={(e) => {
+                        setReqRowsPerPage(parseInt(e.target.value));
+                        setReqCurrentPage(1);
+                      }}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text)',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span>مدخلات</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
+                  <input
+                    type="text"
+                    placeholder="ابحث برقم الطلب، الشركة أو الحالة..."
+                    value={reqSearchQuery}
+                    onChange={(e) => setReqSearchQuery(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)',
+                      width: '280px',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                </div>
+              </div>
+
               <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
                   <thead>
@@ -1732,7 +1915,7 @@ export default function LifoReportsDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cardRequests.slice((reqCurrentPage - 1) * reqRowsPerPage, reqCurrentPage * reqRowsPerPage).map((req, idx) => (
+                    {filteredCardRequests.slice((reqCurrentPage - 1) * reqRowsPerPage, reqCurrentPage * reqRowsPerPage).map((req, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{req.requestnumber}</td>
                         <td style={{ padding: '12px 15px' }}>{req.company}</td>
@@ -1759,9 +1942,9 @@ export default function LifoReportsDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {cardRequests.length === 0 && (
+                    {filteredCardRequests.length === 0 && (
                       <tr>
-                        <td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>لا توجد طلبات بطاقات مسجلة</td>
+                        <td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>لا توجد طلبات بطاقات مسجلة تطابق البحث</td>
                       </tr>
                     )}
                   </tbody>
@@ -1769,10 +1952,10 @@ export default function LifoReportsDashboard() {
               </div>
 
               {/* Pagination Controls */}
-              {cardRequests.length > 0 && (
+              {filteredCardRequests.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '15px' }}>
                   <div style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold' }}>
-                    عرض {cardRequests.length === 0 ? 0 : (reqCurrentPage - 1) * reqRowsPerPage + 1} إلى {Math.min(reqCurrentPage * reqRowsPerPage, cardRequests.length)} من أصل {cardRequests.length.toLocaleString('ar-LY')} مدخل
+                    عرض {filteredCardRequests.length === 0 ? 0 : (reqCurrentPage - 1) * reqRowsPerPage + 1} إلى {Math.min(reqCurrentPage * reqRowsPerPage, filteredCardRequests.length)} من أصل {filteredCardRequests.length.toLocaleString('ar-LY')} مدخل
                   </div>
                   
                   {reqTotalPages > 1 && (
