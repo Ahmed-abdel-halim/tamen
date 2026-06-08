@@ -562,12 +562,12 @@ export default function LifoReportsDashboard() {
         const adminStatus = u.is_admin || false;
         setIsAdmin(adminStatus);
         if (!adminStatus) {
-          setActiveTab('inventory');
+          setActiveTab('home');
         }
       }
     } catch {
       setIsAdmin(false);
-      setActiveTab('inventory');
+      setActiveTab('home');
     }
     // NOTE: fetchCardsMap() removed from auto-load — only fetch on demand
   }, []);

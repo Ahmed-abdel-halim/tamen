@@ -934,7 +934,6 @@ const createMenuSections = (
           { label: 'المحفظة والنقاط (Loyalty)', icon: 'fa-solid fa-wallet', to: `/branches-agents/${branchAgentId}?tab=wallet` },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests`, badge: pendingDocsCount },
-          { label: 'إلغاء الوكالة', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
           { label: 'التحويلات المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/agent-transfers' },
           { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
         ],
