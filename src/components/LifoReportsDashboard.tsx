@@ -38,7 +38,7 @@ const getExternalCredentials = () => {
 };
 
 
-type ActiveTab = 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports';
+type ActiveTab = 'home' | 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports';
 
 
 type CardCategory = 'all' | 'active' | 'cancel' | 'sold';
@@ -55,7 +55,7 @@ interface LIFOOffice {
 
 export default function LifoReportsDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('requests');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -170,6 +170,45 @@ export default function LifoReportsDashboard() {
   const [distError, setDistError] = useState<string | null>(null);
   const [refundError, setRefundError] = useState<string | null>(null);
 
+  // Home Tab State
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  const fetchDashboardSummary = async (force: boolean = false) => {
+    setDashboardError(null);
+    setLoadingDashboard(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/lifo-reports/dashboard-summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_name: credentials.user_name,
+          pass_word: credentials.pass_word,
+          force_refresh: force
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setDashboardData(data);
+        } else {
+          setDashboardError(data.message || 'فشل تحميل بيانات لوحة التحكم');
+        }
+      } else {
+        setDashboardError('حدث خطأ أثناء الاتصال بالخادم');
+      }
+    } catch (e: any) {
+      console.error('Error fetching dashboard summary:', e);
+      setDashboardError(e.message || 'تعذر الاتصال بالخادم');
+    } finally {
+      setLoadingDashboard(false);
+    }
+  };
+
   // Reports sub-tab & search states
   const [reportSubTab, setReportSubTab] = useState<'sales_summary' | 'sales_detailed' | 'canceled_cards' | 'company_inventory' | 'offices_inventory' | 'offices_aggregated'>('sales_detailed');
   const [searchOfficeId, setSearchOfficeId] = useState('');
@@ -232,17 +271,20 @@ export default function LifoReportsDashboard() {
     }
   };
 
-  // Load and initialize requests list
+  // Tab 1: Initialize list on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem('lifo_card_requests');
       if (stored) {
         setCardRequests(JSON.parse(stored));
+      } else {
+        setCardRequests([]);
       }
     } catch (e) {
       console.error('Error loading card requests:', e);
     }
     fetchCardRequests();
+    fetchDashboardSummary();
   }, []);
 
   // Reset card requests page when search query changes
@@ -540,6 +582,9 @@ export default function LifoReportsDashboard() {
 
   // Fetch LIFO Offices and logs when distribution, refund, or reports tab is active
   useEffect(() => {
+    if (activeTab === 'home') {
+      fetchDashboardSummary();
+    }
     if (activeTab === 'reports' || (isAdmin && (activeTab === 'distribution' || activeTab === 'refund'))) {
       fetchLifoOffices();
     }
@@ -1575,6 +1620,20 @@ export default function LifoReportsDashboard() {
         gap: '15px' 
       }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('home')}
+            className={`profile-tab-button ${activeTab === 'home' ? 'active' : ''}`}
+            style={{
+              padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
+              background: activeTab === 'home' ? 'var(--sidebar)' : 'var(--panel)',
+              color: activeTab === 'home' ? '#fff' : 'var(--text)',
+              cursor: 'pointer', transition: 'all 0.3s ease'
+            }}
+          >
+            <i className="fa-solid fa-house-chimney" style={{ marginLeft: '8px' }}></i>
+            الرئيسية
+          </button>
           {isAdmin && (
             <button 
               type="button"
@@ -1676,6 +1735,433 @@ export default function LifoReportsDashboard() {
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
             <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '30px', marginBottom: '15px', color: 'var(--sidebar)' }}></i>
             <p style={{ fontWeight: '600' }}>جاري استرجاع البيانات الحية مباشرة من سيرفر الاتحاد (LIFO)...</p>
+          </div>
+        )}
+
+        {!loading && activeTab === 'home' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>
+              <h3 style={{ color: 'var(--text)', margin: 0, fontWeight: 'bold' }}>
+                <i className="fa-solid fa-house-chimney" style={{ marginLeft: '10px', color: 'var(--sidebar)' }}></i>
+                الصفحة الرئيسية للاتحاد (لوحة المعلومات)
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => fetchDashboardSummary(true)} 
+                disabled={loadingDashboard}
+                className="primary"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontWeight: '800',
+                  background: 'var(--sidebar)',
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className={`fa-solid fa-rotate ${loadingDashboard ? 'fa-spin' : ''}`}></i>
+                تحديث البيانات
+              </button>
+            </div>
+
+            {dashboardError && (
+              <div style={{
+                padding: '15px 20px',
+                borderRadius: '8px',
+                background: '#fee2e2',
+                color: '#b91c1c',
+                marginBottom: '20px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '1.2rem' }}></i>
+                <span>{dashboardError}</span>
+              </div>
+            )}
+
+            {loadingDashboard ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '15px' }}>
+                <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '3rem', color: 'var(--sidebar)' }}></i>
+                <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>جاري تحميل إحصائيات لوحة التحكم...</span>
+              </div>
+            ) : dashboardData ? (
+              <div>
+                {/* First Row: Main Cards */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '20px',
+                  marginBottom: '25px'
+                }}>
+                  {/* Card 1: Total Cards */}
+                  <div style={{
+                    background: 'var(--panel)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '25px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'default'
+                  }} className="stats-card">
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
+                      background: 'rgba(120, 53, 15, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <i className="fa-solid fa-file-invoice" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                    </div>
+                    <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                        {dashboardData.metrics.total_cards.toLocaleString('ar-LY')} بطاقة
+                      </span>
+                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                        اجمالي البطاقات
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Assigned Cards */}
+                  <div style={{
+                    background: 'var(--panel)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '25px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'default'
+                  }} className="stats-card">
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
+                      background: 'rgba(107, 114, 128, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <i className="fa-solid fa-boxes-stacked" style={{ fontSize: '1.8rem', color: '#6b7280' }}></i>
+                    </div>
+                    <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#6b7280' }}>
+                        {dashboardData.metrics.assigned_cards.toLocaleString('ar-LY')} بطاقة
+                      </span>
+                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                        {dashboardData.is_admin ? 'معينة(مخزون الشركة)' : 'معينة'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Issued Cards */}
+                  <div style={{
+                    background: 'var(--panel)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '25px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'default'
+                  }} className="stats-card">
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
+                      background: 'rgba(21, 128, 61, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <i className="fa-solid fa-circle-check" style={{ fontSize: '1.8rem', color: '#15803d' }}></i>
+                    </div>
+                    <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#15803d' }}>
+                        {dashboardData.metrics.issued_cards.toLocaleString('ar-LY')} بطاقة
+                      </span>
+                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                        اجمالي المصدرة
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Cancelled Cards */}
+                  <div style={{
+                    background: 'var(--panel)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '25px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'default'
+                  }} className="stats-card">
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
+                      background: 'rgba(185, 28, 28, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <i className="fa-solid fa-trash-can" style={{ fontSize: '1.8rem', color: '#b91c1c' }}></i>
+                    </div>
+                    <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#b91c1c' }}>
+                        {dashboardData.metrics.canceled_cards.toLocaleString('ar-LY')} بطاقة
+                      </span>
+                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                        اجمالي الملغية
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Extra Rows for Office Users */}
+                {!dashboardData.is_admin && dashboardData.extra_stats && (
+                  <div>
+                    {/* Second Row: Office Sales Count Metrics */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gap: '20px',
+                      marginBottom: '25px'
+                    }}>
+                      {/* Issued Cards Total */}
+                      <div style={{
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s ease'
+                      }} className="stats-card">
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '12px',
+                          background: 'rgba(120, 53, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fa-solid fa-file-shield" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                        </div>
+                        <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                            {dashboardData.extra_stats.issued_total_count.toLocaleString('ar-LY')} بطاقة
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                            بطاقات المصدرة (الكلي)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Issued Cards Month */}
+                      <div style={{
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s ease'
+                      }} className="stats-card">
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '12px',
+                          background: 'rgba(120, 53, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fa-solid fa-calendar-days" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                        </div>
+                        <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                            {dashboardData.extra_stats.issued_month_count.toLocaleString('ar-LY')} بطاقة
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                            بطاقات المصدرة (هذا الشهر)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Issued Cards Today */}
+                      <div style={{
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s ease'
+                      }} className="stats-card">
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '12px',
+                          background: 'rgba(120, 53, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fa-solid fa-clock" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                        </div>
+                        <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                            {dashboardData.extra_stats.issued_today_count.toLocaleString('ar-LY')} بطاقة
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                            بطاقات المصدرة (هذا اليوم)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Third Row: Office Financial Metrics */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gap: '20px',
+                      marginBottom: '25px'
+                    }}>
+                      {/* Financial Value Total */}
+                      <div style={{
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s ease'
+                      }} className="stats-card">
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '12px',
+                          background: 'rgba(120, 53, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fa-solid fa-money-bill-wave" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                        </div>
+                        <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                            {dashboardData.extra_stats.issued_total_value.toFixed(3).toLocaleString()} د.ل
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                            اجمالي قيمة البطاقة المصدرة (الكلي)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Financial Value Month */}
+                      <div style={{
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s ease'
+                      }} className="stats-card">
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '12px',
+                          background: 'rgba(120, 53, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fa-solid fa-money-check-dollar" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                        </div>
+                        <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                            {dashboardData.extra_stats.issued_month_value.toFixed(3).toLocaleString()} د.ل
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                            اجمالي قيمة البطاقة المصدرة (هذا الشهر)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Financial Value Today */}
+                      <div style={{
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s ease'
+                      }} className="stats-card">
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '12px',
+                          background: 'rgba(120, 53, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                        </div>
+                        <div style={{ textAlign: 'left', direction: 'rtl' }}>
+                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                            {dashboardData.extra_stats.issued_today_value.toFixed(3).toLocaleString()} د.ل
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                            اجمالي قيمة البطاقة المصدرة (هذا اليوم)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '15px' }}>
+                <i className="fa-solid fa-inbox" style={{ fontSize: '3rem', color: 'var(--muted)' }}></i>
+                <span style={{ color: 'var(--muted)' }}>لا توجد بيانات لعرضها</span>
+              </div>
+            )}
           </div>
         )}
 
