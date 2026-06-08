@@ -1,0 +1,628 @@
+/* Premium CSS styles for Union (LIFO) Dashboard */
+
+.lifo-container {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tab buttons styling */
+.lifo-tabs-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.lifo-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.lifo-tab-btn i {
+  font-size: 1.1rem;
+  transition: transform 0.25s ease;
+}
+
+.lifo-tab-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(1, 76, 177, 0.08);
+}
+
+.lifo-tab-btn:hover i {
+  transform: scale(1.15);
+}
+
+.lifo-tab-btn.active {
+  background: linear-gradient(135deg, var(--sidebar) 0%, var(--accent-cyan) 100%);
+  border-color: transparent;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px var(--accent-shadow);
+}
+
+.lifo-tab-btn.active i {
+  color: #ffffff !important;
+}
+
+.lifo-btn-back {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.lifo-btn-back:hover {
+  background: var(--input-bg);
+  color: var(--text);
+  transform: translateX(-3px);
+}
+
+/* Metric Stats Card */
+.lifo-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.lifo-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.lifo-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+.lifo-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0, 49, 115, 0.08);
+}
+
+/* Light / Dark themed accents on hover */
+[data-theme='dark'] .lifo-card:hover {
+  box-shadow: 0 12px 30px rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.lifo-stats-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  cursor: default;
+}
+
+.lifo-stats-card-val {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.lifo-stats-card-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Icon Wrappers with Gradients */
+.lifo-stat-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.lifo-stat-icon-wrapper i {
+  font-size: 1.5rem;
+  color: #ffffff !important;
+}
+
+/* Themed Gradients */
+.lifo-grad-amber {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 8px 16px rgba(245, 158, 11, 0.25);
+}
+.lifo-grad-indigo {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.25);
+}
+.lifo-grad-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25);
+}
+.lifo-grad-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
+}
+.lifo-grad-emerald {
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  box-shadow: 0 8px 16px rgba(52, 211, 153, 0.25);
+}
+.lifo-grad-cyan {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  box-shadow: 0 8px 16px rgba(6, 182, 212, 0.25);
+}
+.lifo-grad-purple {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  box-shadow: 0 8px 16px rgba(168, 85, 247, 0.25);
+}
+
+/* Typography styles for values */
+.lifo-text-amber { color: #d97706 !important; }
+.lifo-text-indigo { color: #4f46e5 !important; }
+.lifo-text-green { color: #059669 !important; }
+.lifo-text-red { color: #dc2626 !important; }
+.lifo-text-cyan { color: #0891b2 !important; }
+
+[data-theme='dark'] .lifo-text-amber { color: #fbbf24 !important; }
+[data-theme='dark'] .lifo-text-indigo { color: #818cf8 !important; }
+[data-theme='dark'] .lifo-text-green { color: #34d399 !important; }
+[data-theme='dark'] .lifo-text-red { color: #f87171 !important; }
+[data-theme='dark'] .lifo-text-cyan { color: #22d3ee !important; }
+
+/* Dashboard Headers */
+.lifo-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.lifo-header-title {
+  color: var(--text);
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lifo-header-title i {
+  color: var(--sidebar);
+}
+
+[data-theme='dark'] .lifo-header-title i {
+  color: #00e5ff;
+}
+
+/* Forms styling */
+.lifo-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.lifo-form-section {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--panel);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01);
+  transition: border-color 0.25s ease;
+}
+
+.lifo-form-section:hover {
+  border-color: rgba(1, 76, 177, 0.2);
+}
+
+[data-theme='dark'] .lifo-form-section:hover {
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+.lifo-form-section-title {
+  color: var(--text);
+  margin-bottom: 20px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.lifo-form-section-title i {
+  color: var(--sidebar);
+}
+
+[data-theme='dark'] .lifo-form-section-title i {
+  color: var(--accent-cyan);
+}
+
+.lifo-form-group {
+  margin-bottom: 18px;
+}
+
+.lifo-form-group label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.lifo-input,
+.lifo-select {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.lifo-input:focus,
+.lifo-select:focus {
+  outline: none;
+  border-color: var(--sidebar);
+  box-shadow: 0 0 0 3px rgba(1, 76, 177, 0.15);
+  background: var(--panel);
+}
+
+[data-theme='dark'] .lifo-input:focus,
+[data-theme='dark'] .lifo-select:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+}
+
+.lifo-btn-submit {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--sidebar) 0%, var(--accent-cyan) 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px var(--accent-shadow);
+}
+
+.lifo-btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--accent-shadow);
+  opacity: 0.95;
+}
+
+.lifo-btn-submit:active {
+  transform: translateY(0);
+}
+
+.lifo-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Controls and Filters row */
+.lifo-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 15px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+}
+
+.lifo-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.lifo-search-input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  width: 280px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.lifo-search-input:focus {
+  outline: none;
+  border-color: var(--sidebar);
+  width: 320px;
+  background: var(--panel);
+}
+
+[data-theme='dark'] .lifo-search-input:focus {
+  border-color: var(--accent-cyan);
+}
+
+.lifo-actions-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lifo-btn-excel {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #10b981;
+  color: #ffffff !important;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+.lifo-btn-excel:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(16, 185, 129, 0.3);
+}
+
+.lifo-btn-secondary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lifo-btn-secondary:hover {
+  background: var(--hover-bg);
+  border-color: var(--sidebar);
+}
+
+[data-theme='dark'] .lifo-btn-secondary:hover {
+  border-color: var(--accent-cyan);
+}
+
+/* Premium Table Layout */
+.lifo-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01);
+}
+
+.lifo-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.lifo-table thead tr {
+  background: var(--table-header);
+}
+
+.lifo-table th {
+  padding: 14px 18px;
+  font-weight: 800;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.lifo-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  transition: background-color 0.15s ease;
+}
+
+.lifo-table tbody tr:hover td {
+  background-color: var(--hover-bg);
+}
+
+.lifo-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Status Badges */
+.lifo-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lifo-badge-success {
+  background: #dcfce7;
+  color: #15803d;
+}
+[data-theme='dark'] .lifo-badge-success {
+  background: rgba(21, 128, 61, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(21, 128, 61, 0.3);
+}
+
+.lifo-badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+[data-theme='dark'] .lifo-badge-danger {
+  background: rgba(185, 28, 28, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(185, 28, 28, 0.3);
+}
+
+.lifo-badge-warning {
+  background: #fef9c3;
+  color: #a16207;
+}
+[data-theme='dark'] .lifo-badge-warning {
+  background: rgba(161, 98, 7, 0.2);
+  color: #facc15;
+  border: 1px solid rgba(161, 98, 7, 0.3);
+}
+
+.lifo-badge-info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+[data-theme='dark'] .lifo-badge-info {
+  background: rgba(3, 105, 161, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(3, 105, 161, 0.3);
+}
+
+/* Pagination box styles */
+.lifo-pagination-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  min-width: 35px;
+}
+
+.lifo-pagination-btn:hover:not(:disabled) {
+  border-color: var(--sidebar);
+  color: var(--sidebar);
+}
+
+[data-theme='dark'] .lifo-pagination-btn:hover:not(:disabled) {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.lifo-pagination-btn:disabled {
+  background: var(--input-bg);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.lifo-pagination-btn.active {
+  background: var(--sidebar);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .lifo-pagination-btn.active {
+  background: var(--accent-cyan);
+}
+
+/* Accordion Layout */
+.lifo-accordion-row {
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.lifo-accordion-header {
+  padding: 14px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel);
+}
+
+.lifo-accordion-header:hover {
+  background: var(--hover-bg);
+}
+
+.lifo-accordion-content {
+  background: var(--input-bg);
+  border-top: 1px solid var(--border);
+  padding: 16px 24px;
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

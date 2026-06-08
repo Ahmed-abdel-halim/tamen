@@ -4,6 +4,8 @@ import { showToast } from "./Toast";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import { API_BASE_URL } from "../config/api";
 import { translateLifoError } from "../utils/translateLifoError";
+import "../styles/LifoDashboard.css";
+
 
 // Default external credentials
 const EXTERNAL_API_CREDENTIALS = {
@@ -1597,7 +1599,7 @@ export default function LifoReportsDashboard() {
   };
 
   return (
-    <section className="users-management font-cairo">
+    <section className="users-management font-cairo lifo-container">
       <div className="users-breadcrumb" style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 30px', flexWrap: 'wrap', gap: '15px'
       }}>
@@ -1611,25 +1613,12 @@ export default function LifoReportsDashboard() {
       </div>
 
       {/* Tabs Selector */}
-      <div className="profile-tabs-container" style={{ 
-        margin: '0 30px 20px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        flexWrap: 'wrap', 
-        gap: '15px' 
-      }}>
+      <div className="profile-tabs-container lifo-tabs-bar" style={{ margin: '0 30px 20px' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button 
             type="button"
             onClick={() => setActiveTab('home')}
-            className={`profile-tab-button ${activeTab === 'home' ? 'active' : ''}`}
-            style={{
-              padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-              background: activeTab === 'home' ? 'var(--sidebar)' : 'var(--panel)',
-              color: activeTab === 'home' ? '#fff' : 'var(--text)',
-              cursor: 'pointer', transition: 'all 0.3s ease'
-            }}
+            className={`lifo-tab-btn ${activeTab === 'home' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-house-chimney" style={{ marginLeft: '8px' }}></i>
             الرئيسية
@@ -1638,13 +1627,7 @@ export default function LifoReportsDashboard() {
             <button 
               type="button"
               onClick={() => setActiveTab('requests')}
-              className={`profile-tab-button ${activeTab === 'requests' ? 'active' : ''}`}
-              style={{
-                padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-                background: activeTab === 'requests' ? 'var(--sidebar)' : 'var(--panel)',
-                color: activeTab === 'requests' ? '#fff' : 'var(--text)',
-                cursor: 'pointer', transition: 'all 0.3s ease'
-              }}
+              className={`lifo-tab-btn ${activeTab === 'requests' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-file-invoice" style={{ marginLeft: '8px' }}></i>
               طلب بطاقات التأمين
@@ -1653,13 +1636,7 @@ export default function LifoReportsDashboard() {
           <button 
             type="button"
             onClick={() => setActiveTab('inventory')}
-            className={`profile-tab-button ${activeTab === 'inventory' ? 'active' : ''}`}
-            style={{
-              padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-              background: activeTab === 'inventory' ? 'var(--sidebar)' : 'var(--panel)',
-              color: activeTab === 'inventory' ? '#fff' : 'var(--text)',
-              cursor: 'pointer', transition: 'all 0.3s ease'
-            }}
+            className={`lifo-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-boxes-stacked" style={{ marginLeft: '8px' }}></i>
             البطاقات
@@ -1668,13 +1645,7 @@ export default function LifoReportsDashboard() {
             <button 
               type="button"
               onClick={() => setActiveTab('distribution')}
-              className={`profile-tab-button ${activeTab === 'distribution' ? 'active' : ''}`}
-              style={{
-                padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-                background: activeTab === 'distribution' ? 'var(--sidebar)' : 'var(--panel)',
-                color: activeTab === 'distribution' ? '#fff' : 'var(--text)',
-                cursor: 'pointer', transition: 'all 0.3s ease'
-              }}
+              className={`lifo-tab-btn ${activeTab === 'distribution' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-truck-ramp-box" style={{ marginLeft: '8px' }}></i>
               إدارة التوزيع
@@ -1684,13 +1655,7 @@ export default function LifoReportsDashboard() {
             <button 
               type="button"
               onClick={() => setActiveTab('refund')}
-              className={`profile-tab-button ${activeTab === 'refund' ? 'active' : ''}`}
-              style={{
-                padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-                background: activeTab === 'refund' ? 'var(--sidebar)' : 'var(--panel)',
-                color: activeTab === 'refund' ? '#fff' : 'var(--text)',
-                cursor: 'pointer', transition: 'all 0.3s ease'
-              }}
+              className={`lifo-tab-btn ${activeTab === 'refund' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-rotate-left" style={{ marginLeft: '8px' }}></i>
               إدارة الراجعات
@@ -1699,13 +1664,7 @@ export default function LifoReportsDashboard() {
           <button 
             type="button"
             onClick={() => setActiveTab('reports')}
-            className={`profile-tab-button ${activeTab === 'reports' ? 'active' : ''}`}
-            style={{
-              padding: '12px 24px', borderRadius: '10px', fontWeight: '800', border: '1px solid var(--border)',
-              background: activeTab === 'reports' ? 'var(--sidebar)' : 'var(--panel)',
-              color: activeTab === 'reports' ? '#fff' : 'var(--text)',
-              cursor: 'pointer', transition: 'all 0.3s ease'
-            }}
+            className={`lifo-tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-chart-pie" style={{ marginLeft: '8px' }}></i>
             إدارة واستعلام التقارير
@@ -1713,17 +1672,8 @@ export default function LifoReportsDashboard() {
         </div>
 
         <button 
-          className="btn-cancel" 
+          className="lifo-btn-back" 
           onClick={() => navigate(-1)}
-          style={{
-            padding: '12px 24px',
-            borderRadius: '10px',
-            fontWeight: '800',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxSizing: 'border-box'
-          }}
         >
           <i className="fa-solid fa-arrow-right" style={{ marginLeft: '8px' }}></i>
           العودة
@@ -1740,25 +1690,17 @@ export default function LifoReportsDashboard() {
 
         {!loading && activeTab === 'home' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>
-              <h3 style={{ color: 'var(--text)', margin: 0, fontWeight: 'bold' }}>
-                <i className="fa-solid fa-house-chimney" style={{ marginLeft: '10px', color: 'var(--sidebar)' }}></i>
+            <div className="lifo-header-container">
+              <h3 className="lifo-header-title">
+                <i className="fa-solid fa-house-chimney" style={{ marginLeft: '10px' }}></i>
                 الصفحة الرئيسية للاتحاد (لوحة المعلومات)
               </h3>
               <button 
                 type="button" 
                 onClick={() => fetchDashboardSummary(true)} 
                 disabled={loadingDashboard}
-                className="primary"
+                className="lifo-btn-secondary"
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontWeight: '800',
-                  background: 'var(--sidebar)',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px'
@@ -1794,143 +1736,62 @@ export default function LifoReportsDashboard() {
             ) : dashboardData ? (
               <div>
                 {/* First Row: Main Cards */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '20px',
-                  marginBottom: '25px'
-                }}>
+                <div className="lifo-stats-grid">
                   {/* Card 1: Total Cards */}
-                  <div style={{
-                    background: 'var(--panel)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    padding: '25px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'default'
-                  }} className="stats-card">
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '12px',
-                      background: 'rgba(120, 53, 15, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <i className="fa-solid fa-file-invoice" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                  <div className="lifo-card lifo-stats-card">
+                    <div className="lifo-stat-icon-wrapper lifo-grad-amber">
+                      <i className="fa-solid fa-file-invoice"></i>
                     </div>
                     <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
-                        {dashboardData.metrics.total_cards.toLocaleString('ar-LY')} بطاقة
+                      <span className="lifo-stats-card-val lifo-text-amber">
+                        {dashboardData.metrics.total_cards.toLocaleString('ar-LY')}
                       </span>
-                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                      <span className="lifo-stats-card-label">
                         اجمالي البطاقات
                       </span>
                     </div>
                   </div>
 
                   {/* Card 2: Assigned Cards */}
-                  <div style={{
-                    background: 'var(--panel)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    padding: '25px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'default'
-                  }} className="stats-card">
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '12px',
-                      background: 'rgba(107, 114, 128, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <i className="fa-solid fa-boxes-stacked" style={{ fontSize: '1.8rem', color: '#6b7280' }}></i>
+                  <div className="lifo-card lifo-stats-card">
+                    <div className="lifo-stat-icon-wrapper lifo-grad-indigo">
+                      <i className="fa-solid fa-boxes-stacked"></i>
                     </div>
                     <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#6b7280' }}>
-                        {dashboardData.metrics.assigned_cards.toLocaleString('ar-LY')} بطاقة
+                      <span className="lifo-stats-card-val lifo-text-indigo">
+                        {dashboardData.metrics.assigned_cards.toLocaleString('ar-LY')}
                       </span>
-                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
-                        {dashboardData.is_admin ? 'معينة(مخزون الشركة)' : 'معينة'}
+                      <span className="lifo-stats-card-label">
+                        {dashboardData.is_admin ? 'معينة (مخزون الشركة)' : 'معينة'}
                       </span>
                     </div>
                   </div>
 
                   {/* Card 3: Issued Cards */}
-                  <div style={{
-                    background: 'var(--panel)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    padding: '25px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'default'
-                  }} className="stats-card">
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '12px',
-                      background: 'rgba(21, 128, 61, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <i className="fa-solid fa-circle-check" style={{ fontSize: '1.8rem', color: '#15803d' }}></i>
+                  <div className="lifo-card lifo-stats-card">
+                    <div className="lifo-stat-icon-wrapper lifo-grad-green">
+                      <i className="fa-solid fa-circle-check"></i>
                     </div>
                     <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#15803d' }}>
-                        {dashboardData.metrics.issued_cards.toLocaleString('ar-LY')} بطاقة
+                      <span className="lifo-stats-card-val lifo-text-green">
+                        {dashboardData.metrics.issued_cards.toLocaleString('ar-LY')}
                       </span>
-                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                      <span className="lifo-stats-card-label">
                         اجمالي المصدرة
                       </span>
                     </div>
                   </div>
 
                   {/* Card 4: Cancelled Cards */}
-                  <div style={{
-                    background: 'var(--panel)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    padding: '25px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'default'
-                  }} className="stats-card">
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '12px',
-                      background: 'rgba(185, 28, 28, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <i className="fa-solid fa-trash-can" style={{ fontSize: '1.8rem', color: '#b91c1c' }}></i>
+                  <div className="lifo-card lifo-stats-card">
+                    <div className="lifo-stat-icon-wrapper lifo-grad-red">
+                      <i className="fa-solid fa-trash-can"></i>
                     </div>
                     <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                      <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#b91c1c' }}>
-                        {dashboardData.metrics.canceled_cards.toLocaleString('ar-LY')} بطاقة
+                      <span className="lifo-stats-card-val lifo-text-red">
+                        {dashboardData.metrics.canceled_cards.toLocaleString('ar-LY')}
                       </span>
-                      <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                      <span className="lifo-stats-card-label">
                         اجمالي الملغية
                       </span>
                     </div>
@@ -1941,106 +1802,47 @@ export default function LifoReportsDashboard() {
                 {!dashboardData.is_admin && dashboardData.extra_stats && (
                   <div>
                     {/* Second Row: Office Sales Count Metrics */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                      gap: '20px',
-                      marginBottom: '25px'
-                    }}>
+                    <div className="lifo-stats-grid">
                       {/* Issued Cards Total */}
-                      <div style={{
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                        transition: 'all 0.3s ease'
-                      }} className="stats-card">
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '12px',
-                          background: 'rgba(120, 53, 15, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <i className="fa-solid fa-file-shield" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                      <div className="lifo-card lifo-stats-card">
+                        <div className="lifo-stat-icon-wrapper lifo-grad-amber">
+                          <i className="fa-solid fa-file-shield"></i>
                         </div>
                         <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
-                            {dashboardData.extra_stats.issued_total_count.toLocaleString('ar-LY')} بطاقة
+                          <span className="lifo-stats-card-val lifo-text-amber">
+                            {dashboardData.extra_stats.issued_total_count.toLocaleString('ar-LY')}
                           </span>
-                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span className="lifo-stats-card-label">
                             بطاقات المصدرة (الكلي)
                           </span>
                         </div>
                       </div>
 
                       {/* Issued Cards Month */}
-                      <div style={{
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                        transition: 'all 0.3s ease'
-                      }} className="stats-card">
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '12px',
-                          background: 'rgba(120, 53, 15, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <i className="fa-solid fa-calendar-days" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                      <div className="lifo-card lifo-stats-card">
+                        <div className="lifo-stat-icon-wrapper lifo-grad-indigo">
+                          <i className="fa-solid fa-calendar-days"></i>
                         </div>
                         <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
-                            {dashboardData.extra_stats.issued_month_count.toLocaleString('ar-LY')} بطاقة
+                          <span className="lifo-stats-card-val lifo-text-indigo">
+                            {dashboardData.extra_stats.issued_month_count.toLocaleString('ar-LY')}
                           </span>
-                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span className="lifo-stats-card-label">
                             بطاقات المصدرة (هذا الشهر)
                           </span>
                         </div>
                       </div>
 
                       {/* Issued Cards Today */}
-                      <div style={{
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                        transition: 'all 0.3s ease'
-                      }} className="stats-card">
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '12px',
-                          background: 'rgba(120, 53, 15, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <i className="fa-solid fa-clock" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                      <div className="lifo-card lifo-stats-card">
+                        <div className="lifo-stat-icon-wrapper lifo-grad-cyan">
+                          <i className="fa-solid fa-clock"></i>
                         </div>
                         <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
-                            {dashboardData.extra_stats.issued_today_count.toLocaleString('ar-LY')} بطاقة
+                          <span className="lifo-stats-card-val lifo-text-cyan">
+                            {dashboardData.extra_stats.issued_today_count.toLocaleString('ar-LY')}
                           </span>
-                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span className="lifo-stats-card-label">
                             بطاقات المصدرة (هذا اليوم)
                           </span>
                         </div>
@@ -2048,106 +1850,47 @@ export default function LifoReportsDashboard() {
                     </div>
 
                     {/* Third Row: Office Financial Metrics */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                      gap: '20px',
-                      marginBottom: '25px'
-                    }}>
+                    <div className="lifo-stats-grid">
                       {/* Financial Value Total */}
-                      <div style={{
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                        transition: 'all 0.3s ease'
-                      }} className="stats-card">
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '12px',
-                          background: 'rgba(120, 53, 15, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <i className="fa-solid fa-money-bill-wave" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                      <div className="lifo-card lifo-stats-card">
+                        <div className="lifo-stat-icon-wrapper lifo-grad-amber">
+                          <i className="fa-solid fa-money-bill-wave"></i>
                         </div>
                         <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                          <span className="lifo-stats-card-val lifo-text-amber">
                             {dashboardData.extra_stats.issued_total_value.toFixed(3).toLocaleString()} د.ل
                           </span>
-                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span className="lifo-stats-card-label">
                             اجمالي قيمة البطاقة المصدرة (الكلي)
                           </span>
                         </div>
                       </div>
 
                       {/* Financial Value Month */}
-                      <div style={{
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                        transition: 'all 0.3s ease'
-                      }} className="stats-card">
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '12px',
-                          background: 'rgba(120, 53, 15, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <i className="fa-solid fa-money-check-dollar" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                      <div className="lifo-card lifo-stats-card">
+                        <div className="lifo-stat-icon-wrapper lifo-grad-indigo">
+                          <i className="fa-solid fa-money-check-dollar"></i>
                         </div>
                         <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                          <span className="lifo-stats-card-val lifo-text-indigo">
                             {dashboardData.extra_stats.issued_month_value.toFixed(3).toLocaleString()} د.ل
                           </span>
-                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span className="lifo-stats-card-label">
                             اجمالي قيمة البطاقة المصدرة (هذا الشهر)
                           </span>
                         </div>
                       </div>
 
                       {/* Financial Value Today */}
-                      <div style={{
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                        transition: 'all 0.3s ease'
-                      }} className="stats-card">
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '12px',
-                          background: 'rgba(120, 53, 15, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '1.8rem', color: '#78350f' }}></i>
+                      <div className="lifo-card lifo-stats-card">
+                        <div className="lifo-stat-icon-wrapper lifo-grad-green">
+                          <i className="fa-solid fa-hand-holding-dollar"></i>
                         </div>
                         <div style={{ textAlign: 'left', direction: 'rtl' }}>
-                          <span style={{ display: 'block', fontSize: '1.7rem', fontWeight: '800', color: '#78350f' }}>
+                          <span className="lifo-stats-card-val lifo-text-green">
                             {dashboardData.extra_stats.issued_today_value.toFixed(3).toLocaleString()} د.ل
                           </span>
-                          <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span className="lifo-stats-card-label">
                             اجمالي قيمة البطاقة المصدرة (هذا اليوم)
                           </span>
                         </div>
@@ -2171,19 +1914,20 @@ export default function LifoReportsDashboard() {
               طلب بطاقات التأمين البرتقالية من الاتحاد الليبي للتأمين (LIFO)
             </h3>
 
-            <div className="form-sections-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '30px' }}>
+            <div className="form-sections-container lifo-form-grid">
               {/* Request Form */}
-              <div className="form-section" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', background: 'var(--panel)' }}>
-                <h4 style={{ color: 'var(--sidebar)', marginBottom: '15px', fontWeight: 'bold' }}>
+              <div className="lifo-form-section">
+                <h4 className="lifo-form-section-title">
                   <i className="fa-solid fa-paper-plane" style={{ marginLeft: '8px' }}></i>
                   إضافة طلب بطاقات جديدة
                 </h4>
 
                 <form onSubmit={handleCreateCardRequest}>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label style={{ fontWeight: '700' }}>عدد البطاقات المطلوبة</label>
+                  <div className="lifo-form-group">
+                    <label>عدد البطاقات المطلوبة</label>
                     <input 
                       type="number"
+                      className="lifo-input"
                       value={reqNumOfCards}
                       onChange={(e) => setReqNumOfCards(e.target.value)}
                       placeholder="أدخل عدد البطاقات (مثال: 250)"
@@ -2192,7 +1936,7 @@ export default function LifoReportsDashboard() {
                     />
                   </div>
 
-                  <button type="submit" disabled={submittingRequest} className="primary btn-submit" style={{ width: '100%', padding: '10px', borderRadius: '8px', fontWeight: '800' }}>
+                  <button type="submit" disabled={submittingRequest} className="lifo-btn-submit">
                     {submittingRequest ? 'جاري إرسال الطلب...' : 'إرسال طلب بطاقات'}
                   </button>
                 </form>
@@ -2204,20 +1948,21 @@ export default function LifoReportsDashboard() {
               </div>
 
               {/* Status Query Form */}
-              <div className="form-section" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', background: 'var(--panel)' }}>
-                <h4 style={{ color: 'var(--sidebar)', marginBottom: '15px', fontWeight: 'bold' }}>
+              <div className="lifo-form-section">
+                <h4 className="lifo-form-section-title">
                   <i className="fa-solid fa-magnifying-glass-chart" style={{ marginLeft: '8px' }}></i>
                   استعلام يدوي عن حالة طلب
                 </h4>
 
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label style={{ fontWeight: '700' }}>رقم الطلب بالكامل</label>
+                <div className="lifo-form-group">
+                  <label>رقم الطلب بالكامل</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input 
                       type="text"
                       id="manualCheckReqNum"
+                      className="lifo-input"
                       placeholder="مثال: RQ/26/579177"
-                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                      style={{ flex: 1 }}
                     />
                     <button 
                       type="button" 
@@ -2229,8 +1974,8 @@ export default function LifoReportsDashboard() {
                           showToast('الرجاء إدخال رقم الطلب للبحث عنه', 'error');
                         }
                       }}
-                      className="primary" 
-                      style={{ padding: '10px 15px', borderRadius: '8px', fontWeight: '800' }}
+                      className="lifo-btn-submit" 
+                      style={{ width: 'auto', padding: '0 20px' }}
                     >
                       بحث
                     </button>
@@ -2255,11 +2000,10 @@ export default function LifoReportsDashboard() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
                       <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>حالة الطلب في الاتحاد:</span>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: '15px', fontSize: '0.8rem', fontWeight: 'bold',
-                        background: searchResult.status === 'تم القبول' ? '#dcfce7' : searchResult.status === 'مرفوض' || searchResult.isError ? '#fee2e2' : '#fef9c3',
-                        color: searchResult.status === 'تم القبول' ? '#15803d' : searchResult.status === 'مرفوض' || searchResult.isError ? '#b91c1c' : '#a16207'
-                      }}>{searchResult.status}</span>
+                      <span className={`lifo-badge ${
+                        searchResult.status === 'تم القبول' ? 'lifo-badge-success' :
+                        searchResult.status === 'مرفوض' || searchResult.isError ? 'lifo-badge-danger' : 'lifo-badge-warning'
+                      }`}>{searchResult.status}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>استجابة الاتحاد اللفظية:</span>
@@ -2294,56 +2038,23 @@ export default function LifoReportsDashboard() {
               <h4 style={{ marginBottom: '15px', color: 'var(--text)', fontWeight: 'bold' }}>عرض الطلبات (LIFO Card Requests)</h4>
               
               {/* Controls Box */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px',
-                gap: '15px',
-                flexWrap: 'wrap',
-                background: 'var(--panel)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '15px 20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="lifo-controls-row">
+                <div className="lifo-search-box">
                   <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                   <input
                     type="text"
                     placeholder="ابحث برقم الطلب، الشركة أو الحالة..."
                     value={reqSearchQuery}
                     onChange={(e) => setReqSearchQuery(e.target.value)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      width: '280px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-search-input"
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="lifo-actions-group">
                   <button
                     type="button"
                     onClick={handleExportCardRequestsExcel}
-                    className="primary"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      background: '#7c2d12', // Rust color
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-btn-excel"
                   >
                     <i className="fa-solid fa-file-excel"></i>
                     تصدير Excel
@@ -2352,16 +2063,7 @@ export default function LifoReportsDashboard() {
                   <button
                     type="button"
                     onClick={handleCopyCardRequests}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      background: '#78350f', // Rust color
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-btn-secondary"
                   >
                     نسخ
                   </button>
@@ -2374,15 +2076,8 @@ export default function LifoReportsDashboard() {
                         setReqRowsPerPage(parseInt(e.target.value));
                         setReqCurrentPage(1);
                       }}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border)',
-                        background: 'var(--input-bg)',
-                        color: 'var(--text)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                      className="lifo-select"
+                      style={{ width: 'auto', height: '36px' }}
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -2394,42 +2089,41 @@ export default function LifoReportsDashboard() {
                 </div>
               </div>
 
-              <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+              <div className="lifo-table-wrapper custom-scrollbar">
+                <table className="lifo-table">
                   <thead>
-                    <tr style={{ background: 'var(--table-header)' }}>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رقم الطلب</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الشركة</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المستخدم</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>عدد البطاقات</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>حالة الطلب</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>تاريخ الطلب</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>تاريخ التنزيل</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>الإجراءات</th>
+                    <tr>
+                      <th>رقم الطلب</th>
+                      <th>الشركة</th>
+                      <th>المستخدم</th>
+                      <th>عدد البطاقات</th>
+                      <th>حالة الطلب</th>
+                      <th>تاريخ الطلب</th>
+                      <th>تاريخ التنزيل</th>
+                      <th style={{ textAlign: 'center' }}>الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCardRequests.slice((reqCurrentPage - 1) * reqRowsPerPage, reqCurrentPage * reqRowsPerPage).map((req, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{req.requestnumber}</td>
-                        <td style={{ padding: '12px 15px' }}>{req.company}</td>
-                        <td style={{ padding: '12px 15px' }}>{req.username}</td>
-                        <td style={{ padding: '12px 15px' }}>{req.numberofcards}</td>
-                        <td style={{ padding: '12px 15px' }}>
-                          <span style={{
-                            padding: '2px 8px', borderRadius: '15px', fontSize: '0.8rem', fontWeight: 'bold',
-                            background: req.status === 'تم القبول' ? '#dcfce7' : req.status === 'مرفوض' ? '#fee2e2' : '#fef9c3',
-                            color: req.status === 'تم القبول' ? '#15803d' : req.status === 'مرفوض' ? '#b91c1c' : '#a16207'
-                          }}>{req.status}</span>
+                      <tr key={idx}>
+                        <td style={{ fontWeight: 'bold' }}>{req.requestnumber}</td>
+                        <td>{req.company}</td>
+                        <td>{req.username}</td>
+                        <td>{req.numberofcards}</td>
+                        <td>
+                          <span className={`lifo-badge ${
+                            req.status === 'تم القبول' ? 'lifo-badge-success' :
+                            req.status === 'مرفوض' ? 'lifo-badge-danger' : 'lifo-badge-warning'
+                          }`}>{req.status}</span>
                         </td>
-                        <td style={{ padding: '12px 15px' }}>{req.created_at}</td>
-                        <td style={{ padding: '12px 15px' }}>{req.download_date}</td>
-                        <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                        <td>{req.created_at}</td>
+                        <td>{req.download_date}</td>
+                        <td style={{ textAlign: 'center' }}>
                           <button
                             type="button"
                             onClick={() => handleCheckRequestStatus(req.requestnumber)}
-                            className="primary"
-                            style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem' }}
+                            className="lifo-btn-secondary"
+                            style={{ padding: '4px 10px', fontSize: '0.8rem' }}
                           >
                             تحديث الحالة
                           </button>
@@ -2458,13 +2152,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={reqCurrentPage === 1}
                         onClick={() => setReqCurrentPage(prev => Math.max(prev - 1, 1))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: reqCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                          color: reqCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                          cursor: reqCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         السابق
                       </button>
@@ -2478,14 +2166,8 @@ export default function LifoReportsDashboard() {
                             type="button"
                             disabled={!isPageNumber}
                             onClick={() => isPageNumber && setReqCurrentPage(page as number)}
-                            style={{
-                              padding: '6px 12px', borderRadius: '6px',
-                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                              color: isActive ? '#fff' : 'var(--text)',
-                              cursor: isPageNumber ? 'pointer' : 'default',
-                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                            }}
+                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
+                            style={!isPageNumber ? { border: 'none', background: 'transparent', cursor: 'default' } : undefined}
                           >
                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                           </button>
@@ -2496,13 +2178,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={reqCurrentPage === reqTotalPages}
                         onClick={() => setReqCurrentPage(prev => Math.min(prev + 1, reqTotalPages))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: reqCurrentPage === reqTotalPages ? 'var(--input-bg)' : 'var(--panel)',
-                          color: reqCurrentPage === reqTotalPages ? 'var(--muted)' : 'var(--text)',
-                          cursor: reqCurrentPage === reqTotalPages ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         التالي
                       </button>
@@ -2521,25 +2197,12 @@ export default function LifoReportsDashboard() {
             </h3>
 
             {/* Horizontal sub-tabs selector at the top */}
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '10px',
-              marginBottom: '25px',
-              borderBottom: '1px solid var(--border)',
-              paddingBottom: '20px',
-              width: '100%'
-            }}>
+            <div className="lifo-tabs-bar" style={{ marginBottom: '25px', borderBottom: '1px solid var(--border)', paddingBottom: '20px', width: '100%' }}>
               <button
                 type="button"
                 onClick={() => setReportSubTab('sales_detailed')}
-                style={{
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                  background: reportSubTab === 'sales_detailed' ? 'var(--sidebar)' : 'var(--panel)',
-                  color: reportSubTab === 'sales_detailed' ? '#fff' : 'var(--text)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
+                className={`lifo-tab-btn ${reportSubTab === 'sales_detailed' ? 'active' : ''}`}
+                style={{ padding: '10px 20px' }}
               >
                 <i className="fa-solid fa-file-invoice-dollar"></i>
                 تقارير المبيعات
@@ -2548,13 +2211,8 @@ export default function LifoReportsDashboard() {
               <button
                 type="button"
                 onClick={() => setReportSubTab('sales_summary')}
-                style={{
-                  padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                  fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                  background: reportSubTab === 'sales_summary' ? 'var(--sidebar)' : 'var(--panel)',
-                  color: reportSubTab === 'sales_summary' ? '#fff' : 'var(--text)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
+                className={`lifo-tab-btn ${reportSubTab === 'sales_summary' ? 'active' : ''}`}
+                style={{ padding: '10px 20px' }}
               >
                 <i className="fa-solid fa-chart-line"></i>
                 تقارير المبيعات [المختصر]
@@ -2564,13 +2222,8 @@ export default function LifoReportsDashboard() {
                 <button
                   type="button"
                   onClick={() => setReportSubTab('canceled_cards')}
-                  style={{
-                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                    background: reportSubTab === 'canceled_cards' ? 'var(--sidebar)' : 'var(--panel)',
-                    color: reportSubTab === 'canceled_cards' ? '#fff' : 'var(--text)',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
+                  className={`lifo-tab-btn ${reportSubTab === 'canceled_cards' ? 'active' : ''}`}
+                  style={{ padding: '10px 20px' }}
                 >
                   <i className="fa-solid fa-rectangle-xmark"></i>
                   تقارير البطاقات الملغية
@@ -2581,13 +2234,8 @@ export default function LifoReportsDashboard() {
                 <button
                   type="button"
                   onClick={() => setReportSubTab('company_inventory')}
-                  style={{
-                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                    background: reportSubTab === 'company_inventory' ? 'var(--sidebar)' : 'var(--panel)',
-                    color: reportSubTab === 'company_inventory' ? '#fff' : 'var(--text)',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
+                  className={`lifo-tab-btn ${reportSubTab === 'company_inventory' ? 'active' : ''}`}
+                  style={{ padding: '10px 20px' }}
                 >
                   <i className="fa-solid fa-warehouse"></i>
                   تقارير مخزون الشركة
@@ -2598,13 +2246,8 @@ export default function LifoReportsDashboard() {
                 <button
                   type="button"
                   onClick={() => setReportSubTab('offices_inventory')}
-                  style={{
-                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                    background: reportSubTab === 'offices_inventory' ? 'var(--sidebar)' : 'var(--panel)',
-                    color: reportSubTab === 'offices_inventory' ? '#fff' : 'var(--text)',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
+                  className={`lifo-tab-btn ${reportSubTab === 'offices_inventory' ? 'active' : ''}`}
+                  style={{ padding: '10px 20px' }}
                 >
                   <i className="fa-solid fa-store"></i>
                   تقارير مخزون المكاتب
@@ -2615,13 +2258,8 @@ export default function LifoReportsDashboard() {
                 <button
                   type="button"
                   onClick={() => setReportSubTab('offices_aggregated')}
-                  style={{
-                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                    background: reportSubTab === 'offices_aggregated' ? 'var(--sidebar)' : 'var(--panel)',
-                    color: reportSubTab === 'offices_aggregated' ? '#fff' : 'var(--text)',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
+                  className={`lifo-tab-btn ${reportSubTab === 'offices_aggregated' ? 'active' : ''}`}
+                  style={{ padding: '10px 20px' }}
                 >
                   <i className="fa-solid fa-boxes-packing"></i>
                   تقرير المجمع لإصدارات المكاتب
@@ -2632,13 +2270,8 @@ export default function LifoReportsDashboard() {
                 <button
                   type="button"
                   onClick={() => setReportSubTab('company_inventory')}
-                  style={{
-                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)',
-                    fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease',
-                    background: reportSubTab === 'company_inventory' ? 'var(--sidebar)' : 'var(--panel)',
-                    color: reportSubTab === 'company_inventory' ? '#fff' : 'var(--text)',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
+                  className={`lifo-tab-btn ${reportSubTab === 'company_inventory' ? 'active' : ''}`}
+                  style={{ padding: '10px 20px' }}
                 >
                   <i className="fa-solid fa-warehouse"></i>
                   تقرير المخزون
@@ -2654,36 +2287,32 @@ export default function LifoReportsDashboard() {
                       {reportSubTab === 'sales_detailed' ? 'تقارير المبيعات' : 'تقارير المبيعات [المختصر]'}
                     </h4>
 
-                    <form onSubmit={handleFetchReports} style={{
-                      background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px', marginBottom: '30px'
-                    }}>
-                      <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '20px'
-                      }}>
+                    <form onSubmit={handleFetchReports} className="lifo-form-section" style={{ marginBottom: '30px' }}>
+                      <div className="lifo-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                         {/* Row 1 */}
                         {isAdmin && (
                           <>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>الشركة</label>
-                              <select disabled style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}>
+                            <div className="lifo-form-group">
+                              <label>الشركة</label>
+                              <select disabled className="lifo-select">
                                 <option>المدار الليبي للتأمين (adminmli)</option>
                               </select>
                             </div>
 
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم الشركة</label>
-                              <select style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}>
+                            <div className="lifo-form-group">
+                              <label>مستخدم الشركة</label>
+                              <select className="lifo-select">
                                 <option value="">اختر مستخدم الشركة...</option>
                                 <option value="adminmli">adminmli</option>
                               </select>
                             </div>
 
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>المكتب</label>
+                            <div className="lifo-form-group">
+                              <label>المكتب</label>
                               <select 
                                 value={searchOfficeId} 
                                 onChange={(e) => setSearchOfficeId(e.target.value)} 
-                                style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                                className="lifo-select"
                               >
                                 <option value="">Choose one</option>
                                 {lifoOffices.map((office) => (
@@ -2694,21 +2323,21 @@ export default function LifoReportsDashboard() {
                           </>
                         )}
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم المكتب</label>
+                        <div className="lifo-form-group">
+                          <label>مستخدم المكتب</label>
                           {isAdmin ? (
                             <input 
                               type="text" 
                               value={searchOfficeUserId} 
                               onChange={(e) => setSearchOfficeUserId(e.target.value)}
                               placeholder="معرف مستخدم المكتب" 
-                              style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                              className="lifo-input"
                             />
                           ) : (
                             <select
                               value={searchOfficeUserId}
                               onChange={(e) => setSearchOfficeUserId(e.target.value)}
-                              style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                              className="lifo-select"
                             >
                               <option value="">الكل</option>
                               {officeUsers.map((user) => (
@@ -2721,74 +2350,74 @@ export default function LifoReportsDashboard() {
                         </div>
 
                         {/* Row 2 */}
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>اسم العميل</label>
+                        <div className="lifo-form-group">
+                          <label>اسم العميل</label>
                           <input 
                             type="text" 
                             value={customerName} 
                             onChange={(e) => setCustomerName(e.target.value)}
                             placeholder="اسم العميل" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>رقم البطاقة</label>
+                        <div className="lifo-form-group">
+                          <label>رقم البطاقة</label>
                           <input 
                             type="text" 
                             value={cardNumber} 
                             onChange={(e) => setCardNumber(e.target.value)}
                             placeholder="رقم البطاقة" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>رقم اللوحة</label>
+                        <div className="lifo-form-group">
+                          <label>رقم اللوحة</label>
                           <input 
                             type="text" 
                             value={plateNumber} 
                             onChange={(e) => setPlateNumber(e.target.value)}
                             placeholder="اللوحة المعدنية" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>رقم الهيكل</label>
+                        <div className="lifo-form-group">
+                          <label>رقم الهيكل</label>
                           <input 
                             type="text" 
                             value={chassisNumber} 
                             onChange={(e) => setChassisNumber(e.target.value)}
                             placeholder="رقم الهيكل" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
                         {/* Dates */}
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>من</label>
+                        <div className="lifo-form-group">
+                          <label>من</label>
                           <input 
                             type="date" 
                             value={dateFrom} 
                             onChange={(e) => setDateFrom(e.target.value)}
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>الي</label>
+                        <div className="lifo-form-group">
+                          <label>الي</label>
                           <input 
                             type="date" 
                             value={dateTo} 
                             onChange={(e) => setDateTo(e.target.value)}
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
-                        <button type="submit" className="primary btn-submit" style={{ padding: '0 24px', borderRadius: '8px', fontWeight: '800', height: '40px' }}>
+                      <div className="lifo-actions-group" style={{ marginTop: '25px' }}>
+                        <button type="submit" className="lifo-btn-submit" style={{ width: 'auto', padding: '0 24px' }}>
                           <i className="fa-solid fa-magnifying-glass" style={{ marginLeft: '8px' }}></i>
                           بحث
                         </button>
@@ -2805,13 +2434,13 @@ export default function LifoReportsDashboard() {
                             setSearchOfficeUserId('');
                             setReportsData([]);
                           }} 
-                          className="btn-cancel" 
-                          style={{ padding: '0 20px', borderRadius: '8px', fontWeight: '800', height: '40px' }}
+                          className="lifo-btn-secondary"
+                          style={{ height: '44px', padding: '0 20px' }}
                         >
                           مسح الفلاتر
                         </button>
                         {reportsData.length > 0 && (
-                          <button type="button" onClick={handleExportExcel} className="primary" style={{ padding: '0 20px', borderRadius: '8px', fontWeight: '800', background: '#166534', height: '40px', border: 'none', color: '#fff', cursor: 'pointer' }}>
+                          <button type="button" onClick={handleExportExcel} className="lifo-btn-excel" style={{ height: '44px', padding: '0 20px' }}>
                             <i className="fa-solid fa-file-excel" style={{ marginLeft: '8px' }}></i>
                             تصدير كـ Excel
                           </button>
@@ -2861,24 +2490,12 @@ export default function LifoReportsDashboard() {
                         return (
                           <>
                             {reportsData.length > 0 && (
-                              <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '20px',
-                                gap: '15px',
-                                flexWrap: 'wrap',
-                                background: 'var(--panel)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '12px',
-                                padding: '15px 20px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                              }}>
+                              <div className="lifo-controls-row">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>مجموع السجلات الحالية: {reportsTotal}</span>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <div className="lifo-actions-group">
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text)', fontSize: '0.9rem' }}>
                                     <span>عرض</span>
                                     <select
@@ -2888,15 +2505,8 @@ export default function LifoReportsDashboard() {
                                         setReportsCurrentPage(1);
                                         setTimeout(() => handleFetchReports(1), 50);
                                       }}
-                                      style={{
-                                        padding: '6px 10px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--input-bg)',
-                                        color: 'var(--text)',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer'
-                                      }}
+                                      className="lifo-select"
+                                      style={{ width: 'auto', height: '36px' }}
                                     >
                                       <option value={10}>10</option>
                                       <option value={25}>25</option>
@@ -2911,27 +2521,27 @@ export default function LifoReportsDashboard() {
 
                             {reportsData.length > 0 ? (
                               <>
-                                <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                                <div className="lifo-table-wrapper custom-scrollbar">
+                                  <table className="lifo-table">
                                     <thead>
-                                      <tr style={{ background: 'var(--table-header)' }}>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>#</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رقم البطاقة</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المُصدر</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المؤمن له</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>تاريخ الاصدار</th>
+                                      <tr>
+                                        <th>#</th>
+                                        <th>رقم البطاقة</th>
+                                        <th>المُصدر</th>
+                                        <th>المكتب</th>
+                                        <th>المؤمن له</th>
+                                        <th>تاريخ الاصدار</th>
                                         {reportSubTab === 'sales_detailed' && (
                                           <>
-                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>صافي القسط</th>
-                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الضريبة</th>
-                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رسم الدمغة</th>
-                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإشراف</th>
-                                            <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإصدار</th>
+                                            <th>صافي القسط</th>
+                                            <th>الضريبة</th>
+                                            <th>رسم الدمغة</th>
+                                            <th>الإشراف</th>
+                                            <th>الإصدار</th>
                                           </>
                                         )}
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الاجمالي</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>عرض الوثيقة</th>
+                                        <th>الاجمالي</th>
+                                        <th style={{ textAlign: 'center' }}>عرض الوثيقة</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -2942,24 +2552,24 @@ export default function LifoReportsDashboard() {
                                         const officeName = doc.offices?.name || lifoOffices.find((o: any) => o.id === doc.offices_id)?.name || '-';
 
                                         return (
-                                          <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '12px 15px' }}>{globalIdx}</td>
-                                            <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{cardNo}</td>
-                                            <td style={{ padding: '12px 15px' }}>{issuer}</td>
-                                            <td style={{ padding: '12px 15px' }}>{officeName}</td>
-                                            <td style={{ padding: '12px 15px' }}>{doc.insurance_name || '-'}</td>
-                                            <td style={{ padding: '12px 15px' }}>{doc.issuing_date || '-'}</td>
+                                          <tr key={idx}>
+                                            <td>{globalIdx}</td>
+                                            <td style={{ fontWeight: 'bold' }}>{cardNo}</td>
+                                            <td>{issuer}</td>
+                                            <td>{officeName}</td>
+                                            <td>{doc.insurance_name || '-'}</td>
+                                            <td>{doc.issuing_date || '-'}</td>
                                             {reportSubTab === 'sales_detailed' && (
                                               <>
-                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_installment)}</td>
-                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_tax)}</td>
-                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_stamp)}</td>
-                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_supervision)}</td>
-                                                <td style={{ padding: '12px 15px' }}>{formatDecimal(doc.insurance_version)}</td>
+                                                <td>{formatDecimal(doc.insurance_installment)}</td>
+                                                <td>{formatDecimal(doc.insurance_tax)}</td>
+                                                <td>{formatDecimal(doc.insurance_stamp)}</td>
+                                                <td>{formatDecimal(doc.insurance_supervision)}</td>
+                                                <td>{formatDecimal(doc.insurance_version)}</td>
                                               </>
                                             )}
-                                            <td style={{ padding: '12px 15px', fontWeight: 'bold', color: 'var(--sidebar)' }}>{formatDecimal(doc.insurance_total)}</td>
-                                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                                            <td className="lifo-text-indigo" style={{ fontWeight: 'bold' }}>{formatDecimal(doc.insurance_total)}</td>
+                                            <td style={{ textAlign: 'center' }}>
                                               {cardNo !== '-' ? (
                                                 <button
                                                   type="button"
@@ -2986,18 +2596,18 @@ export default function LifoReportsDashboard() {
                                       })}
                                     </tbody>
                                     <tfoot>
-                                      <tr style={{ background: 'var(--table-header)', borderTop: '2px solid var(--border)', fontWeight: 'bold' }}>
-                                        <td colSpan={6} style={{ padding: '12px 15px', textAlign: 'left' }}>الإجمالي</td>
+                                      <tr style={{ fontWeight: 'bold' }}>
+                                        <td colSpan={6} style={{ textAlign: 'left' }}>الإجمالي</td>
                                         {reportSubTab === 'sales_detailed' && (
                                           <>
-                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.installment}</td>
-                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.tax}</td>
-                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.stamp}</td>
-                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.supervision}</td>
-                                            <td style={{ padding: '12px 15px' }}>{reportsTotals.version}</td>
+                                            <td>{reportsTotals.installment}</td>
+                                            <td>{reportsTotals.tax}</td>
+                                            <td>{reportsTotals.stamp}</td>
+                                            <td>{reportsTotals.supervision}</td>
+                                            <td>{reportsTotals.version}</td>
                                           </>
                                         )}
-                                        <td style={{ padding: '12px 15px', fontWeight: 'bold', color: 'var(--sidebar)' }}>{reportsTotals.total}</td>
+                                        <td className="lifo-text-indigo" style={{ fontWeight: 'bold' }}>{reportsTotals.total}</td>
                                         <td></td>
                                       </tr>
                                     </tfoot>
@@ -3020,13 +2630,7 @@ export default function LifoReportsDashboard() {
                                           setReportsCurrentPage(prevPage);
                                           handleFetchReports(prevPage);
                                         }}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                          background: reportsCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                                          color: reportsCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                                          cursor: reportsCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                                          fontWeight: 'bold', fontSize: '0.85rem'
-                                        }}
+                                        className="lifo-pagination-btn"
                                       >
                                         السابق
                                       </button>
@@ -3045,14 +2649,8 @@ export default function LifoReportsDashboard() {
                                                 handleFetchReports(page as number);
                                               }
                                             }}
-                                            style={{
-                                              padding: '6px 12px', borderRadius: '6px',
-                                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                                              color: isActive ? '#fff' : 'var(--text)',
-                                              cursor: isPageNumber ? 'pointer' : 'default',
-                                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                                            }}
+                                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
+                                            style={!isPageNumber ? { border: 'none', background: 'transparent', cursor: 'default' } : undefined}
                                           >
                                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                                           </button>
@@ -3067,13 +2665,7 @@ export default function LifoReportsDashboard() {
                                           setReportsCurrentPage(nextPage);
                                           handleFetchReports(nextPage);
                                         }}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                          background: reportsCurrentPage === reportsTotalPages ? 'var(--input-bg)' : 'var(--panel)',
-                                          color: reportsCurrentPage === reportsTotalPages ? 'var(--muted)' : 'var(--text)',
-                                          cursor: reportsCurrentPage === reportsTotalPages ? 'not-allowed' : 'pointer',
-                                          fontWeight: 'bold', fontSize: '0.85rem'
-                                        }}
+                                        className="lifo-pagination-btn"
                                       >
                                         التالي
                                       </button>
@@ -3101,19 +2693,15 @@ export default function LifoReportsDashboard() {
                   <div>
                     <h4 style={{ fontWeight: 'bold', marginBottom: '15px', color: 'var(--sidebar)' }}>تقارير البطاقات الملغية</h4>
                     
-                    <form onSubmit={handleFetchCanceledCards} style={{
-                      background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px', marginBottom: '30px'
-                    }}>
-                      <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px'
-                      }}>
+                    <form onSubmit={handleFetchCanceledCards} className="lifo-form-section" style={{ marginBottom: '30px' }}>
+                      <div className="lifo-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                         {/* Row 1 */}
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>المكتب</label>
+                        <div className="lifo-form-group">
+                          <label>المكتب</label>
                           <select 
                             value={canceledSearchOfficeId} 
                             onChange={(e) => setCanceledSearchOfficeId(e.target.value)} 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-select"
                           >
                             <option value="">اختر المكتب...</option>
                             {lifoOffices.map((office) => (
@@ -3122,75 +2710,75 @@ export default function LifoReportsDashboard() {
                           </select>
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم الشركة</label>
+                        <div className="lifo-form-group">
+                          <label>مستخدم الشركة</label>
                           <select 
                             value={canceledSearchCompanyUser} 
                             onChange={(e) => setCanceledSearchCompanyUser(e.target.value)} 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-select"
                           >
                             <option value="">اختر مستخدم الشركة...</option>
                             <option value="adminmli">adminmli</option>
                           </select>
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>مستخدم المكتب</label>
+                        <div className="lifo-form-group">
+                          <label>مستخدم المكتب</label>
                           <select 
                             value={canceledSearchOfficeUserId} 
                             onChange={(e) => setCanceledSearchOfficeUserId(e.target.value)} 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-select"
                           >
                             <option value="">اختر مستخدم المكتب...</option>
                           </select>
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>رقم الطلب</label>
+                        <div className="lifo-form-group">
+                          <label>رقم الطلب</label>
                           <input 
                             type="text" 
                             value={canceledSearchReqNum} 
                             onChange={(e) => setCanceledSearchReqNum(e.target.value)}
                             placeholder="رقم الطلب" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
                         {/* Row 2 */}
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>رقم البطاقة</label>
+                        <div className="lifo-form-group">
+                          <label>رقم البطاقة</label>
                           <input 
                             type="text" 
                             value={canceledSearchCardNum} 
                             onChange={(e) => setCanceledSearchCardNum(e.target.value)}
                             placeholder="رقم البطاقة" 
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>تاريخ الإلغاء - من</label>
+                        <div className="lifo-form-group">
+                          <label>تاريخ الإلغاء - من</label>
                           <input 
                             type="date" 
                             value={canceledSearchDateFrom} 
                             onChange={(e) => setCanceledSearchDateFrom(e.target.value)}
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>تاريخ الإلغاء - إلى</label>
+                        <div className="lifo-form-group">
+                          <label>تاريخ الإلغاء - إلى</label>
                           <input 
                             type="date" 
                             value={canceledSearchDateTo} 
                             onChange={(e) => setCanceledSearchDateTo(e.target.value)}
-                            style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            className="lifo-input"
                           />
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
-                        <button type="submit" disabled={loadingCanceledCards} className="primary btn-submit" style={{ padding: '0 24px', borderRadius: '8px', fontWeight: '800', height: '40px' }}>
+                      <div className="lifo-actions-group" style={{ marginTop: '25px' }}>
+                        <button type="submit" disabled={loadingCanceledCards} className="lifo-btn-submit" style={{ width: 'auto', padding: '0 24px' }}>
                           <i className="fa-solid fa-magnifying-glass" style={{ marginLeft: '8px' }}></i>
                           {loadingCanceledCards ? 'جاري التحميل...' : 'بحث'}
                         </button>
@@ -3206,8 +2794,8 @@ export default function LifoReportsDashboard() {
                             setCanceledSearchDateTo('');
                             setCanceledCardsData([]);
                           }} 
-                          className="btn-cancel" 
-                          style={{ padding: '0 20px', borderRadius: '8px', fontWeight: '800', height: '40px' }}
+                          className="lifo-btn-secondary" 
+                          style={{ height: '44px', padding: '0 20px' }}
                         >
                           مسح الفلاتر
                         </button>
@@ -3240,31 +2828,31 @@ export default function LifoReportsDashboard() {
                           <>
                             {filteredCanceledCards.length > 0 ? (
                               <>
-                                <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                                <div className="lifo-table-wrapper custom-scrollbar">
+                                  <table className="lifo-table">
                                     <thead>
-                                      <tr style={{ background: 'var(--table-header)' }}>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>#</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رقم البطاقة</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>حالة البطاقة</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رقم الطلب</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
+                                      <tr>
+                                        <th>#</th>
+                                        <th>رقم البطاقة</th>
+                                        <th>حالة البطاقة</th>
+                                        <th>رقم الطلب</th>
+                                        <th>المكتب</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {filteredCanceledCards.map((card, idx) => {
                                         const globalIdx = (canceledCurrentPage - 1) * canceledRowsPerPage + idx + 1;
                                         return (
-                                          <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '12px 15px' }}>{globalIdx}</td>
-                                            <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{card.card_number || card.card_serial || '-'}</td>
-                                            <td style={{ padding: '12px 15px' }}>
-                                              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', background: '#fee2e2', color: '#b91c1c' }}>
+                                          <tr key={idx}>
+                                            <td>{globalIdx}</td>
+                                            <td style={{ fontWeight: 'bold' }}>{card.card_number || card.card_serial || '-'}</td>
+                                            <td>
+                                              <span className="lifo-badge lifo-badge-danger">
                                                 {card.cardstautesname || 'الملغية'}
                                               </span>
                                             </td>
-                                            <td style={{ padding: '12px 15px', fontFamily: 'monospace' }}>{card.request_numberr || '-'}</td>
-                                            <td style={{ padding: '12px 15px' }}>{card.offices || '-'}</td>
+                                            <td style={{ fontFamily: 'monospace' }}>{card.request_numberr || '-'}</td>
+                                            <td>{card.offices || '-'}</td>
                                           </tr>
                                         );
                                       })}
@@ -3287,13 +2875,7 @@ export default function LifoReportsDashboard() {
                                           setCanceledCurrentPage(prevPage);
                                           handleFetchCanceledCards(prevPage);
                                         }}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                          background: canceledCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                                          color: canceledCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                                          cursor: canceledCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                                          fontWeight: 'bold', fontSize: '0.85rem'
-                                        }}
+                                        className="lifo-pagination-btn"
                                       >
                                         السابق
                                       </button>
@@ -3312,14 +2894,7 @@ export default function LifoReportsDashboard() {
                                                 handleFetchCanceledCards(page as number);
                                               }
                                             }}
-                                            style={{
-                                              padding: '6px 12px', borderRadius: '6px',
-                                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                                              color: isActive ? '#fff' : 'var(--text)',
-                                              cursor: isPageNumber ? 'pointer' : 'default',
-                                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                                            }}
+                                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
                                           >
                                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                                           </button>
@@ -3334,13 +2909,7 @@ export default function LifoReportsDashboard() {
                                           setCanceledCurrentPage(nextPage);
                                           handleFetchCanceledCards(nextPage);
                                         }}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                          background: canceledCurrentPage === totalCanceledPages ? 'var(--input-bg)' : 'var(--panel)',
-                                          color: canceledCurrentPage === totalCanceledPages ? 'var(--muted)' : 'var(--text)',
-                                          cursor: canceledCurrentPage === totalCanceledPages ? 'not-allowed' : 'pointer',
-                                          fontWeight: 'bold', fontSize: '0.85rem'
-                                        }}
+                                        className="lifo-pagination-btn"
                                       >
                                         التالي
                                       </button>
@@ -3520,7 +3089,7 @@ export default function LifoReportsDashboard() {
                       };
 
                       return (
-                        <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px' }}>
+                        <div className="lifo-form-section">
                           
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h4 style={{ fontWeight: 'bold', color: 'var(--text)', margin: 0, fontSize: '1.1rem' }}>{isAdmin ? 'عرض مخزون الشركة' : 'عرض مخزون المكتب'}</h4>
@@ -3528,10 +3097,8 @@ export default function LifoReportsDashboard() {
                               type="button"
                               onClick={handlePrintCompanyStockPDF}
                               disabled={!hasData}
-                              style={{
-                                padding: '6px 15px', borderRadius: '6px', border: '1px solid var(--border)',
-                                background: '#fff', color: '#000', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                              }}
+                              className="lifo-btn-secondary"
+                              style={{ padding: '6px 15px', height: '36px' }}
                             >
                               PDF
                             </button>
@@ -3539,52 +3106,34 @@ export default function LifoReportsDashboard() {
 
                           {/* Controls bar matching LIFO layout */}
                           {hasData && (
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '20px',
-                              gap: '15px',
-                              flexWrap: 'wrap',
-                              background: 'var(--input-bg)',
-                              border: '1px solid var(--border)',
-                              borderRadius: '12px',
-                              padding: '15px 20px'
-                            }}>
+                            <div className="lifo-controls-row">
                               {/* Search Box on the Right */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div className="lifo-search-box">
                                 <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                                 <input
                                   type="text"
                                   placeholder="ابحث..."
                                   value={inventorySearchQuery}
                                   onChange={(e) => setInventorySearchQuery(e.target.value)}
-                                  style={{
-                                    padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)',
-                                    background: 'var(--panel)', color: 'var(--text)', width: '220px', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-search-input"
+                                  style={{ width: '220px' }}
                                 />
                               </div>
 
                               {/* Action buttons on the Left */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div className="lifo-actions-group">
                                 <button
                                   type="button"
                                   onClick={handleExportCompanyStockExcel}
-                                  style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    background: '#7c2d12', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-btn-excel"
                                 >
                                   تصدير كـ excel
                                 </button>
                                 <button
                                   type="button"
                                   onClick={handleCopyCompanyStock}
-                                  style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    background: '#7c2d12', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-btn-secondary"
+                                  style={{ height: '36px', padding: '0 16px' }}
                                 >
                                   نسخ
                                 </button>
@@ -3593,10 +3142,8 @@ export default function LifoReportsDashboard() {
                                   <span>عرض</span>
                                   <select
                                     disabled
-                                    style={{
-                                      padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: 'var(--panel)', color: 'var(--text)', fontWeight: 'bold'
-                                    }}
+                                    className="lifo-select"
+                                    style={{ width: 'auto', height: '36px' }}
                                   >
                                     <option value={10}>10</option>
                                   </select>
@@ -3609,20 +3156,20 @@ export default function LifoReportsDashboard() {
                           {hasData ? (
                             <>
                               {searchMatch ? (
-                                <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px', display: 'block' }}>
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                                <div className="lifo-table-wrapper custom-scrollbar">
+                                  <table className="lifo-table">
                                     <thead>
-                                      <tr style={{ background: 'var(--table-header)' }}>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>{isAdmin ? 'بطاقة معينة (مخزون الشركة)' : 'بطاقة معينة (مخزون المكتب)'}</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة المصدرة</th>
-                                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة ملغية</th>
+                                      <tr>
+                                        <th>{isAdmin ? 'بطاقة معينة (مخزون الشركة)' : 'بطاقة معينة (مخزون المكتب)'}</th>
+                                        <th>بطاقة المصدرة</th>
+                                        <th>بطاقة ملغية</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      <tr style={{ fontSize: '1rem', fontWeight: 'normal', borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '15px' }}>{counts.active.toLocaleString('ar-LY')} بطاقة</td>
-                                        <td style={{ padding: '15px' }}>{counts.sold.toLocaleString('ar-LY')} بطاقة</td>
-                                        <td style={{ padding: '15px' }}>{counts.canceled.toLocaleString('ar-LY')} بطاقة</td>
+                                      <tr>
+                                        <td style={{ color: '#166534', fontWeight: 'bold' }}>{counts.active.toLocaleString('ar-LY')} بطاقة</td>
+                                        <td style={{ color: 'var(--sidebar)', fontWeight: 'bold' }}>{counts.sold.toLocaleString('ar-LY')} بطاقة</td>
+                                        <td style={{ color: '#b91c1c', fontWeight: 'bold' }}>{counts.canceled.toLocaleString('ar-LY')} بطاقة</td>
                                       </tr>
                                     </tbody>
                                   </table>
@@ -3642,31 +3189,20 @@ export default function LifoReportsDashboard() {
                                   <button
                                     type="button"
                                     disabled
-                                    style={{
-                                      padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: 'var(--input-bg)', color: 'var(--muted)', cursor: 'not-allowed',
-                                      fontWeight: 'bold', fontSize: '0.85rem'
-                                    }}
+                                    className="lifo-pagination-btn"
                                   >
                                     السابق
                                   </button>
                                   <button
                                     type="button"
-                                    style={{
-                                      padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: 'var(--sidebar)', color: '#fff', fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                                    }}
+                                    className="lifo-pagination-btn active"
                                   >
                                     ١
                                   </button>
                                   <button
                                     type="button"
                                     disabled
-                                    style={{
-                                      padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: 'var(--input-bg)', color: 'var(--muted)', cursor: 'not-allowed',
-                                      fontWeight: 'bold', fontSize: '0.85rem'
-                                    }}
+                                    className="lifo-pagination-btn"
                                   >
                                     التالي
                                   </button>
@@ -3876,7 +3412,7 @@ export default function LifoReportsDashboard() {
                       };
 
                       return (
-                        <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px' }}>
+                        <div className="lifo-form-section">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                             <h4 style={{ fontWeight: 'bold', color: 'var(--text)', margin: 0, fontSize: '1.1rem' }}>عرض مخزون المكاتب</h4>
                             
@@ -3885,10 +3421,8 @@ export default function LifoReportsDashboard() {
                                 type="button"
                                 onClick={handlePrintOfficesStockPDF}
                                 disabled={!hasData}
-                                style={{
-                                  padding: '6px 15px', borderRadius: '6px', border: '1px solid var(--border)',
-                                  background: '#fff', color: '#000', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                                }}
+                                className="lifo-btn-secondary"
+                                style={{ padding: '6px 15px', height: '36px' }}
                               >
                                 PDF
                               </button>
@@ -3898,8 +3432,8 @@ export default function LifoReportsDashboard() {
                                   fetchInventorySummary(true);
                                 }}
                                 disabled={loadingInventorySummary}
-                                className="primary"
-                                style={{ padding: '6px 15px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                className="lifo-btn-submit"
+                                style={{ padding: '0 15px', height: '36px', width: 'auto' }}
                               >
                                 {loadingInventorySummary ? 'جاري التحديث...' : 'تحديث جرد المكاتب'}
                               </button>
@@ -3908,20 +3442,9 @@ export default function LifoReportsDashboard() {
 
                           {/* Controls bar matching LIFO layout */}
                           {hasData && (
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '20px',
-                              gap: '15px',
-                              flexWrap: 'wrap',
-                              background: 'var(--input-bg)',
-                              border: '1px solid var(--border)',
-                              borderRadius: '12px',
-                              padding: '15px 20px'
-                            }}>
+                            <div className="lifo-controls-row">
                               {/* Search Box on the Right */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div className="lifo-search-box">
                                 <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                                 <input
                                   type="text"
@@ -3931,42 +3454,33 @@ export default function LifoReportsDashboard() {
                                     setOfficesInvSearchQuery(e.target.value);
                                     setOfficesInvCurrentPage(1);
                                   }}
-                                  style={{
-                                    padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)',
-                                    background: 'var(--panel)', color: 'var(--text)', width: '220px', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-search-input"
+                                  style={{ width: '220px' }}
                                 />
                               </div>
 
                               {/* Action buttons on the Left */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div className="lifo-actions-group">
                                 <button
                                   type="button"
                                   onClick={handlePrintOfficesStockPDF}
-                                  style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    background: '#7c2d12', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-btn-secondary"
+                                  style={{ height: '36px', padding: '0 16px' }}
                                 >
                                   تصدير كـ PDF
                                 </button>
                                 <button
                                   type="button"
                                   onClick={handleExportOfficesStockExcel}
-                                  style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    background: '#7c2d12', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-btn-excel"
                                 >
                                   تصدير كـ excel
                                 </button>
                                 <button
                                   type="button"
                                   onClick={handleCopyOfficesStock}
-                                  style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    background: '#7c2d12', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem'
-                                  }}
+                                  className="lifo-btn-secondary"
+                                  style={{ height: '36px', padding: '0 16px' }}
                                 >
                                   نسخ
                                 </button>
@@ -3979,10 +3493,8 @@ export default function LifoReportsDashboard() {
                                       setOfficesInvRowsPerPage(Number(e.target.value));
                                       setOfficesInvCurrentPage(1);
                                     }}
-                                    style={{
-                                      padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: 'var(--panel)', color: 'var(--text)', fontWeight: 'bold'
-                                    }}
+                                    className="lifo-select"
+                                    style={{ width: 'auto', height: '36px' }}
                                   >
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
@@ -3997,23 +3509,23 @@ export default function LifoReportsDashboard() {
 
                           {hasData ? (
                             <>
-                              <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                              <div className="lifo-table-wrapper custom-scrollbar">
+                                <table className="lifo-table">
                                   <thead>
-                                    <tr style={{ background: 'var(--table-header)' }}>
-                                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
-                                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة معينة (مخزون مكتب)</th>
-                                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة المصدرة</th>
-                                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>بطاقة ملغية</th>
+                                    <tr>
+                                      <th>المكتب</th>
+                                      <th>بطاقة معينة (مخزون مكتب)</th>
+                                      <th>بطاقة المصدرة</th>
+                                      <th>بطاقة ملغية</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {filteredOfficesList.slice((officesInvCurrentPage - 1) * officesInvRowsPerPage, officesInvCurrentPage * officesInvRowsPerPage).map((item: any, idx: number) => (
-                                      <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{item.office}</td>
-                                        <td style={{ padding: '12px 15px', color: '#166534', fontWeight: 'bold' }}>{item.active.toLocaleString('ar-LY')} بطاقة</td>
-                                        <td style={{ padding: '12px 15px', color: 'var(--sidebar)' }}>{item.sold.toLocaleString('ar-LY')} بطاقة</td>
-                                        <td style={{ padding: '12px 15px', color: '#b91c1c' }}>{item.canceled.toLocaleString('ar-LY')} بطاقة</td>
+                                      <tr key={idx}>
+                                        <td style={{ fontWeight: 'bold' }}>{item.office}</td>
+                                        <td style={{ color: '#166534', fontWeight: 'bold' }}>{item.active.toLocaleString('ar-LY')} بطاقة</td>
+                                        <td style={{ color: 'var(--sidebar)', fontWeight: 'bold' }}>{item.sold.toLocaleString('ar-LY')} بطاقة</td>
+                                        <td style={{ color: '#b91c1c', fontWeight: 'bold' }}>{item.canceled.toLocaleString('ar-LY')} بطاقة</td>
                                       </tr>
                                     ))}
                                     {filteredOfficesList.length === 0 && (
@@ -4037,13 +3549,7 @@ export default function LifoReportsDashboard() {
                                         type="button"
                                         disabled={officesInvCurrentPage === 1}
                                         onClick={() => setOfficesInvCurrentPage(prev => Math.max(prev - 1, 1))}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                          background: officesInvCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                                          color: officesInvCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                                          cursor: officesInvCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                                          fontWeight: 'bold', fontSize: '0.85rem'
-                                        }}
+                                        className="lifo-pagination-btn"
                                       >
                                         السابق
                                       </button>
@@ -4057,14 +3563,7 @@ export default function LifoReportsDashboard() {
                                             type="button"
                                             disabled={!isPageNumber}
                                             onClick={() => isPageNumber && setOfficesInvCurrentPage(page as number)}
-                                            style={{
-                                              padding: '6px 12px', borderRadius: '6px',
-                                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                                              color: isActive ? '#fff' : 'var(--text)',
-                                              cursor: isPageNumber ? 'pointer' : 'default',
-                                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                                            }}
+                                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
                                           >
                                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                                           </button>
@@ -4075,13 +3574,7 @@ export default function LifoReportsDashboard() {
                                         type="button"
                                         disabled={officesInvCurrentPage === totalOfficesPages}
                                         onClick={() => setOfficesInvCurrentPage(prev => Math.min(prev + 1, totalOfficesPages))}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                          background: officesInvCurrentPage === totalOfficesPages ? 'var(--input-bg)' : 'var(--panel)',
-                                          color: officesInvCurrentPage === totalOfficesPages ? 'var(--muted)' : 'var(--text)',
-                                          cursor: officesInvCurrentPage === totalOfficesPages ? 'not-allowed' : 'pointer',
-                                          fontWeight: 'bold', fontSize: '0.85rem'
-                                        }}
+                                        className="lifo-pagination-btn"
                                       >
                                         التالي
                                       </button>
@@ -4157,27 +3650,27 @@ export default function LifoReportsDashboard() {
                       }
 
                       return (
-                        <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '25px' }}>
+                        <div className="lifo-form-section">
                           <form onSubmit={(e) => { e.preventDefault(); fetchOfficesAggregated(); }} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '25px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
-                            <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>من</label>
+                            <div className="lifo-form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
+                              <label>من</label>
                               <input 
                                 type="date" 
                                 value={dateFrom} 
                                 onChange={(e) => setDateFrom(e.target.value)}
-                                style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                                className="lifo-input"
                               />
                             </div>
-                            <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                              <label style={{ fontWeight: '800', marginBottom: '8px', display: 'block' }}>الي</label>
+                            <div className="lifo-form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
+                              <label>الي</label>
                               <input 
                                 type="date" 
                                 value={dateTo} 
                                 onChange={(e) => setDateTo(e.target.value)}
-                                style={{ width: '100%', height: '40px', padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                                className="lifo-input"
                               />
                             </div>
-                            <button type="submit" className="primary btn-submit" style={{ padding: '0 20px', borderRadius: '8px', fontWeight: '800', height: '40px' }}>
+                            <button type="submit" className="lifo-btn-submit" style={{ width: 'auto', padding: '0 20px', height: '42px' }}>
                               عرض التقرير
                             </button>
                             <button 
@@ -4277,15 +3770,15 @@ export default function LifoReportsDashboard() {
                                   printable.document.close();
                                 }
                               }}
-                              className="btn-cancel" 
-                              style={{ padding: '0 20px', borderRadius: '8px', fontWeight: '800', height: '40px', background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer' }}
+                              className="lifo-btn-secondary" 
+                              style={{ padding: '0 20px', height: '42px', background: '#dc2626', color: '#fff', border: 'none' }}
                             >
                               طباعة التقرير PDF
                             </button>
                           </form>
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div className="lifo-controls-row">
+                            <div className="lifo-search-box">
                               <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                               <input
                                 type="text"
@@ -4295,42 +3788,40 @@ export default function LifoReportsDashboard() {
                                   setOfficesAggSearchQuery(e.target.value);
                                   setOfficesAggCurrentPage(1);
                                 }}
-                                style={{
-                                  padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)',
-                                  background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.85rem', width: '220px'
-                                }}
+                                className="lifo-search-input"
+                                style={{ width: '220px' }}
                               />
                             </div>
                             <p style={{ fontWeight: 'bold', color: 'var(--text)', margin: 0 }}>مجمع إصدارات وقيم عمولات وضوابط مكاتب التوزيع:</p>
                           </div>
 
-                          <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                          <div className="lifo-table-wrapper custom-scrollbar">
+                            <table className="lifo-table">
                               <thead>
-                                <tr style={{ background: 'var(--table-header)' }}>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>عدد البطاقات المصدرة</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>عدد البطاقات الملغية</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>صافي القسط</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الضريبة</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رسم الدمغة</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإشراف</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رسوم الإصدار</th>
-                                  <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>الإجمالي</th>
+                                <tr>
+                                  <th>المكتب</th>
+                                  <th>عدد البطاقات المصدرة</th>
+                                  <th>عدد البطاقات الملغية</th>
+                                  <th>صافي القسط</th>
+                                  <th>الضريبة</th>
+                                  <th>رسم الدمغة</th>
+                                  <th>الإشراف</th>
+                                  <th>رسوم الإصدار</th>
+                                  <th>الإجمالي</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {filteredList.slice((officesAggCurrentPage - 1) * officesAggRowsPerPage, officesAggCurrentPage * officesAggRowsPerPage).map((item, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{item.officeName}</td>
-                                    <td style={{ padding: '12px 15px', color: 'var(--sidebar)', fontWeight: 'bold' }}>{item.soldCount}</td>
-                                    <td style={{ padding: '12px 15px', color: '#b91c1c' }}>{item.canceledCount}</td>
-                                    <td style={{ padding: '12px 15px' }}>{item.installment.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{item.tax.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{item.stamp.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{item.supervision.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{item.version.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px', fontWeight: 'bold', color: 'var(--sidebar)' }}>{item.total.toFixed(3)}</td>
+                                  <tr key={idx}>
+                                    <td style={{ fontWeight: 'bold' }}>{item.officeName}</td>
+                                    <td style={{ color: 'var(--sidebar)', fontWeight: 'bold' }}>{item.soldCount}</td>
+                                    <td style={{ color: '#b91c1c', fontWeight: 'bold' }}>{item.canceledCount}</td>
+                                    <td>{item.installment.toFixed(3)}</td>
+                                    <td>{item.tax.toFixed(3)}</td>
+                                    <td>{item.stamp.toFixed(3)}</td>
+                                    <td>{item.supervision.toFixed(3)}</td>
+                                    <td>{item.version.toFixed(3)}</td>
+                                    <td style={{ fontWeight: 'bold', color: 'var(--sidebar)' }}>{item.total.toFixed(3)}</td>
                                   </tr>
                                 ))}
                                 {filteredList.length === 0 && (
@@ -4342,15 +3833,15 @@ export default function LifoReportsDashboard() {
                               {filteredList.length > 0 && (
                                 <tfoot>
                                   <tr style={{ background: 'var(--table-header)', borderTop: '2px solid var(--border)', fontWeight: 'bold' }}>
-                                    <td style={{ padding: '12px 15px' }}>الإجمالي</td>
-                                    <td style={{ padding: '12px 15px', color: 'var(--sidebar)' }}>{totals.sold}</td>
-                                    <td style={{ padding: '12px 15px', color: '#b91c1c' }}>{totals.canceled}</td>
-                                    <td style={{ padding: '12px 15px' }}>{totals.installment.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{totals.tax.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{totals.stamp.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{totals.supervision.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px' }}>{totals.version.toFixed(3)}</td>
-                                    <td style={{ padding: '12px 15px', color: 'var(--sidebar)' }}>{totals.total.toFixed(3)}</td>
+                                    <td>الإجمالي</td>
+                                    <td style={{ color: 'var(--sidebar)' }}>{totals.sold}</td>
+                                    <td style={{ color: '#b91c1c' }}>{totals.canceled}</td>
+                                    <td>{totals.installment.toFixed(3)}</td>
+                                    <td>{totals.tax.toFixed(3)}</td>
+                                    <td>{totals.stamp.toFixed(3)}</td>
+                                    <td>{totals.supervision.toFixed(3)}</td>
+                                    <td>{totals.version.toFixed(3)}</td>
+                                    <td style={{ color: 'var(--sidebar)' }}>{totals.total.toFixed(3)}</td>
                                   </tr>
                                 </tfoot>
                               )}
@@ -4369,13 +3860,7 @@ export default function LifoReportsDashboard() {
                                     type="button"
                                     disabled={officesAggCurrentPage === 1}
                                     onClick={() => setOfficesAggCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    style={{
-                                      padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: officesAggCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                                      color: officesAggCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                                      cursor: officesAggCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                                      fontWeight: 'bold', fontSize: '0.85rem'
-                                    }}
+                                    className="lifo-pagination-btn"
                                   >
                                     السابق
                                   </button>
@@ -4389,14 +3874,7 @@ export default function LifoReportsDashboard() {
                                         type="button"
                                         disabled={!isPageNumber}
                                         onClick={() => isPageNumber && setOfficesAggCurrentPage(page as number)}
-                                        style={{
-                                          padding: '6px 12px', borderRadius: '6px',
-                                          border: isPageNumber ? '1px solid var(--border)' : 'none',
-                                          background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                                          color: isActive ? '#fff' : 'var(--text)',
-                                          cursor: isPageNumber ? 'pointer' : 'default',
-                                          fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                                        }}
+                                        className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
                                       >
                                         {isPageNumber ? page.toLocaleString('ar-LY') : page}
                                       </button>
@@ -4407,13 +3885,7 @@ export default function LifoReportsDashboard() {
                                     type="button"
                                     disabled={officesAggCurrentPage === totalAggPages}
                                     onClick={() => setOfficesAggCurrentPage(prev => Math.min(prev + 1, totalAggPages))}
-                                    style={{
-                                      padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                                      background: officesAggCurrentPage === totalAggPages ? 'var(--input-bg)' : 'var(--panel)',
-                                      color: officesAggCurrentPage === totalAggPages ? 'var(--muted)' : 'var(--text)',
-                                      cursor: officesAggCurrentPage === totalAggPages ? 'not-allowed' : 'pointer',
-                                      fontWeight: 'bold', fontSize: '0.85rem'
-                                    }}
+                                    className="lifo-pagination-btn"
                                   >
                                     التالي
                                   </button>
@@ -4436,47 +3908,28 @@ export default function LifoReportsDashboard() {
               استعلام حالة ومخزون البطاقات البرتقالية للشركة
             </h3>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {(['all', 'active', 'cancel', 'sold'] as CardCategory[]).map((cat) => (
-                  <button 
-                    key={cat}
-                    type="button"
-                    onClick={() => {
-                      setCardCategory(cat);
-                      setInventoryData([]);
-                    }}
-                    style={{
-                      padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
-                      background: cardCategory === cat ? 'var(--text)' : 'var(--panel)',
-                      color: cardCategory === cat ? '#fff' : 'var(--text)',
-                      fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {cat === 'all' && 'جميع البطاقات'}
-                    {cat === 'active' && 'البطاقات النشطة'}
-                    {cat === 'cancel' && 'البطاقات الملغية'}
-                    {cat === 'sold' && 'البطاقات المباعة'}
-                  </button>
-                ))}
-              </div>
+            <div className="lifo-tabs-bar" style={{ marginBottom: '20px' }}>
+              {(['all', 'active', 'cancel', 'sold'] as CardCategory[]).map((cat) => (
+                <button 
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    setCardCategory(cat);
+                    setInventoryData([]);
+                  }}
+                  className={`lifo-tab-btn ${cardCategory === cat ? 'active' : ''}`}
+                >
+                  {cat === 'all' && 'جميع البطاقات'}
+                  {cat === 'active' && 'البطاقات النشطة'}
+                  {cat === 'cancel' && 'البطاقات الملغية'}
+                  {cat === 'sold' && 'البطاقات المباعة'}
+                </button>
+              ))}
             </div>
 
             {/* Search and export for Inventory */}
             {(inventoryData.length > 0 || inventorySearchQuery.trim() !== '') && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px',
-                gap: '15px',
-                flexWrap: 'wrap',
-                background: 'var(--panel)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '15px 20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-              }}>
+              <div className="lifo-controls-row">
                 <form 
                   onSubmit={(e) => { e.preventDefault(); handleFetchInventory(1); }} 
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -4487,26 +3940,19 @@ export default function LifoReportsDashboard() {
                     placeholder="ابحث برقم البطاقة، الطلب، أو الحالة..."
                     value={inventorySearchQuery}
                     onChange={(e) => setInventorySearchQuery(e.target.value)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      width: '280px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-search-input"
+                    style={{ width: '280px' }}
                   />
                   <button 
                     type="submit" 
-                    className="primary" 
-                    style={{ padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', height: '37px', cursor: 'pointer', border: 'none' }}
+                    className="lifo-btn-submit" 
+                    style={{ padding: '0 16px', height: '37px', width: 'auto' }}
                   >
                     بحث
                   </button>
                 </form>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="lifo-actions-group">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text)', fontSize: '0.9rem' }}>
                     <span>عرض</span>
                     <select
@@ -4515,15 +3961,8 @@ export default function LifoReportsDashboard() {
                         setRowsPerPage(parseInt(e.target.value));
                         setCurrentPage(1);
                       }}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border)',
-                        background: 'var(--input-bg)',
-                        color: 'var(--text)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                      className="lifo-select"
+                      style={{ width: 'auto', height: '36px' }}
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -4536,16 +3975,11 @@ export default function LifoReportsDashboard() {
                   <button
                     type="button"
                     onClick={() => handleFetchInventory(currentPage, true)}
-                    className="primary"
+                    className="lifo-btn-submit"
                     style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      background: 'var(--sidebar)',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem'
+                      padding: '0 16px',
+                      height: '36px',
+                      width: 'auto'
                     }}
                   >
                     تحديث البيانات من سيرفر الاتحاد
@@ -4554,20 +3988,7 @@ export default function LifoReportsDashboard() {
                   <button
                     type="button"
                     onClick={handleExportInventoryExcel}
-                    className="primary"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      background: '#166534',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-btn-excel"
                   >
                     <i className="fa-solid fa-file-excel"></i>
                     تصدير إكسل
@@ -4578,29 +3999,25 @@ export default function LifoReportsDashboard() {
 
             {inventoryData.length > 0 ? (
               <>
-                <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '500px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                <div className="lifo-table-wrapper custom-scrollbar" style={{ maxHeight: '500px' }}>
+                  <table className="lifo-table">
                     <thead>
-                      <tr style={{ background: 'var(--table-header)' }}>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رقم البطاقة</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>حالة البطاقة</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>رقم الطلب</th>
+                      <tr>
+                        <th>رقم البطاقة</th>
+                        <th>حالة البطاقة</th>
+                        <th>رقم الطلب</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredInventoryData.map((card, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{card.card_number || card.card_serial || '-'}</td>
-                          <td style={{ padding: '12px 15px' }}>
-                            <span style={{
-                              padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
-                              background: card.cardstautesname === 'البطاقات المعينة' || card.cardstautesname === 'البطاقات النشطة' ? '#dcfce7' : card.cardstautesname === 'البطاقات الملغية' ? '#fee2e2' : '#f1f5f9',
-                              color: card.cardstautesname === 'البطاقات المعينة' || card.cardstautesname === 'البطاقات النشطة' ? '#15803d' : card.cardstautesname === 'البطاقات الملغية' ? '#b91c1c' : '#475569'
-                            }}>
+                        <tr key={idx}>
+                          <td style={{ fontWeight: 'bold' }}>{card.card_number || card.card_serial || '-'}</td>
+                          <td>
+                            <span className={`lifo-badge ${card.cardstautesname === 'البطاقات المعينة' || card.cardstautesname === 'البطاقات النشطة' ? 'lifo-badge-success' : card.cardstautesname === 'البطاقات الملغية' ? 'lifo-badge-danger' : 'lifo-badge-info'}`}>
                               {card.cardstautesname || 'غير محدد'}
                             </span>
                           </td>
-                          <td style={{ padding: '12px 15px', fontFamily: 'monospace' }}>{card.request_numberr || '-'}</td>
+                          <td style={{ fontFamily: 'monospace' }}>{card.request_numberr || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -4619,13 +4036,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: currentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                          color: currentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         السابق
                       </button>
@@ -4639,14 +4050,7 @@ export default function LifoReportsDashboard() {
                             type="button"
                             disabled={!isPageNumber}
                             onClick={() => isPageNumber && setCurrentPage(page as number)}
-                            style={{
-                              padding: '6px 12px', borderRadius: '6px',
-                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                              color: isActive ? '#fff' : 'var(--text)',
-                              cursor: isPageNumber ? 'pointer' : 'default',
-                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                            }}
+                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
                           >
                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                           </button>
@@ -4657,13 +4061,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={currentPage === totalPages}
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: currentPage === totalPages ? 'var(--input-bg)' : 'var(--panel)',
-                          color: currentPage === totalPages ? 'var(--muted)' : 'var(--text)',
-                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         التالي
                       </button>
@@ -4693,21 +4091,22 @@ export default function LifoReportsDashboard() {
 
             <div className="form-sections-container" style={{ display: 'block', marginBottom: '30px' }}>
               {/* Distribution Form */}
-              <div className="form-section" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', background: 'var(--panel)' }}>
-                <h4 style={{ color: 'var(--sidebar)', marginBottom: '20px', fontWeight: 'bold' }}>
-                  <i className="fa-solid fa-truck-arrow-right" style={{ marginLeft: '8px' }}></i>
+              <div className="lifo-form-section">
+                <h4 className="lifo-form-section-title">
+                  <i className="fa-solid fa-truck-arrow-right"></i>
                   توزيع حصة بطاقات لوكالة / مكتب
                 </h4>
 
                 <form onSubmit={handleDistributeCards} style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', flexWrap: 'wrap' }}>
-                  <div className="form-group" style={{ flex: 2, minWidth: '250px', marginBottom: 0 }}>
-                    <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block' }}>المكتب / الوكيل بالاتحاد</label>
+                  <div className="lifo-form-group" style={{ flex: 2, minWidth: '250px', marginBottom: 0 }}>
+                    <label>المكتب / الوكيل بالاتحاد</label>
                     <select 
                       value={distributeOfficesId}
                       onChange={(e) => setDistributeOfficesId(e.target.value)}
                       required
                       disabled={loadingOffices}
-                      style={{ width: '100%', height: '45px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                      className="lifo-select"
+                      style={{ height: '45px' }}
                     >
                       <option value="">-- اختر المكتب من قائمة الاتحاد --</option>
                       {lifoOffices.map((office) => (
@@ -4716,8 +4115,8 @@ export default function LifoReportsDashboard() {
                     </select>
                   </div>
 
-                  <div className="form-group" style={{ flex: 1, minWidth: '180px', marginBottom: 0 }}>
-                    <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block' }}>عدد البطاقات لتوزيعها</label>
+                  <div className="lifo-form-group" style={{ flex: 1, minWidth: '180px', marginBottom: 0 }}>
+                    <label>عدد البطاقات لتوزيعها</label>
                     <input 
                       type="number"
                       value={distributeNumOfCards}
@@ -4725,11 +4124,12 @@ export default function LifoReportsDashboard() {
                       placeholder="أدخل العدد المطلوب توزيعها"
                       min="1"
                       required
-                      style={{ width: '100%', height: '45px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                      className="lifo-input"
+                      style={{ height: '45px' }}
                     />
                   </div>
 
-                  <button type="submit" disabled={submittingDistribute} className="primary btn-submit" style={{ padding: '0 24px', borderRadius: '8px', fontWeight: '800', height: '45px', whiteSpace: 'nowrap' }}>
+                  <button type="submit" disabled={submittingDistribute} className="lifo-btn-submit" style={{ padding: '0 24px', height: '45px', width: 'auto', whiteSpace: 'nowrap' }}>
                     {submittingDistribute ? 'جاري التوزيع...' : 'إتمام توزيع البطاقات'}
                   </button>
                 </form>
@@ -4741,39 +4141,20 @@ export default function LifoReportsDashboard() {
               <h4 style={{ marginBottom: '15px', color: 'var(--text)', fontWeight: 'bold' }}>عرض التوزيعات الجارية للمكاتب</h4>
               
               {/* Controls Box */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px',
-                gap: '15px',
-                flexWrap: 'wrap',
-                background: 'var(--panel)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '15px 20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="lifo-controls-row">
+                <div className="lifo-search-box">
                   <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                   <input
                     type="text"
                     placeholder="ابحث باسم المكتب أو القيمة..."
                     value={distSearchQuery}
                     onChange={(e) => setDistSearchQuery(e.target.value)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      width: '280px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-search-input"
+                    style={{ width: '280px' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="lifo-actions-group">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text)', fontSize: '0.9rem' }}>
                     <span>عرض</span>
                     <select
@@ -4782,15 +4163,8 @@ export default function LifoReportsDashboard() {
                         setDistRowsPerPage(parseInt(e.target.value));
                         setDistCurrentPage(1);
                       }}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border)',
-                        background: 'var(--input-bg)',
-                        color: 'var(--text)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                      className="lifo-select"
+                      style={{ width: 'auto', height: '36px' }}
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -4803,20 +4177,7 @@ export default function LifoReportsDashboard() {
                   <button
                     type="button"
                     onClick={handleExportDistributionsExcel}
-                    className="primary"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      background: '#166534',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-btn-excel"
                   >
                     <i className="fa-solid fa-file-excel"></i>
                     تصدير إكسل
@@ -4845,34 +4206,30 @@ export default function LifoReportsDashboard() {
               )}
 
               {/* Main table */}
-              <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+              <div className="lifo-table-wrapper custom-scrollbar">
+                <table className="lifo-table">
                   <thead>
-                    <tr style={{ background: 'var(--table-header)' }}>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>إجمالي عمليات التوزيع</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>التفاصيل</th>
+                    <tr>
+                      <th>المكتب</th>
+                      <th style={{ textAlign: 'center' }}>إجمالي عمليات التوزيع</th>
+                      <th style={{ textAlign: 'center' }}>التفاصيل</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredDistributions.slice((distCurrentPage - 1) * distRowsPerPage, distCurrentPage * distRowsPerPage).map((dist, idx) => (
                       <Fragment key={idx}>
-                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{dist.office_name}</td>
-                          <td style={{ padding: '12px 15px', fontWeight: 'bold', color: 'var(--sidebar)', textAlign: 'center' }}>{dist.totalCards.toLocaleString('ar-LY')}</td>
-                          <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                        <tr>
+                          <td style={{ fontWeight: 'bold' }}>{dist.office_name}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--sidebar)', textAlign: 'center' }}>{dist.totalCards.toLocaleString('ar-LY')}</td>
+                          <td style={{ textAlign: 'center' }}>
                             <button
                               type="button"
                               onClick={() => setExpandedOfficeId(expandedOfficeId === dist.offices_id ? null : dist.offices_id)}
+                              className="lifo-btn-secondary"
                               style={{
                                 padding: '6px 12px',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                background: expandedOfficeId === dist.offices_id ? 'var(--text)' : 'var(--panel)',
-                                color: expandedOfficeId === dist.offices_id ? '#fff' : 'var(--text)',
                                 fontSize: '0.8rem',
-                                cursor: 'pointer',
-                                fontWeight: 'bold'
+                                height: '32px'
                               }}
                             >
                               <i className="fa-solid fa-file-lines" style={{ marginLeft: '4px' }}></i>
@@ -4883,24 +4240,24 @@ export default function LifoReportsDashboard() {
                         
                         {/* Sub-table showing individual distribution transactions when expanded */}
                         {expandedOfficeId === dist.offices_id && (
-                          <tr>
-                            <td colSpan={3} style={{ padding: '15px 25px', background: 'var(--input-bg)' }}>
+                          <tr className="lifo-accordion-row">
+                            <td colSpan={3} className="lifo-accordion-content" style={{ padding: '15px 25px' }}>
                               <div style={{ border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--panel)', padding: '15px' }}>
                                 <h5 style={{ fontWeight: 'bold', marginBottom: '10px', color: 'var(--text)' }}>تفاصيل الحركات الفردية للمكتب:</h5>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.85rem' }}>
+                                <table className="lifo-table" style={{ fontSize: '0.85rem' }}>
                                   <thead>
-                                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                                      <th style={{ padding: '8px 10px', color: 'var(--muted)' }}>رقم الحركة</th>
-                                      <th style={{ padding: '8px 10px', color: 'var(--muted)', textAlign: 'center' }}>عدد البطاقات</th>
-                                      <th style={{ padding: '8px 10px', color: 'var(--muted)' }}>تاريخ الحركة</th>
+                                    <tr>
+                                      <th>رقم الحركة</th>
+                                      <th style={{ textAlign: 'center' }}>عدد البطاقات</th>
+                                      <th>تاريخ الحركة</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {dist.logs.map((log, lIdx) => (
-                                      <tr key={lIdx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>{log.id || lIdx + 1}</td>
-                                        <td style={{ padding: '8px 10px', fontWeight: 'bold', textAlign: 'center', color: '#166534' }}>{log.numerofcard || log.count || '-'}</td>
-                                        <td style={{ padding: '8px 10px' }}>{log.created_at || '-'}</td>
+                                      <tr key={lIdx}>
+                                        <td style={{ fontWeight: 'bold' }}>{log.id || lIdx + 1}</td>
+                                        <td style={{ fontWeight: 'bold', textAlign: 'center', color: '#166534' }}>{log.numerofcard || log.count || '-'}</td>
+                                        <td>{log.created_at || '-'}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -4913,7 +4270,7 @@ export default function LifoReportsDashboard() {
                     ))}
                     {loadingDistribution && filteredDistributions.length === 0 ? (
                       <tr>
-                        <td colSpan={3} style={{ padding: '30px', textAlign: 'center', color: 'var(--text)' }}>
+                        <td colSpan={3} style={{ padding: '30px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                             <i className="fa-solid fa-spinner fa-spin"></i>
                             <span>جاري تحميل البيانات...</span>
@@ -4942,13 +4299,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={distCurrentPage === 1}
                         onClick={() => setDistCurrentPage(prev => Math.max(prev - 1, 1))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: distCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                          color: distCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                          cursor: distCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         السابق
                       </button>
@@ -4962,14 +4313,7 @@ export default function LifoReportsDashboard() {
                             type="button"
                             disabled={!isPageNumber}
                             onClick={() => isPageNumber && setDistCurrentPage(page as number)}
-                            style={{
-                              padding: '6px 12px', borderRadius: '6px',
-                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                              color: isActive ? '#fff' : 'var(--text)',
-                              cursor: isPageNumber ? 'pointer' : 'default',
-                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                            }}
+                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
                           >
                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                           </button>
@@ -4980,13 +4324,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={distCurrentPage === distTotalPages}
                         onClick={() => setDistCurrentPage(prev => Math.min(prev + 1, distTotalPages))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: distCurrentPage === distTotalPages ? 'var(--input-bg)' : 'var(--panel)',
-                          color: distCurrentPage === distTotalPages ? 'var(--muted)' : 'var(--text)',
-                          cursor: distCurrentPage === distTotalPages ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         التالي
                       </button>
@@ -5006,21 +4344,22 @@ export default function LifoReportsDashboard() {
 
             <div className="form-sections-container" style={{ display: 'block', marginBottom: '30px' }}>
               {/* Refund Form */}
-              <div className="form-section" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', background: 'var(--panel)' }}>
-                <h4 style={{ color: '#b91c1c', marginBottom: '20px', fontWeight: 'bold' }}>
-                  <i className="fa-solid fa-rotate-left" style={{ marginLeft: '8px' }}></i>
+              <div className="lifo-form-section">
+                <h4 className="lifo-form-section-title" style={{ color: '#b91c1c' }}>
+                  <i className="fa-solid fa-rotate-left"></i>
                   إضافة عملية راجعة (استرجاع من مكتب)
                 </h4>
 
                 <form onSubmit={handleRefundCards} style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', flexWrap: 'wrap' }}>
-                  <div className="form-group" style={{ flex: 1, minWidth: '250px', marginBottom: 0 }}>
-                    <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block' }}>المكتب / الوكيل بالاتحاد</label>
+                  <div className="lifo-form-group" style={{ flex: 1, minWidth: '250px', marginBottom: 0 }}>
+                    <label>المكتب / الوكيل بالاتحاد</label>
                     <select 
                       value={refundOfficesId}
                       onChange={(e) => setRefundOfficesId(e.target.value)}
                       required
                       disabled={loadingOffices}
-                      style={{ width: '100%', height: '45px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                      className="lifo-select"
+                      style={{ height: '45px' }}
                     >
                       <option value="">-- اختر المكتب من قائمة الاتحاد --</option>
                       {lifoOffices.map((office) => (
@@ -5029,7 +4368,7 @@ export default function LifoReportsDashboard() {
                     </select>
                   </div>
 
-                  <button type="submit" disabled={submittingRefund} className="primary btn-submit" style={{ padding: '0 24px', borderRadius: '8px', fontWeight: '800', background: '#b91c1c', height: '45px', whiteSpace: 'nowrap' }}>
+                  <button type="submit" disabled={submittingRefund} className="lifo-btn-submit" style={{ padding: '0 24px', background: '#b91c1c', height: '45px', width: 'auto', whiteSpace: 'nowrap' }}>
                     {submittingRefund ? 'جاري الاسترجاع...' : 'إتمام استرجاع البطاقات'}
                   </button>
                 </form>
@@ -5041,39 +4380,20 @@ export default function LifoReportsDashboard() {
               <h4 style={{ marginBottom: '15px', color: 'var(--text)', fontWeight: 'bold' }}>عرض الراجعات الجارية من المكاتب</h4>
               
               {/* Controls Box */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px',
-                gap: '15px',
-                flexWrap: 'wrap',
-                background: 'var(--panel)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '15px 20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="lifo-controls-row">
+                <div className="lifo-search-box">
                   <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>بحث:</span>
                   <input
                     type="text"
                     placeholder="ابحث باسم المكتب أو القيمة..."
                     value={refundSearchQuery}
                     onChange={(e) => setRefundSearchQuery(e.target.value)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text)',
-                      width: '280px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-search-input"
+                    style={{ width: '280px' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="lifo-actions-group">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text)', fontSize: '0.9rem' }}>
                     <span>عرض</span>
                     <select
@@ -5082,15 +4402,8 @@ export default function LifoReportsDashboard() {
                         setRefundRowsPerPage(parseInt(e.target.value));
                         setRefundCurrentPage(1);
                       }}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border)',
-                        background: 'var(--input-bg)',
-                        color: 'var(--text)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                      className="lifo-select"
+                      style={{ width: 'auto', height: '36px' }}
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -5103,20 +4416,7 @@ export default function LifoReportsDashboard() {
                   <button
                     type="button"
                     onClick={handleExportRefundsExcel}
-                    className="primary"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      background: '#166534',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.85rem'
-                    }}
+                    className="lifo-btn-excel"
                   >
                     <i className="fa-solid fa-file-excel"></i>
                     تصدير إكسل
@@ -5145,44 +4445,40 @@ export default function LifoReportsDashboard() {
               )}
 
               {/* Main table */}
-              <div className="table-wrapper custom-scrollbar" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+              <div className="lifo-table-wrapper custom-scrollbar">
+                <table className="lifo-table">
                   <thead>
-                    <tr style={{ background: 'var(--table-header)' }}>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>المكتب</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>اجمالي عدد الراجعات</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)' }}>تاريخ الارجاع</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>التفاصيل</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>إرجاع حصة</th>
+                    <tr>
+                      <th>المكتب</th>
+                      <th style={{ textAlign: 'center' }}>اجمالي عدد الراجعات</th>
+                      <th>تاريخ الارجاع</th>
+                      <th style={{ textAlign: 'center' }}>التفاصيل</th>
+                      <th style={{ textAlign: 'center' }}>إرجاع حصة</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRefunds.slice((refundCurrentPage - 1) * refundRowsPerPage, refundCurrentPage * refundRowsPerPage).map((ref, idx) => (
                       <Fragment key={idx}>
-                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>{ref.office_name}</td>
-                          <td style={{ padding: '12px 15px', fontWeight: 'bold', color: '#b91c1c', textAlign: 'center' }}>{ref.totalCards.toLocaleString('ar-LY')}</td>
-                          <td style={{ padding: '12px 15px' }}>{ref.latestDate || '-'}</td>
-                          <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                        <tr>
+                          <td style={{ fontWeight: 'bold' }}>{ref.office_name}</td>
+                          <td style={{ fontWeight: 'bold', color: '#b91c1c', textAlign: 'center' }}>{ref.totalCards.toLocaleString('ar-LY')}</td>
+                          <td>{ref.latestDate || '-'}</td>
+                          <td style={{ textAlign: 'center' }}>
                             <button
                               type="button"
                               onClick={() => setExpandedRefundOfficeId(expandedRefundOfficeId === ref.offices_id ? null : ref.offices_id)}
+                              className="lifo-btn-secondary"
                               style={{
                                 padding: '6px 12px',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                background: expandedRefundOfficeId === ref.offices_id ? 'var(--text)' : 'var(--panel)',
-                                color: expandedRefundOfficeId === ref.offices_id ? '#fff' : 'var(--text)',
                                 fontSize: '0.8rem',
-                                cursor: 'pointer',
-                                fontWeight: 'bold'
+                                height: '32px'
                               }}
                             >
                               <i className="fa-solid fa-file-lines" style={{ marginLeft: '4px' }}></i>
                               {expandedRefundOfficeId === ref.offices_id ? 'إخفاء' : 'عرض السجل'}
                             </button>
                           </td>
-                          <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                          <td style={{ textAlign: 'center' }}>
                             <button
                               type="button"
                               onClick={() => {
@@ -5190,15 +4486,14 @@ export default function LifoReportsDashboard() {
                                   handleRefundCardsForOffice(ref.offices_id);
                                 }
                               }}
+                              className="lifo-btn-secondary"
                               style={{
                                 padding: '6px 12px',
-                                borderRadius: '6px',
                                 border: 'none',
                                 background: '#fee2e2',
                                 color: '#b91c1c',
                                 fontSize: '0.8rem',
-                                cursor: 'pointer',
-                                fontWeight: 'bold'
+                                height: '32px'
                               }}
                             >
                               <i className="fa-solid fa-trash-can" style={{ marginLeft: '4px' }}></i>
@@ -5209,24 +4504,24 @@ export default function LifoReportsDashboard() {
                         
                         {/* Sub-table showing individual refund transactions when expanded */}
                         {expandedRefundOfficeId === ref.offices_id && (
-                          <tr>
-                            <td colSpan={5} style={{ padding: '15px 25px', background: 'var(--input-bg)' }}>
+                          <tr className="lifo-accordion-row">
+                            <td colSpan={5} className="lifo-accordion-content" style={{ padding: '15px 25px' }}>
                               <div style={{ border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--panel)', padding: '15px' }}>
                                 <h5 style={{ fontWeight: 'bold', marginBottom: '10px', color: 'var(--text)' }}>تفاصيل حركات الارتجاع الفردية للمكتب:</h5>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.85rem' }}>
+                                <table className="lifo-table" style={{ fontSize: '0.85rem' }}>
                                   <thead>
-                                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                                      <th style={{ padding: '8px 10px', color: 'var(--muted)' }}>رقم الحركة</th>
-                                      <th style={{ padding: '8px 10px', color: 'var(--muted)', textAlign: 'center' }}>عدد البطاقات المسترجعة</th>
-                                      <th style={{ padding: '8px 10px', color: 'var(--muted)' }}>تاريخ الحركة</th>
+                                    <tr>
+                                      <th>رقم الحركة</th>
+                                      <th style={{ textAlign: 'center' }}>عدد البطاقات المسترجعة</th>
+                                      <th>تاريخ الحركة</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {ref.logs.map((log, lIdx) => (
-                                      <tr key={lIdx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>{log.id || lIdx + 1}</td>
-                                        <td style={{ padding: '8px 10px', fontWeight: 'bold', textAlign: 'center', color: '#b91c1c' }}>{log.numerofcard || log.count || '-'}</td>
-                                        <td style={{ padding: '8px 10px' }}>{log.created_at || '-'}</td>
+                                      <tr key={lIdx}>
+                                        <td style={{ fontWeight: 'bold' }}>{log.id || lIdx + 1}</td>
+                                        <td style={{ fontWeight: 'bold', textAlign: 'center', color: '#b91c1c' }}>{log.numerofcard || log.count || '-'}</td>
+                                        <td>{log.created_at || '-'}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -5239,7 +4534,7 @@ export default function LifoReportsDashboard() {
                     ))}
                     {loadingRefund && filteredRefunds.length === 0 ? (
                       <tr>
-                        <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--text)' }}>
+                        <td colSpan={5} style={{ padding: '30px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                             <i className="fa-solid fa-spinner fa-spin"></i>
                             <span>جاري تحميل البيانات...</span>
@@ -5268,13 +4563,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={refundCurrentPage === 1}
                         onClick={() => setRefundCurrentPage(prev => Math.max(prev - 1, 1))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: refundCurrentPage === 1 ? 'var(--input-bg)' : 'var(--panel)',
-                          color: refundCurrentPage === 1 ? 'var(--muted)' : 'var(--text)',
-                          cursor: refundCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         السابق
                       </button>
@@ -5288,14 +4577,7 @@ export default function LifoReportsDashboard() {
                             type="button"
                             disabled={!isPageNumber}
                             onClick={() => isPageNumber && setRefundCurrentPage(page as number)}
-                            style={{
-                              padding: '6px 12px', borderRadius: '6px',
-                              border: isPageNumber ? '1px solid var(--border)' : 'none',
-                              background: isActive ? 'var(--sidebar)' : (isPageNumber ? 'var(--panel)' : 'transparent'),
-                              color: isActive ? '#fff' : 'var(--text)',
-                              cursor: isPageNumber ? 'pointer' : 'default',
-                              fontWeight: 'bold', fontSize: '0.85rem', minWidth: '35px'
-                            }}
+                            className={`lifo-pagination-btn ${isActive ? 'active' : ''}`}
                           >
                             {isPageNumber ? page.toLocaleString('ar-LY') : page}
                           </button>
@@ -5306,13 +4588,7 @@ export default function LifoReportsDashboard() {
                         type="button"
                         disabled={refundCurrentPage === refundTotalPages}
                         onClick={() => setRefundCurrentPage(prev => Math.min(prev + 1, refundTotalPages))}
-                        style={{
-                          padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-                          background: refundCurrentPage === refundTotalPages ? 'var(--input-bg)' : 'var(--panel)',
-                          color: refundCurrentPage === refundTotalPages ? 'var(--muted)' : 'var(--text)',
-                          cursor: refundCurrentPage === refundTotalPages ? 'not-allowed' : 'pointer',
-                          fontWeight: 'bold', fontSize: '0.85rem'
-                        }}
+                        className="lifo-pagination-btn"
                       >
                         التالي
                       </button>
