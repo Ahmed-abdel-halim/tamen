@@ -354,7 +354,9 @@ export default function TransferOwnershipInsuranceDocument() {
                   type="text"
                   value={
                     originalDocument.vehicle_type
-                      ? `${originalDocument.vehicle_type.brand}${originalDocument.vehicle_type.category ? ' / ' + originalDocument.vehicle_type.category : ''}`
+                      ? (isMandatoryInsurance 
+                          ? originalDocument.vehicle_type.brand 
+                          : `${originalDocument.vehicle_type.brand}${originalDocument.vehicle_type.category ? ' / ' + originalDocument.vehicle_type.category : ''}`)
                       : '-'
                   }
                   disabled

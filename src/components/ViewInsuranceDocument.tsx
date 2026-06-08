@@ -270,7 +270,7 @@ export default function ViewInsuranceDocument() {
               <Row label="رقم اللوحة المعدنية" value={formatPlateNumber()} />
               <Row label="الميناء / الجهة المقيّد بها" value={formatCityName()} />
               <Row label="رقم الهيكل" value={document.chassis_number || '-'} />
-              <Row label="نوع المركبة" value={vt ? `${vt.brand}${vt.category ? ' / ' + vt.category : ''}` : '-'} />
+              <Row label="نوع المركبة" value={vt ? (isMandatory ? vt.brand : `${vt.brand}${vt.category ? ' / ' + vt.category : ''}`) : '-'} />
               <Row label="اللون" value={document.color || '-'} />
               <Row label="سنة الصنع" value={document.year || '-'} />
               <Row label="نوع الوقود" value={document.fuel_type || '-'} />
