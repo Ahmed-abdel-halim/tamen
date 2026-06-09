@@ -55,6 +55,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 10;
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasIssuePermission, setHasIssuePermission] = useState(true);
   const [agents, setAgents] = useState<{id: number, agency_name: string}[]>([]);
   const [filters, setFilters] = useState({
     agentId: '',
@@ -110,9 +111,17 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
       if (userStr) {
         const user = JSON.parse(userStr);
         setIsAdmin(user.is_admin || false);
+        const isSubUser = !!(user.lifo_permissions && user.lifo_permissions.length > 0) || !!user.lifo_user_id;
+        if (isSubUser) {
+          const permissions = user.lifo_permissions || [];
+          setHasIssuePermission(permissions.includes(2));
+        } else {
+          setHasIssuePermission(true);
+        }
       }
     } catch (error) {
       setIsAdmin(false);
+      setHasIssuePermission(true);
     }
   };
 
@@ -290,7 +299,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
           </div>
-          {!isArchive && (
+          {!isArchive && hasIssuePermission && (
             <button
               className="primary add-user-btn"
               onClick={() => navigate('/international-insurance-documents/create')}

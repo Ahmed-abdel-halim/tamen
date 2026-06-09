@@ -123,6 +123,7 @@ import ExcelImportPage from './components/ExcelImportPage';
 import TreasuryAndBanksPage from './components/TreasuryAndBanksPage';
 import AgentTransfers from './components/AgentTransfers';
 import NotificationsPage from './components/NotificationsPage';
+import OfficeUsers from './components/OfficeUsers';
 
 
 
@@ -502,6 +503,10 @@ const createMenuSections = (
     }));
   }
 
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isSubUser = !!(currentUser?.lifo_permissions && currentUser.lifo_permissions.length > 0) || !!currentUser?.lifo_user_id;
+
   // خريطة الصلاحيات إلى العناصر الجانبية
   // يمكن أن تشير الصلاحية الواحدة إلى عنصر واحد أو مصفوفة عناصر
   const insuranceTypeMap: Record<string, SidebarItem | SidebarItem[]> = {
@@ -829,8 +834,8 @@ const createMenuSections = (
     });
   }
 
-  // إضافة "كشف حساب الوكيل" دائماً للوكلاء (غير admin)
-  if (!isAdmin) {
+  // إضافة "كشف حساب الوكيل" دائماً للوكلاء (غير admin وغير sub-user)
+  if (!isAdmin && !isSubUser) {
     const accountReportItem: SidebarItem = {
       label: 'كشف حساب الوكيل',
       icon: 'fa-solid fa-file-invoice-dollar',
@@ -907,8 +912,8 @@ const createMenuSections = (
     });
   }
 
-  // إذا كان فرع/وكيل، أضف إعدادات أنواع السيارات فقط
-  if (branchAgentId && !settingsItems.some(item => item.to === '/vehicle-types')) {
+  // إذا كان فرع/وكيل وغير sub-user، أضف إعدادات أنواع السيارات فقط
+  if (branchAgentId && !isSubUser && !settingsItems.some(item => item.to === '/vehicle-types')) {
     sections.push({
       title: 'الإعدادات',
       items: [
@@ -927,16 +932,27 @@ const createMenuSections = (
   if (userId) {
     if (branchAgentId) {
       // للوكلاء والفرع
-      sections.push({
-        title: 'حسابي الشخصي',
-        items: [
+      const agentItems: SidebarItem[] = [];
+
+      if (isSubUser) {
+        // للموظف الفرعي تحت الوكيل، فقط نعرض إعدادات الحساب لملفه الشخصي
+        agentItems.push({ label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' });
+      } else {
+        // للوكيل الرئيسي (المكتب)
+        agentItems.push(
           { label: 'بيانات الوكالة', icon: 'fa-solid fa-building-user', to: `/branches-agents/${branchAgentId}?tab=agency` },
           { label: 'المحفظة والنقاط (Loyalty)', icon: 'fa-solid fa-wallet', to: `/branches-agents/${branchAgentId}?tab=wallet` },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests`, badge: pendingDocsCount },
           { label: 'التحويلات المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/agent-transfers' },
-          { label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' },
-        ],
+          { label: 'مستخدمي المكتب', icon: 'fa-solid fa-users-gear', to: '/office-users' }
+        );
+        agentItems.push({ label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' });
+      }
+
+      sections.push({
+        title: 'حسابي الشخصي',
+        items: agentItems,
       });
     } else {
       // للموظفين والأدمن فقط
@@ -1149,8 +1165,8 @@ export default function App() {
 
       try {
         const user = JSON.parse(userStr);
-        // لا نحتاج للتحديث إذا كان المستخدم وكيلاً (بياناتهم عادة لا تتغير من قسم الموظفين)
-        if (user.branch_agent_id) return;
+        // لا نحتاج للتحديث إذا كان المستخدم وكيلاً (بياناتهم عادة لا تتغير من قسم الموظفين)، ما عدا مستخدمي المكتب الفرعيين لمزامنة صلاحياتهم
+        if (user.branch_agent_id && !user.lifo_user_id && (!user.lifo_permissions || user.lifo_permissions.length === 0)) return;
 
         const res = await fetch(`${API_BASE_URL}/users/${user.id}`, {
           headers: {
@@ -1275,6 +1291,7 @@ export default function App() {
                   <Route path="/notifications" element={<NotificationsPage />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/office-users" element={<OfficeUsers />} />
                   <Route path="/profile-update-requests" element={isAdmin ? <ProfileUpdateRequestsList /> : <Navigate to="/dashboard" />} />
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />

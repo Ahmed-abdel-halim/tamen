@@ -261,8 +261,27 @@ export default function CreateInternationalInsurance() {
     total: 0,
   });
 
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [hasIssuePermission, setHasIssuePermission] = useState(true);
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const currentUser = JSON.parse(userStr);
+        const isSubUser = currentUser.lifo_user_id ? true : false;
+        if (isSubUser) {
+          const permissions = currentUser.lifo_permissions || [];
+          setHasIssuePermission(permissions.includes(2));
+        } else {
+          setHasIssuePermission(true);
+        }
+      }
+    } catch (e) {
+      console.error("Error reading lifo_permissions from user storage:", e);
+    }
+  }, []);
 
   // Select2 states
   const [vehicleTypeSearch, setVehicleTypeSearch] = useState("");
@@ -1702,11 +1721,31 @@ export default function CreateInternationalInsurance() {
               </button>
             </div>
 
+            {!hasIssuePermission && (
+              <div style={{
+                marginBottom: '20px',
+                padding: '15px 20px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                color: '#991b1b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}>
+                <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '1.2rem' }}></i>
+                <span>ليس لديك صلاحية لإصدار وثائق التأمين الدولي. يرجى مراجعة إدارة المكتب لمنحك الصلاحية اللازمة.</span>
+              </div>
+            )}
+
             {loading ? (
               <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
             ) : (
               <form onSubmit={handleSubmit} className="user-form" style={{ width: '100%', maxWidth: '100%', padding: '0' }}>
-                <div className="modern-grid-4">
+                <fieldset disabled={!hasIssuePermission} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+                  <div className="modern-grid-4">
                   
                   {/* 1. بيانات المؤمن له والمشترك */}
                   <div className="grid-header">
@@ -2167,10 +2206,12 @@ export default function CreateInternationalInsurance() {
 
                 </div>
 
+                </fieldset>
+
                 <div className="form-actions" style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
                   <button
                     type="submit"
-                    disabled={submitting || syncingExternal}
+                    disabled={submitting || syncingExternal || !hasIssuePermission}
                     className="btn-submit"
                     style={{ minWidth: '120px' }}
                   >

@@ -5,6 +5,7 @@ import { generatePremiumExcel } from "../utils/excelGenerator";
 import { API_BASE_URL } from "../config/api";
 import { translateLifoError } from "../utils/translateLifoError";
 import "../styles/LifoDashboard.css";
+import OfficeUsers from "./OfficeUsers";
 
 
 // Default external credentials
@@ -40,7 +41,7 @@ const getExternalCredentials = () => {
 };
 
 
-type ActiveTab = 'home' | 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports';
+type ActiveTab = 'home' | 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports' | 'users';
 
 
 type CardCategory = 'all' | 'active' | 'cancel' | 'sold';
@@ -60,6 +61,11 @@ export default function LifoReportsDashboard() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSubUser, setIsSubUser] = useState(false);
+  const [lifoPermissions, setLifoPermissions] = useState<number[]>([]);
+
+  const hasViewCardsPermission = !isSubUser || lifoPermissions.includes(1);
+  const hasReportsPermission = !isSubUser || lifoPermissions.includes(3);
   
   // LIFO connection environment state (Always Production)
   const connectionEnv = 'production';
@@ -561,12 +567,21 @@ export default function LifoReportsDashboard() {
         const u = JSON.parse(userStr);
         const adminStatus = u.is_admin || false;
         setIsAdmin(adminStatus);
+        
+        const subUserStatus = !!(u.lifo_permissions && u.lifo_permissions.length > 0) || !!u.lifo_user_id;
+        setIsSubUser(subUserStatus);
+        
+        if (u.lifo_permissions && Array.isArray(u.lifo_permissions)) {
+          setLifoPermissions(u.lifo_permissions);
+        }
+        
         if (!adminStatus) {
           setActiveTab('home');
         }
       }
     } catch {
       setIsAdmin(false);
+      setIsSubUser(false);
       setActiveTab('home');
     }
     // NOTE: fetchCardsMap() removed from auto-load — only fetch on demand
@@ -1633,14 +1648,16 @@ export default function LifoReportsDashboard() {
               طلب بطاقات التأمين
             </button>
           )}
-          <button 
-            type="button"
-            onClick={() => setActiveTab('inventory')}
-            className={`lifo-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-          >
-            <i className="fa-solid fa-boxes-stacked" style={{ marginLeft: '8px' }}></i>
-            البطاقات
-          </button>
+          {hasViewCardsPermission && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('inventory')}
+              className={`lifo-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-boxes-stacked" style={{ marginLeft: '8px' }}></i>
+              البطاقات
+            </button>
+          )}
           {isAdmin && (
             <button 
               type="button"
@@ -1661,14 +1678,26 @@ export default function LifoReportsDashboard() {
               إدارة الراجعات
             </button>
           )}
-          <button 
-            type="button"
-            onClick={() => setActiveTab('reports')}
-            className={`lifo-tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
-          >
-            <i className="fa-solid fa-chart-pie" style={{ marginLeft: '8px' }}></i>
-            إدارة واستعلام التقارير
-          </button>
+          {hasReportsPermission && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('reports')}
+              className={`lifo-tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-chart-pie" style={{ marginLeft: '8px' }}></i>
+              إدارة واستعلام التقارير
+            </button>
+          )}
+          {!isSubUser && !isAdmin && (
+            <button 
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`lifo-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-users-gear" style={{ marginLeft: '8px' }}></i>
+              مستخدمي المكتب
+            </button>
+          )}
         </div>
 
         <button 
@@ -2190,7 +2219,7 @@ export default function LifoReportsDashboard() {
           </div>
         )}
 
-        {!loading && activeTab === 'reports' && (
+        {!loading && activeTab === 'reports' && hasReportsPermission && (
           <div>
             <h3 style={{ borderBottom: '2px solid var(--border)', paddingBottom: '12px', marginBottom: '20px', color: 'var(--text)' }}>
               إدارة واستعلام التقارير
@@ -3902,7 +3931,7 @@ export default function LifoReportsDashboard() {
 
           </div>
         )}
-        {!loading && activeTab === 'inventory' && (
+        {!loading && activeTab === 'inventory' && hasViewCardsPermission && (
           <div>
             <h3 style={{ borderBottom: '2px solid var(--border)', paddingBottom: '12px', marginBottom: '20px', color: 'var(--text)' }}>
               استعلام حالة ومخزون البطاقات البرتقالية للشركة
@@ -4597,6 +4626,12 @@ export default function LifoReportsDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {!loading && activeTab === 'users' && !isSubUser && !isAdmin && (
+          <div style={{ padding: '0 30px 30px' }}>
+            <OfficeUsers />
           </div>
         )}
       </div>

@@ -582,19 +582,7 @@ textarea,
     grid-template-areas: 'main';
   }
 
-  .sidebar {
-    position: fixed;
-    left: -280px;
-    right: auto;
-    inset-inline-start: auto; /* Clear desktop logical positioning on mobile */
-    /* Hide sidebar off-screen by default on mobile */
-    transition: left 0.3s ease;
-  }
 
-  .app-shell:not(.is-sidebar-closed) .sidebar {
-    left: 0;
-    /* Show if not explicitly closed (though logic might vary) */
-  }
 
   .main-area {
     padding: 0 20px 40px;
@@ -1961,15 +1949,14 @@ tbody tr:last-child td {
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(15, 23, 42, 0.4);
   border: none;
   padding: 0;
   margin: 0;
   cursor: pointer;
   z-index: 80;
   display: none;
-  backdrop-filter: blur(2px);
-  transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-toggle {
@@ -2060,10 +2047,10 @@ tbody tr:last-child td {
     bottom: 0;
     width: 280px;
     max-width: 85vw;
-    z-index: 90;
+    z-index: 1010;
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15) !important;
     transform: translateX(0);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.2s ease-out;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 20px 16px 32px;
@@ -2093,7 +2080,7 @@ tbody tr:last-child td {
 
   .sidebar-backdrop {
     display: block;
-    z-index: 85;
+    z-index: 1005;
   }
 
   .search-field {
@@ -2143,6 +2130,7 @@ tbody tr:last-child td {
   }
 
   .app-shell.is-sidebar-closed .sidebar {
+    display: flex !important;
     transform: translateX(100%);
   }
 }
@@ -2210,23 +2198,28 @@ tbody tr:last-child td {
   }
 
   .sidebar {
-    width: 90%;
-    max-width: 400px;
-    padding: 16px 12px 24px;
-    right: 50%;
-    transform: translateX(50%);
-    border-radius: 16px;
-    top: 50%;
-    bottom: auto;
-    max-height: 85vh;
-    margin-top: -42.5vh;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    width: 280px;
+    max-width: 85vw;
+    padding: 24px 16px 32px;
+    right: 0;
+    left: auto;
+    transform: translateX(0);
+    border-radius: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    max-height: 100vh;
+    margin-top: 0;
+    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15) !important;
+    transition: transform 0.2s ease-out;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .app-shell.is-sidebar-closed .sidebar {
-    transform: translateX(50%) translateY(-100vh);
-    opacity: 0;
+    display: flex !important;
+    transform: translateX(100%);
+    opacity: 1;
     pointer-events: none;
   }
 
