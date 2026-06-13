@@ -14,8 +14,8 @@ export default function HomePage() {
   const [entities, setEntities] = useState<{ id: number; name: string; logo_url: string }[]>([]);
 
   const bannerImages = [
-    '/new/Gemini_Generated_Image_evgx1ievgx1ievgx (1).png',
-    '/new/قبل الفوتر 2.png'
+    '/new/قبل الفوتر1.png',
+    '/new/قبل الفوتر 3.png'
   ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 

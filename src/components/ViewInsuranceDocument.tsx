@@ -96,14 +96,20 @@ export default function ViewInsuranceDocument() {
   const formatPlateNumber = () => {
     if (!document) return '-';
     const isCustoms = document.insurance_type === 'تأمين سيارة جمرك';
-    const plateNumber = document.plate_number_manual ?? (document.plate?.plate_number ?? null);
+    let plateNumber = document.plate_number_manual ?? (document.plate?.plate_number ?? null);
     const cityOrder = document.plate?.city?.order ?? null;
     if (isCustoms && document.port) {
       const portNum = getPortNumber(document.port);
+      if (plateNumber && portNum && plateNumber.endsWith(`-${portNum}`)) {
+        plateNumber = plateNumber.substring(0, plateNumber.length - portNum.length - 1);
+      }
       if (plateNumber && portNum) return `${portNum}-${plateNumber}`;
       if (plateNumber) return `${document.port.trim()} - ${plateNumber}`;
       if (portNum) return portNum;
       return document.port.trim();
+    }
+    if (plateNumber && cityOrder && plateNumber.endsWith(`-${cityOrder}`)) {
+      plateNumber = plateNumber.substring(0, plateNumber.length - cityOrder.toString().length - 1);
     }
     if (plateNumber && cityOrder) return `${cityOrder}-${plateNumber}`;
     if (plateNumber) return plateNumber;

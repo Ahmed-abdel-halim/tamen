@@ -468,6 +468,434 @@ export default function EmployeeProfile() {
     w.document.close();
   };
 
+  const printAuthorizationDocument = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/general-manager`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      let gmData = { name: '', job_title: '', approved_signature_url: null, certified_stamp_url: null };
+      if (res.ok) {
+        gmData = await res.json();
+      }
+      
+      const w = window.open('', '_blank');
+      if (!w) return;
+
+      const employeeSig = user?.approved_signature_url 
+        ? `<img src="${resolvePublicUrl(user.approved_signature_url)}" alt="توقيع الموظف" />` 
+        : '<div class="empty-sig">توقيع غير متوفر</div>';
+
+      const employeeStamp = user?.certified_stamp_url 
+        ? `<img src="${resolvePublicUrl(user.certified_stamp_url)}" alt="ختم الموظف" />` 
+        : '<div class="empty-stamp">ختم غير متوفر</div>';
+
+      const gmSig = gmData.approved_signature_url 
+        ? `<img src="${resolvePublicUrl(gmData.approved_signature_url)}" alt="توقيع المدير العام" />` 
+        : '<div class="empty-sig">توقيع غير متوفر</div>';
+
+      const gmStamp = gmData.certified_stamp_url 
+        ? `<img src="${resolvePublicUrl(gmData.certified_stamp_url)}" alt="ختم المدير العام" />` 
+        : '<div class="empty-stamp">ختم غير متوفر</div>';
+
+      const currentDate = new Date().toLocaleDateString('ar-LY');
+      const year = new Date().getFullYear();
+
+      w.document.write(`
+        <html dir="rtl" lang="ar">
+          <head>
+            <title>اعتماد صفة قانونية وختم وتوقيع - ${user?.name}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <style>
+              @page { size: A4 portrait; margin: 10mm; }
+              body { 
+                font-family: 'Cairo', sans-serif; 
+                margin: 0; 
+                padding: 0;
+                color: #1e293b; 
+                background: #fff;
+                font-size: 15px;
+                direction: rtl;
+              }
+              .page-container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 30px;
+                box-sizing: border-box;
+                border: 3px double #0284c7;
+                position: relative;
+                min-height: 277mm;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+              }
+              .watermark {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                opacity: 0.05;
+                width: 350px;
+                height: 350px;
+                pointer-events: none;
+                z-index: 0;
+              }
+              .header { 
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid #0284c7; 
+                padding-bottom: 10px; 
+                margin-bottom: 20px;
+                z-index: 1;
+              }
+              .header .company-logo img {
+                height: 65px;
+                object-fit: contain;
+              }
+              .header .header-text-center {
+                text-align: center;
+                flex: 1;
+              }
+              .header .header-text-center h1 { 
+                font-size: 20px; 
+                margin: 0 0 5px 0; 
+                color: #0284c7; 
+                font-weight: 800;
+              }
+              .header .header-text-center p {
+                margin: 0;
+                font-size: 11px;
+                color: #475569;
+                font-weight: 600;
+              }
+              .header .header-meta {
+                text-align: left;
+                font-size: 12px;
+                color: #334155;
+                font-weight: bold;
+              }
+              .header .header-meta p {
+                margin: 2px 0;
+              }
+              .document-body {
+                flex: 1;
+                z-index: 1;
+                margin-top: 10px;
+              }
+              .intro-text {
+                line-height: 1.8;
+                font-size: 16px;
+                margin-bottom: 25px;
+                color: #0f172a;
+              }
+              .intro-text p {
+                margin: 6px 0;
+              }
+              .subject-box {
+                background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 12px;
+                text-align: center;
+                font-size: 18px;
+                font-weight: 800;
+                color: #0f172a;
+                margin-bottom: 20px;
+                box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+              }
+              .details-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 25px;
+              }
+              .details-table td {
+                padding: 12px 15px;
+                border: 1px solid #cbd5e1;
+                font-size: 16px;
+              }
+              .details-table td.label-cell {
+                background-color: #f8fafc;
+                font-weight: bold;
+                color: #334155;
+                width: 25%;
+              }
+              .details-table td.value-cell {
+                color: #0f172a;
+                font-weight: 600;
+              }
+              .slots-container {
+                display: flex;
+                gap: 20px;
+                margin-bottom: 30px;
+              }
+              .slot-card {
+                flex: 1;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                overflow: hidden;
+              }
+              .slot-card-title {
+                background-color: #f1f5f9;
+                padding: 8px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 14px;
+                color: #334155;
+                border-bottom: 1px solid #cbd5e1;
+              }
+              .slot-samples {
+                display: flex;
+                padding: 15px;
+                gap: 10px;
+                justify-content: space-around;
+                align-items: center;
+                min-height: 100px;
+              }
+              .sample-box {
+                flex: 1;
+                height: 90px;
+                border: 1px dashed #94a3b8;
+                border-radius: 6px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                position: relative;
+                padding: 4px;
+              }
+              .sample-box span {
+                position: absolute;
+                top: 2px;
+                right: 5px;
+                font-size: 10px;
+                color: #64748b;
+                font-weight: bold;
+              }
+              .sample-box img {
+                max-width: 100%;
+                max-height: 80px;
+                object-fit: contain;
+              }
+              .empty-sig, .empty-stamp {
+                font-size: 11px;
+                color: #94a3b8;
+                font-style: italic;
+              }
+              .approval-section {
+                border: 2px solid #0284c7;
+                border-radius: 8px;
+                padding: 15px;
+                background-color: #f8fafc;
+                margin-top: 15px;
+                page-break-inside: avoid;
+              }
+              .approval-title {
+                font-weight: 800;
+                font-size: 16px;
+                color: #0284c7;
+                margin: 0 0 15px 0;
+                text-align: center;
+                border-bottom: 1px solid #cbd5e1;
+                padding-bottom: 6px;
+              }
+              .approval-columns {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+              }
+              .approval-col {
+                text-align: center;
+                width: 45%;
+              }
+              .approval-col h4 {
+                margin: 0 0 10px 0;
+                font-size: 14px;
+                color: #334155;
+              }
+              .approval-img-box {
+                height: 80px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+              }
+              .approval-img-box img {
+                max-width: 150px;
+                max-height: 80px;
+                object-fit: contain;
+              }
+              .footer { 
+                border-top: 2px solid #0284c7; 
+                padding-top: 10px; 
+                margin-top: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 10px;
+                color: #64748b;
+                font-weight: 600;
+                z-index: 1;
+              }
+              .footer-links {
+                text-align: right;
+                line-height: 1.6;
+              }
+              .footer-qr {
+                text-align: left;
+              }
+              .footer-qr img {
+                height: 50px;
+                width: 50px;
+                object-fit: contain;
+              }
+              .print-btn { 
+                position: fixed; 
+                top: 20px; 
+                left: 20px; 
+                padding: 10px 20px; 
+                background: #0284c7; 
+                color: white; 
+                border: none; 
+                border-radius: 8px; 
+                cursor: pointer; 
+                font-family: inherit; 
+                font-weight: bold;
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+                z-index: 1000;
+              }
+              @media print { 
+                .print-btn { display: none; } 
+                body { background: none; }
+                .page-container { 
+                  margin: 0; 
+                  padding: 20px; 
+                  max-width: 100%; 
+                  box-shadow: none; 
+                  height: 100%; 
+                  min-height: auto;
+                  border: 3px double #0284c7;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <button class="print-btn" onclick="window.print()">🖨️ طباعة المستند</button>
+            <div class="page-container">
+              <img class="watermark" src="${window.location.origin}/img/logo.png" onerror="this.src='${window.location.origin}/img/official_logo.PNG'" alt="شعار" />
+              
+              <div>
+                <div class="header">
+                  <div class="company-logo">
+                    <img src="${window.location.origin}/img/logo.png" alt="شعار الشركة" onerror="this.src='${window.location.origin}/img/official_logo.PNG'" />
+                  </div>
+                  <div class="header-text-center">
+                    <h1>المدار الليبي للتأمين</h1>
+                    <h1>ALNADAR LIBYAN INSURANCE</h1>
+                    <p>رأس مال الشركة (١٠) مليون د.ل - سجل تجاري رقم (٨٧٤٨) – EQUITYCAPITAL (10) MILLION L.Y.D – COMMERCIAL REG (8748)</p>
+                  </div>
+                  <div class="header-meta">
+                    <p>التاريخ: ${currentDate}</p>
+                    <p>الرقم: MLI-AUTH-${user?.id}-${year}</p>
+                  </div>
+                </div>
+
+                <div class="document-body">
+                  <div class="intro-text">
+                    <p><strong>السادة / إدارة شركة المدار الليبي للتأمين - رؤساء الأقسام - الجهات المعنية .</strong></p>
+                    <p>بناء على طلب مدير الشؤون الإدارية – الموارد البشرية.</p>
+                    <p>اعتمد مدير عام شركة المدار الليبي للتأمين المساهمة، الصفة القانونية والختم والتوقيع المبين أدناه للموظف المذكور:</p>
+                  </div>
+
+                  <div class="subject-box">
+                    الموضوع / اعتماد صفة قانونية وختم وتوقيع
+                  </div>
+
+                  <table class="details-table">
+                    <tr>
+                      <td class="label-cell">السيد / السيدة</td>
+                      <td class="value-cell">${user?.name || '—'}</td>
+                    </tr>
+                    <tr>
+                      <td class="label-cell">الصفة الإدارية</td>
+                      <td class="value-cell">${user?.job_title || 'موظف'}</td>
+                    </tr>
+                  </table>
+
+                  <div class="slots-container">
+                    <div class="slot-card" style="width: 60%;">
+                      <div class="slot-card-title">نموذج التوقيع الإلكتروني (Signature Samples)</div>
+                      <div class="slot-samples">
+                        <div class="sample-box">
+                          <span>1</span>
+                          ${employeeSig}
+                        </div>
+                        <div class="sample-box">
+                          <span>2</span>
+                          ${employeeSig}
+                        </div>
+                        <div class="sample-box">
+                          <span>3</span>
+                          ${employeeSig}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="slot-card" style="width: 40%;">
+                      <div class="slot-card-title">نموذج الختم الإلكتروني (Seal Samples)</div>
+                      <div class="slot-samples">
+                        <div class="sample-box">
+                          ${employeeStamp}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="approval-section">
+                  <div class="approval-title">اعتماد المدير العام للشركة (General Manager Authorization)</div>
+                  <div class="approval-columns">
+                    <div class="approval-col">
+                      <h4>التوقيع الإلكتروني للمدير العام</h4>
+                      <div class="approval-img-box">
+                        ${gmSig}
+                      </div>
+                      <p style="font-size: 13px; font-weight: bold; margin: 5px 0 0 0;">${gmData.name || 'مدير عام الشركة'}</p>
+                    </div>
+                    <div class="approval-col">
+                      <h4>الختم الإلكتروني للشركة</h4>
+                      <div class="approval-img-box">
+                        ${gmStamp}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="footer">
+                  <div class="footer-links">
+                    <p>العنوان: ليبيا – طرابلس | موبايل: 00218920003366 | صندوق بريد: P O BOX (83410)</p>
+                    <p>الموقع الإلكتروني: www.mli.ly | البريد الإلكتروني: info@mli.ly | فيسبوك: شركة المدار الليبي للتأمين</p>
+                  </div>
+                  <div class="footer-qr">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/users/' + user?.id)}" alt="رمز الاستجابة السريعة" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      w.document.close();
+    } catch (error) {
+      console.error(error);
+      showToast("حدث خطأ أثناء تحميل مستند الاعتماد والتوقيع", "error");
+    }
+  };
+
   return (
     <div className="profile-container font-cairo">
       {/* Header Info */}
@@ -511,6 +939,13 @@ export default function EmployeeProfile() {
                 <i className="fa-solid fa-user-pen"></i> تقديم طلب تعديل بياناتي
               </button>
             )}
+            <button 
+              className="btn-primary-sm" 
+              onClick={printAuthorizationDocument} 
+              style={{ background: '#0284c7', borderColor: '#0284c7', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <i className="fa-solid fa-stamp"></i> طباعة اعتماد الصفة والتوقيع
+            </button>
             <button className="btn-primary-sm" onClick={() => window.print()}>
               <i className="fa-solid fa-print"></i> طباعة الاستمارة
             </button>
