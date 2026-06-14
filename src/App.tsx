@@ -126,6 +126,7 @@ import TreasuryAndBanksPage from './components/TreasuryAndBanksPage';
 import AgentTransfers from './components/AgentTransfers';
 import NotificationsPage from './components/NotificationsPage';
 import OfficeUsers from './components/OfficeUsers';
+import OldDocumentsManagement from './components/OldDocumentsManagement';
 
 
 
@@ -175,6 +176,7 @@ function hasAccessToRoute(
     'تأمين نقل النقدية': ['/cash-in-transit-insurance'],
     'تأمين شحن البضائع': ['/cargo-insurance'],
     'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
+    'إدارة الوثائق القديمة': ['/old-documents'],
 
     'إدارة الموظفين': ['/users', '/employee-requests', '/departments'],
     'الشؤون الفنية': ['/claims', '/reports/indemnities'],
@@ -321,6 +323,7 @@ const menuSections: SidebarSection[] = [
           { label: 'تأمين حماية طلاب المدارس', icon: 'fa-solid fa-graduation-cap', to: '/school-student-insurance' },
           { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
           { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
+          { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' },
         ]
       },
       { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
@@ -537,6 +540,7 @@ const createMenuSections = (
     'تأمين نقل النقدية': { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
     'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests', badge: pendingDocsCount },
+    'إدارة الوثائق القديمة': { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' },
     'إدارة الفروع والوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
       { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
@@ -607,6 +611,7 @@ const createMenuSections = (
     '/school-student-insurance',
     '/cash-in-transit-insurance',
     '/cargo-insurance',
+    '/old-documents',
     '/coming-soon',
   ];
 
@@ -1298,6 +1303,7 @@ export default function App() {
                   <Route path="/notifications" element={<NotificationsPage />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/old-documents" element={<ProtectedRoute><OldDocumentsManagement /></ProtectedRoute>} />
                   <Route path="/office-users" element={<OfficeUsers />} />
                   <Route path="/profile-update-requests" element={isAdmin ? <ProfileUpdateRequestsList /> : <Navigate to="/dashboard" />} />
                   <Route path="/users" element={<UsersList />} />

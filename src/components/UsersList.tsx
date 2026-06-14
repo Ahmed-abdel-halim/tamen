@@ -152,6 +152,7 @@ const ADMIN_SECTION_PERMISSIONS = [
   'طلبات الوثائق',
   'الشؤون الفنية',
   'ملفات الشركة',
+  'إدارة الوثائق القديمة',
 ];
 
 const SETTINGS_PERMISSIONS = [
