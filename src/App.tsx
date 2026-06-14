@@ -20,6 +20,7 @@ type SidebarSection = {
 import { Topbar } from './components/Topbar'
 import { DashboardPanels } from './components/DashboardPanels'
 import UsersList from './components/UsersList';
+import DepartmentsList from './components/DepartmentsList';
 import DocumentRequestsList from './components/DocumentRequestsList';
 import Login from './components/Login';
 import BranchAgentAccountReport from './components/BranchAgentAccountReport';
@@ -90,6 +91,7 @@ import ArchiveDashboard from './components/archive/ArchiveDashboard';
 import HomePage from './components/HomePage';
 import AboutUs from './components/AboutUs';
 import Management from './components/Management';
+import DepartmentView from './components/DepartmentView';
 import BranchesAgentsPage from './components/BranchesAgentsPage';
 import InsurancesPage from './components/InsurancesPage';
 import ContactUs from './components/ContactUs';
@@ -174,7 +176,7 @@ function hasAccessToRoute(
     'تأمين شحن البضائع': ['/cargo-insurance'],
     'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
 
-    'إدارة الموظفين': ['/users', '/employee-requests'],
+    'إدارة الموظفين': ['/users', '/employee-requests', '/departments'],
     'الشؤون الفنية': ['/claims', '/reports/indemnities'],
     'المطالبات': ['/claims'],
     'البريد الصادر والوارد': ['/mail/incoming', '/mail/outgoing'],
@@ -340,6 +342,7 @@ const menuSections: SidebarSection[] = [
       {
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+          { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
           { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee' },
         ]
@@ -543,6 +546,7 @@ const createMenuSections = (
     ],
     'إدارة الموظفين': [
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+      { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
       { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
       { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
     ],
@@ -634,6 +638,7 @@ const createMenuSections = (
     '/branches-agents', 
     '/branches-agents?status=pending',
     '/users', 
+    '/departments',
     '/employee-requests', 
     '/agent-requests', 
     '/agency-cancellations', 
@@ -762,7 +767,7 @@ const createMenuSections = (
 
   // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
   if (adminItems.length > 0) {
-    const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests');
+    const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests' || i.to === '/departments');
     const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
     const mailGroup = adminItems.filter(i => i.to === '/mail/incoming' || i.to === '/mail/outgoing');
     
@@ -790,7 +795,7 @@ const createMenuSections = (
     }
 
     if (hrGroup.length > 0) {
-      if (hrGroup.length === 1 && hrGroup[0].to === '/users') {
+      if (hrGroup.length === 1) {
         finalAdmin.push(hrGroup[0]);
       } else {
         finalAdmin.push({
@@ -1246,6 +1251,8 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/management" element={<Management />} />
+        <Route path="/management/work-team" element={<DepartmentView />} />
+        <Route path="/management/department/:id" element={<DepartmentView />} />
         <Route path="/website/branches-agents" element={<BranchesAgentsPage />} />
         <Route path="/insurances" element={<InsurancesPage />} />
         <Route path="/contact-us" element={<ContactUs />} />
@@ -1294,6 +1301,7 @@ export default function App() {
                   <Route path="/office-users" element={<OfficeUsers />} />
                   <Route path="/profile-update-requests" element={isAdmin ? <ProfileUpdateRequestsList /> : <Navigate to="/dashboard" />} />
                   <Route path="/users" element={<UsersList />} />
+                  <Route path="/departments" element={<DepartmentsList />} />
                   <Route path="/employee-requests" element={<AllEmployeeRequests />} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
                   <Route path="/agent-requests" element={<AuthorizedRoute requiredPath="/agent-requests"><AllAgentRequests /></AuthorizedRoute>} />

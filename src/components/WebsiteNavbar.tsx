@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import WhatsAppFloating from './WhatsAppFloating';
+import { API_BASE_URL } from '../config/api';
 
 export default function WebsiteNavbar() {
   const getInitialLanguage = (): 'ar' | 'en' => {
@@ -12,7 +13,24 @@ export default function WebsiteNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    const fetchNavbarDeps = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/public/departments`);
+        if (response.ok) {
+          const data = await response.json();
+          setDepartments(data);
+        }
+      } catch (error) {
+        console.error('Error fetching navbar departments:', error);
+      }
+    };
+    fetchNavbarDeps();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -127,14 +145,55 @@ export default function WebsiteNavbar() {
                 {t.about}
               </Link>
             </li>
-            <li>
-              <Link 
-                to="/management" 
-                className={isActive('/management') ? 'active' : ''}
-                onClick={() => setIsMobileMenuOpen(false)}
+            <li 
+              className={`navbar-dropdown-container ${isDropdownOpen ? 'open' : ''}`}
+              onMouseEnter={() => window.innerWidth > 1024 && setIsDropdownOpen(true)}
+              onMouseLeave={() => window.innerWidth > 1024 && setIsDropdownOpen(false)}
+            >
+              <div 
+                className={`navbar-dropdown-trigger ${isActive('/management') || location.pathname.startsWith('/management/') ? 'active' : ''}`}
+                onClick={() => window.innerWidth <= 1024 && setIsDropdownOpen(!isDropdownOpen)}
               >
-                {t.management}
-              </Link>
+                <span>{t.management}</span>
+                <i className="fas fa-chevron-down" style={{ fontSize: '0.8rem', marginRight: '5px' }}></i>
+              </div>
+              <ul className="navbar-dropdown-menu">
+                <li>
+                  <Link 
+                    to="/management" 
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {language === 'ar' ? 'فريق الإدارة (الرئيسي)' : 'Management Team (Main)'}
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/management/work-team" 
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {language === 'ar' ? 'فريق العمل' : 'Work Team'}
+                  </Link>
+                </li>
+                {departments.map((dep) => (
+                  <li key={dep.id}>
+                    <Link 
+                      to={`/management/department/${dep.id}`}
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      {dep.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </li>
             <li>
               <Link 
