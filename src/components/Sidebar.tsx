@@ -81,32 +81,48 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
 
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-            <div className="logo-icon" style={{ height: '50px', display: 'flex', alignItems: 'center' }}>
-              <img src={resolveImageUrl('/img/logo3.png')} alt="المدار الليبي للتأميـن" style={{ height: '100%', width: 'auto' }} />
-            </div>
-            <div className="logo-text" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <span className="logo-title" style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', lineHeight: '1.2' }}>
-                المدار الليبـي للتأميـن
-              </span>
-              <span className="logo-subtitle" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--muted)', lineHeight: '1.2' }}>
-                Al Madar Libyan Insurance
-              </span>
-            </div>
+      <div className="brand" style={{ position: 'relative', paddingLeft: showCloseButton ? '40px' : '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+          <div className="logo-icon" style={{ height: '50px', width: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <img src={resolveImageUrl('/img/logo3.png')} alt="المدار الليبي للتأميـن" style={{ maxHeight: '100%', maxWidth: '100%', width: 'auto', height: 'auto' }} />
           </div>
-          {showCloseButton && onClose && (
-            <button
-              type="button"
-              className="sidebar-close-btn"
-              onClick={onClose}
-              aria-label="إغلاق القائمة الجانبية"
-            >
-              <i className="fa-solid fa-xmark" aria-hidden="true" />
-            </button>
-          )}
+          <div className="logo-text" style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+            <span className="logo-title" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              المدار الليبـي للتأميـن
+            </span>
+            <span className="logo-subtitle" style={{ fontSize: '12px', fontWeight: '500', color: 'var(--muted)', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Al Madar Libyan Insurance
+            </span>
+          </div>
         </div>
+        {showCloseButton && onClose && (
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={onClose}
+            aria-label="إغلاق القائمة الجانبية"
+            style={{
+              position: 'absolute',
+              left: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--panel)',
+              color: 'var(--text)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10,
+              padding: 0
+            }}
+          >
+            <i className="fa-solid fa-xmark" aria-hidden="true" style={{ fontSize: '16px' }} />
+          </button>
+        )}
       </div>
       <nav className="sidebar-nav">
         {sections.map((section) => (

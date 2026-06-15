@@ -15,6 +15,11 @@ type VehicleType = {
   category: string;
 };
 
+type Color = {
+  id: number;
+  name: string;
+};
+
 const YEARS = Array.from({ length: 70 }, (_, i) => new Date().getFullYear() - i);
 
 const LICENSE_PURPOSES = [
@@ -35,6 +40,9 @@ const FUEL_TYPES = [
 
 const DOCUMENT_TYPES = [
   { value: 'compulsory', label: 'تأمين إجباري سيارات' },
+  { value: 'customs', label: 'تأمين سيارة جمرك' },
+  { value: 'third_party', label: 'تأمين طرف ثالث سيارات' },
+  { value: 'foreign_car', label: 'تأمين سيارات أجنبية' },
   { value: 'international', label: 'تأمين السيارات الدولي' },
   { value: 'travel', label: 'تأمين المسافرين' },
   { value: 'resident', label: 'تأمين الوافدين للمقيمين' },
@@ -46,10 +54,64 @@ const DOCUMENT_TYPES = [
   { value: 'cargo', label: 'تأمين شحن البضائع' },
 ];
 
+const ENGINE_POWERS_PRIVATE = [
+  'أقل من (16) حصان',
+  'من (17) الي (30) حصان',
+  'أكثر من (30) حصان',
+  'سيارة تجارية',
+];
+
+const ENGINE_POWERS_PUBLIC = [
+  'سيارة تعليم قيادة',
+  'سيارة اسعاف',
+  'ركوبة عامة داخل المدينة',
+  'ركوبة عامة خارج المدينة',
+  'حافلة لنقل الركاب',
+  'مركبة مقطورة بحافلة ركاب',
+];
+
+const ENGINE_POWERS_TRANSPORT = [
+  'سيارة نقل',
+  'رأس جر',
+  'شاحنة صندوق',
+  'مقطورة',
+  'مقطورة سيارة خاصة',
+  'سيارة نقل موتى',
+];
+
+const ENGINE_POWERS_AGRICULTURAL = [
+  'جرار زراعي',
+  'ألات زراعية',
+];
+
+const ENGINE_POWERS_INDUSTRIAL = [
+  'جرار صناعي',
+  'ألات حفر',
+  'ألات رفع',
+  'ألات تعبيد الطرق',
+];
+
+const LOW_VALUE_ITEMS = [
+  'سيارات خاصة ملاكي',
+  'دراجة نارية',
+  'سيارة تعليم قيادة',
+  'سيارة اسعاف',
+  'سيارة نقل الموتى'
+];
+
+const HIGH_VALUE_ITEMS = [
+  'مقطورة',
+  'السيارات التجارية',
+  'الجرارات',
+  'سيارات نقل بضائع',
+  'سيارات الركوبة الحافلات'
+];
+
 export default function OldDocumentsManagement() {
   const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
+  const [colors, setColors] = useState<Color[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Search Agent Dropdown State
@@ -67,9 +129,9 @@ export default function OldDocumentsManagement() {
 
   // Client Details
   const [insuredName, setInsuredName] = useState('');
-  const [nidPassport, setNidPassport] = useState('');
-  const [phone, setPhone] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [nidPassport, setNidPassport] = useState('111111111111');
+  const [phone, setPhone] = useState('0910000000');
+  const [whatsappNumber, setWhatsappNumber] = useState('0910000000');
   const [email, setEmail] = useState('info@mli.ly');
   const [address, setAddress] = useState('طرابلس');
   const [nationality, setNationality] = useState('ليبي');
@@ -87,7 +149,7 @@ export default function OldDocumentsManagement() {
   const [total, setTotal] = useState('0');
 
   // Type Specific Details
-  // 1. Vehicles (compulsory / international)
+  // 1. Vehicles (compulsory / international / customs / third_party / foreign_car)
   const [chassisNumber, setChassisNumber] = useState('');
   const [plateNumberManual, setPlateNumberManual] = useState('');
   const [color, setColor] = useState('');
@@ -101,6 +163,13 @@ export default function OldDocumentsManagement() {
   const [vehicleTypeId, setVehicleTypeId] = useState('');
   const [fuelType, setFuelType] = useState('');
   const [licensePurpose, setLicensePurpose] = useState('');
+
+  // Vehicle Subtype Specifics
+  const [port, setPort] = useState('ميناء طرابلس');
+  const [thirdPartyPurpose, setThirdPartyPurpose] = useState('خاصة');
+  const [foreignCarCountry, setForeignCarCountry] = useState('تونس');
+  const [foreignCarPurpose, setForeignCarPurpose] = useState('سيارات خاصة سياحية');
+  const prevEnginePowerRef = useRef<string>('');
 
   // 2. International specific
   const [vehicleNationality, setVehicleNationality] = useState('ليبية- LBY');
@@ -117,7 +186,7 @@ export default function OldDocumentsManagement() {
 
   // 4. Marine
   const [structureName, setStructureName] = useState('');
-  const [structureType, setStructureType] = useState('');
+  const [structureType, setStructureType] = useState('القوارب الشخصية والدراجات');
   const [manufacturingYear, setManufacturingYear] = useState('');
   const [engineModel, setEngineModel] = useState('');
 
@@ -148,6 +217,7 @@ export default function OldDocumentsManagement() {
   useEffect(() => {
     fetchAgents();
     fetchVehicleTypes();
+    fetchColors();
   }, []);
 
   // Click outside listener to close the searchable agent select
@@ -182,6 +252,921 @@ export default function OldDocumentsManagement() {
       setTotal((p + t + s + i + sv).toFixed(3));
     }
   }, [premium, tax, stamp, issueFees, supervisionFees, documentType]);
+
+  // Auto-fill default rates when documentType changes (editable by the user)
+  useEffect(() => {
+    switch (documentType) {
+      case 'compulsory':
+      case 'customs':
+      case 'third_party':
+      case 'foreign_car':
+        setPremium('0');
+        setTax('1.000');
+        setStamp('0.500');
+        setIssueFees('2.000');
+        setSupervisionFees('0.500');
+        if (documentType === 'customs') {
+          setDuration('شهر (30 يوم)');
+          setPort('ميناء طرابلس');
+        } else if (documentType === 'third_party') {
+          setDuration('سنة (365 يوم)');
+          setThirdPartyPurpose('خاصة');
+        } else if (documentType === 'foreign_car') {
+          setDuration('شهر (30 يوم)');
+          setForeignCarCountry('تونس');
+          setForeignCarPurpose('سيارات خاصة سياحية');
+          setAuthorizedPassengers('1');
+          setLoadCapacity('0');
+        } else {
+          setDuration('سنة (365 يوم)');
+        }
+        break;
+      case 'international':
+        setPremium('60.000');
+        setTax('2.000');
+        setStamp('0.500');
+        setIssueFees('5.000');
+        setSupervisionFees('0.500');
+        break;
+      case 'travel':
+        setPremium('20.000');
+        setTax('0.000');
+        setStamp('0.500');
+        setIssueFees('3.770');
+        setSupervisionFees('0.180');
+        break;
+      case 'resident':
+        setPremium('730.000');
+        setTax('2.500');
+        setStamp('0.500');
+        setIssueFees('10.000');
+        setSupervisionFees('1.050');
+        setDuration('سنة (365 يوم)');
+        setGeographicArea('داخل ليبيا (للأفراد)');
+        setResidenceType('تأشيرة إقامة Residence Visa');
+        break;
+      case 'marine':
+        setPremium('500.000');
+        setTax('5.000');
+        setStamp('0.500');
+        setIssueFees('10.000');
+        setSupervisionFees('0.500');
+        break;
+      case 'medical':
+        setPremium('210.000');
+        setTax('2.500');
+        setStamp('0.500');
+        setIssueFees('10.000');
+        setSupervisionFees('1.050');
+        break;
+      case 'personal_accident':
+        setPremium('100.000');
+        setTax('2.500');
+        setStamp('0.500');
+        setIssueFees('10.000');
+        setSupervisionFees('1.050');
+        break;
+      case 'school_student':
+        setPremium('10.000');
+        setTax('0.000');
+        setStamp('0.000');
+        setIssueFees('0.000');
+        setSupervisionFees('0.000');
+        break;
+      case 'cash_in_transit':
+        setPremium('150.000');
+        setTax('0.000');
+        setStamp('0.000');
+        setIssueFees('0.000');
+        setSupervisionFees('0.000');
+        break;
+      case 'cargo':
+        setPremium('200.000');
+        setTax('0.000');
+        setStamp('0.000');
+        setIssueFees('0.000');
+        setSupervisionFees('0.000');
+        break;
+      default:
+        setPremium('0');
+        setTax('0');
+        setStamp('0');
+        setIssueFees('0');
+        setSupervisionFees('0');
+        break;
+    }
+  }, [documentType]);
+
+  // Helper to normalize geographic area for travel pricing
+  const getNormalizedGeographicArea = (area: string): string => {
+    const clean = (area || '').toLowerCase();
+    if (clean.includes('شنغن') || clean.includes('schengen') || clean.includes('اوروب') || clean.includes('europa') || clean.includes('eu')) {
+      return 'schengen';
+    }
+    if (clean.includes('عائل')) {
+      return 'family_world';
+    }
+    return 'individual_world';
+  };
+
+  // Helper to normalize duration to travel pricing categories
+  const getNormalizedDuration = (dur: string): string => {
+    const clean = (dur || '').toLowerCase();
+    if (clean.includes('سنتين') || clean.includes('730') || clean.includes('2 year')) return '730';
+    if (clean.includes('سنة') || clean.includes('عام') || clean.includes('365') || clean.includes('1 year')) return '365';
+    if (clean.includes('ستة') || clean.includes('6 أشهر') || clean.includes('180') || clean.includes('6 month')) return '180';
+    if (clean.includes('ثلاث') || clean.includes('3 أشهر') || clean.includes('90') || clean.includes('3 month')) return '90';
+    if (clean.includes('شهرين') || clean.includes('60') || clean.includes('2 month')) return '60';
+    if (clean.includes('شهر') || clean.includes('30') || clean.includes('1 month')) return '30';
+    if (clean.includes('ثلاثة أسابيع') || clean.includes('21')) return '21';
+    if (clean.includes('أسبوعين') || clean.includes('14')) return '14';
+    if (clean.includes('عشر') || clean.includes('10')) return '10';
+    if (clean.includes('أسبوع') || clean.includes('7')) return '7';
+    if (clean.includes('خمس') || clean.includes('5')) return '5';
+    return '365'; // default fallback
+  };
+
+  // Calculate age from birthDate automatically
+  useEffect(() => {
+    if (birthDate) {
+      const today = new Date();
+      const birth = new Date(birthDate);
+      let calculatedAge = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        calculatedAge--;
+      }
+      if (calculatedAge >= 0 && calculatedAge <= 150) {
+        setAge(calculatedAge.toString());
+      }
+    }
+  }, [birthDate]);
+
+  // Calculate birthDate from age automatically (only if birthDate is empty or manually cleared)
+  useEffect(() => {
+    const ageNum = parseInt(age);
+    if (ageNum > 0 && !birthDate) {
+      const today = new Date();
+      const birthYear = today.getFullYear() - ageNum;
+      const calculatedBirthDate = `${birthYear}-01-01`;
+      setBirthDate(calculatedBirthDate);
+    }
+  }, [age]);
+
+  // Dynamic premium and fees calculation (just like creating a new document normally)
+  useEffect(() => {
+    if (!['travel', 'resident'].includes(documentType)) {
+      return;
+    }
+
+    const ageNum = parseInt(age) || 30; // default to 30 if not set
+
+    if (documentType === 'resident') {
+      let basePremium = 730.000;
+      if (ageNum >= 1 && ageNum <= 17) {
+        basePremium = 547.500;
+      } else if (ageNum >= 18 && ageNum <= 49) {
+        basePremium = 730.000;
+      } else if (ageNum >= 50 && ageNum <= 69) {
+        basePremium = 912.500;
+      } else if (ageNum >= 70) {
+        basePremium = 1095.000;
+      }
+
+      setPremium(basePremium.toFixed(3));
+      setTax('2.500');
+      setStamp('0.500');
+      setIssueFees('10.000');
+      setSupervisionFees('1.050');
+    } 
+    else if (documentType === 'travel') {
+      const normArea = getNormalizedGeographicArea(geographicArea);
+      const normDuration = getNormalizedDuration(duration);
+      let basePremium = 0;
+
+      if (normArea === 'schengen' || normArea === 'family_world') {
+        const isChild = ageNum >= 0 && ageNum <= 17;
+        const rates: Record<string, number> = isChild ? {
+          '5': 8.209,
+          '7': 9.174,
+          '10': 15.155,
+          '14': 16.150,
+          '21': 19.135,
+          '30': 22.120,
+          '60': 35.055,
+          '90': 52.465,
+          '180': 75.350,
+          '365': 112.660,
+          '730': 204.000
+        } : {
+          '5': 13.165,
+          '7': 20.000,
+          '10': 25.105,
+          '14': 28.090,
+          '21': 31.075,
+          '30': 36.050,
+          '60': 55.450,
+          '90': 83.310,
+          '180': 117.635,
+          '365': 175.840,
+          '730': 312.610
+        };
+        basePremium = rates[normDuration] || 175.840;
+      } else {
+        // world individual
+        const isChild = ageNum >= 0 && ageNum <= 15;
+        const rates: Record<string, number> = isChild ? {
+          '5': 5.412,
+          '7': 7.195,
+          '10': 10.825,
+          '14': 15.155,
+          '21': 24.110,
+          '30': 27.095,
+          '60': 41.228,
+          '90': 43.015,
+          '180': 83.310,
+          '365': 125.100,
+          '730': 204.195
+        } : {
+          '5': 9.300,
+          '7': 12.170,
+          '10': 18.600,
+          '14': 26.100,
+          '21': 39.035,
+          '30': 44.010,
+          '60': 65.400,
+          '90': 68.385,
+          '180': 130.570,
+          '365': 193.750,
+          '730': 316.625
+        };
+        basePremium = rates[normDuration] || 193.750;
+      }
+
+      setPremium(basePremium.toFixed(3));
+      setTax('0.000');
+      setStamp('0.500');
+      setIssueFees('3.770');
+      setSupervisionFees('0.180');
+    }
+  }, [documentType, geographicArea, duration, age]);
+
+  // Determine available engine power options based on license purpose
+  const getAvailableEnginePowers = () => {
+    const isPublic = licensePurpose && licensePurpose.includes('عامة');
+    const isTransport = licensePurpose && licensePurpose.includes('نقل');
+    const isAgricultural = licensePurpose && licensePurpose.includes('زراعي');
+    const isIndustrial = licensePurpose && licensePurpose.includes('صناعي');
+    const isPrivate = licensePurpose && licensePurpose.includes('خاصة');
+
+    if (isPublic) return ENGINE_POWERS_PUBLIC;
+    if (isTransport) return ENGINE_POWERS_TRANSPORT;
+    if (isAgricultural) return ENGINE_POWERS_AGRICULTURAL;
+    if (isIndustrial) return ENGINE_POWERS_INDUSTRIAL;
+    if (isPrivate) return ENGINE_POWERS_PRIVATE;
+    return ENGINE_POWERS_PRIVATE; // fallback
+  };
+
+  // Reset engine power if license purpose changes and current engine power is not in the new purpose's list
+  useEffect(() => {
+    if (licensePurpose && enginePower) {
+      const isPublic = licensePurpose.includes('عامة');
+      const isPrivate = licensePurpose.includes('خاصة');
+      const isTransport = licensePurpose.includes('نقل');
+      const isAgricultural = licensePurpose.includes('زراعي');
+      const isIndustrial = licensePurpose.includes('صناعي');
+
+      const allOtherPowers = [
+        ...ENGINE_POWERS_PRIVATE,
+        ...ENGINE_POWERS_PUBLIC,
+        ...ENGINE_POWERS_TRANSPORT,
+        ...ENGINE_POWERS_AGRICULTURAL,
+        ...ENGINE_POWERS_INDUSTRIAL
+      ].filter(power => {
+        if (isPublic) return !ENGINE_POWERS_PUBLIC.includes(power);
+        if (isPrivate) return !ENGINE_POWERS_PRIVATE.includes(power);
+        if (isTransport) return !ENGINE_POWERS_TRANSPORT.includes(power);
+        if (isAgricultural) return !ENGINE_POWERS_AGRICULTURAL.includes(power);
+        if (isIndustrial) return !ENGINE_POWERS_INDUSTRIAL.includes(power);
+        return true;
+      });
+
+      if (allOtherPowers.includes(enginePower)) {
+        setEnginePower('');
+      }
+    }
+  }, [licensePurpose]);
+
+  // Auto-set default passengers and load capacity when enginePower changes
+  useEffect(() => {
+    if (!['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType)) {
+      return;
+    }
+    if (!enginePower) return;
+
+    const enginePowerChanged = prevEnginePowerRef.current !== enginePower;
+    prevEnginePowerRef.current = enginePower;
+
+    if (enginePowerChanged) {
+      let defaultPassengers = '';
+      let defaultLoad = '';
+
+      switch (enginePower) {
+        case 'أقل من (16) حصان':
+        case 'من (17) الي (30) حصان':
+        case 'أكثر من (30) حصان':
+          defaultPassengers = '4';
+          break;
+        case 'سيارة تجارية':
+        case 'سيارة تعليم قيادة':
+        case 'سيارة اسعاف':
+        case 'سيارة نقل موتى':
+        case 'سيارة نقل':
+        case 'رأس جر':
+        case 'شاحنة صندوق':
+        case 'جرار زراعي':
+        case 'ألات زراعية':
+        case 'جرار صناعي':
+        case 'ألات حفر':
+        case 'ألات رفع':
+        case 'ألات تعبيد الطرق':
+          defaultPassengers = '1';
+          break;
+        case 'ركوبة عامة داخل المدينة':
+        case 'ركوبة عامة خارج المدينة':
+          defaultPassengers = '4';
+          break;
+        case 'حافلة لنقل الركاب':
+        case 'مركبة مقطورة بحافلة ركاب':
+          defaultPassengers = '14';
+          break;
+        case 'مقطورة':
+        case 'مقطورة سيارة خاصة':
+          defaultPassengers = '0';
+          break;
+      }
+
+      switch (enginePower) {
+        case 'سيارة نقل':
+        case 'شاحنة صندوق':
+        case 'رأس جر':
+        case 'مقطورة':
+        case 'مقطورة سيارة خاصة':
+        case 'سيارة نقل موتى':
+        case 'جرار زراعي':
+        case 'ألات زراعية':
+        case 'جرار صناعي':
+        case 'ألات حفر':
+        case 'ألات رفع':
+        case 'ألات تعبيد الطرق':
+          defaultLoad = '0';
+          break;
+      }
+
+      if (defaultPassengers) setAuthorizedPassengers(defaultPassengers);
+      if (defaultLoad) setLoadCapacity(defaultLoad);
+    }
+  }, [enginePower, documentType]);
+
+  // Auto-calculate vehicle insurance end date based on start date and duration
+  useEffect(() => {
+    if (!['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType)) {
+      return;
+    }
+    const startDateValue = startDate;
+    const durationValue = documentType === 'compulsory' ? 'سنة (365 يوم)' : duration;
+
+    if (startDateValue && durationValue) {
+      const start = new Date(startDateValue);
+      const end = new Date(start);
+
+      if (['customs', 'foreign_car'].includes(documentType)) {
+        let days = 0;
+        switch (durationValue) {
+          case 'شهر (30 يوم)':
+            days = 30;
+            break;
+          case 'شهرين (60 يوم)':
+            days = 60;
+            break;
+          case 'ثلاثة أشهر (90 يوم)':
+            days = 90;
+            break;
+          case 'سنة (365 يوم)':
+            days = 365;
+            break;
+          case 'سنتين (730 يوم)':
+            days = 730;
+            break;
+          default:
+            days = 30;
+        }
+        end.setDate(end.getDate() + days);
+      } else {
+        // Normal or third party
+        if (durationValue === 'سنتين (730 يوم)' || durationValue === 'سنتين') {
+          end.setFullYear(end.getFullYear() + 2);
+        } else {
+          end.setFullYear(end.getFullYear() + 1);
+        }
+      }
+
+      const y = end.getFullYear();
+      const m = String(end.getMonth() + 1).padStart(2, '0');
+      const d = String(end.getDate()).padStart(2, '0');
+      setEndDate(`${y}-${m}-${d}`);
+    }
+  }, [startDate, duration, documentType]);
+
+  // Dynamic premium and fees calculation for vehicle insurance types
+  useEffect(() => {
+    if (!['compulsory', 'customs', 'third_party', 'foreign_car', 'international'].includes(documentType)) {
+      return;
+    }
+
+    let calculatedPremium = 0;
+    let calculatedTax = 1.000;
+    let calculatedStamp = 0.500;
+    let calculatedIssueFees = 2.000;
+    let calculatedSupervisionFees = 0.500;
+
+    const passengers = parseInt(authorizedPassengers) || 0;
+    const capacity = parseFloat(loadCapacity) || 0;
+
+    if (documentType === 'international') {
+      calculatedIssueFees = 10.000;
+      calculatedStamp = 0.250;
+      let dailyPremium = 0;
+
+      if (LOW_VALUE_ITEMS.includes(itemType)) {
+        dailyPremium = 7;
+        calculatedTax = 0.5;
+        calculatedSupervisionFees = 0.245;
+      } else if (HIGH_VALUE_ITEMS.includes(itemType)) {
+        dailyPremium = 8;
+        calculatedTax = 1.0;
+        calculatedSupervisionFees = 0.280;
+      }
+
+      const days = parseInt(numberOfDays) || 0;
+      calculatedPremium = dailyPremium * days;
+    }
+    else if (documentType === 'third_party') {
+      switch (thirdPartyPurpose) {
+        case 'خاصة':
+          calculatedPremium = 365.000;
+          break;
+        case 'عامة':
+          calculatedPremium = 547.500;
+          break;
+        case 'نقل':
+          calculatedPremium = 456.250;
+          break;
+        default:
+          calculatedPremium = 0;
+      }
+
+      if (duration.includes('سنتين') || duration.includes('730')) {
+        calculatedPremium = calculatedPremium * 2;
+      }
+    }
+    else if (documentType === 'foreign_car') {
+      let dailyBase = 0;
+      let extraPassengerPrice = 0;
+      let extraTonPrice = 0;
+
+      switch (foreignCarPurpose) {
+        case 'سيارات خاصة سياحية':
+          dailyBase = 2;
+          extraPassengerPrice = 1;
+          extraTonPrice = 1;
+          break;
+        case 'سيارات نقل ركاب':
+          dailyBase = 3;
+          extraPassengerPrice = 2;
+          extraTonPrice = 2;
+          break;
+        case 'سيارات نقل وشحن':
+          dailyBase = 4;
+          extraPassengerPrice = 3;
+          extraTonPrice = 3;
+          break;
+      }
+
+      let days = 30;
+      switch (duration) {
+        case 'شهر (30 يوم)':
+          days = 30;
+          break;
+        case 'شهرين (60 يوم)':
+          days = 60;
+          break;
+        case 'ثلاثة أشهر (90 يوم)':
+          days = 90;
+          break;
+        case 'سنة (365 يوم)':
+          days = 365;
+          break;
+        case 'سنتين (730 يوم)':
+          days = 730;
+          break;
+        default:
+          days = 30;
+      }
+
+      calculatedPremium = dailyBase * days;
+
+      // Extra passengers (> 1)
+      if (passengers > 1) {
+        calculatedPremium += (passengers - 1) * extraPassengerPrice * days;
+      }
+      // Extra tonnage (> 0)
+      if (capacity > 0) {
+        calculatedPremium += capacity * extraTonPrice * days;
+      }
+    }
+    else if (documentType === 'compulsory' || documentType === 'customs') {
+      let basePremium = 0;
+
+      // Engine power basic premium
+      switch (enginePower) {
+        // Private
+        case 'أقل من (16) حصان':
+          basePremium = 64.000;
+          break;
+        case 'من (17) الي (30) حصان':
+          basePremium = 70.000;
+          break;
+        case 'أكثر من (30) حصان':
+          basePremium = 90.000;
+          break;
+        case 'سيارة تجارية':
+          basePremium = 100.000;
+          break;
+        // Public
+        case 'سيارة تعليم قيادة':
+          basePremium = 58.000;
+          break;
+        case 'سيارة اسعاف':
+          basePremium = 50.000;
+          break;
+        case 'ركوبة عامة داخل المدينة':
+        case 'ركوبة عامة خارج المدينة':
+          basePremium = 64.000;
+          break;
+        case 'حافلة لنقل الركاب':
+        case 'مركبة مقطورة بحافلة ركاب':
+          basePremium = 84.000;
+          break;
+        // Transport
+        case 'سيارة نقل':
+        case 'رأس جر':
+          basePremium = 65.000;
+          break;
+        case 'شاحنة صندوق':
+          basePremium = 73.000;
+          break;
+        case 'مقطورة':
+          basePremium = 0;
+          break;
+        case 'مقطورة سيارة خاصة':
+          basePremium = 30.000;
+          break;
+        case 'سيارة نقل موتى':
+          basePremium = 24.000;
+          break;
+        // Agricultural
+        case 'جرار زراعي':
+        case 'ألات زراعية':
+          basePremium = 16.000;
+          break;
+        // Industrial
+        case 'جرار صناعي':
+        case 'ألات حفر':
+        case 'ألات رفع':
+        case 'ألات تعبيد الطرق':
+          basePremium = 34.000;
+          break;
+      }
+
+      // Surcharges by license purpose
+      const isPrivate = licensePurpose && licensePurpose.includes('خاصة');
+      const isPublic = licensePurpose && licensePurpose.includes('عامة');
+      const isTransport = licensePurpose && licensePurpose.includes('نقل');
+      const isAgricultural = licensePurpose && licensePurpose.includes('زراعي');
+      const isIndustrial = licensePurpose && licensePurpose.includes('صناعي');
+
+      if (documentType === 'customs' && isPrivate) {
+        // Customs + Private uses a monthly rate
+        let monthlyPremium = 0;
+        switch (enginePower) {
+          case 'أقل من (16) حصان':
+            monthlyPremium = 12.8;
+            break;
+          case 'من (17) الي (30) حصان':
+            monthlyPremium = 14;
+            break;
+          case 'أكثر من (30) حصان':
+            monthlyPremium = 18;
+            break;
+          case 'سيارة تجارية':
+            monthlyPremium = 20;
+            break;
+        }
+
+        let days = 30;
+        switch (duration) {
+          case 'شهر (30 يوم)':
+            days = 30;
+            basePremium = monthlyPremium;
+            break;
+          case 'شهرين (60 يوم)':
+            days = 60;
+            basePremium = monthlyPremium * 1.5;
+            break;
+          case 'ثلاثة أشهر (90 يوم)':
+            days = 90;
+            basePremium = monthlyPremium * 2.0;
+            break;
+          default:
+            days = 30;
+            basePremium = monthlyPremium;
+        }
+
+        const defaultPassengers = enginePower === 'سيارة تجارية' ? 1 : 4;
+        if (passengers > defaultPassengers) {
+          basePremium += (passengers - defaultPassengers) * 0.10 * days;
+        }
+      } 
+      else if (documentType === 'customs' && isPublic) {
+        // Customs + Public monthly rates
+        let monthlyPremium = 0;
+        let defaultPassengers = 1;
+
+        switch (enginePower) {
+          case 'سيارة تعليم قيادة':
+            monthlyPremium = 11.6;
+            defaultPassengers = 1;
+            break;
+          case 'سيارة اسعاف':
+            monthlyPremium = 10;
+            defaultPassengers = 1;
+            break;
+          case 'ركوبة عامة داخل المدينة':
+          case 'ركوبة عامة خارج المدينة':
+            monthlyPremium = 12.8;
+            defaultPassengers = 1;
+            break;
+          case 'حافلة لنقل الركاب':
+          case 'مركبة مقطورة بحافلة ركاب':
+            monthlyPremium = 16.8;
+            defaultPassengers = 14;
+            break;
+        }
+
+        let days = 30;
+        switch (duration) {
+          case 'شهر (30 يوم)':
+            days = 30;
+            basePremium = monthlyPremium;
+            break;
+          case 'شهرين (60 يوم)':
+            days = 60;
+            basePremium = monthlyPremium * 1.5;
+            break;
+          case 'ثلاثة أشهر (90 يوم)':
+            days = 90;
+            basePremium = monthlyPremium * 2.0;
+            break;
+          default:
+            days = 30;
+            basePremium = monthlyPremium;
+        }
+
+        if (passengers > defaultPassengers) {
+          basePremium += (passengers - defaultPassengers) * 0.10 * days;
+        }
+      }
+      else if (documentType === 'customs' && isTransport) {
+        // Customs + Transport monthly rates
+        let monthlyPremium = 0;
+        let hasLoad = true;
+
+        switch (enginePower) {
+          case 'سيارة نقل':
+          case 'رأس جر':
+            monthlyPremium = 13;
+            break;
+          case 'شاحنة صندوق':
+            monthlyPremium = 14.6;
+            break;
+          case 'مقطورة':
+            monthlyPremium = 0;
+            break;
+          case 'مقطورة سيارة خاصة':
+            monthlyPremium = 6;
+            hasLoad = false;
+            break;
+          case 'سيارة نقل موتى':
+            monthlyPremium = 4.8;
+            hasLoad = false;
+            break;
+        }
+
+        let days = 30;
+        switch (duration) {
+          case 'شهر (30 يوم)':
+            days = 30;
+            basePremium = monthlyPremium;
+            break;
+          case 'شهرين (60 يوم)':
+            days = 60;
+            basePremium = monthlyPremium * 1.5;
+            break;
+          case 'ثلاثة أشهر (90 يوم)':
+            days = 90;
+            basePremium = monthlyPremium * 2.0;
+            break;
+          default:
+            days = 30;
+            basePremium = monthlyPremium;
+        }
+
+        if (hasLoad && capacity > 0) {
+          if (enginePower === 'مقطورة') {
+            const tonPrice = 8;
+            const extra = capacity * tonPrice;
+            if (duration === 'شهر (30 يوم)') {
+              basePremium += extra;
+            } else if (duration === 'شهرين (60 يوم)') {
+              basePremium += extra * 1.5;
+            } else if (duration === 'ثلاثة أشهر (90 يوم)') {
+              basePremium += extra * 2.0;
+            }
+          } else {
+            basePremium += capacity * 0.10 * days;
+          }
+        }
+      }
+      else if (documentType === 'customs' && isAgricultural) {
+        let monthlyPremium = 3.2;
+        let days = 30;
+        switch (duration) {
+          case 'شهر (30 يوم)':
+            days = 30;
+            basePremium = monthlyPremium;
+            break;
+          case 'شهرين (60 يوم)':
+            days = 60;
+            basePremium = monthlyPremium * 1.5;
+            break;
+          case 'ثلاثة أشهر (90 يوم)':
+            days = 90;
+            basePremium = monthlyPremium * 2.0;
+            break;
+          default:
+            days = 30;
+            basePremium = monthlyPremium;
+        }
+        if (capacity > 0) {
+          basePremium += capacity * 0.10 * days;
+        }
+      }
+      else if (documentType === 'customs' && isIndustrial) {
+        let monthlyPremium = 6.8;
+        let days = 30;
+        switch (duration) {
+          case 'شهر (30 يوم)':
+            days = 30;
+            basePremium = monthlyPremium;
+            break;
+          case 'شهرين (60 يوم)':
+            days = 60;
+            basePremium = monthlyPremium * 1.5;
+            break;
+          case 'ثلاثة أشهر (90 يوم)':
+            days = 90;
+            basePremium = monthlyPremium * 2.0;
+            break;
+          default:
+            days = 30;
+            basePremium = monthlyPremium;
+        }
+        if (capacity > 0) {
+          basePremium += capacity * 0.10 * days;
+        }
+      }
+      else if (documentType === 'customs') {
+        // Fallback for customs (divide compulsory by 365)
+        let days = 30;
+        switch (duration) {
+          case 'شهر (30 يوم)': days = 30; break;
+          case 'شهرين (60 يوم)': days = 60; break;
+          case 'ثلاثة أشهر (90 يوم)': days = 90; break;
+        }
+        // Calculate compulsory premium for base first, then scale
+        let compPremium = basePremium;
+        if (isPrivate) {
+          const defaultPass = enginePower === 'سيارة تجارية' ? 1 : 4;
+          const extraPrice = enginePower === 'سيارة تجارية' ? 15 : 5;
+          if (passengers > defaultPass) {
+            compPremium += (passengers - defaultPass) * extraPrice;
+          }
+        }
+        basePremium = (compPremium / 365) * days;
+      }
+      else {
+        // Compulsory standard pricing
+        if (isPrivate) {
+          const defaultPass = enginePower === 'سيارة تجارية' ? 1 : 4;
+          const extraPrice = enginePower === 'سيارة تجارية' ? 15 : 5;
+          if (passengers > defaultPass) {
+            basePremium += (passengers - defaultPass) * extraPrice;
+          }
+        } 
+        else if (isPublic) {
+          let defaultPass = 1;
+          let extraPrice = 10;
+          switch (enginePower) {
+            case 'سيارة تعليم قيادة':
+            case 'سيارة اسعاف':
+              defaultPass = 1;
+              extraPrice = 15;
+              break;
+            case 'ركوبة عامة داخل المدينة':
+            case 'ركوبة عامة خارج المدينة':
+              defaultPass = 1;
+              extraPrice = 10;
+              break;
+            case 'حافلة لنقل الركاب':
+            case 'مركبة مقطورة بحافلة ركاب':
+              defaultPass = 14;
+              extraPrice = 8;
+              break;
+          }
+          if (passengers > defaultPass) {
+            basePremium += (passengers - defaultPass) * extraPrice;
+          }
+        }
+        else if (isTransport) {
+          let defaultLoad = 0;
+          let extraTon = 8;
+          let canIncrease = true;
+          switch (enginePower) {
+            case 'سيارة نقل':
+            case 'شاحنة صندوق':
+              defaultLoad = 1;
+              extraTon = 8;
+              break;
+            case 'مقطورة':
+              basePremium = capacity * 8;
+              canIncrease = false;
+              break;
+            case 'رأس جر':
+            case 'مقطورة سيارة خاصة':
+            case 'سيارة نقل موتى':
+              canIncrease = false;
+              break;
+          }
+          if (canIncrease && capacity > defaultLoad) {
+            basePremium += (capacity - defaultLoad) * extraTon;
+          }
+        }
+        else if (isAgricultural) {
+          if (passengers > 1) basePremium += (passengers - 1) * 15;
+          if (capacity > 0) basePremium += capacity * 15;
+        }
+        else if (isIndustrial) {
+          if (passengers > 1) basePremium += (passengers - 1) * 15;
+          if (capacity > 0) basePremium += capacity * 15;
+        }
+
+        // Duration multiplier for compulsory
+        if (duration.includes('سنتين') || duration.includes('730')) {
+          basePremium = basePremium * 2;
+        }
+      }
+
+      calculatedPremium = basePremium;
+    }
+
+    setPremium(calculatedPremium.toFixed(3));
+    setTax(calculatedTax.toFixed(3));
+    setStamp(calculatedStamp.toFixed(3));
+    setIssueFees(calculatedIssueFees.toFixed(3));
+    setSupervisionFees(calculatedSupervisionFees.toFixed(3));
+  }, [
+    documentType,
+    enginePower,
+    licensePurpose,
+    authorizedPassengers,
+    loadCapacity,
+    duration,
+    thirdPartyPurpose,
+    foreignCarPurpose,
+    itemType,
+    numberOfDays
+  ]);
 
   const fetchAgents = async () => {
     try {
@@ -219,6 +1204,25 @@ export default function OldDocumentsManagement() {
     }
   };
 
+  const fetchColors = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/colors`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const colorsList = Array.isArray(data) ? data : (data.data && Array.isArray(data.data) ? data.data : []);
+        setColors(colorsList);
+      }
+    } catch (e) {
+      console.error('Error fetching colors:', e);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -230,7 +1234,7 @@ export default function OldDocumentsManagement() {
 
       // Build payload dynamically based on type
       const payload: Record<string, any> = {
-        document_type: documentType,
+        document_type: ['customs', 'third_party', 'foreign_car'].includes(documentType) ? 'compulsory' : documentType,
         branch_agent_id: branchAgentId || null,
         issue_date: issueDate,
         start_date: startDate,
@@ -261,7 +1265,7 @@ export default function OldDocumentsManagement() {
       };
 
       // Type-specific additions
-      if (documentType === 'compulsory' || documentType === 'international') {
+      if (['compulsory', 'customs', 'third_party', 'foreign_car', 'international'].includes(documentType)) {
         payload.chassis_number = chassisNumber;
         payload.plate_number_manual = plateNumberManual;
         payload.plate_number = plateNumberManual;
@@ -277,11 +1281,29 @@ export default function OldDocumentsManagement() {
         payload.fuel_type = fuelType;
         payload.license_purpose = licensePurpose;
 
+        if (documentType === 'compulsory') {
+          payload.insurance_type = 'تأمين إجباري سيارات';
+        } else if (documentType === 'customs') {
+          payload.insurance_type = 'تأمين سيارة جمرك';
+          payload.port = port;
+          payload.duration = duration;
+        } else if (documentType === 'third_party') {
+          payload.insurance_type = 'تأمين طرف ثالث سيارات';
+          payload.third_party_purpose = thirdPartyPurpose;
+          payload.duration = duration;
+        } else if (documentType === 'foreign_car') {
+          payload.insurance_type = 'تأمين سيارات أجنبية';
+          payload.foreign_car_country = foreignCarCountry;
+          payload.foreign_car_purpose = foreignCarPurpose;
+          payload.duration = duration;
+        }
+
         if (documentType === 'international') {
           payload.vehicle_nationality = vehicleNationality;
           payload.visited_country = visitedCountry;
           payload.number_of_days = parseInt(numberOfDays) || 30;
           payload.item_type = itemType;
+          payload.daily_premium = LOW_VALUE_ITEMS.includes(itemType) ? 7 : 8;
         }
       }
 
@@ -307,10 +1329,14 @@ export default function OldDocumentsManagement() {
 
       if (documentType === 'medical') {
         payload.profession = profession;
+        payload.workplace = workPlace;
         payload.work_place = workPlace;
       }
 
       if (documentType === 'personal_accident') {
+        payload.name = insuredName;
+        payload.id_proof = nidPassport;
+        payload.profession = job;
         payload.job = job;
       }
 
@@ -408,6 +1434,7 @@ export default function OldDocumentsManagement() {
               
               {showAgentDropdown && (
                 <div
+                  className="searchable-dropdown-list"
                   style={{
                     position: 'absolute',
                     top: '100%',
@@ -450,6 +1477,7 @@ export default function OldDocumentsManagement() {
                       filteredAgents.map((agent) => (
                         <div
                           key={agent.id}
+                          className={`searchable-dropdown-item ${branchAgentId === agent.id.toString() ? 'selected' : ''}`}
                           onClick={() => {
                             setBranchAgentId(agent.id.toString());
                             setShowAgentDropdown(false);
@@ -512,6 +1540,11 @@ export default function OldDocumentsManagement() {
             </div>
 
             <div className="modern-grid-3">
+              <div className="form-group">
+                <label>رقم الوثيقة القديمة (يدوي) *</label>
+                <input type="text" value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} required placeholder="الرقم التعريفي القديم للوثيقة لإعادة كتابته" />
+              </div>
+
               <div className="form-group span-2">
                 <label>اسم المؤمن له كما في الإثبات *</label>
                 <input type="text" value={insuredName} onChange={(e) => setInsuredName(e.target.value)} required placeholder="اسم المؤمن له كما في الإثبات" />
@@ -557,10 +1590,7 @@ export default function OldDocumentsManagement() {
                 <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
               </div>
 
-              <div className="form-group">
-                <label>رقم الوثيقة القديمة (يدوي) *</label>
-                <input type="text" value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} required placeholder="الرقم التعريفي القديم للوثيقة لإعادة كتابته" />
-              </div>
+
 
               {/* حقول مسافر السفر والوافد */}
               {['travel', 'resident'].includes(documentType) && (
@@ -586,17 +1616,33 @@ export default function OldDocumentsManagement() {
                   </div>
                   <div className="form-group">
                     <label>المنطقة الجغرافية / الوجهة *</label>
-                    <input type="text" value={geographicArea} onChange={(e) => setGeographicArea(e.target.value)} required placeholder="مثال: دول الخليج، أوروبا..." />
+                    {documentType === 'resident' ? (
+                      <select value={geographicArea} onChange={(e) => setGeographicArea(e.target.value)} required>
+                        <option value="داخل ليبيا (للأفراد)">داخل ليبيا (للأفراد)</option>
+                        <option value="داخل ليبيا (للعائلات)">داخل ليبيا (للعائلات)</option>
+                      </select>
+                    ) : (
+                      <input type="text" value={geographicArea} onChange={(e) => setGeographicArea(e.target.value)} required placeholder="مثال: دول الخليج، أوروبا..." />
+                    )}
                   </div>
                   <div className="form-group">
                     <label>مدة التأمين *</label>
-                    <input type="text" value={duration} onChange={(e) => setDuration(e.target.value)} required placeholder="سنة، 3 أشهر..." />
+                    {documentType === 'resident' ? (
+                      <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                      </select>
+                    ) : (
+                      <input type="text" value={duration} onChange={(e) => setDuration(e.target.value)} required placeholder="سنة، 3 أشهر..." />
+                    )}
                   </div>
                   {documentType === 'resident' && (
                     <>
                       <div className="form-group">
                         <label>نوع الإقامة *</label>
-                        <input type="text" value={residenceType} onChange={(e) => setResidenceType(e.target.value)} required placeholder="تأشيرة إقامة" />
+                        <select value={residenceType} onChange={(e) => setResidenceType(e.target.value)} required>
+                          <option value="تأشيرة إقامة Residence Visa">تأشيرة إقامة Residence Visa</option>
+                          <option value="تأشيرة عمل Work Visa">تأشيرة عمل Work Visa</option>
+                        </select>
                       </div>
                       <div className="form-group">
                         <label>مدة الإقامة (بالأشهر) *</label>
@@ -612,24 +1658,130 @@ export default function OldDocumentsManagement() {
               )}
             </div>
 
-            {/* حقول المركبة (للتأمين الإجباري والدولي) */}
-            {(documentType === 'compulsory' || documentType === 'international') && (
+            {/* حقول المركبة (للتأمين الإجباري والدولي وفروع مركبات جمرك وطرف ثالث وسيارات أجنبية) */}
+            {['compulsory', 'customs', 'third_party', 'foreign_car', 'international'].includes(documentType) && (
               <>
                 <div className="grid-header" style={{ background: '#014cb1', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '800', margin: '30px 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <i className="fa-solid fa-car"></i> بيانات المركبة
                 </div>
 
                 <div className="modern-grid-3">
+                  {documentType === 'customs' && (
+                    <>
+                      <div className="form-group">
+                        <label>الميناء *</label>
+                        <select value={port} onChange={(e) => setPort(e.target.value)} required>
+                          <option value="ميناء طرابلس">ميناء طرابلس</option>
+                          <option value="ميناء مصراته">ميناء مصراته</option>
+                          <option value="ميناء الخمس">ميناء الخمس</option>
+                          <option value="ميناء بنغازي">ميناء بنغازي</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>مدة التأمين *</label>
+                        <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                          <option value="شهر (30 يوم)">شهر (30 يوم)</option>
+                          <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
+                          <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {documentType === 'third_party' && (
+                    <>
+                      <div className="form-group">
+                        <label>الغرض من الطرف الثالث *</label>
+                        <select value={thirdPartyPurpose} onChange={(e) => setThirdPartyPurpose(e.target.value)} required>
+                          <option value="خاصة">خاصة</option>
+                          <option value="عامة">عامة</option>
+                          <option value="نقل">نقل</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>مدة التأمين *</label>
+                        <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                          <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                          <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {documentType === 'foreign_car' && (
+                    <>
+                      <div className="form-group">
+                        <label>دولة السيارة *</label>
+                        <input type="text" value={foreignCarCountry} onChange={(e) => setForeignCarCountry(e.target.value)} required placeholder="مثال: تونس، الجزائر" />
+                      </div>
+                      <div className="form-group">
+                        <label>الغرض من السيارة *</label>
+                        <select value={foreignCarPurpose} onChange={(e) => setForeignCarPurpose(e.target.value)} required>
+                          <option value="سيارات خاصة سياحية">سيارات خاصة سياحية</option>
+                          <option value="سيارات نقل ركاب">سيارات نقل ركاب</option>
+                          <option value="سيارات نقل وشحن">سيارات نقل وشحن</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>مدة التأمين *</label>
+                        <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                          <option value="شهر (30 يوم)">شهر (30 يوم)</option>
+                          <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
+                          <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
+                          <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                          <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {documentType === 'compulsory' && (
+                    <div className="form-group">
+                      <label>مدة التأمين *</label>
+                      <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                        <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* 1. الغرض من الترخيص */}
+                  <div className="form-group">
+                    <label>الغرض من الترخيص *</label>
+                    <select value={licensePurpose} onChange={(e) => setLicensePurpose(e.target.value)} required={['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType)}>
+                      <option value="">-- اختر الغرض --</option>
+                      {LICENSE_PURPOSES.map(p => <option key={p} value={p}>{p.split('/')[0]}</option>)}
+                    </select>
+                  </div>
+
+                  {/* 2. قوة المحرك / فئة المركبة */}
+                  <div className="form-group">
+                    <label>قوة المحرك (حصان) / فئة المركبة *</label>
+                    {['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType) ? (
+                      <select value={enginePower} onChange={(e) => setEnginePower(e.target.value)} required>
+                        <option value="">-- اختر الفئة / قوة المحرك --</option>
+                        {getAvailableEnginePowers().map((ep) => (
+                          <option key={ep} value={ep}>{ep}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input type="text" value={enginePower} onChange={(e) => setEnginePower(e.target.value)} placeholder="16، 30، إلخ" />
+                    )}
+                  </div>
+
+                  {/* 3. رقم اللوحة المعدنية */}
                   <div className="form-group">
                     <label>رقم اللوحة المعدنية *</label>
                     <input type="text" value={plateNumberManual} onChange={(e) => setPlateNumberManual(e.target.value)} required placeholder="مثال: 123456" />
                   </div>
 
+                  {/* 4. رقم الشاصي */}
                   <div className="form-group">
                     <label>رقم الشاصي (الهيكل) *</label>
                     <input type="text" value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value)} required placeholder="رقم الشاصي" />
                   </div>
 
+                  {/* 5. نوع السيارة وموديلها */}
                   <div className="form-group">
                     <label>نوع السيارة وموديلها</label>
                     <select value={vehicleTypeId} onChange={(e) => setVehicleTypeId(e.target.value)}>
@@ -642,11 +1794,7 @@ export default function OldDocumentsManagement() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>اللون *</label>
-                    <input type="text" value={color} onChange={(e) => setColor(e.target.value)} required placeholder="أحمر، أسود، فضي..." />
-                  </div>
-
+                  {/* 6. سنة الصنع */}
                   <div className="form-group">
                     <label>سنة الصنع *</label>
                     <select value={year} onChange={(e) => setYear(e.target.value)} required>
@@ -655,44 +1803,54 @@ export default function OldDocumentsManagement() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>قوة المحرك (حصان)</label>
-                    <input type="text" value={enginePower} onChange={(e) => setEnginePower(e.target.value)} placeholder="16، 30، إلخ" />
-                  </div>
-
+                  {/* 7. عدد الركاب */}
                   <div className="form-group">
                     <label>عدد الركاب</label>
                     <input type="text" value={authorizedPassengers} onChange={(e) => setAuthorizedPassengers(e.target.value)} placeholder="4" />
                   </div>
 
+                  {/* 8. الحمولة بالطن */}
                   <div className="form-group">
                     <label>الحمولة (بالطن)</label>
                     <input type="text" value={loadCapacity} onChange={(e) => setLoadCapacity(e.target.value)} placeholder="0" />
                   </div>
 
+                  {/* 9. اللون */}
+                  <div className="form-group">
+                    <label>اللون *</label>
+                    <select value={color} onChange={(e) => setColor(e.target.value)} required>
+                      <option value="">-- اختر اللون --</option>
+                      {colors.length > 0 ? (
+                        colors.map((c) => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))
+                      ) : (
+                        ['أبيض', 'أسود', 'فضي', 'رمادي', 'أحمر', 'أزرق', 'بني', 'بيج', 'أخضر', 'ذهبي', 'أصفر', 'برتقالي'].map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  {/* 10. رقم المحرك */}
                   <div className="form-group">
                     <label>رقم المحرك</label>
                     <input type="text" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} placeholder="رقم المحرك" />
                   </div>
 
+                  {/* 11. سعة المحرك CC */}
                   <div className="form-group">
                     <label>سعة المحرك (CC)</label>
                     <input type="text" value={engineCc} onChange={(e) => setEngineCc(e.target.value)} placeholder="1600، 2000..." />
                   </div>
 
+                  {/* 12. وزن المركبة */}
                   <div className="form-group">
                     <label>وزن المركبة</label>
                     <input type="text" value={vehicleWeight} onChange={(e) => setVehicleWeight(e.target.value)} placeholder="وزن المركبة" />
                   </div>
 
-                  <div className="form-group">
-                    <label>الغرض من الترخيص</label>
-                    <select value={licensePurpose} onChange={(e) => setLicensePurpose(e.target.value)}>
-                      <option value="">-- اختر الغرض --</option>
-                      {LICENSE_PURPOSES.map(p => <option key={p} value={p}>{p.split('/')[0]}</option>)}
-                    </select>
-                  </div>
-
+                  {/* 13. نوع الوقود */}
                   <div className="form-group">
                     <label>نوع الوقود</label>
                     <select value={fuelType} onChange={(e) => setFuelType(e.target.value)}>
@@ -743,7 +1901,11 @@ export default function OldDocumentsManagement() {
                   </div>
                   <div className="form-group">
                     <label>نوع الهيكل *</label>
-                    <input type="text" value={structureType} onChange={(e) => setStructureType(e.target.value)} required />
+                    <select value={structureType} onChange={(e) => setStructureType(e.target.value)} required>
+                      <option value="القوارب الشخصية والدراجات">القوارب الشخصية والدراجات</option>
+                      <option value="الآلات والرافعات البحرية">الآلات والرافعات البحرية</option>
+                      <option value="قوارب الصيد">قوارب الصيد</option>
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>سنة الصنع *</label>
@@ -879,9 +2041,9 @@ export default function OldDocumentsManagement() {
               </>
             )}
 
-            {/* القسم المالي (إدخال يدوي بالكامل) */}
+            {/* القسم المالي */}
             <div className="grid-header" style={{ background: '#014cb1', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '800', margin: '30px 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <i className="fa-solid fa-calculator"></i> بيانات التأمين والأسعار (إدخال يدوي بالكامل)
+              <i className="fa-solid fa-calculator"></i> بيانات التأمين والأسعار
             </div>
 
             <div className="modern-grid-3">

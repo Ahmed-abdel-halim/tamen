@@ -277,12 +277,56 @@
 [data-theme='dark'] .card-shadow,
 [data-theme='dark'] div[style*="background: #fff"],
 [data-theme='dark'] div[style*="background: rgb(255, 255, 255)"],
+[data-theme='dark'] div[style*="background: #f8fafc"],
+[data-theme='dark'] div[style*="background: rgb(248, 250, 252)"],
 [data-theme='dark'] .chart-container,
 [data-theme='dark'] .table-wrapper {
   background: var(--panel) !important;
   border-color: var(--border) !important;
   color: var(--text) !important;
 }
+
+[data-theme='dark'] .searchable-dropdown-list {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme='dark'] .searchable-dropdown-item {
+  color: var(--text) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+[data-theme='dark'] .searchable-dropdown-item:hover {
+  background-color: var(--input-bg) !important;
+}
+
+[data-theme='dark'] .searchable-dropdown-item.selected {
+  background-color: rgba(1, 76, 177, 0.2) !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme='dark'] .price-input-wrapper {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme='dark'] .price-input-wrapper .currency {
+  background: var(--panel) !important;
+  color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme='dark'] .price-input-wrapper input {
+  color: var(--text) !important;
+  background: transparent !important;
+}
+
+[data-theme='dark'] div[style*="background: #f0f9ff"],
+[data-theme='dark'] div[style*="background: rgb(240, 249, 255)"] {
+  background: var(--input-bg) !important;
+}
+
 
 [data-theme='dark'] svg circle {
   fill: var(--panel) !important;
@@ -1984,6 +2028,11 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 1024px) {
+  html,
+  body {
+    overflow-x: hidden !important;
+  }
+
   .sidebar-toggle {
     display: grid;
   }
@@ -2076,6 +2125,7 @@ tbody tr:last-child td {
   .app-shell.is-sidebar-closed .sidebar {
     display: block;
     transform: translateX(100%);
+    visibility: hidden !important;
   }
 
   .sidebar-backdrop {
@@ -2221,6 +2271,7 @@ tbody tr:last-child td {
     transform: translateX(100%);
     opacity: 1;
     pointer-events: none;
+    visibility: hidden !important;
   }
 
   .brand {
@@ -2424,24 +2475,6 @@ tbody tr:last-child td {
     width: 32px;
     height: 32px;
     font-size: 13px;
-  }
-
-  .sidebar {
-    width: 95%;
-    max-width: 95vw;
-    padding: 14px 10px 20px;
-    right: 50%;
-    transform: translateX(50%);
-    border-radius: 12px;
-    top: 50%;
-    bottom: auto;
-    max-height: 90vh;
-    margin-top: -45vh;
-  }
-
-  .app-shell.is-sidebar-closed .sidebar {
-    transform: translateX(50%) translateY(-100vh);
-    opacity: 0;
   }
 
   .brand-title {
@@ -13214,6 +13247,73 @@ td.no-print {
 
 .print-only {
   display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Responsive Overrides for Inline Grids, Card Paddings, and Tables
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  /* Collapse 4-column inline layouts to 2-columns on tablets */
+  div[style*="grid-template-columns"][style*="repeat(4"],
+  div[style*="grid-template-columns"][style*="1fr 1fr 1fr 1fr"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Collapse all multi-column inline grids to a single stacked column on mobile */
+  div[style*="grid-template-columns"][style*="repeat(4"],
+  div[style*="grid-template-columns"][style*="repeat(3"],
+  div[style*="grid-template-columns"][style*="repeat(2"],
+  div[style*="grid-template-columns"][style*="1fr 1fr 1fr 1fr"],
+  div[style*="grid-template-columns"][style*="1fr 1fr 1fr"],
+  div[style*="grid-template-columns"][style*="1fr 1fr"],
+  div[style*="grid-template-columns"][style*="2fr 1fr"],
+  div[style*="grid-template-columns"][style*="1.6fr 1fr"],
+  div[style*="grid-template-columns"][style*="450px"],
+  div[style*="grid-template-columns"][style*="minmax(400px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reset layout column spans to fill full width */
+  div[style*="grid-column"][style*="span 2"],
+  div[style*="grid-column"][style*="span 3"],
+  div[style*="grid-column"][style*="span 4"] {
+    grid-column: span 1 !important;
+  }
+
+  /* Adjust excessive card panel padding on small viewports */
+  div[style*="padding: 24px"],
+  div[style*="padding: 30px"],
+  div[style*="padding:30px"],
+  div[style*="padding: 24px 16px"] {
+    padding: 16px !important;
+  }
+
+  /* Allow table parent containers to scroll horizontally if content overflows */
+  .card-shadow,
+  .users-card,
+  div[style*="background: var(--panel)"] {
+    overflow-x: auto !important;
+  }
+
+  /* Set sensible minimum width to prevent columns squishing, enabling swipe-scroll instead */
+  table[style*="width: 100%"],
+  table[style*="width:100%"],
+  table {
+    min-width: 550px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Make donut chart elements wrap/stack vertically on mobile */
+  div[style*="display: flex"][style*="align-items: center"][style*="gap: 30px"],
+  div[style*="display:flex"][style*="align-items:center"][style*="gap:30px"] {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: center !important;
+    text-align: center;
+  }
 }
 
 /* Print Styles */
