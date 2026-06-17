@@ -207,6 +207,10 @@ export default function TreasuryAndBanksPage() {
   const [activeBankFilter, setActiveBankFilter] = useState('all');
   const [bankSearch, setBankSearch] = useState('');
   const [showBankModal, setShowBankModal] = useState(false);
+  const [bankAgentSearch, setBankAgentSearch] = useState('غير مرتبط بوكيل');
+  const [showBankAgentDropdown, setShowBankAgentDropdown] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [isSavingTreasury, setIsSavingTreasury] = useState(false);
   
   // Dynamic settings lists
   const [dbBanks, setDbBanks] = useState<{id: number, name: string, account_number?: string}[]>([]);
@@ -522,6 +526,7 @@ export default function TreasuryAndBanksPage() {
       payer_phone: '',
       voucher_image: null
     });
+    setBankAgentSearch('غير مرتبط بوكيل');
     setEditingBankTxnId(null);
     setShowBankModal(true);
   };
@@ -546,12 +551,27 @@ export default function TreasuryAndBanksPage() {
       payer_phone: txn.payer_phone || '',
       voucher_image: null
     });
+    if (txn.branch_agent_id) {
+      const agent = agents.find(a => a.id === txn.branch_agent_id);
+      if (agent) {
+        setBankAgentSearch(`${agent.agency_name} (${agent.code})`);
+      } else if (txn.agent_name) {
+        setBankAgentSearch(txn.agent_name);
+      } else {
+        setBankAgentSearch('غير مرتبط بوكيل');
+      }
+    } else if (txn.agent_name) {
+      setBankAgentSearch(txn.agent_name);
+    } else {
+      setBankAgentSearch('غير مرتبط بوكيل');
+    }
     setShowBankModal(true);
   };
 
   const handleCloseBankModal = () => {
     setShowBankModal(false);
     setEditingBankTxnId(null);
+    setBankAgentSearch('غير مرتبط بوكيل');
   };
 
   const fetchAgents = async () => {
@@ -597,6 +617,7 @@ export default function TreasuryAndBanksPage() {
 
   const handleSaveTreasuryTxn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingTreasury(true);
     const formData = new FormData();
     Object.entries(treasuryFormData).forEach(([key, val]) => {
       if (key === 'voucher_image' && val) {
@@ -636,6 +657,8 @@ export default function TreasuryAndBanksPage() {
       }
     } catch (err) {
       showToast('خطأ في حفظ المعاملة', 'error');
+    } finally {
+      setIsSavingTreasury(false);
     }
   };
 
@@ -676,6 +699,7 @@ export default function TreasuryAndBanksPage() {
 
   const handleSaveBankTxn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingBank(true);
     const isEdit = editingBankTxnId !== null;
     const url = isEdit ? `${API_BASE_URL}/bank-transactions/${editingBankTxnId}` : `${API_BASE_URL}/bank-transactions`;
     
@@ -721,6 +745,7 @@ export default function TreasuryAndBanksPage() {
           payer_phone: '',
           voucher_image: null
         });
+        setBankAgentSearch('غير مرتبط بوكيل');
         fetchBankData();
       } else {
         const errData = await res.json();
@@ -728,6 +753,8 @@ export default function TreasuryAndBanksPage() {
       }
     } catch (err) {
       showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+    } finally {
+      setIsSavingBank(false);
     }
   };
 
@@ -1661,12 +1688,31 @@ export default function TreasuryAndBanksPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 'bold' }}>{txn.payer_name || '—'}</span>
-                        {txn.payer_phone && (
+                        {txn.agent_name && (
+                          <span style={{ fontWeight: 'bold', color: '#014cb1', fontSize: '13px' }}>
+                            <i className="fa-solid fa-building" style={{ marginLeft: '4px', fontSize: '11px' }}></i>
+                            {txn.agent_name}
+                          </span>
+                        )}
+                        {txn.payer_name && txn.payer_name !== txn.agent_name && (
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>
+                            {txn.payer_name}
+                          </span>
+                        )}
+                        {!txn.agent_name && !txn.payer_name && <span style={{ color: 'var(--muted)' }}>—</span>}
+                        
+                        {txn.payer_phone ? (
                           <span style={{ fontSize: '11px', color: 'var(--muted)', direction: 'ltr', textAlign: 'right' }}>
                             <i className="fa-solid fa-phone" style={{ marginLeft: '4px', fontSize: '9px' }}></i>
                             {txn.payer_phone}
                           </span>
+                        ) : (
+                          txn.branch_agent_id && agents.find(a => a.id === txn.branch_agent_id)?.phone && (
+                            <span style={{ fontSize: '11px', color: 'var(--muted)', direction: 'ltr', textAlign: 'right' }}>
+                              <i className="fa-solid fa-phone" style={{ marginLeft: '4px', fontSize: '9px' }}></i>
+                              {agents.find(a => a.id === txn.branch_agent_id)?.phone}
+                            </span>
+                          )
                         )}
                       </div>
                     </td>
@@ -2599,7 +2645,16 @@ export default function TreasuryAndBanksPage() {
               </div>
               <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setShowTreasuryModal(false)} className="secondary" style={{ padding: '10px 20px' }}>إلغاء</button>
-                <button type="submit" className="primary" style={{ padding: '10px 30px' }}>حفظ حركة الخزينة</button>
+                <button type="submit" className="primary" style={{ padding: '10px 30px' }} disabled={isSavingTreasury}>
+                  {isSavingTreasury ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" style={{ marginLeft: '8px' }}></i>
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    'حفظ حركة الخزينة'
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -2852,7 +2907,86 @@ export default function TreasuryAndBanksPage() {
                     onChange={e => setBankFormData({ ...bankFormData, payer_phone: e.target.value })} 
                   />
                 </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <div className="form-group" style={{ position: 'relative' }}>
+                  <label>ربط بالفرع أو الوكيل (اختياري)</label>
+                  <input
+                    type="text"
+                    placeholder="ابحث عن وكيل أو فرع..."
+                    value={bankAgentSearch}
+                    onFocus={() => {
+                      setShowBankAgentDropdown(true);
+                      if (bankAgentSearch === 'غير مرتبط بوكيل') setBankAgentSearch('');
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowBankAgentDropdown(false), 200);
+                      if (!bankFormData.branch_agent_id) setBankAgentSearch('غير مرتبط بوكيل');
+                    }}
+                    onChange={e => setBankAgentSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)',
+                      paddingRight: '12px',
+                      paddingLeft: '12px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      fontFamily: "'Cairo', 'Segoe UI', sans-serif",
+                      direction: 'rtl',
+                      textAlign: 'right',
+                      outline: 'none',
+                    }}
+                  />
+                  {showBankAgentDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      background: 'var(--panel)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '10px',
+                      zIndex: 999,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    }}>
+                      <div
+                        style={{ padding: '10px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', borderBottom: '1px solid var(--border)' }}
+                        onMouseDown={() => {
+                          setBankFormData({ ...bankFormData, branch_agent_id: '' });
+                          setBankAgentSearch('غير مرتبط بوكيل');
+                          setShowBankAgentDropdown(false);
+                        }}
+                      >
+                        غير مرتبط بوكيل
+                      </div>
+                      {agents
+                        .filter(a => !bankAgentSearch || a.agency_name.includes(bankAgentSearch) || (a.code && a.code.includes(bankAgentSearch)))
+                        .map(a => (
+                          <div
+                            key={a.id}
+                            style={{ padding: '10px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', borderBottom: '1px solid var(--border)' }}
+                            onMouseDown={() => {
+                              setBankFormData({ 
+                                ...bankFormData, 
+                                branch_agent_id: String(a.id),
+                                payer_name: bankFormData.payer_name || a.agency_name,
+                                payer_phone: bankFormData.payer_phone || a.phone || ''
+                              });
+                              setBankAgentSearch(`${a.agency_name} (${a.code})`);
+                              setShowBankAgentDropdown(false);
+                            }}
+                          >
+                            {a.agency_name} ({a.code})
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
                   <label>تحميل إيصال المرفق أو الحوالة</label>
                   <input 
                     type="file" 
@@ -2873,8 +3007,15 @@ export default function TreasuryAndBanksPage() {
               </div>
               <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={handleCloseBankModal} className="secondary" style={{ padding: '10px 20px' }}>إلغاء</button>
-                <button type="submit" className="primary" style={{ padding: '10px 30px' }}>
-                  {editingBankTxnId !== null ? 'حفظ التعديلات' : 'حفظ وإضافة الحركة'}
+                <button type="submit" className="primary" style={{ padding: '10px 30px' }} disabled={isSavingBank}>
+                  {isSavingBank ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" style={{ marginLeft: '8px' }}></i>
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    editingBankTxnId !== null ? 'حفظ التعديلات' : 'حفظ وإضافة الحركة'
+                  )}
                 </button>
               </div>
             </form>
