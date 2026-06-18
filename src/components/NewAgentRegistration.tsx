@@ -39,6 +39,8 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
     city: '',
     address: '',
     phone: '',
+    office_phone: '',
+    office_location: '',
     nationality: '',
     national_id: '',
     identity_number: '',
@@ -50,6 +52,7 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
 
   const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({
     personal_photo: null,
+    office_facade_photo: null,
     identity_photo: null,
     national_id_photo: null,
     contract_photo: null,
@@ -151,6 +154,8 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
       formDataToSend.append('city', formData.city);
       if (formData.address) formDataToSend.append('address', formData.address);
       if (formData.phone) formDataToSend.append('phone', formData.phone);
+      if (formData.office_phone) formDataToSend.append('office_phone', formData.office_phone);
+      if (formData.office_location) formDataToSend.append('office_location', formData.office_location);
       if (formData.nationality) formDataToSend.append('nationality', formData.nationality);
       if (formData.national_id) formDataToSend.append('national_id', formData.national_id);
       if (formData.identity_number) formDataToSend.append('identity_number', formData.identity_number);
@@ -278,6 +283,17 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
         </div>
 
         <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="form-group">
+            <label>هاتف المكتب</label>
+            <input type="text" value={formData.office_phone} onChange={(e) => setFormData({ ...formData, office_phone: e.target.value })} placeholder="هاتف المكتب" />
+            </div>
+            <div className="form-group">
+            <label>لوكيشن المكتب (رابط خرائط جوجل)</label>
+            <input type="text" value={formData.office_location} onChange={(e) => setFormData({ ...formData, office_location: e.target.value })} placeholder="رابط الموقع الجغرافي" />
+            </div>
+        </div>
+
+        <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div className="form-group">
             <label>المدينة *</label>
             {isCustomCity ? (
@@ -333,6 +349,7 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
             <div className="permissions-grid-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' }}>
               {[
                 { key: 'personal_photo', label: 'صورة شخصية', icon: 'fa-user-circle' },
+                { key: 'office_facade_photo', label: 'صورة واجهة المكتب', icon: 'fa-store' },
                 { key: 'national_id_photo', label: 'صورة الرقم الوطني', icon: 'fa-id-card' },
                 { key: 'identity_photo', label: 'إثبات الهوية', icon: 'fa-passport' },
                 { key: 'contract_photo', label: 'صورة العقد المبدئي', icon: 'fa-file-contract' },

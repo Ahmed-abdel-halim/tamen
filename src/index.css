@@ -11469,15 +11469,15 @@ tbody tr:last-child td {
 .branch-card {
   background: #ffffff;
   border-radius: 20px;
-  overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: 0 !important;
+  padding: 24px !important;
   margin: 0 !important;
+  box-sizing: border-box;
 }
 
 .branch-card:hover {
@@ -11489,11 +11489,13 @@ tbody tr:last-child td {
 .branch-card-image-wrapper {
   position: relative !important;
   width: 100% !important;
-  height: 240px !important;
+  aspect-ratio: 1.15 / 1 !important;
   overflow: hidden !important;
+  border-radius: 16px !important;
   background: #f8fafc;
   padding: 0 !important;
-  margin: 0 !important;
+  margin: 0 0 20px 0 !important;
+  height: auto !important;
 }
 
 .branch-card-image {
@@ -11544,7 +11546,7 @@ tbody tr:last-child td {
 }
 
 .branch-card-body {
-  padding: 1.5rem;
+  padding: 0 !important;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -11640,11 +11642,12 @@ tbody tr:last-child td {
 }
 
 .branch-card-footer {
-  padding: 1.25rem 1.5rem;
-  background: #ffffff;
+  padding: 16px 0 0 0 !important;
+  background: transparent !important;
   border-top: 1px solid #f1f5f9;
   display: flex;
   justify-content: center;
+  margin-top: auto;
 }
 
 .branch-whatsapp-btn {

@@ -43,6 +43,9 @@ type BranchAgent = {
   consumed_custodies?: Array<{ description: string; quantity: number }>;
   fixed_custodies?: Array<{ description: string; quantity: number }>;
   personal_photo?: string;
+  office_facade_photo?: string;
+  office_phone?: string;
+  office_location?: string;
   national_id_photo?: string;
   identity_photo?: string;
   contract_photo?: string;
@@ -1158,6 +1161,8 @@ export default function BranchAgentDetails() {
                 <div className="info-grid">
                   <InfoItem label="المدينة" value={branchAgent.city} icon="fa-city" />
                   <InfoItem label="رقم الهاتف" value={branchAgent.phone} icon="fa-phone" />
+                  <InfoItem label="هاتف المكتب" value={branchAgent.office_phone} icon="fa-phone-alt" />
+                  <InfoItem label="لوكيشن المكتب" value={branchAgent.office_location} icon="fa-location-crosshairs" />
                   <InfoItem label="الجنسية" value={branchAgent.nationality} icon="fa-flag" />
                   <InfoItem label="الرقم الوطني" value={branchAgent.national_id} icon="fa-id-card" />
                   <InfoItem label="رقم إثبات الشخصية" value={branchAgent.identity_number} icon="fa-passport" />
@@ -1168,6 +1173,7 @@ export default function BranchAgentDetails() {
                   <h4 className="section-title-sm"><i className="fa-solid fa-images"></i> المستندات المرفقة</h4>
                   <div className="documents-grid-layout" style={{ marginTop: '20px' }}>
                     {branchAgent.personal_photo && <DocCard label="الصورة الشخصية" url={branchAgent.personal_photo} />}
+                    {branchAgent.office_facade_photo && <DocCard label="صورة واجهة المكتب" url={branchAgent.office_facade_photo} />}
                     {branchAgent.national_id_photo && <DocCard label="رقم القومي (صورة)" url={branchAgent.national_id_photo} />}
                     {branchAgent.identity_photo && <DocCard label="إثبات الهوية" url={branchAgent.identity_photo} />}
                     {branchAgent.contract_photo && <DocCard label="صورة العقد" url={branchAgent.contract_photo} />}
@@ -1953,13 +1959,22 @@ export default function BranchAgentDetails() {
 }
 
 function InfoItem({ label, value, icon }: { label: string, value?: string, icon?: string }) {
+  const isLink = value && (value.startsWith('http://') || value.startsWith('https://'));
   return (
     <div className="info-item-box">
       <span className="info-label-text">
         {icon && <i className={`fa-solid ${icon}`}></i>}
         {label}
       </span>
-      <span className="info-value-text">{value || '—'}</span>
+      <span className="info-value-text">
+        {isLink ? (
+          <a href={value} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent, #3b82f6)', textDecoration: 'underline' }}>
+            اضغط هنا لفتح الرابط
+          </a>
+        ) : (
+          value || '—'
+        )}
+      </span>
     </div>
   );
 }

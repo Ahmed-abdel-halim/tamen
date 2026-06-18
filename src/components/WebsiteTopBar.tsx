@@ -19,7 +19,7 @@ export default function WebsiteTopBar() {
       path === '/' ||
       path === '/home' ||
       path === '/about-us' ||
-      path === '/management' ||
+      path.startsWith('/management') ||
       path === '/branches-agents' ||
       path === '/insurances' ||
       path.startsWith('/website')

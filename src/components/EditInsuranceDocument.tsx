@@ -240,8 +240,17 @@ const Combobox = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isManual, setIsManual] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(value || "");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync searchTerm with value prop when value changes from outside (e.g. parent sets/resets it)
+  // or when the dropdown is closed.
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm(value || "");
+    }
+  }, [value, isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -252,6 +261,24 @@ const Combobox = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Filter options based on searchTerm (if not manual and dropdown is open)
+  const showFilteredOptions = useMemo(() => {
+    // If search term is empty or is exactly equal to the selected value, show all options
+    if (!searchTerm || searchTerm === value) {
+      return options;
+    }
+    
+    // Filter options that contain the search term
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    
+    return options.filter(opt => {
+      // Always filter out header options if we are searching
+      const isHeader = opt.startsWith('--') && opt.endsWith('--');
+      if (isHeader) return false;
+      return opt.toLowerCase().includes(cleanSearch);
+    });
+  }, [options, searchTerm, value]);
 
   return (
     <div className={`form-group ${error ? 'has-error' : ''}`} ref={containerRef}>
@@ -265,13 +292,28 @@ const Combobox = ({
           <input
             ref={inputRef}
             type={type}
-            value={value}
+            value={isManual ? value : searchTerm}
             disabled={disabled}
             onChange={(e) => {
-              onChange(e.target.value);
-              if (e.target.value === "") setIsManual(true);
+              const val = e.target.value;
+              if (isManual) {
+                onChange(val);
+              } else {
+                setSearchTerm(val);
+                setIsOpen(true);
+                // If they clear the search input entirely, let's call onChange("") so the parent is cleared
+                if (val === "") {
+                  onChange("");
+                }
+              }
             }}
-            onFocus={() => !isManual && !disabled && setIsOpen(true)}
+            onFocus={() => {
+              if (!isManual && !disabled) {
+                setIsOpen(true);
+                // Highlight text on focus to make searching easier
+                inputRef.current?.select();
+              }
+            }}
             onClick={() => !isManual && !disabled && setIsOpen(true)}
             placeholder={isManual ? "أدخل القيمة الجديدة..." : placeholder}
             autoComplete="off"
@@ -293,6 +335,7 @@ const Combobox = ({
                   setIsManual(false);
                   setIsOpen(true);
                   onChange("");
+                  setSearchTerm("");
                 }}
               ></i>
             )
@@ -300,37 +343,45 @@ const Combobox = ({
         </div>
         {isOpen && !disabled && (
           <div className="combobox-dropdown animate-fade-in">
-            {options.map((opt, i) => {
-              const isHeader = opt.startsWith('--') && opt.endsWith('--');
-              return (
-                <div 
-                  key={i} 
-                  className={`combobox-option ${isHeader ? 'combobox-header-option' : ''}`}
-                  style={isHeader ? { 
-                    pointerEvents: 'none', 
-                    background: 'var(--table-header, #f8fafc)', 
-                    color: 'var(--muted, #64748b)', 
-                    fontSize: '0.85rem', 
-                    fontWeight: 'bold',
-                    padding: '6px 12px',
-                    borderBottom: '1px solid var(--border)',
-                    borderTop: i > 0 ? '1px solid var(--border)' : 'none'
-                  } : {}}
-                  onClick={() => {
-                    if (isHeader) return;
-                    onChange(opt);
-                    setIsManual(false);
-                    setIsOpen(false);
-                  }}
-                >
-                  {opt}
-                </div>
-              );
-            })}
+            {showFilteredOptions.length === 0 ? (
+              <div style={{ padding: '10px 15px', color: '#64748b', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                لا توجد نتائج مطابقة
+              </div>
+            ) : (
+              showFilteredOptions.map((opt, i) => {
+                const isHeader = opt.startsWith('--') && opt.endsWith('--');
+                return (
+                  <div 
+                    key={i} 
+                    className={`combobox-option ${isHeader ? 'combobox-header-option' : ''}`}
+                    style={isHeader ? { 
+                      pointerEvents: 'none', 
+                      background: 'var(--table-header, #f8fafc)', 
+                      color: 'var(--muted, #64748b)', 
+                      fontSize: '0.85rem', 
+                      fontWeight: 'bold',
+                      padding: '6px 12px',
+                      borderBottom: '1px solid var(--border)',
+                      borderTop: i > 0 ? '1px solid var(--border)' : 'none'
+                    } : {}}
+                    onClick={() => {
+                      if (isHeader) return;
+                      onChange(opt);
+                      setSearchTerm(opt);
+                      setIsManual(false);
+                      setIsOpen(false);
+                    }}
+                  >
+                    {opt}
+                  </div>
+                );
+              })
+            )}
             <div 
               className="combobox-option add-new"
               onClick={() => {
                 onChange("");
+                setSearchTerm("");
                 setIsManual(true);
                 setIsOpen(false);
                 setTimeout(() => {

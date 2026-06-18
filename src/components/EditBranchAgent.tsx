@@ -110,6 +110,8 @@ export default function EditBranchAgent() {
     city: '',
     address: '',
     phone: '',
+    office_phone: '',
+    office_location: '',
     nationality: '',
     national_id: '',
     identity_number: '',
@@ -131,6 +133,7 @@ export default function EditBranchAgent() {
   const [lifoOffices, setLifoOffices] = useState<{ id: string; name: string }[]>([]);
 
   const [personalPhoto, setPersonalPhoto] = useState<File | null>(null);
+  const [officeFacadePhoto, setOfficeFacadePhoto] = useState<File | null>(null);
   const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
   const [nationalIdPhoto, setNationalIdPhoto] = useState<File | null>(null);
   const [contractPhoto, setContractPhoto] = useState<File | null>(null);
@@ -143,6 +146,7 @@ export default function EditBranchAgent() {
   const [academicQualification, setAcademicQualification] = useState<File | null>(null);
   const [activityLicense, setActivityLicense] = useState<File | null>(null);
   const [existingPersonalPhoto, setExistingPersonalPhoto] = useState<string | null>(null);
+  const [existingOfficeFacadePhoto, setExistingOfficeFacadePhoto] = useState<string | null>(null);
   const [existingIdentityPhoto, setExistingIdentityPhoto] = useState<string | null>(null);
   const [existingNationalIdPhoto, setExistingNationalIdPhoto] = useState<string | null>(null);
   const [existingContractPhoto, setExistingContractPhoto] = useState<string | null>(null);
@@ -159,6 +163,7 @@ export default function EditBranchAgent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isCustomCity, setIsCustomCity] = useState(false);
   const personalPhotoRef = useRef<HTMLInputElement>(null);
+  const officeFacadePhotoRef = useRef<HTMLInputElement>(null);
   const identityPhotoRef = useRef<HTMLInputElement>(null);
   const nationalIdPhotoRef = useRef<HTMLInputElement>(null);
   const contractPhotoRef = useRef<HTMLInputElement>(null);
@@ -281,6 +286,8 @@ export default function EditBranchAgent() {
         city: data.city || '',
         address: data.address || '',
         phone: data.phone || '',
+        office_phone: data.office_phone || '',
+        office_location: data.office_location || '',
         nationality: data.nationality || '',
         national_id: data.national_id || '',
         identity_number: data.identity_number || '',
@@ -308,6 +315,7 @@ export default function EditBranchAgent() {
       }
 
       setExistingPersonalPhoto(data.personal_photo || null);
+      setExistingOfficeFacadePhoto(data.office_facade_photo || null);
       setExistingIdentityPhoto(data.identity_photo || null);
       setExistingNationalIdPhoto(data.national_id_photo || null);
       setExistingContractPhoto(data.contract_photo || null);
@@ -421,11 +429,14 @@ export default function EditBranchAgent() {
       formDataToSend.append('city', formData.city);
       if (formData.address) formDataToSend.append('address', formData.address);
       if (formData.phone) formDataToSend.append('phone', formData.phone);
+      if (formData.office_phone) formDataToSend.append('office_phone', formData.office_phone);
+      if (formData.office_location) formDataToSend.append('office_location', formData.office_location);
       if (formData.nationality) formDataToSend.append('nationality', formData.nationality);
       if (formData.national_id) formDataToSend.append('national_id', formData.national_id);
       if (formData.identity_number) formDataToSend.append('identity_number', formData.identity_number);
 
       if (personalPhoto) formDataToSend.append('personal_photo', personalPhoto);
+      if (officeFacadePhoto) formDataToSend.append('office_facade_photo', officeFacadePhoto);
       if (identityPhoto) formDataToSend.append('identity_photo', identityPhoto);
       if (nationalIdPhoto) formDataToSend.append('national_id_photo', nationalIdPhoto);
       if (contractPhoto) formDataToSend.append('contract_photo', contractPhoto);
@@ -663,6 +674,26 @@ export default function EditBranchAgent() {
                 </div>
 
                 <div className="form-group">
+                  <label>هاتف المكتب</label>
+                  <input
+                    type="text"
+                    value={formData.office_phone}
+                    onChange={(e) => setFormData({ ...formData, office_phone: e.target.value })}
+                    placeholder="هاتف المكتب"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>لوكيشن المكتب (رابط خرائط جوجل)</label>
+                  <input
+                    type="text"
+                    value={formData.office_location}
+                    onChange={(e) => setFormData({ ...formData, office_location: e.target.value })}
+                    placeholder="رابط الموقع الجغرافي"
+                  />
+                </div>
+
+                <div className="form-group">
                   <label>الجنسية</label>
                   <input
                     type="text"
@@ -780,6 +811,7 @@ export default function EditBranchAgent() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
                 {[
                   { ref: personalPhotoRef, newFile: personalPhoto, setter: setPersonalPhoto, existing: existingPersonalPhoto, label: 'صورة شخصية' },
+                  { ref: officeFacadePhotoRef, newFile: officeFacadePhoto, setter: setOfficeFacadePhoto, existing: existingOfficeFacadePhoto, label: 'صورة واجهة المكتب' },
                   { ref: identityPhotoRef, newFile: identityPhoto, setter: setIdentityPhoto, existing: existingIdentityPhoto, label: 'صورة إثبات الهوية' },
                   { ref: nationalIdPhotoRef, newFile: nationalIdPhoto, setter: setNationalIdPhoto, existing: existingNationalIdPhoto, label: 'صورة الرقم الوطني' },
                   { ref: contractPhotoRef, newFile: contractPhoto, setter: setContractPhoto, existing: existingContractPhoto, label: 'صورة العقد' },

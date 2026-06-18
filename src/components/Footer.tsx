@@ -101,7 +101,7 @@ export default function Footer() {
             <h4>{t.quickLinks}</h4>
             <ul>
               <li><Link to="/about-us">{t.about}</Link></li>
-              <li><Link to="/management">{t.management}</Link></li>
+              <li><Link to="/management/work-team">{t.management}</Link></li>
               <li><Link to="/branches-agents">{t.branches}</Link></li>
               <li><Link to="/insurances">{t.insurances}</Link></li>
             </ul>

@@ -160,17 +160,6 @@ export default function WebsiteNavbar() {
               <ul className="navbar-dropdown-menu">
                 <li>
                   <Link 
-                    to="/management" 
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    {language === 'ar' ? 'فريق الإدارة (الرئيسي)' : 'Management Team (Main)'}
-                  </Link>
-                </li>
-                <li>
-                  <Link 
                     to="/management/work-team" 
                     onClick={() => {
                       setIsDropdownOpen(false);

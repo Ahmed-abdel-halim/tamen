@@ -17,6 +17,9 @@ type BranchAgent = {
   status: 'نشط' | 'غير نشط';
   activity?: string;
   personal_photo?: string;
+  office_facade_photo?: string;
+  office_phone?: string;
+  office_location?: string;
 };
 
 const getWhatsAppLink = (phone: string) => {
@@ -81,6 +84,8 @@ export default function BranchesAgentsPage() {
           active: 'نشط',
           agentType: 'وكيل',
           branchType: 'فرع من شركة',
+          officePhone: 'هاتف المكتب',
+          officeLocation: 'موقع المكتب',
         }
       : {
           heroTitle: 'Branches & Agents',
@@ -95,6 +100,8 @@ export default function BranchesAgentsPage() {
           active: 'Active',
           agentType: 'Agent',
           branchType: 'Branch',
+          officePhone: 'Office Phone',
+          officeLocation: 'Office Location',
         };
   }, [language]);
 
@@ -135,7 +142,10 @@ export default function BranchesAgentsPage() {
             phone: item.phone,
             status: item.status,
             activity: item.activity,
-            personal_photo: item.personal_photo
+            personal_photo: item.personal_photo,
+            office_facade_photo: item.office_facade_photo,
+            office_phone: item.office_phone,
+            office_location: item.office_location,
           }));
         setBranchesAgents(activeData);
       }
@@ -295,7 +305,7 @@ export default function BranchesAgentsPage() {
                   >
                     <div className="branch-card-image-wrapper">
                       <img 
-                        src={resolveImageUrl(item.personal_photo) || '/img/khaled.png'} 
+                        src={resolveImageUrl(item.office_facade_photo || item.personal_photo) || '/img/khaled.png'} 
                         alt={item.agent_name} 
                         className="branch-card-image" 
                         style={{
@@ -386,6 +396,33 @@ export default function BranchesAgentsPage() {
                           >
                             <i className="fas fa-phone"></i>
                             <a href={`tel:${item.phone}`}>{item.phone}</a>
+                          </div>
+                        )}
+                        {item.office_phone && (
+                          <div
+                            className="detail-item"
+                            style={{
+                              direction: language === 'en' ? 'ltr' : 'rtl',
+                              textAlign: language === 'en' ? 'left' : 'right',
+                            }}
+                          >
+                            <i className="fas fa-phone-alt"></i>
+                            <span style={{ fontWeight: 600 }}>{t.officePhone}: </span>
+                            <a href={`tel:${item.office_phone}`}>{item.office_phone}</a>
+                          </div>
+                        )}
+                        {item.office_location && (
+                          <div
+                            className="detail-item"
+                            style={{
+                              direction: language === 'en' ? 'ltr' : 'rtl',
+                              textAlign: language === 'en' ? 'left' : 'right',
+                            }}
+                          >
+                            <i className="fas fa-map-pin" style={{ color: '#ef4444' }}></i>
+                            <a href={item.office_location} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline', fontWeight: 600 }}>
+                              {t.officeLocation}
+                            </a>
                           </div>
                         )}
                       </div>

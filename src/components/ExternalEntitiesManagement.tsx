@@ -23,9 +23,24 @@ const ExternalEntitiesManagement: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentEntityId, setCurrentEntityId] = useState<number | null>(null);
     
-    // فلاتر البحث
     const [searchTerm, setSearchTerm] = useState('');
     const [filterAddress, setFilterAddress] = useState('');
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
+    useEffect(() => {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                setCurrentUser(JSON.parse(userStr));
+            } catch (e) {
+                console.error('Error parsing user from localStorage', e);
+            }
+        }
+    }, []);
+
+    const canDelete = useMemo(() => {
+        return currentUser?.is_admin || currentUser?.authorized_documents?.includes('دليل الجهات الخارجية');
+    }, [currentUser]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -136,7 +151,14 @@ const ExternalEntitiesManagement: React.FC = () => {
     const handleDelete = async (id: number) => {
         if (!window.confirm('هل أنت متأكد من حذف هذه الجهة؟')) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/external-entities/${id}`, { method: 'DELETE' });
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/external-entities/${id}`, { 
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
             if (response.ok) { showToast('تم الحذف بنجاح', 'success'); fetchEntities(); }
         } catch (error) { showToast('خطأ في الاتصال', 'error'); }
     };
@@ -278,7 +300,9 @@ const ExternalEntitiesManagement: React.FC = () => {
                                         <td>
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <button onClick={() => handleEdit(entity)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
-                                                <button onClick={() => handleDelete(entity.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
+                                                {canDelete && (
+                                                    <button onClick={() => handleDelete(entity.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
