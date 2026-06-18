@@ -82,6 +82,7 @@ export default function AgentTransfers() {
   const [viewVoucherPath, setViewVoucherPath] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [editingTransfer, setEditingTransfer] = useState<AgentTransfer | null>(null);
 
   // Add transfer form state
   const [formAgentId, setFormAgentId] = useState('');
@@ -181,6 +182,7 @@ export default function AgentTransfers() {
   };
 
   const resetForm = () => {
+    setEditingTransfer(null);
     setFormAgentId('');
     setFormAmount('');
     setFormTransferDate(new Date().toISOString().split('T')[0]);
@@ -196,6 +198,24 @@ export default function AgentTransfers() {
     setFormFile(null);
   };
 
+  const handleEditClick = (t: AgentTransfer) => {
+    setEditingTransfer(t);
+    setFormAgentId(t.branch_agent_id ? String(t.branch_agent_id) : '');
+    setFormAmount(String(t.amount));
+    setFormTransferDate(t.transfer_date);
+    setFormPaymentMethod(t.payment_method);
+    setFormReferenceNumber(t.reference_number || '');
+    setFormBankName(t.bank_name || '');
+    setFormSourceBank(t.source_bank || '');
+    setFormSourceAccountNumber(t.source_account_number || '');
+    setFormPosMachineId(t.pos_machine_id ? String(t.pos_machine_id) : '');
+    setFormRepresentativeName(t.representative_name || '');
+    setFormExchangeOffice(t.exchange_office || '');
+    setFormNotes(t.notes || '');
+    setFormFile(null);
+    setShowAddModal(true);
+  };
+
   const handleAddTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -204,7 +224,7 @@ export default function AgentTransfers() {
       return;
     }
 
-    if (!isAdmin && !formFile) {
+    if (!isAdmin && !formFile && !editingTransfer) {
       showToast('صورة الإيصال مطلوبة لإثبات عملية الدفع', 'error');
       return;
     }
@@ -242,7 +262,15 @@ export default function AgentTransfers() {
         formData.append('voucher_image', formFile);
       }
 
-      const res = await fetch(`${API_BASE_URL}/agent-transfers`, {
+      if (editingTransfer) {
+        formData.append('_method', 'PUT');
+      }
+
+      const url = editingTransfer
+        ? `${API_BASE_URL}/agent-transfers/${editingTransfer.id}`
+        : `${API_BASE_URL}/agent-transfers`;
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -252,7 +280,7 @@ export default function AgentTransfers() {
 
       const json = await res.json();
       if (json.success) {
-        showToast(json.message || 'تم حفظ المعاملة المالية بنجاح', 'success');
+        showToast(json.message || (editingTransfer ? 'تم تحديث الحوالة بنجاح' : 'تم حفظ المعاملة المالية بنجاح'), 'success');
         window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
         setShowAddModal(false);
         resetForm();
@@ -480,7 +508,7 @@ export default function AgentTransfers() {
           </div>
 
           <div className="ep-payroll-actions" style={{ marginTop: '16px' }}>
-            <button className="btn-submit" type="button" onClick={() => setShowAddModal(true)}>
+            <button className="btn-submit" type="button" onClick={() => { resetForm(); setShowAddModal(true); }}>
               <i className="fa-solid fa-plus"></i>
               {isAdmin ? 'إدخال عملية مالية للوكيل' : 'تسجيل إيصال حوالة جديد'}
             </button>
@@ -569,7 +597,16 @@ export default function AgentTransfers() {
                       {t.voucher_image ? (
                         <button
                           className="action-btn"
-                          style={{ background: '#3b82f6', color: 'white' }}
+                          style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            width: 'auto',
+                            padding: '0 12px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            whiteSpace: 'nowrap'
+                          }}
                           onClick={() => setViewVoucherPath(t.voucher_image || null)}
                           title="عرض الإيصال"
                         >
@@ -581,18 +618,18 @@ export default function AgentTransfers() {
                     </td>
                     <td>
                       {t.status === 'approved' && (
-                        <span style={{ background: '#d1fae5', color: '#065f46', padding: '4px 10px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold' }}>
+                        <span style={{ background: '#d1fae5', color: '#065f46', padding: '4px 10px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                           معتمدة ومطابقة
                         </span>
                       )}
                       {t.status === 'pending' && (
-                        <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold' }}>
+                        <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                           قيد المراجعة
                         </span>
                       )}
                       {t.status === 'rejected' && (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold' }}>
+                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                             مرفوضة
                           </span>
                           {t.rejection_reason && (
@@ -629,9 +666,29 @@ export default function AgentTransfers() {
                             </button>
                           </>
                         )}
-                        {(!isAdmin || t.status === 'pending' || t.status === 'approved') && (
+                        {!isAdmin && t.status === 'pending' && (
+                          <>
+                            <button
+                              className="action-btn edit"
+                              style={{ background: '#3b82f6', color: 'white' }}
+                              onClick={() => handleEditClick(t)}
+                              title="تعديل الحوالة"
+                            >
+                              <i className="fa-solid fa-pencil"></i>
+                            </button>
+                            <button
+                              className="action-btn delete"
+                              style={{ background: '#ef4444', color: 'white' }}
+                              onClick={() => handleDelete(t.id)}
+                              title="حذف السجل"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </>
+                        )}
+                        {isAdmin && (t.status === 'pending' || t.status === 'approved') && (
                           <button
-                            className="action-btn edit"
+                            className="action-btn delete"
                             style={{ background: '#ef4444', color: 'white' }}
                             onClick={() => handleDelete(t.id)}
                             title="حذف السجل"
@@ -651,10 +708,10 @@ export default function AgentTransfers() {
 
       {/* Modal - Add Transfer */}
       {showAddModal && (
-        <div className="modal" onClick={(e) => e.target === e.currentTarget && setShowAddModal(false)}>
+        <div className="modal" onClick={(e) => { if (e.target === e.currentTarget) { setShowAddModal(false); resetForm(); } }}>
           <div className="modal-content user-form-modal" style={{ maxWidth: '650px' }}>
             <div className="modal-header">
-              <h3>{isAdmin ? 'تسجيل وإيداع دفعة مالية للوكيل' : 'تسجيل إرسال حوالة جديدة للشركة'}</h3>
+              <h3>{editingTransfer ? 'تعديل بيانات الحوالة المالية' : (isAdmin ? 'تسجيل وإيداع دفعة مالية للوكيل' : 'تسجيل إرسال حوالة جديدة للشركة')}</h3>
             </div>
             <form onSubmit={handleAddTransfer} className="user-form">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
@@ -830,12 +887,12 @@ export default function AgentTransfers() {
                 )}
 
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label>صورة إيصال الدفع / الإيداع {!isAdmin && '*'} (JPG/PNG/PDF)</label>
+                  <label>صورة إيصال الدفع / الإيداع {(!isAdmin && !editingTransfer) && '*'} (JPG/PNG/PDF)</label>
                   <input
                     type="file"
                     accept="image/*,application/pdf"
                     onChange={handleFileChange}
-                    required={!isAdmin}
+                    required={!isAdmin && !editingTransfer}
                   />
                   <p style={{ fontSize: '11px', color: '#64748b', margin: '4px 0 0' }}>يرجى التقاط صورة واضحة ومقروءة للإيداع البنكي أو إيصال ماكينة POS</p>
                 </div>
@@ -852,9 +909,9 @@ export default function AgentTransfers() {
               </div>
 
               <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>إلغاء</button>
+                <button type="button" className="btn-secondary" onClick={() => { setShowAddModal(false); resetForm(); }}>إلغاء</button>
                 <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? 'جاري الحفظ والتحميل...' : (isAdmin ? 'حفظ وتأكيد وإيداع للحسابات' : 'إرسال للتدقيق')}
+                  {submitting ? 'جاري الحفظ والتحميل...' : (editingTransfer ? 'حفظ التعديلات' : (isAdmin ? 'حفظ وتأكيد وإيداع للحسابات' : 'إرسال للتدقيق'))}
                 </button>
               </div>
             </form>
