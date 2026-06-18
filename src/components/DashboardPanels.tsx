@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
-import { showToast } from "./Toast";
 
 type ServiceCard = {
   label: string;
