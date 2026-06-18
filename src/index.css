@@ -1170,7 +1170,7 @@ button.ghost {
 /* Services Grid - شبكة الخدمات */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   margin-top: 0;
 }
@@ -1403,15 +1403,15 @@ button.ghost {
   border-bottom: none;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .services-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
   .services-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 15px;
   }
 
@@ -1436,10 +1436,6 @@ button.ghost {
 }
 
 @media (max-width: 480px) {
-  .services-grid {
-    grid-template-columns: 1fr;
-  }
-
   .service-card {
     min-height: 100px;
   }
@@ -16230,5 +16226,26 @@ textarea:disabled {
   .navbar-dropdown-menu li a {
     padding: 8px 15px !important;
     font-size: 14px !important;
+  }
+}
+
+/* Agent financial stats grid responsive layout */
+.agent-financial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+@media (max-width: 1100px) {
+  .agent-financial-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .agent-financial-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
 }
