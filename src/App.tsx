@@ -128,6 +128,7 @@ import OfficeUsers from './components/OfficeUsers';
 import OldDocumentsManagement from './components/OldDocumentsManagement';
 import WebsiteSettingsManagement from './components/WebsiteSettingsManagement';
 import PublicInsuranceRequestsList from './components/PublicInsuranceRequestsList';
+import LoaderOverlay from './components/LoaderOverlay';
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -995,6 +996,69 @@ const createMenuSections = (
 }
 
 export default function App() {
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalLoadingMessage, setGlobalLoadingMessage] = useState('جاري تحميل البيانات...');
+
+  useEffect(() => {
+    const handleShowLoader = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setGlobalLoading(!!customEvent.detail?.show);
+      if (customEvent.detail?.message) {
+        setGlobalLoadingMessage(customEvent.detail.message);
+      } else {
+        setGlobalLoadingMessage('جاري تحميل البيانات...');
+      }
+    };
+    window.addEventListener('show-loader', handleShowLoader);
+    return () => window.removeEventListener('show-loader', handleShowLoader);
+  }, []);
+
+  useEffect(() => {
+    let activeRequestsCount = 0;
+    let timeoutId: any = null;
+
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
+      
+      // Exclude background polling/interval endpoints
+      const isBackground = 
+        url.includes('/branches-agents/pending-counts') || 
+        url.includes('/document-requests/pending-count') || 
+        url.includes('/notifications/unread-count') ||
+        (url.includes('/notifications') && !url.includes('/read-all') && !url.includes('/read'));
+
+      if (!isBackground) {
+        activeRequestsCount++;
+        if (activeRequestsCount === 1) {
+          // Trigger the show-loader event after 150ms delay to avoid flickering on fast API responses
+          timeoutId = setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('show-loader', { 
+              detail: { show: true, message: 'جاري تحميل وتحديث البيانات...' } 
+            }));
+          }, 150);
+        }
+      }
+
+      try {
+        const response = await originalFetch(...args);
+        return response;
+      } finally {
+        if (!isBackground) {
+          activeRequestsCount--;
+          if (activeRequestsCount === 0) {
+            if (timeoutId) clearTimeout(timeoutId);
+            window.dispatchEvent(new CustomEvent('show-loader', { detail: { show: false } }));
+          }
+        }
+      }
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
   const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [branchAgentId, setBranchAgentId] = useState<number | null>(null);
@@ -1282,6 +1346,7 @@ export default function App() {
         <Route path="/*" element={
           <ProtectedRoute>
             <div className={`app-shell ${isSidebarOpen ? 'is-sidebar-open' : 'is-sidebar-closed'}`}>
+              <LoaderOverlay show={globalLoading} message={globalLoadingMessage} />
               <Sidebar
                 sections={getMenuSectionsSafely()}
                 LinkTag={Link}

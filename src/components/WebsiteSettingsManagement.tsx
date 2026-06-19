@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
 import { API_BASE_URL, resolveImageUrl } from "../config/api";
+import { showGlobalLoader, hideGlobalLoader } from "./LoaderOverlay";
 
 
 type Slider = {
@@ -470,6 +471,20 @@ export default function WebsiteSettingsManagement() {
     }
   };
 
+
+  const showLoader = settingsLoading || slidersLoading || servicesLoading || insurancesLoading || settingsSaving || sliderSaving || serviceSaving || insuranceSaving;
+  const loaderMessage = (settingsSaving || sliderSaving || serviceSaving || insuranceSaving) 
+    ? "جاري حفظ التعديلات والبيانات..." 
+    : "جاري تحميل وتحديث بيانات الموقع...";
+
+  useEffect(() => {
+    if (showLoader) {
+      showGlobalLoader(loaderMessage);
+    } else {
+      hideGlobalLoader();
+    }
+    return () => hideGlobalLoader();
+  }, [showLoader, loaderMessage]);
 
   return (
     <section className="users-management">

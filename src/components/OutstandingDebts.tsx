@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
+import { showGlobalLoader, hideGlobalLoader } from './LoaderOverlay';
 
 interface DebtRecord {
   id: number;
@@ -22,6 +23,7 @@ export default function OutstandingDebts() {
 
   const fetchDebts = async () => {
     setLoading(true);
+    showGlobalLoader('جاري جلب بيانات المديونيات...');
     try {
       const response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`);
       if (response.ok) {
@@ -34,6 +36,7 @@ export default function OutstandingDebts() {
       showToast('تعذر الاتصال بالسيرفر للمديونيات', 'error');
     } finally {
       setLoading(false);
+      hideGlobalLoader();
     }
   };
 

@@ -131,8 +131,14 @@
   color: var(--muted);
 }
 
-[data-theme='dark'] .sidebar-section button {
-  color: var(--text);
+[data-theme='dark'] .sidebar-section button,
+[data-theme='dark'] .sidebar-link {
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .sidebar-link .sidebar-icon,
+[data-theme='dark'] .sidebar-section button .sidebar-icon {
+  color: #94a3b8 !important;
 }
 
 [data-theme='dark'] .sidebar-section button:hover {

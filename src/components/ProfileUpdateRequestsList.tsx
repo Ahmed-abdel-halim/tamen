@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
+import { showGlobalLoader, hideGlobalLoader } from './LoaderOverlay';
 
 interface ProfileUpdateRequest {
   id: number;
@@ -78,6 +79,7 @@ export default function ProfileUpdateRequestsList() {
 
   const fetchRequests = async () => {
     setLoading(true);
+    showGlobalLoader('جاري تحميل طلبات التعديل...');
     try {
       const token = localStorage.getItem('token');
       let url = `${API_BASE_URL}/profile-update-requests?status=${statusFilter}`;
@@ -97,6 +99,7 @@ export default function ProfileUpdateRequestsList() {
       showToast(error.message || 'حدث خطأ أثناء تحميل الطلبات', 'error');
     } finally {
       setLoading(false);
+      hideGlobalLoader();
     }
   };
 
@@ -111,6 +114,8 @@ export default function ProfileUpdateRequestsList() {
     }
 
     setSubmitting(true);
+    setActionType(type);
+    showGlobalLoader(type === 'reject' ? 'جاري رفض التعديل...' : 'جاري اعتماد التعديلات وحفظها...');
     try {
       const token = localStorage.getItem('token');
       const url = `${API_BASE_URL}/profile-update-requests/${id}/${type}`;
@@ -141,6 +146,7 @@ export default function ProfileUpdateRequestsList() {
       showToast(error.message || 'حدث خطأ أثناء معالجة الطلب', 'error');
     } finally {
       setSubmitting(false);
+      hideGlobalLoader();
     }
   };
 
