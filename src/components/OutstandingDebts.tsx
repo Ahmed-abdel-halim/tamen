@@ -96,7 +96,14 @@ export default function OutstandingDebts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>جاري جلب بيانات المديونيات...</td></tr>
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--accent-cyan)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <i className="fa-solid fa-spinner fa-spin fa-2x"></i>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جاري جلب بيانات المديونيات...</span>
+                  </div>
+                </td>
+              </tr>
             ) : debts.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>لا توجد ديون مستحقة حالياً</td></tr>
             ) : debts.map(debt => {
