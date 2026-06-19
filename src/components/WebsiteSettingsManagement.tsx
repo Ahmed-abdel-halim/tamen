@@ -546,7 +546,10 @@ export default function WebsiteSettingsManagement() {
           <div>
             <h3 style={{ marginBottom: "20px" }}>تعديل معلومات التواصل والروابط الاجتماعية</h3>
             {settingsLoading ? (
-              <p>جار تحميل الإعدادات...</p>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '250px', color: 'var(--accent-cyan)' }}>
+                <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ marginBottom: '15px' }}></i>
+                <p style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جارِ تحميل الإعدادات...</p>
+              </div>
             ) : (
               <form onSubmit={handleSettingsSubmit} className="user-form" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                 <div className="form-group">
@@ -652,7 +655,10 @@ export default function WebsiteSettingsManagement() {
             </div>
 
             {slidersLoading ? (
-              <p>جار تحميل البنرات...</p>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '250px', color: 'var(--accent-cyan)' }}>
+                <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ marginBottom: '15px' }}></i>
+                <p style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جارِ تحميل البنرات...</p>
+              </div>
             ) : sliders.length === 0 ? (
               <p style={{ textAlign: "center", color: "var(--text-muted)", padding: "30px" }}>لا توجد بنرات إعلانية معروضة حالياً.</p>
             ) : (
@@ -788,7 +794,10 @@ export default function WebsiteSettingsManagement() {
               </button>
             </div>
             {servicesLoading ? (
-              <p>جار تحميل كروت الخدمات...</p>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '250px', color: 'var(--accent-cyan)' }}>
+                <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ marginBottom: '15px' }}></i>
+                <p style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جارِ تحميل كروت الخدمات...</p>
+              </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "20px" }}>
                 {services.map(service => (
@@ -1004,7 +1013,10 @@ export default function WebsiteSettingsManagement() {
               </button>
             </div>
             {insurancesLoading ? (
-              <p>جار تحميل وثائق التأمين...</p>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '250px', color: 'var(--accent-cyan)' }}>
+                <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ marginBottom: '15px' }}></i>
+                <p style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جارِ تحميل وثائق التأمين...</p>
+              </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
                 {insurances.map(insurance => (
