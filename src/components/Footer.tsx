@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 export default function Footer() {
   const getInitialLanguage = (): 'ar' | 'en' => {
@@ -9,6 +10,16 @@ export default function Footer() {
   };
 
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
+  const [settings, setSettings] = useState({
+    phone: '920003366 218+',
+    email: 'info@mli.ly',
+    address: 'ليبيا',
+    facebook: 'https://facebook.com',
+    twitter: 'https://x.com',
+    youtube: 'https://youtube.com',
+    linkedin: '',
+    instagram: '',
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -19,6 +30,32 @@ export default function Footer() {
     return () => window.removeEventListener('siteLanguageChanged', handler as EventListener);
   }, []);
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/public/website-settings`);
+        if (res.ok) {
+          const data = await res.json();
+          const s = data.settings || {};
+          setSettings(prev => ({
+            ...prev,
+            phone: s.phone || prev.phone,
+            email: s.email || prev.email,
+            address: language === 'ar' ? (s.address_ar || prev.address) : (s.address_en || s.address_ar || prev.address),
+            facebook: s.facebook_url !== undefined ? s.facebook_url : prev.facebook,
+            twitter: s.twitter_url !== undefined ? s.twitter_url : prev.twitter,
+            youtube: s.youtube_url !== undefined ? s.youtube_url : prev.youtube,
+            linkedin: s.linkedin_url !== undefined ? s.linkedin_url : prev.linkedin,
+            instagram: s.instagram_url !== undefined ? s.instagram_url : prev.instagram,
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching footer settings:', error);
+      }
+    };
+    fetchSettings();
+  }, [language]);
+
   const t = useMemo(() => {
     return language === 'ar'
       ? {
@@ -28,7 +65,7 @@ export default function Footer() {
           subscribe: 'اشترك',
           companyDesc:
             'المدار الليبي للتأمين هي شركة تأمين رائدة في ليبيا، تقدم مجموعة شاملة من خدمات التأمين والحماية لعملائها. نحن ملتزمون بتوفير حلول تأمينية موثوقة ومبتكرة تلبي احتياجات الأفراد والشركات، مع التركيز على الجودة والشفافية والخدمة المتميزة.',
-          address: 'طرابلس، لـيبيـا',
+          address: settings.address || 'طرابلس، لـيبيـا',
           quickLinks: 'روابط سريعة',
           about: 'من نحن',
           management: 'الإدارة',
@@ -58,7 +95,7 @@ export default function Footer() {
           subscribe: 'Subscribe',
           companyDesc:
             'Almadar Libya Insurance is a leading insurance company offering comprehensive coverage for individuals and businesses with a focus on quality, transparency, and excellent service.',
-          address: 'Tripoli, Libya',
+          address: settings.address || 'Tripoli, Libya',
           quickLinks: 'Quick Links',
           about: 'About Us',
           management: 'Management',
@@ -81,7 +118,7 @@ export default function Footer() {
           creditPrefix: 'Developed by',
           creditBrand: 'Codinity Tech',
         };
-  }, [language]);
+  }, [language, settings.address]);
 
   return (
     <footer className="website-footer">
@@ -117,22 +154,38 @@ export default function Footer() {
           <div className="footer-section">
             <h4>{t.contactTitle}</h4>
             <ul>
-              <li><i className="fas fa-phone"></i> 920003366 218+</li>
-              <li><i className="fas fa-envelope"></i> info@mli.ly</li>
-              <li><i className="fas fa-map-marker-alt"></i> ليبيا</li>
+              <li><i className="fas fa-phone"></i> {settings.phone}</li>
+              <li><i className="fas fa-envelope"></i> {settings.email}</li>
+              <li><i className="fas fa-map-marker-alt"></i> {settings.address}</li>
             </ul>
             <div className="footer-social">
               <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>{t.followUs}</h4>
               <div className="social-icons">
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="social-icon">
-                  <i className="fab fa-facebook-f"></i>
-                </a>
-                <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="social-icon">
-                  <i className="fab fa-x-twitter"></i>
-                </a>
-                <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="social-icon">
-                  <i className="fab fa-youtube"></i>
-                </a>
+                {settings.facebook && (
+                  <a href={settings.facebook} target="_blank" rel="noopener noreferrer" className="social-icon">
+                    <i className="fab fa-facebook-f"></i>
+                  </a>
+                )}
+                {settings.twitter && (
+                  <a href={settings.twitter} target="_blank" rel="noopener noreferrer" className="social-icon">
+                    <i className="fab fa-x-twitter"></i>
+                  </a>
+                )}
+                {settings.youtube && (
+                  <a href={settings.youtube} target="_blank" rel="noopener noreferrer" className="social-icon">
+                    <i className="fab fa-youtube"></i>
+                  </a>
+                )}
+                {settings.linkedin && (
+                  <a href={settings.linkedin} target="_blank" rel="noopener noreferrer" className="social-icon">
+                    <i className="fab fa-linkedin-in"></i>
+                  </a>
+                )}
+                {settings.instagram && (
+                  <a href={settings.instagram} target="_blank" rel="noopener noreferrer" className="social-icon">
+                    <i className="fab fa-instagram"></i>
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -151,4 +204,3 @@ export default function Footer() {
     </footer>
   );
 }
-

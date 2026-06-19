@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import WebsiteNavbar from './WebsiteNavbar';
 import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config/api';
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,12 @@ export default function ContactUs() {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [settings, setSettings] = useState({
+    phone: '+218 920003366',
+    email: 'info@mli.ly',
+    address_ar: 'طرابلس، ليبيا',
+    address_en: 'Tripoli, Libya',
+  });
   const getInitialLanguage = (): 'ar' | 'en' => {
     if (typeof window === 'undefined') return 'ar';
     const stored = localStorage.getItem('siteLang');
@@ -34,6 +41,29 @@ export default function ContactUs() {
     document.body.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.body.style.direction = language === 'ar' ? 'rtl' : 'ltr';
   }, [language]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/public/website-settings`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings) {
+            setSettings(prev => ({
+              ...prev,
+              phone: data.settings.phone || prev.phone,
+              email: data.settings.email || prev.email,
+              address_ar: data.settings.address_ar || prev.address_ar,
+              address_en: data.settings.address_en || prev.address_en,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching contact-us settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const t = useMemo(() => {
     return language === 'ar'
@@ -251,7 +281,7 @@ export default function ContactUs() {
                       </div>
                       <div className="info-item-text">
                         <span>{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</span>
-                        <a href="tel:+218920003366" dir="ltr">+218 920003366</a>
+                        <a href={`tel:${settings.phone.replace(/[\s()+-]/g, '')}`} dir="ltr">{settings.phone}</a>
                       </div>
                     </div>
 
@@ -262,8 +292,7 @@ export default function ContactUs() {
                       </div>
                       <div className="info-item-text">
                         <span>{language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</span>
-                        <a href="mailto:info@mli.ly">info@mli.ly</a>
-                        <a href="mailto:support@almadar.ly">support@almadar.ly</a>
+                        <a href={`mailto:${settings.email}`}>{settings.email}</a>
                       </div>
                     </div>
 
@@ -274,7 +303,7 @@ export default function ContactUs() {
                       </div>
                       <div className="info-item-text">
                         <span>{language === 'ar' ? 'العنوان' : 'Address'}</span>
-                        <p>{language === 'ar' ? 'طرابلس، ليبيا' : 'Tripoli, Libya'}</p>
+                        <p>{language === 'ar' ? settings.address_ar : settings.address_en}</p>
                       </div>
                     </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { API_BASE_URL, BACKEND_URL } from '../config/api';
+import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import '../styles/CreateInsurance.css';
 
@@ -282,7 +282,7 @@ const ExternalEntitiesManagement: React.FC = () => {
                                         <td>
                                             {entity.logo_url ? (
                                                 <img 
-                                                    src={`${BACKEND_URL}${entity.logo_url}`} 
+                                                    src={resolveImageUrl(entity.logo_url)} 
                                                     alt={entity.name} 
                                                     style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} 
                                                 />

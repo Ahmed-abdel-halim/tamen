@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import NewAgentRegistration from './NewAgentRegistration';
+import { API_BASE_URL } from '../config/api';
 
 export default function WebsiteTopBar() {
   const getInitialLanguage = (): 'ar' | 'en' => {
@@ -12,6 +13,10 @@ export default function WebsiteTopBar() {
 
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [settings, setSettings] = useState({
+    phone: '920003366 218+',
+    email: 'info@mli.ly',
+  });
 
   const isWebsiteRoute = () => {
     const path = window.location.pathname;
@@ -30,7 +35,6 @@ export default function WebsiteTopBar() {
     if (!isWebsiteRoute()) return;
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    // ضمان اتجاه الصفحة حتى مع وجود أنماط سابقة
     document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.body.style.direction = lang === 'ar' ? 'rtl' : 'ltr';
   };
@@ -38,6 +42,25 @@ export default function WebsiteTopBar() {
   useEffect(() => {
     applyLanguageToDocument(language);
   }, [language]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/public/website-settings`);
+        if (res.ok) {
+          const data = await res.json();
+          const s = data.settings || {};
+          setSettings({
+            phone: s.phone || '920003366 218+',
+            email: s.email || 'info@mli.ly',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching topbar settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const toggleLanguage = () => {
     const newLang = language === 'ar' ? 'en' : 'ar';
@@ -47,19 +70,22 @@ export default function WebsiteTopBar() {
     window.dispatchEvent(new CustomEvent('siteLanguageChanged', { detail: newLang }));
   };
 
+  // Clean phone number for tel link
+  const telLink = `tel:${settings.phone.replace(/[\s()]/g, '')}`;
+
   return (
     <div className="website-top-bar">
       <div className="top-bar-container">
         <div className="top-bar-content">
           <div className="top-bar-left">
             <div className="top-bar-info">
-              <a href="tel:+218XXXXXXXXX" className="top-bar-info-item">
+              <a href={telLink} className="top-bar-info-item">
                 <i className="fas fa-phone-alt"></i>
-                <span>920003366 218+</span>
+                <span>{settings.phone}</span>
               </a>
-              <a href="mailto:info@almadar.ly" className="top-bar-info-item">
+              <a href={`mailto:${settings.email}`} className="top-bar-info-item">
                 <i className="fas fa-envelope"></i>
-                <span>info@mli.ly</span>
+                <span>{settings.email}</span>
               </a>
             </div>
           </div>
@@ -120,4 +146,3 @@ export default function WebsiteTopBar() {
     </div>
   );
 }
-

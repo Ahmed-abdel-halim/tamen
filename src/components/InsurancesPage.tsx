@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import WebsiteNavbar from './WebsiteNavbar';
 import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
+import { API_BASE_URL, resolveImageUrl } from '../config/api';
 
 export default function InsurancesPage() {
   const getInitialLanguage = (): 'ar' | 'en' => {
@@ -12,6 +13,8 @@ export default function InsurancesPage() {
   };
 
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
+  const [dbInsurances, setDbInsurances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -39,7 +42,7 @@ export default function InsurancesPage() {
     scrollToHash();
     window.addEventListener('hashchange', scrollToHash);
     return () => window.removeEventListener('hashchange', scrollToHash);
-  }, []);
+  }, [loading]); // Scroll again when data is loaded
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -48,34 +51,27 @@ export default function InsurancesPage() {
     document.body.style.direction = language === 'ar' ? 'rtl' : 'ltr';
   }, [language]);
 
-  const t = useMemo(() => {
-    const baseHero = {
-      heroTitle: language === 'ar' ? 'التأمينات' : 'Insurances',
-      heroSubtitle: language === 'ar' ? 'مجموعة شاملة من خدمات التأمين' : 'A comprehensive suite of insurance services',
-      heroDesc:
-        language === 'ar'
-          ? 'نقدم مجموعة واسعة من خدمات التأمين المصممة خصيصاً لتلبية احتياجاتك المختلفة، مع ضمان الحماية الشاملة والخدمة المتميزة'
-          : 'We offer a wide range of tailored insurance services to meet your needs, ensuring full protection and excellent service.',
-      introTitle: language === 'ar' ? 'أنواع التأمين' : 'Insurance Types',
-      introDesc:
-        language === 'ar'
-          ? 'اختر من بين مجموعة متنوعة من أنواع التأمين التي تناسب احتياجاتك المختلفة'
-          : 'Choose from a variety of insurance types that fit your needs.',
-      ctaTitle:
-        language === 'ar'
-          ? 'هل تحتاج مساعدة في اختيار التأمين المناسب؟'
-          : 'Need help choosing the right insurance?',
-      ctaDesc:
-        language === 'ar'
-          ? 'فريقنا جاهز لمساعدتك في اختيار أفضل تأمين يناسب احتياجاتك'
-          : 'Our team is ready to help you choose the best coverage.',
-      ctaButton: language === 'ar' ? 'اتصل بنا الآن' : 'Contact us now',
-      quote: language === 'ar' ? 'احصل على عرض سعر' : 'Get a quote',
+  useEffect(() => {
+    const fetchInsuranceTypes = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/public/website-settings`);
+        if (res.ok) {
+          const data = await res.json();
+          setDbInsurances(data.insurance_types || []);
+        }
+      } catch (error) {
+        console.error('Error fetching insurance types:', error);
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchInsuranceTypes();
+  }, []);
 
-    const ins = (ar: any, en: any) => (language === 'ar' ? ar : en);
-
-    const insuranceTypes = [
+  // Fallback static data if backend is empty or loading fails
+  const fallbackInsurances = useMemo(() => {
+    const ins = (ar: string, en: string) => (language === 'ar' ? ar : en);
+    return [
       {
         id: 1,
         title: ins('تأمين السيارات', 'Car Insurance'),
@@ -232,7 +228,7 @@ This coverage is issued in accordance with Law No. 28 of 1971 regarding civil li
 
 قد تجبرك الحوادث غير المتوقعة على تغيير نمط حياتك أو تعطل أعمالك، سواء كانت حوادث بسيطة كالتعثر أثناء المشي، أو أكثر خطورة كالتعرض لحادث مركبة يجبرك على دخول المستشفى.
 
-لذلك صممنا لك وثائق التأمين ضد الحوادث الشخصية لنؤمن لك الحماية طوال الوقت، ونضمن لك الأمان وراحة البال أينما كنت ومهما حدث.
+ليستمعنا بصنع لك وثائق التأمين ضد الحوادث الشخصية لنؤمن لك الحماية طوال الوقت، ونضمن لك الأمان وراحة البال أينما كنت ومهما حدث.
 
 ما الذي ستحصل عليه من خلال تأمين الحوادث الشخصية لدينا:
 • دفع مبلغ التأمين الإجمالي إذا تعرضت لحادث سبب لك الإعاقة الدائمة
@@ -297,11 +293,49 @@ This document covers death and permanent disability or partial permanent or temp
         )
       }
     ];
-
-    return { ...baseHero, insuranceTypes };
   }, [language]);
 
-  const insuranceTypes = t.insuranceTypes;
+  const t = useMemo(() => {
+    return {
+      heroTitle: language === 'ar' ? 'التأمينات' : 'Insurances',
+      heroSubtitle: language === 'ar' ? 'مجموعة شاملة من خدمات التأمين' : 'A comprehensive suite of insurance services',
+      heroDesc:
+        language === 'ar'
+          ? 'نقدم مجموعة واسعة من خدمات التأمين المصممة خصيصاً لتلبية احتياجاتك المختلفة، مع ضمان الحماية الشاملة والخدمة المتميزة'
+          : 'We offer a wide range of tailored insurance services to meet your needs, ensuring full protection and excellent service.',
+      introTitle: language === 'ar' ? 'أنواع التأمين' : 'Insurance Types',
+      introDesc:
+        language === 'ar'
+          ? 'اختر من بين مجموعة متنوعة من أنواع التأمين التي تناسب احتياجاتك المختلفة'
+          : 'Choose from a variety of insurance types that fit your needs.',
+      ctaTitle:
+        language === 'ar'
+          ? 'هل تحتاج مساعدة في اختيار التأمين المناسب؟'
+          : 'Need help choosing the right insurance?',
+      ctaDesc:
+        language === 'ar'
+          ? 'فريقنا جاهز لمساعدتك في اختيار أفضل تأمين يناسب احتياجاتك'
+          : 'Our team is ready to help you choose the best coverage.',
+      ctaButton: language === 'ar' ? 'اتصل بنا الآن' : 'Contact us now',
+      quote: language === 'ar' ? 'احصل على عرض سعر' : 'Get a quote',
+    };
+  }, [language]);
+
+  // Combine dynamic and fallback insurance types
+  const insuranceTypes = useMemo(() => {
+    if (dbInsurances.length > 0) {
+      return dbInsurances.map(item => ({
+        id: item.id,
+        title: language === 'ar' ? item.title_ar : item.title_en,
+        description: language === 'ar' ? item.description_ar : item.description_en,
+        icon: item.icon || 'fas fa-shield-alt',
+        color: item.color || '#3b82f6',
+        image: item.image_url ? resolveImageUrl(item.image_url) : '/new/تامين السيارات .jpg',
+        details: language === 'ar' ? item.details_ar : item.details_en,
+      }));
+    }
+    return fallbackInsurances;
+  }, [dbInsurances, fallbackInsurances, language]);
 
   return (
     <div className="website-layout new-design">
@@ -333,33 +367,40 @@ This document covers death and permanent disability or partial permanent or temp
             </p>
           </div>
 
-          <div className="insurances-grid">
-            {insuranceTypes.map((insurance) => (
-              <div key={insurance.id} id={`insurance-${insurance.id}`} className="insurance-card">
-                {insurance.image && (
-                  <div className="insurance-card-image">
-                    <img src={insurance.image} alt={insurance.title} />
-                  </div>
-                )}
-                <div className="insurance-card-inner">
-                  <div className="insurance-card-body">
-                    <h3 className="insurance-title">{insurance.title}</h3>
-                    <p className="insurance-description">{insurance.description}</p>
-                    {insurance.details && (
-                      <div className="insurance-details-scrollbox">
-                        {insurance.details}
-                      </div>
-                    )}
-                  </div>
-                  <div className="insurance-footer">
-                    <Link to="/contact-us?subject=insurance" className="insurance-link">
-                      <span>+ {language === 'ar' ? 'اطلب خدمتك' : 'Request Service'}</span>
-                    </Link>
+          {loading ? (
+            <p style={{ textAlign: 'center', padding: '40px' }}>جاري تحميل أنواع التأمين...</p>
+          ) : (
+            <div className="insurances-grid">
+              {insuranceTypes.map((insurance) => (
+                <div key={insurance.id} id={`insurance-${insurance.id}`} className="insurance-card">
+                  {insurance.image && (
+                    <div className="insurance-card-image">
+                      <img src={insurance.image} alt={insurance.title} />
+                    </div>
+                  )}
+                  <div className="insurance-card-inner">
+                    <div className="insurance-card-body">
+                      <h3 className="insurance-title">
+                        <i className={insurance.icon} style={{ color: insurance.color, marginLeft: '8px', marginRight: '8px' }}></i>
+                        {insurance.title}
+                      </h3>
+                      <p className="insurance-description">{insurance.description}</p>
+                      {insurance.details && (
+                        <div className="insurance-details-scrollbox" style={{ whiteSpace: 'pre-wrap' }}>
+                          {insurance.details}
+                        </div>
+                      )}
+                    </div>
+                    <div className="insurance-footer">
+                      <Link to={`/contact-us?subject=${encodeURIComponent(insurance.title)}`} className="insurance-link">
+                        <span>+ {language === 'ar' ? 'اطلب خدمتك' : 'Request Service'}</span>
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

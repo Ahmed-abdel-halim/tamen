@@ -126,7 +126,8 @@ import AgentTransfers from './components/AgentTransfers';
 import NotificationsPage from './components/NotificationsPage';
 import OfficeUsers from './components/OfficeUsers';
 import OldDocumentsManagement from './components/OldDocumentsManagement';
-
+import WebsiteSettingsManagement from './components/WebsiteSettingsManagement';
+import PublicInsuranceRequestsList from './components/PublicInsuranceRequestsList';
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -413,6 +414,19 @@ const menuSections: SidebarSection[] = [
           { label: 'قائمة الألوان', icon: 'fa-solid fa-palette', to: '/colors' },
           { label: 'أنواع السيارات', icon: 'fa-solid fa-car-side', to: '/vehicle-types' },
           { label: 'نقاط مكافآت الوكلاء', icon: 'fa-solid fa-award', to: '/settings/loyalty' },
+        ]
+      },
+    ],
+  },
+  {
+    title: 'إدارة الموقع الإلكتروني',
+    items: [
+      {
+        label: 'إدارة الموقع',
+        icon: 'fa-solid fa-globe',
+        children: [
+          { label: 'إعدادات ومحتوى الموقع', icon: 'fa-solid fa-sliders', to: '/website-settings' },
+          { label: 'طلبات التأمين العامة', icon: 'fa-solid fa-file-invoice', to: '/public-insurance-requests' },
         ]
       },
     ],
@@ -1328,6 +1342,8 @@ export default function App() {
                   <Route path="/vehicle-types" element={<AuthorizedRoute requiredPath="/vehicle-types"><VehicleTypesList /></AuthorizedRoute>} />
                   {/* إعدادات نقاط الولاء للوكلاء */}
                   <Route path="/settings/loyalty" element={isAdmin ? <LoyaltySettings /> : <Navigate to="/dashboard" />} />
+                  <Route path="/website-settings" element={isAdmin ? <WebsiteSettingsManagement /> : <Navigate to="/dashboard" />} />
+                  <Route path="/public-insurance-requests" element={isAdmin ? <PublicInsuranceRequestsList /> : <Navigate to="/dashboard" />} />
                   {/* إدارة وثائق تأمين السيارات */}
                   <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument /></AuthorizedRoute>} />
