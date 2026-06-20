@@ -424,7 +424,7 @@ export default function HomePage() {
                   ))
               }
             </p>
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '20px' }}>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-start', flexWrap: 'wrap', marginTop: '20px' }}>
               <Link to="/contact-us" className="hero-join-btn" style={{ textDecoration: 'none' }}>
                 {language === 'ar' ? <i className="fas fa-handshake" style={{marginLeft: '8px'}}></i> : <i className="fas fa-handshake" style={{marginRight: '8px'}}></i>}
                 {t.heroCtaPrimary}

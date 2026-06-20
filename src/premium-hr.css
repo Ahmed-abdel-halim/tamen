@@ -1029,6 +1029,43 @@
   color: #b91c1c !important;
 }
 
+/* EIDC and LIFO Credentials Container Styles */
+.eidc-credentials-container {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f0f9ff;
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+}
+.eidc-credentials-container label {
+  color: #0369a1 !important;
+  font-weight: 800;
+}
+.eidc-credentials-container .input-with-icon i {
+  color: #0369a1 !important;
+}
+.eidc-credentials-container input {
+  border: 1px solid #7dd3fc !important;
+}
+
+.lifo-credentials-container {
+  margin-top: 15px;
+  padding: 15px;
+  background: #faf5ff;
+  border-radius: 12px;
+  border: 1px solid #e9d5ff;
+}
+.lifo-credentials-container label {
+  color: #7e22ce !important;
+  font-weight: 800;
+}
+.lifo-credentials-container .input-with-icon i {
+  color: #7e22ce !important;
+}
+.lifo-credentials-container input {
+  border: 1px solid #d8b4fe !important;
+}
+
 /* --- Dark Mode Support --- */
 [data-theme='dark'] .form-section {
   background: #11141d;
@@ -1084,6 +1121,35 @@
 [data-theme='dark'] .premium-table tr:hover td {
   background: #1a202c !important;
 }
+
+[data-theme='dark'] .eidc-credentials-container {
+  background: rgba(3, 105, 161, 0.12) !important;
+  border-color: rgba(3, 105, 161, 0.3) !important;
+}
+[data-theme='dark'] .eidc-credentials-container label,
+[data-theme='dark'] .eidc-credentials-container .input-with-icon i {
+  color: #38bdf8 !important;
+}
+[data-theme='dark'] .eidc-credentials-container input {
+  border-color: rgba(3, 105, 161, 0.4) !important;
+  background: #1e2330 !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme='dark'] .lifo-credentials-container {
+  background: rgba(126, 34, 206, 0.12) !important;
+  border-color: rgba(126, 34, 206, 0.3) !important;
+}
+[data-theme='dark'] .lifo-credentials-container label,
+[data-theme='dark'] .lifo-credentials-container .input-with-icon i {
+  color: #c084fc !important;
+}
+[data-theme='dark'] .lifo-credentials-container input {
+  border-color: rgba(126, 34, 206, 0.4) !important;
+  background: #1e2330 !important;
+  color: #e2e8f0 !important;
+}
+
 
 .admin-note-box {
   font-size: 0.75rem;

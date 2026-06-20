@@ -120,45 +120,142 @@ function resolvePublicUrl(path: string | null | undefined): string {
   return `${BACKEND_URL}/storage/${cleanPath}`;
 }
 
-const INSURANCE_TYPES = [
-  'تأمين سيارات إجباري',
-  'تأمين سيارات',
-  'تأمين سيارة جمرك',
-  'تأمين سيارات أجنبية',
-  'تأمين طرف ثالث سيارات',
-  'تأمين سيارات دولي',
-  'تأمين المسافرين',
-  'تأمين زائرين ليبيا',
-  'تأمين الوافدين',
-  'تأمين الهياكل البحرية',
-  'تأمين الحوادث الشخصية',
-  'تأمين حماية طلاب المدارس',
-  'تأمين نقل النقدية',
-  'تأمين شحن البضائع',
-];
 
-const REPORT_PERMISSIONS = [
-  'المحاسب المالي',
-  'اجور ومرتبات ضرائب',
-  'اجور ومرتبات ضمان',
-];
+export const PERMISSION_GROUPS = [
+  {
+    id: 'insurance_types',
+    title: 'أنواع التأمين المسموح بها',
+    icon: 'fa-file-shield',
+    color: '#3b82f6',
+    permissions: [
+      { id: 'تأمين سيارات إجباري', label: 'تأمين سيارات إجباري' },
+      { id: 'تأمين سيارات', label: 'تأمين سيارات' },
+      { id: 'تأمين سيارة جمرك', label: 'تأمين سيارة جمرك' },
+      { id: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' },
+      { id: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' },
+      { id: 'تأمين سيارات دولي', label: 'تأمين سيارات دولي' },
+      { id: 'تأمين المسافرين', label: 'تأمين المسافرين' },
+      { id: 'تأمين زائرين ليبيا', label: 'تأمين زائرين ليبيا' },
+      { id: 'تأمين الوافدين', label: 'تأمين الوافدين' },
+      { id: 'تأمين الهياكل البحرية', label: 'تأمين الهياكل البحرية' },
+      { id: 'تأمين المسؤولية المهنية (الطبية)', label: 'تأمين المسؤولية المهنية (الطبية)' },
+      { id: 'تأمين الحوادث الشخصية', label: 'تأمين الحوادث الشخصية' },
+      { id: 'تأمين حماية طلاب المدارس', label: 'تأمين حماية طلاب المدارس' },
+      { id: 'تأمين نقل النقدية', label: 'تأمين نقل النقدية' },
+      { id: 'تأمين شحن البضائع', label: 'تأمين شحن البضائع' },
+    ]
+  },
+  {
+    id: 'finance',
+    title: 'الشؤون المالية والحسابات',
+    icon: 'fa-money-bill-wave',
+    color: '#0284c7',
+    permissions: [
+      { id: 'المصارف والخزنة', label: 'المصارف والخزنة' },
+      { id: 'الإحصائيات المالية', label: 'الإحصائيات المالية' },
+      { id: 'الديون المستحقة', label: 'الديون المستحقة' },
+      { id: 'مرتبات الموظفين', label: 'مرتبات الموظفين' },
+      { id: 'الأرشيف المالي', label: 'الأرشيف المالي' },
+      { id: 'إحصائيات الإيرادات', label: 'إحصائيات الإيرادات' },
+      { id: 'إدارة الإيرادات', label: 'إدارة الإيرادات' },
+      { id: 'المخازن والعهدة', label: 'المخازن والعهدة' },
+      { id: 'رصيد الاتحاد (البطاقة البرتقالية)', label: 'رصيد الاتحاد (البطاقة البرتقالية)' },
+      { id: 'الإيجارات العقارية', label: 'الإيجارات العقارية' },
+      { id: 'المصروفات التشغيلية', label: 'المصروفات التشغيلية' },
+      { id: 'التسويات والعمولات', label: 'التسويات والعمولات' },
+      { id: 'كشف حساب الوكيل', label: 'كشف حساب الوكيل' },
+      { id: 'حوالات الوكلاء المالية', label: 'حوالات الوكلاء المالية' },
+      { id: 'اغلاق حساب الوكيل', label: 'اغلاق حساب الوكيل' },
+      { id: 'كشف حساب الوكلاء', label: 'كشف حساب الوكلاء' },
+      { id: 'تسديد التعويضات', label: 'تسديد التعويضات' },
+      { id: 'التحصيلات البنكية', label: 'التحصيلات البنكية' },
+      { id: 'اجور ومرتبات ضرائب', label: 'اجور ومرتبات ضرائب' },
+      { id: 'اجور ومرتبات ضمان', label: 'اجور ومرتبات ضمان' },
+      { id: 'المحاسب المالي', label: 'المحاسب المالي (صلاحية كاملة للمالية)' }
+    ]
+  },
+  {
+    id: 'branches_agents',
+    title: 'إدارة الفروع والوكلاء',
+    icon: 'fa-building',
+    color: '#0d9488',
+    permissions: [
+      { id: 'قائمة الفروع والوكلاء', label: 'قائمة الفروع والوكلاء' },
+      { id: 'الوكلاء الجدد', label: 'الوكلاء الجدد' },
+      { id: 'طلبات الوكلاء', label: 'طلبات الوكلاء' },
+      { id: 'إلغاء الوكالات', label: 'إلغاء الوكالات' },
+      { id: 'طلبات تعديل بيانات الوكلاء', label: 'طلبات تعديل بيانات الوكلاء' },
+      { id: 'إدارة الفروع والوكلاء', label: 'إدارة الفروع والوكلاء (صلاحية كاملة)' }
+    ]
+  },
+  {
+    id: 'admin_affairs',
+    title: 'الشؤون الإدارية',
+    icon: 'fa-folder-open',
+    color: '#4f46e5',
+    permissions: [
+      // شؤون الموظفين
+      { id: 'قائمة الموظفين', label: 'شؤون الموظفين - قائمة الموظفين' },
+      { id: 'إدارة أقسام الشركة', label: 'شؤون الموظفين - إدارة أقسام الشركة' },
+      { id: 'طلبات الموظفين', label: 'شؤون الموظفين - طلبات الموظفين' },
+      { id: 'طلبات تعديل بيانات الموظفين', label: 'شؤون الموظفين - طلبات تعديل بيانات الموظفين' },
+      { id: 'إدارة الموظفين', label: 'شؤون الموظفين (صلاحية كاملة للقسم)' },
 
-const ADMIN_SECTION_PERMISSIONS = [
-  'إدارة الفروع والوكلاء',
-  'إدارة الموظفين',
-  'البريد الصادر والوارد',
-  'أرشيف المستندات الإدارية',
-  'دليل الجهات الخارجية',
-  'طلبات الوثائق',
-  'الشؤون الفنية',
-  'ملفات الشركة',
-  'إدارة الوثائق القديمة',
-];
+      // البريد الصادر والوارد
+      { id: 'البريد الوارد', label: 'البريد الصادر والوارد - البريد الوارد' },
+      { id: 'البريد الصادر', label: 'البريد الصادر والوارد - البريد الصادر' },
+      { id: 'البريد الصادر والوارد', label: 'البريد الصادر والوارد (صلاحية كاملة)' },
 
-const SETTINGS_PERMISSIONS = [
-  'قائمة المدن',
-  'قائمة اللوحات',
-  'أنواع السيارات',
+      // أرشيف المستندات الإدارية ودليل الجهات الخارجية
+      { id: 'أرشيف المستندات الإدارية', label: 'أرشيف المستندات الإدارية' },
+      { id: 'دليل الجهات الخارجية', label: 'دليل الجهات الخارجية' }
+    ]
+  },
+  {
+    id: 'technical',
+    title: 'الشؤون الفنية والمطالبات',
+    icon: 'fa-scale-balanced',
+    color: '#be123c',
+    permissions: [
+      { id: 'المطالبات', label: 'المطالبات' },
+      { id: 'التعويضات', label: 'التعويضات (قسم الشؤون الفنية)' },
+      { id: 'الشؤون الفنية', label: 'الشؤون الفنية (صلاحية كاملة)' }
+    ]
+  },
+  {
+    id: 'settings',
+    title: 'الإعدادات العامة والتهيئة',
+    icon: 'fa-gear',
+    color: '#4b5563',
+    permissions: [
+      { id: 'قائمة المدن', label: 'قائمة المدن' },
+      { id: 'قائمة اللوحات', label: 'قائمة اللوحات' },
+      { id: 'أنواع السيارات', label: 'أنواع السيارات' },
+      { id: 'قائمة الألوان', label: 'قائمة الألوان' },
+      { id: 'نقاط مكافآت الوكلاء', label: 'نقاط مكافآت الوكلاء' }
+    ]
+  },
+  {
+    id: 'website',
+    title: 'إدارة الموقع الإلكتروني',
+    icon: 'fa-globe',
+    color: '#0891b2',
+    permissions: [
+      { id: 'إعدادات ومحتوى الموقع', label: 'إعدادات ومحتوى الموقع' },
+      { id: 'طلبات التأمين العامة', label: 'طلبات التأمين العامة' }
+    ]
+  },
+  {
+    id: 'documents_management',
+    title: 'إدارة الوثائق والمستندات',
+    icon: 'fa-file-shield',
+    color: '#8b5cf6',
+    permissions: [
+      { id: 'طلبات الوثائق', label: 'طلبات الوثائق' },
+      { id: 'ملفات الشركة', label: 'ملفات الشركة' },
+      { id: 'إدارة الوثائق القديمة', label: 'إدارة الوثائق القديمة' }
+    ]
+  }
 ];
 
 const getInventoryTypeName = (inventoryType?: string) => {
@@ -173,6 +270,20 @@ export default function UsersList() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', user?: User }>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    insurance_types: false,
+    finance: false,
+    branches_agents: false,
+    admin_affairs: false,
+    technical: false,
+    settings: false,
+    website: false,
+    documents_management: false,
+  });
+
+  const toggleCategory = (catId: string) => {
+    setExpandedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -2143,68 +2254,64 @@ export default function UsersList() {
                 </div>
 
                 {/* EIDC Credentials Section */}
-                <div className="form-row" style={{ marginTop: '15px', padding: '15px', background: '#f0f9ff', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+                <div className="form-row eidc-credentials-container">
                   <div className="form-group flex-1" style={{ marginBottom: 0 }}>
-                    <label style={{ color: '#0369a1', fontWeight: '800' }}>
+                    <label>
                       <i className="fa-solid fa-id-card-clip"></i> اسم مستخدم الهيئة (EIDC)
                     </label>
                     <div className="input-with-icon">
-                      <i className="fa-solid fa-user-shield" style={{ color: '#0369a1' }}></i>
+                      <i className="fa-solid fa-user-shield"></i>
                       <input
                         type="text"
                         value={formData.eidc_username}
                         onChange={(e) => setFormData({ ...formData, eidc_username: e.target.value })}
                         placeholder="اختياري للوكلاء"
-                        style={{ border: '1px solid #7dd3fc' }}
                       />
                     </div>
                   </div>
                   <div className="form-group flex-1" style={{ marginBottom: 0 }}>
-                    <label style={{ color: '#0369a1', fontWeight: '800' }}>
+                    <label>
                       <i className="fa-solid fa-key"></i> كلمة مرور الهيئة (EIDC)
                     </label>
                     <div className="input-with-icon">
-                      <i className="fa-solid fa-lock" style={{ color: '#0369a1' }}></i>
+                      <i className="fa-solid fa-lock"></i>
                       <input
                         type="password"
                         value={formData.eidc_password}
                         onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
                         placeholder="اختياري للوكلاء"
-                        style={{ border: '1px solid #7dd3fc' }}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* LIFO Credentials Section */}
-                <div className="form-row" style={{ marginTop: '15px', padding: '15px', background: '#faf5ff', borderRadius: '12px', border: '1px solid #e9d5ff' }}>
+                <div className="form-row lifo-credentials-container">
                   <div className="form-group flex-1" style={{ marginBottom: 0 }}>
-                    <label style={{ color: '#7e22ce', fontWeight: '800' }}>
+                    <label>
                       <i className="fa-solid fa-id-card-clip"></i> اسم مستخدم الاتحاد (LIFO)
                     </label>
                     <div className="input-with-icon">
-                      <i className="fa-solid fa-user-shield" style={{ color: '#7e22ce' }}></i>
+                      <i className="fa-solid fa-user-shield"></i>
                       <input
                         type="text"
                         value={formData.lifo_username}
                         onChange={(e) => setFormData({ ...formData, lifo_username: e.target.value })}
                         placeholder="اختياري للوكلاء"
-                        style={{ border: '1px solid #d8b4fe' }}
                       />
                     </div>
                   </div>
                   <div className="form-group flex-1" style={{ marginBottom: 0 }}>
-                    <label style={{ color: '#7e22ce', fontWeight: '800' }}>
+                    <label>
                       <i className="fa-solid fa-key"></i> كلمة مرور الاتحاد (LIFO)
                     </label>
                     <div className="input-with-icon">
-                      <i className="fa-solid fa-lock" style={{ color: '#7e22ce' }}></i>
+                      <i className="fa-solid fa-lock"></i>
                       <input
                         type="password"
                         value={formData.lifo_password}
                         onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
                         placeholder="اختياري للوكلاء"
-                        style={{ border: '1px solid #d8b4fe' }}
                       />
                     </div>
                   </div>
@@ -2641,41 +2748,171 @@ export default function UsersList() {
               {!formData.is_admin && (
                 <div className="form-section-card fade-in">
                   <h4 className="section-title-premium"><i className="fa-solid fa-shield"></i> الصلاحيات الممنوحة للمستخدم</h4>
-                  <div className="permissions-tabs">
-                    <div className="form-group">
-                      <label className="permissions-label">أنواع التأمين المسموح بها</label>
-                      <div className="permissions-grid-sm">
-                        {INSURANCE_TYPES.map((type) => (
-                          <label key={type} className={`perm-chk ${formData.authorized_documents.includes(type) ? 'active' : ''}`}>
-                            <input type="checkbox" checked={formData.authorized_documents.includes(type)} onChange={(e) => {
-                              const list = e.target.checked ? [...formData.authorized_documents, type] : formData.authorized_documents.filter(d => d !== type);
-                              setFormData({ ...formData, authorized_documents: list });
-                            }} />
-                            <span>{type}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="form-group mt-4">
-                      <label className="permissions-label">الأقسام الإدارية والمالية</label>
-                      <div className="permissions-grid-sm">
-                        {[...REPORT_PERMISSIONS, ...ADMIN_SECTION_PERMISSIONS, ...SETTINGS_PERMISSIONS].map((p) => (
-                          <label key={p} className={`perm-chk ${formData.authorized_documents.includes(p) ? 'active' : ''}`}>
-                            <input type="checkbox" checked={formData.authorized_documents.includes(p)} onChange={(e) => {
-                              const list = e.target.checked ? [...formData.authorized_documents, p] : formData.authorized_documents.filter(d => d !== p);
-                              setFormData({ ...formData, authorized_documents: list });
-                            }} />
-                            <span>{p}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    {formErrors.authorized_documents && (
-                      <div className="error-message" style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
-                        <i className="fa-solid fa-triangle-exclamation"></i> {formErrors.authorized_documents}
-                      </div>
-                    )}
+                  <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '20px' }}>
+                    اضغط على أي قسم لعرض وتحديد الصلاحيات التفصيلية الخاصة به.
+                  </p>
+                  <div className="permissions-accordion-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {PERMISSION_GROUPS.map((group) => {
+                      const groupActiveCount = group.permissions.filter(p => formData.authorized_documents.includes(p.id)).length;
+                      const totalGroupCount = group.permissions.length;
+                      const isExpanded = !!expandedCategories[group.id];
+                      const isAllSelected = groupActiveCount === totalGroupCount;
+
+                      const handleSelectAllToggle = (e: any) => {
+                        e.stopPropagation(); // منع طي أو فتح الأكورديون عند تحديد الكل
+                        let updatedList = [...formData.authorized_documents];
+                        const groupPermIds = group.permissions.map(p => p.id);
+                        if (isAllSelected) {
+                          // إلغاء تحديد الكل في هذه المجموعة
+                          updatedList = updatedList.filter(d => !groupPermIds.includes(d));
+                        } else {
+                          // تحديد الكل في هذه المجموعة
+                          groupPermIds.forEach(id => {
+                            if (!updatedList.includes(id)) {
+                              updatedList.push(id);
+                            }
+                          });
+                        }
+                        setFormData({ ...formData, authorized_documents: updatedList });
+                      };
+
+                      return (
+                        <div 
+                          key={group.id} 
+                          className="permission-group-card" 
+                          style={{
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            background: 'var(--panel)',
+                            overflow: 'hidden',
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          {/* رأس المجموعة */}
+                          <div 
+                            className="permission-group-header"
+                            onClick={() => toggleCategory(group.id)}
+                            style={{
+                              padding: '15px 20px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              background: isExpanded ? 'rgba(37, 99, 235, 0.05)' : 'transparent',
+                              borderBottom: isExpanded ? '1px solid var(--border)' : 'none',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                              <div 
+                                style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '10px',
+                                  background: group.color,
+                                  color: '#fff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '1.2rem'
+                                }}
+                              >
+                                <i className={`fa-solid ${group.icon}`}></i>
+                              </div>
+                              <div>
+                                <h5 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: 'var(--text)' }}>{group.title}</h5>
+                                <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                                  تم اختيار {groupActiveCount} من {totalGroupCount}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <button
+                                type="button"
+                                onClick={handleSelectAllToggle}
+                                style={{
+                                  padding: '5px 12px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border)',
+                                  background: isAllSelected ? '#22c55e' : 'var(--card)',
+                                  color: isAllSelected ? '#fff' : 'var(--text)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                {isAllSelected ? 'إلغاء التحديد' : 'تحديد الكل'}
+                              </button>
+                              
+                              <i 
+                                className={`fa-solid fa-chevron-down`} 
+                                style={{
+                                  color: 'var(--muted)',
+                                  transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                  transition: 'transform 0.3s ease'
+                                }}
+                              ></i>
+                            </div>
+                          </div>
+
+                          {/* قائمة الصلاحيات التفصيلية */}
+                          {isExpanded && (
+                            <div 
+                              className="permission-group-body"
+                              style={{
+                                padding: '20px',
+                                background: 'var(--card)'
+                              }}
+                            >
+                              <div className="permissions-grid-sm" style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                                gap: '10px'
+                              }}>
+                                {group.permissions.map((p) => (
+                                  <label 
+                                    key={p.id} 
+                                    className={`perm-chk ${formData.authorized_documents.includes(p.id) ? 'active' : ''}`}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '10px',
+                                      padding: '10px 15px',
+                                      borderRadius: '8px',
+                                      border: '1px solid var(--border)',
+                                      background: formData.authorized_documents.includes(p.id) ? 'rgba(37, 99, 235, 0.08)' : 'var(--panel)',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s'
+                                    }}
+                                  >
+                                    <input 
+                                      type="checkbox" 
+                                      checked={formData.authorized_documents.includes(p.id)} 
+                                      onChange={(e) => {
+                                        const list = e.target.checked 
+                                          ? [...formData.authorized_documents, p.id] 
+                                          : formData.authorized_documents.filter(d => d !== p.id);
+                                        setFormData({ ...formData, authorized_documents: list });
+                                      }}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                    <span style={{ fontSize: '13px', fontWeight: '500' }}>{p.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
+                  {formErrors.authorized_documents && (
+                    <div className="error-message" style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-triangle-exclamation"></i> {formErrors.authorized_documents}
+                    </div>
+                  )}
                 </div>
               )}
 

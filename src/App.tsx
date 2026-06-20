@@ -149,9 +149,17 @@ function hasAccessToRoute(
     return true;
   }
 
-  // الفروع/الوكلاء لديهم وصول إلى إعدادات أنواع السيارات فقط
-  if (branchAgentId && path.startsWith('/vehicle-types')) {
-    return true;
+  // الفروع/الوكلاء لديهم وصول إلى صفحاتهم الخاصة وإعدادات أنواع السيارات وحوالات الوكلاء
+  if (branchAgentId) {
+    if (path.startsWith('/vehicle-types')) {
+      return true;
+    }
+    if (path.startsWith(`/branches-agents/${branchAgentId}`)) {
+      return true;
+    }
+    if (path.startsWith('/agent-transfers') || path.startsWith('/reports/agent-transfers')) {
+      return true;
+    }
   }
 
   // إذا لم يكن هناك صلاحيات، لا وصول
