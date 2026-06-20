@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar'
 import { API_BASE_URL } from './config/api';
 import './premium-hr.css';
@@ -187,12 +187,31 @@ function hasAccessToRoute(
     'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
     'إدارة الوثائق القديمة': ['/old-documents'],
 
+    // تفصيل صلاحيات الفروع والوكلاء
+    'قائمة الفروع والوكلاء': ['/branches-agents'],
+    'الوكلاء الجدد': ['/branches-agents'],
+    'طلبات الوكلاء': ['/agent-requests'],
+    'إلغاء الوكالات': ['/agency-cancellations'],
+    'طلبات تعديل بيانات الوكلاء': ['/profile-update-requests'],
+
     'إدارة الموظفين': ['/users', '/employee-requests', '/departments'],
+    // تفصيل صلاحيات الموظفين
+    'قائمة الموظفين': ['/users'],
+    'إدارة أقسام الشركة': ['/departments', '/management/department'],
+    'طلبات الموظفين': ['/employee-requests'],
+    'طلبات تعديل بيانات الموظفين': ['/profile-update-requests'],
+
     'الشؤون الفنية': ['/claims', '/reports/indemnities'],
     'المطالبات': ['/claims'],
+    'التعويضات': ['/reports/indemnities'],
+
     'البريد الصادر والوارد': ['/mail/incoming', '/mail/outgoing'],
     'البريد الوارد والصادر': ['/mail/incoming', '/mail/outgoing'],
     'المراسلات الإدارية': ['/mail/incoming', '/mail/outgoing'],
+    // تفصيل صلاحيات البريد الصادر والوارد
+    'البريد الوارد': ['/mail/incoming', '/mail/view'],
+    'البريد الصادر': ['/mail/outgoing', '/mail/view'],
+
     'دليل الجهات الخارجية': ['/external-entities'],
     'أرشيف المستندات الإدارية': ['/archive'],
     'طلبات الوثائق': ['/document-requests'],
@@ -215,8 +234,29 @@ function hasAccessToRoute(
       '/reports/union-balances',
       '/reports/rental-vouchers',
       '/reports/employee-salaries',
-      '/reports/financial-archive'
+      '/reports/financial-archive',
+      '/reports/treasury-banks'
     ],
+    // تفصيل صلاحيات المحاسب المالي
+    'المصارف والخزنة': ['/reports/treasury-banks'],
+    'الإحصائيات المالية': ['/reports/financial-statistics'],
+    'الديون المستحقة': ['/reports/outstanding-debts'],
+    'مرتبات الموظفين': ['/reports/employee-salaries'],
+    'الأرشيف المالي': ['/reports/financial-archive'],
+    'إحصائيات الإيرادات': ['/reports/revenue'],
+    'إدارة الإيرادات': ['/reports/payment-vouchers'],
+    'المخازن والعهدة': ['/reports/inventory'],
+    'رصيد الاتحاد (البطاقة البرتقالية)': ['/reports/union-balances'],
+    'الإيجارات العقارية': ['/reports/rental-vouchers'],
+    'المصروفات التشغيلية': ['/reports/expenses', '/reports/treasury-banks'],
+    'التسويات والعمولات': ['/reports/commissions'],
+    'كشف حساب الوكيل': ['/reports/branch-agent-account'],
+    'حوالات الوكلاء المالية': ['/reports/agent-transfers', '/agent-transfers'],
+    'اغلاق حساب الوكيل': ['/reports/monthly-account-closure'],
+    'كشف حساب الوكلاء': ['/reports/monthly-account-closures-report'],
+    'تسديد التعويضات': ['/reports/finance-claims'],
+    'التحصيلات البنكية': ['/reports/bank-reconciliation'],
+
     'اجور ومرتبات ضرائب': ['/reports/tax'],
     'اجور ومرتبات ضمان': ['/reports/social-security'],
     'قائمة المدن': ['/cities'],
@@ -250,8 +290,9 @@ function AuthorizedRoute({
   requiredPath
 }: {
   children: React.ReactNode;
-  requiredPath: string;
+  requiredPath?: string;
 }) {
+  const location = useLocation();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -268,7 +309,8 @@ function AuthorizedRoute({
         const authorizedDocs = user.authorized_documents || null;
         const branchAgentId = user.branch_agent_id ?? null;
 
-        setHasAccess(hasAccessToRoute(requiredPath, authorizedDocs, isAdmin, branchAgentId));
+        const pathToCheck = requiredPath || location.pathname;
+        setHasAccess(hasAccessToRoute(pathToCheck, authorizedDocs, isAdmin, branchAgentId));
       } catch (error) {
         console.error('Error loading user permissions:', error);
         setHasAccess(false);
@@ -291,7 +333,7 @@ function AuthorizedRoute({
       window.removeEventListener('userLoggedIn', handleStorageChange);
       window.removeEventListener('userPermissionsUpdated', handleStorageChange);
     };
-  }, [requiredPath]);
+  }, [requiredPath, location.pathname]);
 
   // انتظر حتى يتم تحميل الصلاحيات
   if (hasAccess === null) {
@@ -570,12 +612,25 @@ const createMenuSections = (
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
       { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
     ],
+    // تفصيل صلاحيات الفروع والوكلاء
+    'قائمة الفروع والوكلاء': { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+    'الوكلاء الجدد': { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
+    'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+    'إلغاء الوكالات': { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+    'طلبات تعديل بيانات الوكلاء': { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+
     'إدارة الموظفين': [
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
       { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
       { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
       { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
     ],
+    // تفصيل صلاحيات الموظفين
+    'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+    'إدارة أقسام الشركة': { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
+    'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
+    'طلبات تعديل بيانات الموظفين': { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
+
     'دليل الجهات الخارجية': { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
     'البريد الصادر والوارد': [
       { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
@@ -585,10 +640,13 @@ const createMenuSections = (
       { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
       { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
     ],
+    // تفصيل صلاحيات البريد الصادر والوارد
+    'البريد الوارد': { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
+    'البريد الصادر': { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
+
     'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
-
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -608,10 +666,34 @@ const createMenuSections = (
       { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
       { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     ],
+    // تفصيل صلاحيات المحاسب المالي
+    'المصارف والخزنة': { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
+    'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+    'الديون المستحقة': { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
+    'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
+    'الأرشيف المالي': { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
+    'إحصائيات الإيرادات': { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
+    'إدارة الإيرادات': { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+    'المخازن والعهدة': { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+    'رصيد الاتحاد (البطاقة البرتقالية)': { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+    'الإيجارات العقارية': { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
+    'التسويات والعمولات': { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
+    'كشف حساب الوكيل': { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
+    'حوالات الوكلاء المالية': { label: 'حوالات الوكلاء المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/reports/agent-transfers', badge: adminCounts?.agent_transfers },
+    'اغلاق حساب الوكيل': { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
+    'كشف حساب الوكلاء': { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+    'التحصيلات البنكية': { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
+    'المصروفات التشغيلية': { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+    'تسديد التعويضات': { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
+
     'الشؤون الفنية': [
       { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
       { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
     ],
+    // تفصيل صلاحيات الشؤون الفنية والمطالبات
+    'المطالبات': { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
+    'التعويضات': { label: 'التعويضات', icon: 'fa-solid fa-scale-unbalanced', to: '/reports/indemnities' },
+
     'اجور ومرتبات ضرائب': { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
     'اجور ومرتبات ضمان': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
@@ -669,6 +751,8 @@ const createMenuSections = (
     '/employee-requests', 
     '/agent-requests', 
     '/agency-cancellations', 
+    '/profile-update-requests?type=agent',
+    '/profile-update-requests?type=employee',
     '/external-entities',
     '/mail/incoming',
     '/mail/outgoing',
@@ -690,17 +774,17 @@ const createMenuSections = (
         if (Array.isArray(items)) {
           items.forEach(item => {
             if (item.to) {
-              if (item.to.startsWith('/reports/')) {
-                if (!reportsItemsMap.has(item.to)) {
-                  reportsItemsMap.set(item.to, item);
-                }
-              } else if (adminOrder.includes(item.to) || technicalOrder.includes(item.to)) {
+              if (adminOrder.includes(item.to) || technicalOrder.includes(item.to)) {
                 if (!adminItemsMap.has(item.to)) {
                   adminItemsMap.set(item.to, item);
                 }
               } else if (settingsOrder.includes(item.to)) {
                 if (!settingsItemsMap.has(item.to)) {
                   settingsItemsMap.set(item.to, item);
+                }
+              } else if (item.to.startsWith('/reports/')) {
+                if (!reportsItemsMap.has(item.to)) {
+                  reportsItemsMap.set(item.to, item);
                 }
               } else {
                 if (!insuranceItemsMap.has(item.to)) {
@@ -712,11 +796,7 @@ const createMenuSections = (
         } else {
           const itemInfo = items as SidebarItem;
           if (itemInfo.to) {
-            if (itemInfo.to.startsWith('/reports/')) {
-              if (!reportsItemsMap.has(itemInfo.to)) {
-                reportsItemsMap.set(itemInfo.to, itemInfo);
-              }
-            } else if (adminOrder.includes(itemInfo.to) || technicalOrder.includes(itemInfo.to)) {
+            if (adminOrder.includes(itemInfo.to) || technicalOrder.includes(itemInfo.to)) {
               if (!adminItemsMap.has(itemInfo.to)) {
                 adminItemsMap.set(itemInfo.to, itemInfo);
               }
@@ -727,6 +807,10 @@ const createMenuSections = (
                   icon: itemInfo.icon,
                   to: itemInfo.to,
                 });
+              }
+            } else if (itemInfo.to.startsWith('/reports/')) {
+              if (!reportsItemsMap.has(itemInfo.to)) {
+                reportsItemsMap.set(itemInfo.to, itemInfo);
               }
             } else {
               if (!insuranceItemsMap.has(itemInfo.to)) {
@@ -794,9 +878,35 @@ const createMenuSections = (
 
   // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
   if (adminItems.length > 0) {
-    const hrGroup = adminItems.filter(i => i.to === '/users' || i.to === '/employee-requests' || i.to === '/departments');
-    const agentsGroup = adminItems.filter(i => i.to === '/branches-agents' || i.to === '/agent-requests');
-    const mailGroup = adminItems.filter(i => i.to === '/mail/incoming' || i.to === '/mail/outgoing');
+    const hrOrder = [
+      '/users',
+      '/departments',
+      '/employee-requests',
+      '/profile-update-requests?type=employee'
+    ];
+    const agentsOrder = [
+      '/branches-agents',
+      '/branches-agents?status=pending',
+      '/agent-requests',
+      '/agency-cancellations',
+      '/profile-update-requests?type=agent'
+    ];
+    const mailOrder = [
+      '/mail/incoming',
+      '/mail/outgoing'
+    ];
+
+    const hrGroup = adminItems
+      .filter(i => i.to && hrOrder.includes(i.to))
+      .sort((a, b) => hrOrder.indexOf(a.to!) - hrOrder.indexOf(b.to!));
+
+    const agentsGroup = adminItems
+      .filter(i => i.to && agentsOrder.includes(i.to))
+      .sort((a, b) => agentsOrder.indexOf(a.to!) - agentsOrder.indexOf(b.to!));
+
+    const mailGroup = adminItems
+      .filter(i => i.to && mailOrder.includes(i.to))
+      .sort((a, b) => mailOrder.indexOf(a.to!) - mailOrder.indexOf(b.to!));
     
     const otherAdmin = adminItems.filter(i =>
       !hrGroup.some(g => g.to === i.to) &&
@@ -881,29 +991,44 @@ const createMenuSections = (
   }
 
   if (reportsItems.length > 0) {
-    const expensesGroup = reportsItems.filter(i => i.to === '/reports/union-balances' || i.to === '/reports/rental-vouchers' || i.to === '/reports/expenses');
-    const accountantGroup = reportsItems.filter(i =>
-      i.to === '/reports/commissions' ||
-      i.to === '/reports/branch-agent-account' ||
-      i.to === '/reports/monthly-account-closure' ||
-      i.to === '/reports/monthly-account-closures-report' ||
-      i.to === '/reports/bank-reconciliation' ||
-      i.to === '/reports/inventory' ||
-      i.to === '/reports/revenue' ||
-      i.to === '/reports/payment-vouchers' ||
-      i.to === '/reports/financial-statistics' ||
-      i.to === '/reports/outstanding-debts' ||
-      i.to === '/reports/employee-salaries' ||
-      i.to === '/reports/financial-archive' ||
-      i.to === '/reports/finance-claims' ||
-      i.to === '/reports/treasury-banks'
-    );
+    const rootFinanceOrder = [
+      '/reports/treasury-banks',
+      '/reports/financial-statistics',
+      '/reports/outstanding-debts',
+      '/reports/employee-salaries',
+      '/reports/financial-archive',
+      '/reports/tax',
+      '/reports/social-security'
+    ];
+    const accountantOrder = [
+      '/reports/revenue',
+      '/reports/payment-vouchers',
+      '/reports/inventory',
+      '/reports/commissions',
+      '/reports/branch-agent-account',
+      '/reports/agent-transfers',
+      '/reports/monthly-account-closure',
+      '/reports/monthly-account-closures-report',
+      '/reports/finance-claims',
+      '/reports/bank-reconciliation'
+    ];
+    const expensesOrder = [
+      '/reports/union-balances',
+      '/reports/rental-vouchers',
+      '/reports/expenses'
+    ];
 
-    // العناصر التي لا تنتمي لأي مجموعة (ستظهر كعناصر أساسية في الشؤون المالية)
-    const otherReports = reportsItems.filter(i =>
-      !expensesGroup.some(eg => eg.to === i.to) &&
-      !accountantGroup.some(ag => ag.to === i.to)
-    );
+    const otherReports = reportsItems
+      .filter(i => i.to && rootFinanceOrder.includes(i.to))
+      .sort((a, b) => rootFinanceOrder.indexOf(a.to!) - rootFinanceOrder.indexOf(b.to!));
+
+    const accountantGroup = reportsItems
+      .filter(i => i.to && accountantOrder.includes(i.to))
+      .sort((a, b) => accountantOrder.indexOf(a.to!) - accountantOrder.indexOf(b.to!));
+
+    const expensesGroup = reportsItems
+      .filter(i => i.to && expensesOrder.includes(i.to))
+      .sort((a, b) => expensesOrder.indexOf(a.to!) - expensesOrder.indexOf(b.to!));
 
     const finalReports = [...otherReports];
 
@@ -1117,7 +1242,14 @@ export default function App() {
     authorizedDocuments !== null && (
       authorizedDocuments.includes('إدارة الفروع والوكلاء') ||
       authorizedDocuments.includes('إدارة الموظفين') ||
-      authorizedDocuments.includes('المحاسب المالي')
+      authorizedDocuments.includes('المحاسب المالي') ||
+      authorizedDocuments.includes('الوكلاء الجدد') ||
+      authorizedDocuments.includes('طلبات الوكلاء') ||
+      authorizedDocuments.includes('إلغاء الوكالات') ||
+      authorizedDocuments.includes('طلبات تعديل بيانات الوكلاء') ||
+      authorizedDocuments.includes('طلبات الموظفين') ||
+      authorizedDocuments.includes('طلبات تعديل بيانات الموظفين') ||
+      authorizedDocuments.includes('حوالات الوكلاء المالية')
     )
   );
 
@@ -1132,7 +1264,14 @@ export default function App() {
         Array.isArray(user.authorized_documents) && (
           user.authorized_documents.includes('إدارة الفروع والوكلاء') ||
           user.authorized_documents.includes('إدارة الموظفين') ||
-          user.authorized_documents.includes('المحاسب المالي')
+          user.authorized_documents.includes('المحاسب المالي') ||
+          user.authorized_documents.includes('الوكلاء الجدد') ||
+          user.authorized_documents.includes('طلبات الوكلاء') ||
+          user.authorized_documents.includes('إلغاء الوكالات') ||
+          user.authorized_documents.includes('طلبات تعديل بيانات الوكلاء') ||
+          user.authorized_documents.includes('طلبات الموظفين') ||
+          user.authorized_documents.includes('طلبات تعديل بيانات الموظفين') ||
+          user.authorized_documents.includes('حوالات الوكلاء المالية')
         )
       );
       if (!hasAccess) return;
@@ -1383,28 +1522,28 @@ export default function App() {
                   showSidebarToggle={showSidebarToggle}
                 />
                 <Routes>
-                  <Route path="/company-documents" element={isAdmin ? <CompanyDocuments /> : <Navigate to="/dashboard" />} />
+                  <Route path="/company-documents" element={<AuthorizedRoute requiredPath="/company-documents"><CompanyDocuments /></AuthorizedRoute>} />
                   <Route path="/excel-import" element={isAdmin ? <ExcelImportPage /> : <Navigate to="/dashboard" />} />
                   <Route path="/dashboard" element={<DashboardPanels />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/old-documents" element={<ProtectedRoute><OldDocumentsManagement /></ProtectedRoute>} />
+                  <Route path="/old-documents" element={<AuthorizedRoute requiredPath="/old-documents"><OldDocumentsManagement /></AuthorizedRoute>} />
                   <Route path="/office-users" element={<OfficeUsers />} />
-                  <Route path="/profile-update-requests" element={isAdmin ? <ProfileUpdateRequestsList /> : <Navigate to="/dashboard" />} />
-                  <Route path="/users" element={<UsersList />} />
-                  <Route path="/departments" element={<DepartmentsList />} />
-                  <Route path="/employee-requests" element={<AllEmployeeRequests />} />
+                  <Route path="/profile-update-requests" element={<AuthorizedRoute requiredPath="/profile-update-requests"><ProfileUpdateRequestsList /></AuthorizedRoute>} />
+                  <Route path="/users" element={<AuthorizedRoute requiredPath="/users"><UsersList /></AuthorizedRoute>} />
+                  <Route path="/departments" element={<AuthorizedRoute requiredPath="/departments"><DepartmentsList /></AuthorizedRoute>} />
+                  <Route path="/employee-requests" element={<AuthorizedRoute requiredPath="/employee-requests"><AllEmployeeRequests /></AuthorizedRoute>} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
                   <Route path="/agent-requests" element={<AuthorizedRoute requiredPath="/agent-requests"><AllAgentRequests /></AuthorizedRoute>} />
                   <Route path="/agency-cancellations" element={<AuthorizedRoute requiredPath="/agency-cancellations"><AgencyCancellations /></AuthorizedRoute>} />
 
                   <Route path="/document-requests" element={<AuthorizedRoute requiredPath="/document-requests"><DocumentRequestsList /></AuthorizedRoute>} />
                   {/* إدارة الفروع والوكلاء */}
-                  <Route path="/branches-agents" element={<BranchesAgentsList />} />
-                  <Route path="/branches-agents/create" element={<CreateBranchAgent />} />
-                  <Route path="/branches-agents/:id" element={<BranchAgentDetails />} />
-                  <Route path="/branches-agents/:id/edit" element={<EditBranchAgent />} />
+                  <Route path="/branches-agents" element={<AuthorizedRoute requiredPath="/branches-agents"><BranchesAgentsList /></AuthorizedRoute>} />
+                  <Route path="/branches-agents/create" element={<AuthorizedRoute requiredPath="/branches-agents"><CreateBranchAgent /></AuthorizedRoute>} />
+                  <Route path="/branches-agents/:id" element={<AuthorizedRoute requiredPath="/branches-agents"><BranchAgentDetails /></AuthorizedRoute>} />
+                  <Route path="/branches-agents/:id/edit" element={<AuthorizedRoute requiredPath="/branches-agents"><EditBranchAgent /></AuthorizedRoute>} />
                   {/* إدارة المدن */}
                   <Route path="/cities" element={<AuthorizedRoute requiredPath="/cities"><CitiesList /></AuthorizedRoute>} />
                   {/* إدارة اللوحات */}
@@ -1484,45 +1623,45 @@ export default function App() {
                   <Route path="/cargo-insurance/create" element={<AuthorizedRoute requiredPath="/cargo-insurance"><CreateCargoInsurance /></AuthorizedRoute>} />
 
                   {/* المصارف والخزنة */}
-                  <Route path="/reports/treasury-banks" element={<TreasuryAndBanksPage />} />
+                  <Route path="/reports/treasury-banks" element={<AuthorizedRoute requiredPath="/reports/treasury-banks"><TreasuryAndBanksPage /></AuthorizedRoute>} />
                   {/* تقارير */}
-                  <Route path="/reports/financial-statistics" element={<FinancialStatistics />} />
-                  <Route path="/reports/revenue" element={<RevenueManagement />} />
-                  <Route path="/reports/branch-agent-account" element={<BranchAgentAccountReport />} />
-                  <Route path="/reports/agent-transfers" element={<AgentTransfers />} />
-                  <Route path="/agent-transfers" element={<AgentTransfers />} />
-                  <Route path="/reports/monthly-account-closure" element={<MonthlyAccountClosure />} />
-                  <Route path="/reports/monthly-account-closures-report" element={<MonthlyAccountClosuresReport />} />
-                  <Route path="/reports/payment-vouchers" element={<PaymentVouchers />} />
-                  <Route path="/reports/commissions" element={<CommissionManagement />} />
-                  <Route path="/reports/bank-reconciliation" element={<BankReconciliation />} />
-                  <Route path="/reports/outstanding-debts" element={<OutstandingDebts />} />
-                  <Route path="/reports/financial-archive" element={<FinancialArchive />} />
-                  <Route path="/reports/inventory" element={<InventoryManagement />} />
+                  <Route path="/reports/financial-statistics" element={<AuthorizedRoute requiredPath="/reports/financial-statistics"><FinancialStatistics /></AuthorizedRoute>} />
+                  <Route path="/reports/revenue" element={<AuthorizedRoute requiredPath="/reports/revenue"><RevenueManagement /></AuthorizedRoute>} />
+                  <Route path="/reports/branch-agent-account" element={<AuthorizedRoute requiredPath="/reports/branch-agent-account"><BranchAgentAccountReport /></AuthorizedRoute>} />
+                  <Route path="/reports/agent-transfers" element={<AuthorizedRoute requiredPath="/reports/agent-transfers"><AgentTransfers /></AuthorizedRoute>} />
+                  <Route path="/agent-transfers" element={<AuthorizedRoute requiredPath="/agent-transfers"><AgentTransfers /></AuthorizedRoute>} />
+                  <Route path="/reports/monthly-account-closure" element={<AuthorizedRoute requiredPath="/reports/monthly-account-closure"><MonthlyAccountClosure /></AuthorizedRoute>} />
+                  <Route path="/reports/monthly-account-closures-report" element={<AuthorizedRoute requiredPath="/reports/monthly-account-closures-report"><MonthlyAccountClosuresReport /></AuthorizedRoute>} />
+                  <Route path="/reports/payment-vouchers" element={<AuthorizedRoute requiredPath="/reports/payment-vouchers"><PaymentVouchers /></AuthorizedRoute>} />
+                  <Route path="/reports/commissions" element={<AuthorizedRoute requiredPath="/reports/commissions"><CommissionManagement /></AuthorizedRoute>} />
+                  <Route path="/reports/bank-reconciliation" element={<AuthorizedRoute requiredPath="/reports/bank-reconciliation"><BankReconciliation /></AuthorizedRoute>} />
+                  <Route path="/reports/outstanding-debts" element={<AuthorizedRoute requiredPath="/reports/outstanding-debts"><OutstandingDebts /></AuthorizedRoute>} />
+                  <Route path="/reports/financial-archive" element={<AuthorizedRoute requiredPath="/reports/financial-archive"><FinancialArchive /></AuthorizedRoute>} />
+                  <Route path="/reports/inventory" element={<AuthorizedRoute requiredPath="/reports/inventory"><InventoryManagement /></AuthorizedRoute>} />
                   <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
                   <Route path="/reports/tax" element={<AuthorizedRoute requiredPath="/reports/tax"><TaxSSReport type="tax" /></AuthorizedRoute>} />
                   <Route path="/reports/social-security" element={<AuthorizedRoute requiredPath="/reports/social-security"><TaxSSReport type="social_security" /></AuthorizedRoute>} />
-                  <Route path="/reports/expenses" element={<Navigate to="/reports/treasury-banks?tab=expenses" replace />} />
+                  <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><Navigate to="/reports/treasury-banks?tab=expenses" replace /></AuthorizedRoute>} />
                   <Route path="/reports/expenses/:id" element={<AuthorizedRoute requiredPath="/reports/expenses"><ViewExpenseDetails /></AuthorizedRoute>} />
                   <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><CompensationsList /></AuthorizedRoute>} />
                   <Route path="/reports/finance-claims" element={<AuthorizedRoute requiredPath="/reports/finance-claims"><FinanceClaimsList /></AuthorizedRoute>} />
                   <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
                   {/* ورقة الإيجارات */}
-                  <Route path="/reports/rental-vouchers" element={<RentalVouchersList />} />
-                  <Route path="/reports/rental-vouchers/create" element={<CreateRentalVoucher />} />
-                  <Route path="/reports/rental-vouchers/:id" element={<RentalVoucherDetails />} />
-                  <Route path="/reports/rental-vouchers/:id/edit" element={<EditRentalVoucher />} />
+                  <Route path="/reports/rental-vouchers" element={<AuthorizedRoute requiredPath="/reports/rental-vouchers"><RentalVouchersList /></AuthorizedRoute>} />
+                  <Route path="/reports/rental-vouchers/create" element={<AuthorizedRoute requiredPath="/reports/rental-vouchers"><CreateRentalVoucher /></AuthorizedRoute>} />
+                  <Route path="/reports/rental-vouchers/:id" element={<AuthorizedRoute requiredPath="/reports/rental-vouchers"><RentalVoucherDetails /></AuthorizedRoute>} />
+                  <Route path="/reports/rental-vouchers/:id/edit" element={<AuthorizedRoute requiredPath="/reports/rental-vouchers"><EditRentalVoucher /></AuthorizedRoute>} />
                   {/* اختبار API */}
                   <Route path="/test-car-info-api" element={<TestCarInfoAPI />} />
                   <Route path="/test-lifo-login" element={<TestLifoLogin />} />
                   {/* الأرشيف */}
-                  <Route path="/archive" element={<ProtectedRoute><ArchiveDashboard /></ProtectedRoute>} />
-                  <Route path="/external-entities" element={<ProtectedRoute><ExternalEntitiesManagement /></ProtectedRoute>} />
-                  <Route path="/mail/:type" element={<ProtectedRoute><MailManagement /></ProtectedRoute>} />
-                  <Route path="/mail/view/:id" element={<ProtectedRoute><ViewMailDocument /></ProtectedRoute>} />
+                  <Route path="/archive" element={<AuthorizedRoute requiredPath="/archive"><ArchiveDashboard /></AuthorizedRoute>} />
+                  <Route path="/external-entities" element={<AuthorizedRoute requiredPath="/external-entities"><ExternalEntitiesManagement /></AuthorizedRoute>} />
+                  <Route path="/mail/:type" element={<AuthorizedRoute><MailManagement /></AuthorizedRoute>} />
+                  <Route path="/mail/view/:id" element={<AuthorizedRoute><ViewMailDocument /></AuthorizedRoute>} />
 
-                  <Route path="/claims" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ClaimsList /></AuthorizedRoute></ProtectedRoute>} />
-                  <Route path="/claims/:id" element={<ProtectedRoute><AuthorizedRoute requiredPath="/claims"><ViewClaim /></AuthorizedRoute></ProtectedRoute>} />
+                  <Route path="/claims" element={<AuthorizedRoute requiredPath="/claims"><ClaimsList /></AuthorizedRoute>} />
+                  <Route path="/claims/:id" element={<AuthorizedRoute requiredPath="/claims"><ViewClaim /></AuthorizedRoute>} />
                   <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />
                 </Routes>
               </main>
