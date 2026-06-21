@@ -15,6 +15,7 @@ export default function WebsiteNavbar() {
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMediaDropdownOpen, setIsMediaDropdownOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -76,6 +77,13 @@ export default function WebsiteNavbar() {
           management: 'الإدارة',
           branches: 'الوكلاء والفروع',
           insurances: 'التأمينات',
+          investments: 'استثمارات الشركة',
+          mediaOffice: 'المكتب الإعلامي',
+          news: 'أخبارنا',
+          photos: 'الصور',
+          videos: 'الفيديو',
+          audios: 'الصوتيات',
+          insInfo: 'معلومات تأمينية',
           contact: 'اتصل بنا',
           logoTitle: 'المدار الليبي للتأمين',
           logoSubtitle: 'Al Madar Libyan Insurance',
@@ -88,6 +96,13 @@ export default function WebsiteNavbar() {
           management: 'Management',
           branches: 'Branches & Agents',
           insurances: 'Insurances',
+          investments: 'Company Investments',
+          mediaOffice: 'Media Office',
+          news: 'Our News',
+          photos: 'Photos',
+          videos: 'Videos',
+          audios: 'Audios',
+          insInfo: 'Insurance Info',
           contact: 'Contact Us',
           logoTitle: 'Al Madar Libyan Insurance',
           logoSubtitle: 'Insurance Services',
@@ -201,6 +216,85 @@ export default function WebsiteNavbar() {
               >
                 {t.insurances}
               </Link>
+            </li>
+            <li>
+              <Link 
+                to="/investments" 
+                className={isActive('/investments') ? 'active' : ''}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {t.investments}
+              </Link>
+            </li>
+            <li 
+              className={`navbar-dropdown-container ${isMediaDropdownOpen ? 'open' : ''}`}
+              onMouseEnter={() => window.innerWidth > 1024 && setIsMediaDropdownOpen(true)}
+              onMouseLeave={() => window.innerWidth > 1024 && setIsMediaDropdownOpen(false)}
+            >
+              <div 
+                className={`navbar-dropdown-trigger ${location.pathname.startsWith('/media') ? 'active' : ''}`}
+                onClick={() => window.innerWidth <= 1024 && setIsMediaDropdownOpen(!isMediaDropdownOpen)}
+              >
+                <span>{t.mediaOffice}</span>
+                <i className="fas fa-chevron-down" style={{ fontSize: '0.8rem', marginRight: '5px' }}></i>
+              </div>
+              <ul className="navbar-dropdown-menu">
+                <li>
+                  <Link 
+                    to="/media/news" 
+                    onClick={() => {
+                      setIsMediaDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {t.news}
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/media/photos" 
+                    onClick={() => {
+                      setIsMediaDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {t.photos}
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/media/videos" 
+                    onClick={() => {
+                      setIsMediaDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {t.videos}
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/media/audios" 
+                    onClick={() => {
+                      setIsMediaDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {t.audios}
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/media/info" 
+                    onClick={() => {
+                      setIsMediaDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {t.insInfo}
+                  </Link>
+                </li>
+              </ul>
             </li>
             <li>
               <Link 

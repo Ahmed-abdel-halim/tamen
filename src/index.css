@@ -12641,16 +12641,23 @@ tbody tr:last-child td {
 @media (max-width: 1024px) {
   .navbar-menu {
     position: fixed;
-    top: 80px;
+    top: 95px;
     right: -100%;
-    width: 300px;
-    height: calc(100vh - 80px);
+    width: 310px;
+    height: calc(100vh - 120px);
     background: white;
     flex-direction: column;
-    padding: 2rem;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem !important;
+    box-shadow: -5px 15px 40px rgba(0, 0, 0, 0.15);
     transition: right 0.3s ease;
     gap: 0;
+    overflow-y: auto;
+    border-radius: 24px 0 0 24px;
+    border: 1px solid rgba(1, 76, 177, 0.08);
+  }
+
+  [dir="ltr"] .navbar-menu {
+    border-radius: 0 24px 24px 0;
   }
 
   .navbar-menu.active {
@@ -13667,7 +13674,7 @@ td.no-print {
 
 .navbar-menu {
   display: flex;
-  gap: 25px;
+  gap: 15px;
   align-items: center;
   margin: 0;
   padding: 0;
@@ -13677,7 +13684,7 @@ td.no-print {
 .navbar-menu li a {
   color: #014cb1 !important;
   font-weight: 700 !important;
-  font-size: 17px !important;
+  font-size: 14.5px !important;
   text-decoration: none;
   transition: color 0.3s ease;
   padding: 0 !important;
@@ -13693,7 +13700,7 @@ td.no-print {
 .navbar-actions {
   display: flex;
   align-items: center;
-  gap: 25px;
+  gap: 15px;
 }
 
 .navbar-lang-toggle {
@@ -13704,24 +13711,24 @@ td.no-print {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 14px;
   padding: 0;
 }
 
 .navbar-lang-toggle i {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .navbar-login-btn {
   background: #139625;
   color: #ffffff !important;
-  padding: 10px 35px;
+  padding: 8px 22px;
   border-radius: 40px;
   text-decoration: none;
   font-weight: 800;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.3s ease;
 }
 
@@ -16134,15 +16141,19 @@ textarea:disabled {
 .navbar-dropdown-trigger {
   text-decoration: none;
   color: #014cb1;
-  font-weight: 600;
-  font-size: 16px;
-  padding: 0.5rem 1rem;
+  font-weight: 700;
+  font-size: 14.5px !important;
+  padding: 6px 12px;
   border-radius: 8px;
   transition: all 0.3s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.navbar-dropdown-trigger .fa-chevron-down {
+  transition: transform 0.3s ease;
 }
 
 .navbar-dropdown-trigger:hover,
@@ -16208,33 +16219,75 @@ textarea:disabled {
   .navbar-dropdown-menu {
     position: static;
     box-shadow: none;
-    border: none;
-    border-radius: 0;
-    min-width: 100%;
-    padding: 0;
-    margin-top: 0;
-    opacity: 1;
-    visibility: visible;
-    transform: none;
+    border: 1px solid rgba(1, 76, 177, 0.08) !important;
+    border-radius: 12px !important;
+    min-width: calc(100% - 20px) !important;
+    margin: 5px 10px 10px 10px !important;
+    padding: 8px 0 !important;
+    background: rgba(1, 76, 177, 0.03) !important;
     display: none;
-    background: rgba(1, 76, 177, 0.02);
-    border-right: 2px solid rgba(1, 76, 177, 0.1);
-    margin-right: 1rem;
-    margin-bottom: 0.5rem;
+    box-sizing: border-box;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
   }
 
   .navbar-dropdown-container.open .navbar-dropdown-menu {
-    display: block;
+    display: block !important;
+  }
+
+  .navbar-menu > li > a,
+  .navbar-dropdown-trigger {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 12px 16px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #014cb1 !important;
+    background: transparent !important;
+    border-bottom: none !important;
+    border-radius: 12px !important;
+    margin: 4px 0 !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s ease !important;
+    text-align: right !important;
+    justify-content: flex-start !important;
   }
 
   .navbar-dropdown-trigger {
-    width: 100%;
-    justify-content: space-between;
+    justify-content: space-between !important;
+  }
+
+  .navbar-menu > li > a:hover,
+  .navbar-menu > li > a.active,
+  .navbar-dropdown-trigger:hover,
+  .navbar-dropdown-trigger.active {
+    color: #139625 !important;
+    background: rgba(1, 76, 177, 0.05) !important;
+  }
+
+  .navbar-dropdown-container.open .fa-chevron-down {
+    transform: rotate(180deg);
   }
 
   .navbar-dropdown-menu li a {
-    padding: 8px 15px !important;
-    font-size: 14px !important;
+    display: block !important;
+    padding: 10px 20px !important;
+    font-size: 14.5px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    border-bottom: none !important;
+    border-radius: 8px !important;
+    margin: 2px 8px !important;
+    text-align: right !important;
+    background: transparent !important;
+  }
+
+  .navbar-dropdown-menu li a:hover,
+  .navbar-dropdown-menu li a.active {
+    background: rgba(1, 76, 177, 0.08) !important;
+    color: #139625 !important;
   }
 }
 
@@ -16256,5 +16309,67 @@ textarea:disabled {
   .agent-financial-grid {
     grid-template-columns: 1fr;
     gap: 15px;
+  }
+}
+
+/* --- Website Responsive Subpages: Investments & Media Center --- */
+
+.investments-grid-wrapper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (max-width: 991px) {
+  .investments-grid-wrapper {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+}
+
+.investment-main-card {
+  padding: 40px !important;
+}
+
+.media-detailed-card {
+  padding: 40px !important;
+}
+
+@media (max-width: 768px) {
+  .investment-main-card,
+  .media-detailed-card {
+    padding: 24px !important;
+  }
+  
+  .about-hero-new {
+    height: 340px !important;
+  }
+  
+  .about-hero-content-new {
+    margin-top: 40px !important;
+  }
+  
+  .about-hero-title-green {
+    font-size: 24px !important;
+  }
+  
+  .about-hero-title-white {
+    font-size: 28px !important;
+  }
+}
+
+.media-grid-three,
+.media-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+}
+
+@media (max-width: 768px) {
+  .media-grid-three,
+  .media-grid-two {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
   }
 }

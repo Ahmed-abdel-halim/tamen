@@ -39,7 +39,7 @@ type InsuranceType = {
 };
 
 export default function WebsiteSettingsManagement() {
-  const [activeTab, setActiveTab] = useState<"settings" | "sliders" | "services" | "insurances">("settings");
+  const [activeTab, setActiveTab] = useState<"settings" | "sliders" | "services" | "insurances" | "investments" | "media-center">("settings");
   
   // Site settings state
   const [settings, setSettings] = useState<Record<string, string>>({
@@ -55,6 +55,38 @@ export default function WebsiteSettingsManagement() {
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+
+  // Investments settings state
+  const [investmentsFormData, setInvestmentsFormData] = useState({
+    investments_title_ar: "",
+    investments_title_en: "",
+    investments_content_ar: "",
+    investments_content_en: "",
+  });
+  const [investmentsBannerFile, setInvestmentsBannerFile] = useState<File | null>(null);
+  const [investmentsBannerUrl, setInvestmentsBannerUrl] = useState("");
+  const [investmentsSaving, setInvestmentsSaving] = useState(false);
+
+  // Media Center state
+  const [mediaPosts, setMediaPosts] = useState<any[]>([]);
+  const [mediaPostsLoading, setMediaPostsLoading] = useState(false);
+  const [mediaPostsSaving, setMediaPostsSaving] = useState(false);
+  const [showMediaForm, setShowMediaForm] = useState(false);
+  const [editingMediaPost, setEditingMediaPost] = useState<any | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaFormData, setMediaFormData] = useState({
+    type: "news",
+    title_ar: "",
+    title_en: "",
+    content_ar: "",
+    content_en: "",
+    location_ar: "",
+    location_en: "",
+    media_url: "",
+    published_date: "",
+    sort_order: 0,
+    is_active: true,
+  });
 
   // Sliders state
   const [sliders, setSliders] = useState<Slider[]>([]);
@@ -112,10 +144,11 @@ export default function WebsiteSettingsManagement() {
 
 
   useEffect(() => {
-    if (activeTab === "settings") fetchSettings();
+    if (activeTab === "settings" || activeTab === "investments") fetchSettings();
     if (activeTab === "sliders") fetchSliders();
     if (activeTab === "services") fetchServices();
     if (activeTab === "insurances") fetchInsurances();
+    if (activeTab === "media-center") fetchMediaPosts();
   }, [activeTab]);
 
   // Common Headers Helper
@@ -142,6 +175,15 @@ export default function WebsiteSettingsManagement() {
       if (res.ok) {
         const data = await res.json();
         setSettings(prev => ({ ...prev, ...data }));
+        
+        // Pre-fill investments form data
+        setInvestmentsFormData({
+          investments_title_ar: data.investments_title_ar || "",
+          investments_title_en: data.investments_title_en || "",
+          investments_content_ar: data.investments_content_ar || "",
+          investments_content_en: data.investments_content_en || "",
+        });
+        setInvestmentsBannerUrl(data.investments_banner || "");
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -166,6 +208,148 @@ export default function WebsiteSettingsManagement() {
       showToast(error.message || "حدث خطأ أثناء حفظ الإعدادات", "error");
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const handleInvestmentsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInvestmentsSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("investments_title_ar", investmentsFormData.investments_title_ar);
+      formData.append("investments_title_en", investmentsFormData.investments_title_en);
+      formData.append("investments_content_ar", investmentsFormData.investments_content_ar);
+      formData.append("investments_content_en", investmentsFormData.investments_content_en);
+      if (investmentsBannerFile) {
+        formData.append("investments_banner", investmentsBannerFile);
+      }
+
+      const res = await fetch(`${API_BASE_URL}/website-settings`, {
+        method: "POST",
+        headers: getAuthHeaders(false),
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("فشل حفظ إعدادات الاستثمارات");
+      showToast("تم حفظ إعدادات الاستثمارات بنجاح", "success");
+      fetchSettings();
+    } catch (error: any) {
+      showToast(error.message || "حدث خطأ أثناء حفظ إعدادات الاستثمارات", "error");
+    } finally {
+      setInvestmentsSaving(false);
+    }
+  };
+
+  // Media Center CRUD handlers
+  const fetchMediaPosts = async () => {
+    setMediaPostsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/website-settings/media-posts`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMediaPosts(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching media posts:", error);
+    } finally {
+      setMediaPostsLoading(false);
+    }
+  };
+
+  const handleMediaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMediaPostsSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("type", mediaFormData.type);
+      formData.append("title_ar", mediaFormData.title_ar);
+      formData.append("title_en", mediaFormData.title_en);
+      formData.append("content_ar", mediaFormData.content_ar);
+      formData.append("content_en", mediaFormData.content_en);
+      formData.append("location_ar", mediaFormData.location_ar);
+      formData.append("location_en", mediaFormData.location_en);
+      formData.append("sort_order", mediaFormData.sort_order.toString());
+      formData.append("is_active", mediaFormData.is_active ? "1" : "0");
+      if (mediaFormData.published_date) {
+        formData.append("published_date", mediaFormData.published_date);
+      }
+      if (mediaFormData.media_url) {
+        formData.append("media_url", mediaFormData.media_url);
+      }
+      if (mediaFile) {
+        formData.append("file", mediaFile);
+      }
+
+      const url = editingMediaPost
+        ? `${API_BASE_URL}/website-settings/media-posts/${editingMediaPost.id}`
+        : `${API_BASE_URL}/website-settings/media-posts`;
+
+      const res = await fetch(url, {
+        method: "POST", // POST endpoint handles PUT/Update logic natively on file upload forms
+        headers: getAuthHeaders(false),
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("فشل حفظ المنشور");
+      showToast("تم حفظ المنشور بنجاح", "success");
+      setShowMediaForm(false);
+      setEditingMediaPost(null);
+      setMediaFile(null);
+      setMediaFormData({
+        type: "news",
+        title_ar: "",
+        title_en: "",
+        content_ar: "",
+        content_en: "",
+        location_ar: "",
+        location_en: "",
+        media_url: "",
+        published_date: "",
+        sort_order: 0,
+        is_active: true,
+      });
+      fetchMediaPosts();
+    } catch (error: any) {
+      showToast(error.message || "حدث خطأ أثناء حفظ المنشور", "error");
+    } finally {
+      setMediaPostsSaving(false);
+    }
+  };
+
+  const handleMediaEdit = (post: any) => {
+    setEditingMediaPost(post);
+    setMediaFormData({
+      type: post.type,
+      title_ar: post.title_ar || "",
+      title_en: post.title_en || "",
+      content_ar: post.content_ar || "",
+      content_en: post.content_en || "",
+      location_ar: post.location_ar || "",
+      location_en: post.location_en || "",
+      media_url: post.media_url || "",
+      published_date: post.published_date ? post.published_date.substring(0, 16) : "",
+      sort_order: post.sort_order || 0,
+      is_active: post.is_active ?? true,
+    });
+    setMediaFile(null);
+    setShowMediaForm(true);
+  };
+
+  const handleMediaDelete = async (id: number) => {
+    if (!window.confirm("هل أنت متأكد من حذف هذا المنشور؟")) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/website-settings/media-posts/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      if (!res.ok) throw new Error("فشل حذف المنشور");
+      showToast("تم حذف المنشور بنجاح", "success");
+      setMediaPosts(prev => prev.filter(p => p.id !== id));
+    } catch (error: any) {
+      showToast(error.message || "حدث خطأ أثناء حذف المنشور", "error");
     }
   };
 
@@ -472,8 +656,8 @@ export default function WebsiteSettingsManagement() {
   };
 
 
-  const showLoader = settingsLoading || slidersLoading || servicesLoading || insurancesLoading || settingsSaving || sliderSaving || serviceSaving || insuranceSaving;
-  const loaderMessage = (settingsSaving || sliderSaving || serviceSaving || insuranceSaving) 
+  const showLoader = settingsLoading || slidersLoading || servicesLoading || insurancesLoading || mediaPostsLoading || settingsSaving || sliderSaving || serviceSaving || insuranceSaving || investmentsSaving || mediaPostsSaving;
+  const loaderMessage = (settingsSaving || sliderSaving || serviceSaving || insuranceSaving || investmentsSaving || mediaPostsSaving) 
     ? "جاري حفظ التعديلات والبيانات..." 
     : "جاري تحميل وتحديث بيانات الموقع...";
 
@@ -506,7 +690,7 @@ export default function WebsiteSettingsManagement() {
             fontWeight: "bold",
           }}
         >
-          إعدادات التواصل والتواصل الاجتماعي
+          إعدادات التواصل
         </button>
         <button
           className={`tab-btn ${activeTab === "sliders" ? "active" : ""}`}
@@ -521,7 +705,7 @@ export default function WebsiteSettingsManagement() {
             fontWeight: "bold",
           }}
         >
-          البنرات المتحركة (Sliders)
+          البنرات المتحركة
         </button>
         <button
           className={`tab-btn ${activeTab === "services" ? "active" : ""}`}
@@ -536,7 +720,7 @@ export default function WebsiteSettingsManagement() {
             fontWeight: "bold",
           }}
         >
-          خدمات الصفحة الرئيسية (8 خدمات)
+          خدمات الصفحة الرئيسية
         </button>
         <button
           className={`tab-btn ${activeTab === "insurances" ? "active" : ""}`}
@@ -553,9 +737,414 @@ export default function WebsiteSettingsManagement() {
         >
           تفاصيل وثائق التأمين
         </button>
+        <button
+          className={`tab-btn ${activeTab === "investments" ? "active" : ""}`}
+          onClick={() => setActiveTab("investments")}
+          style={{
+            padding: "10px 20px",
+            background: activeTab === "investments" ? "var(--accent-cyan)" : "transparent",
+            color: activeTab === "investments" ? "white" : "var(--text)",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          استثمارات الشركة
+        </button>
+        <button
+          className={`tab-btn ${activeTab === "media-center" ? "active" : ""}`}
+          onClick={() => setActiveTab("media-center")}
+          style={{
+            padding: "10px 20px",
+            background: activeTab === "media-center" ? "var(--accent-cyan)" : "transparent",
+            color: activeTab === "media-center" ? "white" : "var(--text)",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          المكتب الإعلامي
+        </button>
       </div>
 
       <div className="users-card" style={{ padding: "25px" }}>
+        {/* Tab 5: Investments */}
+        {activeTab === "investments" && (
+          <div>
+            <h3 style={{ marginBottom: "20px" }}>تعديل صفحة استثمارات الشركة</h3>
+            {settingsLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '250px', color: 'var(--accent-cyan)' }}>
+                <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ marginBottom: '15px' }}></i>
+                <p style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جارِ تحميل الإعدادات...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleInvestmentsSubmit} className="user-form" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                  <div className="form-group">
+                    <label>عنوان القسم باللغة العربية</label>
+                    <input
+                      type="text"
+                      value={investmentsFormData.investments_title_ar}
+                      onChange={(e) => setInvestmentsFormData({ ...investmentsFormData, investments_title_ar: e.target.value })}
+                      placeholder="مثال: إستثمارات الشركة"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>عنوان القسم باللغة الإنجليزية</label>
+                    <input
+                      type="text"
+                      value={investmentsFormData.investments_title_en}
+                      onChange={(e) => setInvestmentsFormData({ ...investmentsFormData, investments_title_en: e.target.value })}
+                      placeholder="مثال: Company Investments"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>صورة البنر العلوي (Banner Image)</label>
+                  {investmentsBannerUrl && (
+                    <div style={{ marginBottom: "10px", height: "150px", overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border)", position: "relative" }}>
+                      <img src={resolveImageUrl(investmentsBannerUrl)} alt="Banner Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setInvestmentsBannerFile(e.target.files?.[0] || null)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>الوصف والمحتوى باللغة العربية</label>
+                  <textarea
+                    value={investmentsFormData.investments_content_ar}
+                    onChange={(e) => setInvestmentsFormData({ ...investmentsFormData, investments_content_ar: e.target.value })}
+                    placeholder="اكتب هنا كامل نص الوصف والتفاصيل بما فيها المساهمات..."
+                    rows={12}
+                    style={{ lineHeight: "1.6" }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>الوصف والمحتوى باللغة الإنجليزية</label>
+                  <textarea
+                    value={investmentsFormData.investments_content_en}
+                    onChange={(e) => setInvestmentsFormData({ ...investmentsFormData, investments_content_en: e.target.value })}
+                    placeholder="Write the English description and content details here..."
+                    rows={12}
+                    style={{ lineHeight: "1.6" }}
+                  />
+                </div>
+
+                <div className="form-actions" style={{ marginTop: "15px" }}>
+                  <button type="submit" className="btn-submit" disabled={investmentsSaving}>
+                    {investmentsSaving ? "جاري حفظ التعديلات..." : "حفظ التعديلات"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* Tab 6: Media Center */}
+        {activeTab === "media-center" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ margin: 0 }}>إدارة محتوى المكتب الإعلامي</h3>
+              <button
+                onClick={() => {
+                  setEditingMediaPost(null);
+                  setMediaFile(null);
+                  setMediaFormData({
+                    type: "news",
+                    title_ar: "",
+                    title_en: "",
+                    content_ar: "",
+                    content_en: "",
+                    location_ar: "",
+                    location_en: "",
+                    media_url: "",
+                    published_date: new Date().toISOString().substring(0, 16),
+                    sort_order: 0,
+                    is_active: true,
+                  });
+                  setShowMediaForm(true);
+                }}
+                className="btn-submit"
+                style={{ background: "var(--accent)", display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <i className="fa-solid fa-plus"></i> إضافة منشور جديد
+              </button>
+            </div>
+
+            {showMediaForm && (
+              <div style={{ border: "1px solid var(--border)", borderRadius: "12px", padding: "25px", marginBottom: "30px", background: "var(--bg)" }}>
+                <h4 style={{ marginBottom: "20px", color: "var(--text)" }}>
+                  {editingMediaPost ? "تعديل منشور" : "إضافة منشور جديد"}
+                </h4>
+                <form onSubmit={handleMediaSubmit} className="user-form" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
+                    <div className="form-group">
+                      <label>نوع المنشور</label>
+                      <select
+                        value={mediaFormData.type}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, type: e.target.value })}
+                        required
+                      >
+                        <option value="news">أخبارنا (News)</option>
+                        <option value="photo">الصور (Photos)</option>
+                        <option value="video">الفيديو (Videos)</option>
+                        <option value="audio">الصوتيات (Audios)</option>
+                        <option value="info">معلومات تأمينية (Insurance Info)</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>تاريخ النشر</label>
+                      <input
+                        type="datetime-local"
+                        value={mediaFormData.published_date}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, published_date: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>الترتيب (الوزن)</label>
+                      <input
+                        type="number"
+                        value={mediaFormData.sort_order}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, sort_order: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                    <div className="form-group">
+                      <label>العنوان باللغة العربية</label>
+                      <input
+                        type="text"
+                        value={mediaFormData.title_ar}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, title_ar: e.target.value })}
+                        required
+                        placeholder="العنوان بالعربية"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>العنوان باللغة الإنجليزية</label>
+                      <input
+                        type="text"
+                        value={mediaFormData.title_en}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, title_en: e.target.value })}
+                        placeholder="Title in English"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                    <div className="form-group">
+                      <label>الموقع الجغرافي بالعربية (للأخبار/الصور)</label>
+                      <input
+                        type="text"
+                        value={mediaFormData.location_ar}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, location_ar: e.target.value })}
+                        placeholder="مثال: طرابلس، ليبيا"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>الموقع الجغرافي بالإنجليزية</label>
+                      <input
+                        type="text"
+                        value={mediaFormData.location_en}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, location_en: e.target.value })}
+                        placeholder="e.g., Tripoli, Libya"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>رابط فيديو يوتيوب أو الرابط الخارجي (لالفيديو فقط)</label>
+                    <input
+                      type="url"
+                      value={mediaFormData.media_url}
+                      onChange={(e) => setMediaFormData({ ...mediaFormData, media_url: e.target.value })}
+                      placeholder="https://www.youtube.com/embed/..."
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>رفع ملف (صورة مميزة للأخبار/الصور، أو ملف صوتي/فيديو مباشر)</label>
+                    {mediaFormData.media_url && !mediaFile && !mediaFormData.media_url.startsWith('http') && (
+                      <p style={{ margin: "5px 0", fontSize: "0.85rem", color: "var(--accent)" }}>
+                        يوجد ملف مرفوع مسبقاً: {mediaFormData.media_url}
+                      </p>
+                    )}
+                    <input
+                      type="file"
+                      accept={mediaFormData.type === 'audio' ? 'audio/*' : mediaFormData.type === 'video' ? 'video/*' : 'image/*'}
+                      onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                    <div className="form-group">
+                      <label>المحتوى / التفاصيل باللغة العربية</label>
+                      <textarea
+                        value={mediaFormData.content_ar}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, content_ar: e.target.value })}
+                        rows={6}
+                        placeholder="محتوى المنشور بالتفصيل..."
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>المحتوى / التفاصيل باللغة الإنجليزية</label>
+                      <textarea
+                        value={mediaFormData.content_en}
+                        onChange={(e) => setMediaFormData({ ...mediaFormData, content_en: e.target.value })}
+                        rows={6}
+                        placeholder="Post content details in English..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <input
+                      type="checkbox"
+                      id="media_active"
+                      checked={mediaFormData.is_active}
+                      onChange={(e) => setMediaFormData({ ...mediaFormData, is_active: e.target.checked })}
+                      style={{ width: "20px", height: "20px", cursor: "pointer" }}
+                    />
+                    <label htmlFor="media_active" style={{ cursor: "pointer", userSelect: "none" }}>منشور نشط ويظهر على الموقع</label>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+                    <button type="submit" className="btn-submit" disabled={mediaPostsSaving}>
+                      {mediaPostsSaving ? "جاري حفظ البيانات..." : "حفظ المنشور"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMediaForm(false);
+                        setEditingMediaPost(null);
+                      }}
+                      className="btn-submit"
+                      style={{ background: "#64748b" }}
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {mediaPostsLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '200px', color: 'var(--accent-cyan)' }}>
+                <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ marginBottom: '15px' }}></i>
+                <p>جاري تحميل المنشورات...</p>
+              </div>
+            ) : mediaPosts.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "var(--muted)" }}>
+                لا يوجد منشورات حالياً في المكتب الإعلامي.
+              </div>
+            ) : (
+              <div className="table-wrapper" style={{ overflowX: "auto" }}>
+                <table className="users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: "12px", textAlign: "right" }}>العنوان</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>التصنيف</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>الموقع</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>المشاهدات</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>الحالة</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>الترتيب</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>تاريخ النشر</th>
+                      <th style={{ padding: "12px", textAlign: "center" }}>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mediaPosts.map((post) => {
+                      const typeLabelMap: Record<string, string> = {
+                        news: "أخبارنا",
+                        photo: "الصور",
+                        video: "الفيديو",
+                        audio: "الصوتيات",
+                        info: "معلومات تأمينية"
+                      };
+                      const typeLabel = typeLabelMap[post.type] || post.type;
+
+                      return (
+                        <tr key={post.id}>
+                          <td style={{ padding: "12px", fontWeight: "bold" }}>{post.title_ar}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            <span style={{
+                              background: "rgba(30, 66, 159, 0.1)",
+                              color: "var(--accent-cyan)",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.85rem",
+                              fontWeight: "bold"
+                            }}>
+                              {typeLabel}
+                            </span>
+                          </td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>{post.location_ar || "-"}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>{post.views}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            <span style={{
+                              color: post.is_active ? "#139625" : "#e11d48",
+                              fontWeight: "bold"
+                            }}>
+                              {post.is_active ? "نشط" : "غير نشط"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>{post.sort_order}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            {post.published_date ? new Date(post.published_date).toLocaleDateString("ar-LY") : "-"}
+                          </td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                              <button
+                                onClick={() => handleMediaEdit(post)}
+                                style={{
+                                  background: "var(--accent-cyan)",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  padding: "6px 12px",
+                                  cursor: "pointer",
+                                  fontWeight: "bold"
+                                }}
+                              >
+                                تعديل
+                              </button>
+                              <button
+                                onClick={() => handleMediaDelete(post.id)}
+                                style={{
+                                  background: "#e11d48",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  padding: "6px 12px",
+                                  cursor: "pointer",
+                                  fontWeight: "bold"
+                                }}
+                              >
+                                حذف
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab 1: Settings */}
         {activeTab === "settings" && (
           <div>

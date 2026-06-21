@@ -90,6 +90,8 @@ import EditCargoInsurance from './components/EditCargoInsurance';
 import ArchiveDashboard from './components/archive/ArchiveDashboard';
 import HomePage from './components/HomePage';
 import AboutUs from './components/AboutUs';
+import CompanyInvestments from './components/CompanyInvestments';
+import MediaCenter from './components/MediaCenter';
 import DepartmentView from './components/DepartmentView';
 import BranchesAgentsPage from './components/BranchesAgentsPage';
 import InsurancesPage from './components/InsurancesPage';
@@ -1479,6 +1481,9 @@ export default function App() {
         {/* Public Website Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/about-us" element={<AboutUs />} />
+        <Route path="/investments" element={<CompanyInvestments />} />
+        <Route path="/media/:type" element={<MediaCenter />} />
+        <Route path="/media/:type/:id" element={<MediaCenter />} />
         <Route path="/management" element={<Navigate to="/management/work-team" replace />} />
         <Route path="/management/work-team" element={<DepartmentView />} />
         <Route path="/management/department/:id" element={<DepartmentView />} />
