@@ -709,16 +709,20 @@ export default function BranchAgentDetails() {
       <div className="profile-main-layout">
         <aside className="profile-sidebar">
           <nav className="tab-navigation">
-            {[
+            {(isAdmin ? [
               { id: 'agency', label: 'بيانات الوكالة', icon: 'fa-building' },
               { id: 'wallet', label: 'المحفظة والنقاط', icon: 'fa-wallet' },
               { id: 'contact', label: 'الاتصال والهوية', icon: 'fa-address-card' },
               { id: 'custody', label: 'العهدة والعهد', icon: 'fa-boxes-stacked' },
               { id: 'permissions', label: 'الصلاحيات', icon: 'fa-shield-halved' },
-              { id: 'requests', label: 'طلبات الوكيل', icon: 'fa-paper-plane' },
+              { id: 'requests', label: 'طلبات الوكلاء', icon: 'fa-paper-plane' },
               { id: 'doc_requests', label: 'طلبات الوثائق', icon: 'fa-file-circle-exclamation' },
               { id: 'stats', label: 'الإحصائيات المالية', icon: 'fa-chart-pie' },
-            ].map((tab) => (
+            ] : [
+              { id: 'agency', label: 'بيانات الوكالة', icon: 'fa-building' },
+              { id: 'wallet', label: 'المحفظة والنقاط', icon: 'fa-wallet' },
+              { id: 'requests', label: 'طلبات الوكلاء', icon: 'fa-paper-plane' },
+            ]).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id as any); navigate(`/branches-agents/${id}?tab=${tab.id}`, { replace: true }); }}
@@ -728,6 +732,29 @@ export default function BranchAgentDetails() {
                 <span>{tab.label}</span>
               </button>
             ))}
+            {!isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="tab-btn back-home-btn"
+                style={{
+                  marginTop: '15px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '14px',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  width: '100%',
+                  fontWeight: '800'
+                }}
+              >
+                <i className="fa-solid fa-arrow-right-from-bracket" style={{ transform: 'rotate(180deg)' }}></i>
+                <span>العودة للصفحة الرئيسية</span>
+              </button>
+            )}
           </nav>
         </aside>
 

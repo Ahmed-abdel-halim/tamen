@@ -78,6 +78,7 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const [userName, setUserName] = useState('المستخدم')
+  const [branchAgentId, setBranchAgentId] = useState<number | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
@@ -245,12 +246,15 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
         try {
           const user = JSON.parse(userStr);
           setUserName(user.name || user.username || 'المستخدم');
+          setBranchAgentId(user.branch_agent_id || null);
         } catch {
           // إذا كان string قديم
           setUserName(userStr || 'المستخدم');
+          setBranchAgentId(null);
         }
       } else {
         setUserName('المستخدم');
+        setBranchAgentId(null);
       }
     };
     
@@ -260,12 +264,17 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
     const handleUserUpdate = (e: CustomEvent) => {
       const updatedUser = e.detail;
       setUserName(updatedUser.name || updatedUser.username || 'المستخدم');
+      setBranchAgentId(updatedUser.branch_agent_id || null);
     };
     
     window.addEventListener('userUpdated', handleUserUpdate as EventListener);
+    window.addEventListener('userLoggedIn', loadUser);
+    window.addEventListener('storage', loadUser);
     
     return () => {
       window.removeEventListener('userUpdated', handleUserUpdate as EventListener);
+      window.removeEventListener('userLoggedIn', loadUser);
+      window.removeEventListener('storage', loadUser);
     };
   }, [])
 
@@ -461,7 +470,14 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
             <i className="fa-solid fa-chevron-down" aria-hidden="true" />
           </button>
           <div className={`user-menu${isUserMenuOpen ? ' is-open' : ''}`} role="menu">
-            <button type="button" onClick={() => { navigate('/profile'); setIsUserMenuOpen(false); }}>
+            <button type="button" onClick={() => {
+              if (branchAgentId) {
+                navigate(`/branches-agents/${branchAgentId}?tab=agency`);
+              } else {
+                navigate('/profile');
+              }
+              setIsUserMenuOpen(false);
+            }}>
               <i className="fa-regular fa-user" aria-hidden="true" />
               الملف الشخصي
             </button>

@@ -1103,13 +1103,10 @@ const createMenuSections = (
         // للوكيل الرئيسي (المكتب)
         agentItems.push(
           { label: 'بيانات الوكالة', icon: 'fa-solid fa-building-user', to: `/branches-agents/${branchAgentId}?tab=agency` },
-          { label: 'المحفظة والنقاط (Loyalty)', icon: 'fa-solid fa-wallet', to: `/branches-agents/${branchAgentId}?tab=wallet` },
+          { label: 'المحفظة والنقاط', icon: 'fa-solid fa-wallet', to: `/branches-agents/${branchAgentId}?tab=wallet` },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: `/branches-agents/${branchAgentId}?tab=requests` },
-          { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-contract', to: `/branches-agents/${branchAgentId}?tab=doc_requests`, badge: pendingDocsCount },
-          { label: 'التحويلات المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/agent-transfers' },
-          { label: 'مستخدمي المكتب', icon: 'fa-solid fa-users-gear', to: '/office-users' }
+          { label: 'العودة للصفحة الرئيسية', icon: 'fa-solid fa-house', to: '/dashboard' }
         );
-        agentItems.push({ label: 'إعدادات الحساب', icon: 'fa-solid fa-user-gear', to: '/profile' });
       }
 
       sections.push({
@@ -1550,8 +1547,8 @@ export default function App() {
                   {/* إدارة الفروع والوكلاء */}
                   <Route path="/branches-agents" element={<AuthorizedRoute requiredPath="/branches-agents"><BranchesAgentsList /></AuthorizedRoute>} />
                   <Route path="/branches-agents/create" element={<AuthorizedRoute requiredPath="/branches-agents"><CreateBranchAgent /></AuthorizedRoute>} />
-                  <Route path="/branches-agents/:id" element={<AuthorizedRoute requiredPath="/branches-agents"><BranchAgentDetails /></AuthorizedRoute>} />
-                  <Route path="/branches-agents/:id/edit" element={<AuthorizedRoute requiredPath="/branches-agents"><EditBranchAgent /></AuthorizedRoute>} />
+                  <Route path="/branches-agents/:id" element={<AuthorizedRoute><BranchAgentDetails /></AuthorizedRoute>} />
+                  <Route path="/branches-agents/:id/edit" element={<AuthorizedRoute><EditBranchAgent /></AuthorizedRoute>} />
                   {/* إدارة المدن */}
                   <Route path="/cities" element={<AuthorizedRoute requiredPath="/cities"><CitiesList /></AuthorizedRoute>} />
                   {/* إدارة اللوحات */}
