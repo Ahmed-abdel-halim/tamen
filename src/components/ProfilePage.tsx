@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { showToast } from './Toast';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, resolveImageUrl } from '../config/api';
 
 interface UserType {
   id: number;
@@ -41,10 +41,7 @@ interface UserType {
 
 const resolveFileUrl = (urlOrPath: string | undefined) => {
   if (!urlOrPath) return undefined;
-  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://') || urlOrPath.startsWith('/storage/')) {
-    return urlOrPath;
-  }
-  return `/storage/${urlOrPath}`;
+  return resolveImageUrl(urlOrPath);
 };
 
 export default function ProfilePage() {
@@ -376,6 +373,7 @@ export default function ProfilePage() {
     if (!url) {
       return <span style={{ fontSize: 13, color: 'var(--muted)' }}>لا يوجد ملف مرفق حالياً</span>;
     }
+    const resolvedUrl = resolveImageUrl(url);
     const isPdf = url.toLowerCase().endsWith('.pdf');
     return (
       <div className="profile-file-preview-container">
@@ -385,10 +383,10 @@ export default function ProfilePage() {
             <span>PDF</span>
           </div>
         ) : (
-          <img src={url} alt={title} className="profile-file-preview-thumb" />
+          <img src={resolvedUrl} alt={title} className="profile-file-preview-thumb" />
         )}
         <div className="profile-file-info">
-          <a href={url} target="_blank" rel="noopener noreferrer" className="profile-file-link">
+          <a href={resolvedUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link">
             عرض الملف الحالي
           </a>
         </div>

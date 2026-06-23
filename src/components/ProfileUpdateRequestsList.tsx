@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { showGlobalLoader, hideGlobalLoader } from './LoaderOverlay';
 
@@ -170,6 +170,9 @@ export default function ProfileUpdateRequestsList() {
     const isCurrentPdf = currentUrl?.toLowerCase().endsWith('.pdf');
     const isProposedPdf = proposedUrl?.toLowerCase().endsWith('.pdf');
 
+    const resolvedCurrentUrl = currentUrl ? resolveImageUrl(currentUrl) : null;
+    const resolvedProposedUrl = proposedUrl ? resolveImageUrl(proposedUrl) : null;
+
     return (
       <div className="comparison-row" style={{ marginTop: 15 }}>
         <div className="comparison-label">{label}</div>
@@ -177,17 +180,17 @@ export default function ProfileUpdateRequestsList() {
           {/* Current File */}
           <div style={{ flex: 1, minWidth: '120px' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>الملف الحالي:</div>
-            {currentUrl ? (
+            {resolvedCurrentUrl ? (
               isCurrentPdf ? (
                 <div className="profile-file-pdf-thumb">
                   <i className="fa fa-file-pdf-o" style={{ fontSize: 20 }}></i>
                   <span>PDF</span>
-                  <a href={currentUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ marginTop: 4 }}>عرض</a>
+                  <a href={resolvedCurrentUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ marginTop: 4 }}>عرض</a>
                 </div>
               ) : (
                 <div>
-                  <img src={currentUrl} alt={label} className="profile-file-preview-thumb" />
-                  <a href={currentUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ display: 'block', marginTop: 4 }}>تنزيل</a>
+                  <img src={resolvedCurrentUrl} alt={label} className="profile-file-preview-thumb" />
+                  <a href={resolvedCurrentUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ display: 'block', marginTop: 4 }}>تنزيل</a>
                 </div>
               )
             ) : (
@@ -199,17 +202,17 @@ export default function ProfileUpdateRequestsList() {
           {isChanged && (
             <div style={{ flex: 1, minWidth: '120px' }}>
               <div style={{ fontSize: 11, color: '#10b981', marginBottom: 4, fontWeight: 700 }}>الملف المقترح:</div>
-              {proposedUrl ? (
+              {resolvedProposedUrl ? (
                 isProposedPdf ? (
                   <div className="profile-file-pdf-thumb" style={{ border: '1px dashed #10b981' }}>
                     <i className="fa fa-file-pdf-o" style={{ fontSize: 20, color: '#10b981' }}></i>
                     <span style={{ color: '#10b981' }}>PDF</span>
-                    <a href={proposedUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ marginTop: 4, color: '#10b981' }}>عرض</a>
+                    <a href={resolvedProposedUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ marginTop: 4, color: '#10b981' }}>عرض</a>
                   </div>
                 ) : (
                   <div>
-                    <img src={proposedUrl} alt={label} className="profile-file-preview-thumb" style={{ border: '2px solid #10b981' }} />
-                    <a href={proposedUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ display: 'block', marginTop: 4, color: '#10b981', fontWeight: 700 }}>تنزيل</a>
+                    <img src={resolvedProposedUrl} alt={label} className="profile-file-preview-thumb" style={{ border: '2px solid #10b981' }} />
+                    <a href={resolvedProposedUrl} target="_blank" rel="noopener noreferrer" className="profile-file-link" style={{ display: 'block', marginTop: 4, color: '#10b981', fontWeight: 700 }}>تنزيل</a>
                   </div>
                 )
               ) : (
