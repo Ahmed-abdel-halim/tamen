@@ -162,6 +162,9 @@ function hasAccessToRoute(
     if (path.startsWith('/agent-transfers') || path.startsWith('/reports/agent-transfers')) {
       return true;
     }
+    if (path.startsWith('/reports/branch-agent-account')) {
+      return true;
+    }
   }
 
   // إذا لم يكن هناك صلاحيات، لا وصول
@@ -979,7 +982,7 @@ const createMenuSections = (
   }
 
   // إضافة "كشف حساب الوكيل" دائماً للوكلاء (غير admin وغير sub-user)
-  if (!isAdmin && !isSubUser) {
+  if (branchAgentId && !isAdmin && !isSubUser) {
     const accountReportItem: SidebarItem = {
       label: 'كشف حساب الوكيل',
       icon: 'fa-solid fa-file-invoice-dollar',
