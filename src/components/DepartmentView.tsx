@@ -5,24 +5,6 @@ import WebsiteTopBar from './WebsiteTopBar';
 import Footer from './Footer';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
 
-const getWhatsAppLink = (phone: string) => {
-  if (!phone) return '#';
-  const arabicNums = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-  let clean = phone;
-  for (let i = 0; i < 10; i++) {
-    const regex = new RegExp(arabicNums[i], 'g');
-    clean = clean.replace(regex, i.toString());
-  }
-  clean = clean.replace(/[^\d]/g, '');
-  
-  if (clean.startsWith('0')) {
-    clean = '218' + clean.slice(1);
-  } else if (!clean.startsWith('218') && clean.length === 9) {
-    clean = '218' + clean;
-  }
-  return `https://wa.me/${clean}`;
-};
-
 type Employee = {
   id: number;
   name: string;
@@ -167,47 +149,9 @@ export default function DepartmentView() {
                           </div>
                         )}
                       </div>
-                      <div className="team-info-new" style={{ paddingBottom: emp.personal_phone ? '15px' : '0' }}>
+                      <div className="team-info-new" style={{ paddingBottom: '0' }}>
                         <h3>{emp.name}</h3>
                         <p className="team-position-new">{emp.job_title || (language === 'ar' ? 'موظف' : 'Employee')}</p>
-                        {emp.personal_phone && (
-                          <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', width: '100%' }}>
-                            <span style={{ fontSize: '0.9rem', color: '#64748b', direction: 'ltr', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <i className="fas fa-phone" style={{ color: '#139625' }}></i>
-                              {emp.personal_phone}
-                            </span>
-                            <a 
-                              href={getWhatsAppLink(emp.personal_phone)} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                background: '#25D366',
-                                color: '#fff',
-                                padding: '8px 18px',
-                                borderRadius: '20px',
-                                fontSize: '0.85rem',
-                                fontWeight: 'bold',
-                                textDecoration: 'none',
-                                boxShadow: '0 4px 10px rgba(37, 211, 102, 0.2)',
-                                transition: 'all 0.3s ease'
-                              }}
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 6px 15px rgba(37, 211, 102, 0.3)';
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.transform = 'none';
-                                e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 211, 102, 0.2)';
-                              }}
-                            >
-                              <i className="fab fa-whatsapp" style={{ fontSize: '1.1rem' }}></i>
-                              <span>{language === 'ar' ? 'تواصل واتساب' : 'WhatsApp'}</span>
-                            </a>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}

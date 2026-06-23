@@ -14537,7 +14537,7 @@ body,
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 49, 115, 0.86) !important; /* Extremely deep dark blue overlay to ensure superb readability */
+  background: rgba(0, 49, 115, 0.45) !important; /* Lightened blue overlay to make the background image more visible */
   z-index: 2; /* Sits directly on top of the image */
 }
 
