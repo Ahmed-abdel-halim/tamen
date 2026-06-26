@@ -25,7 +25,12 @@ export default function MediaCenter() {
   const [language, setLanguage] = useState<'ar' | 'en'>(getInitialLanguage());
   const [posts, setPosts] = useState<any[]>([]);
   const [singlePost, setSinglePost] = useState<any | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [singlePost]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -76,6 +81,25 @@ export default function MediaCenter() {
     };
     fetchData();
   }, [type, id]);
+
+  const postImages = useMemo(() => {
+    if (!singlePost) return [];
+    let imgs = singlePost.images;
+    if (typeof imgs === 'string') {
+      try {
+        imgs = JSON.parse(imgs);
+      } catch (e) {
+        imgs = [];
+      }
+    }
+    if (Array.isArray(imgs)) {
+      return imgs.filter(Boolean);
+    }
+    if (singlePost.media_url && singlePost.type !== 'video' && singlePost.type !== 'audio') {
+      return [singlePost.media_url];
+    }
+    return [];
+  }, [singlePost]);
 
   const t = useMemo(() => {
     const arTitles: Record<string, string> = {
@@ -263,13 +287,144 @@ export default function MediaCenter() {
                 </div>
               )}
 
-              {singlePost.type !== 'video' && singlePost.type !== 'audio' && singlePost.media_url && (
-                <div style={{ width: '100%', maxHeight: '500px', overflow: 'hidden', borderRadius: '12px', marginBottom: '30px', border: '1px solid var(--border)' }}>
-                  <img
-                    src={resolveImageUrl(singlePost.media_url)}
-                    alt={singlePost.title_ar}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+              {singlePost.type !== 'video' && singlePost.type !== 'audio' && postImages.length > 0 && (
+                <div style={{ marginBottom: '30px' }}>
+                  {/* Main Image View */}
+                  <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '480px',
+                    overflow: 'hidden',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <img
+                      src={resolveImageUrl(postImages[activeImageIndex])}
+                      alt={`${singlePost.title_ar} - ${activeImageIndex + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                    
+                    {/* Navigation Arrows */}
+                    {postImages.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageIndex((prev) => (prev === 0 ? postImages.length - 1 : prev - 1))}
+                          style={{
+                            position: 'absolute',
+                            left: '15px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(0, 0, 0, 0.4)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.2rem',
+                            transition: 'all 0.2s',
+                            zIndex: 10
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.4)'}
+                        >
+                          <i className="fas fa-chevron-left"></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageIndex((prev) => (prev === postImages.length - 1 ? 0 : prev + 1))}
+                          style={{
+                            position: 'absolute',
+                            right: '15px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(0, 0, 0, 0.4)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.2rem',
+                            transition: 'all 0.2s',
+                            zIndex: 10
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.4)'}
+                        >
+                          <i className="fas fa-chevron-right"></i>
+                        </button>
+                      </>
+                    )}
+
+                    {/* Image Counter Badge */}
+                    {postImages.length > 1 && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '15px',
+                        right: '15px',
+                        background: 'rgba(0, 0, 0, 0.65)',
+                        color: '#fff',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold',
+                        direction: 'ltr',
+                        zIndex: 10
+                      }}>
+                        {activeImageIndex + 1} / {postImages.length}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnails Row */}
+                  {postImages.length > 1 && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '10px',
+                      marginTop: '15px',
+                      overflowX: 'auto',
+                      paddingBottom: '5px',
+                    }}>
+                      {postImages.map((img, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setActiveImageIndex(idx)}
+                          style={{
+                            width: '80px',
+                            height: '60px',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            border: idx === activeImageIndex ? '2px solid var(--accent-cyan)' : '2px solid transparent',
+                            boxShadow: idx === activeImageIndex ? '0 0 10px rgba(6,182,212,0.3)' : 'none',
+                            flexShrink: 0,
+                            transition: 'all 0.2s',
+                            opacity: idx === activeImageIndex ? 1 : 0.6
+                          }}
+                          onMouseEnter={(e) => { if(idx !== activeImageIndex) e.currentTarget.style.opacity = '0.9'; }}
+                          onMouseLeave={(e) => { if(idx !== activeImageIndex) e.currentTarget.style.opacity = '0.6'; }}
+                        >
+                          <img
+                            src={resolveImageUrl(img)}
+                            alt={`Thumbnail ${idx + 1}`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

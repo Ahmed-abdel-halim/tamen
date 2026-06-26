@@ -74,6 +74,8 @@ export default function WebsiteSettingsManagement() {
   const [showMediaForm, setShowMediaForm] = useState(false);
   const [editingMediaPost, setEditingMediaPost] = useState<any | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaExistingImages, setMediaExistingImages] = useState<string[]>([]);
+  const [mediaAdditionalFiles, setMediaAdditionalFiles] = useState<File[]>([]);
   const [mediaFormData, setMediaFormData] = useState({
     type: "news",
     title_ar: "",
@@ -282,6 +284,14 @@ export default function WebsiteSettingsManagement() {
         formData.append("file", mediaFile);
       }
 
+      // Add existing images to formData
+      formData.append("existing_images", JSON.stringify(mediaExistingImages));
+
+      // Append new additional images to formData
+      mediaAdditionalFiles.forEach((file) => {
+        formData.append("images[]", file);
+      });
+
       const url = editingMediaPost
         ? `${API_BASE_URL}/website-settings/media-posts/${editingMediaPost.id}`
         : `${API_BASE_URL}/website-settings/media-posts`;
@@ -297,6 +307,8 @@ export default function WebsiteSettingsManagement() {
       setShowMediaForm(false);
       setEditingMediaPost(null);
       setMediaFile(null);
+      setMediaExistingImages([]);
+      setMediaAdditionalFiles([]);
       setMediaFormData({
         type: "news",
         title_ar: "",
@@ -334,6 +346,23 @@ export default function WebsiteSettingsManagement() {
       is_active: post.is_active ?? true,
     });
     setMediaFile(null);
+
+    // Parse and set existing images
+    let parsedImages: string[] = [];
+    if (post.images) {
+      if (typeof post.images === "string") {
+        try {
+          parsedImages = JSON.parse(post.images);
+        } catch (e) {
+          parsedImages = [];
+        }
+      } else if (Array.isArray(post.images)) {
+        parsedImages = post.images;
+      }
+    }
+    setMediaExistingImages(parsedImages);
+    setMediaAdditionalFiles([]);
+
     setShowMediaForm(true);
   };
 
@@ -857,6 +886,8 @@ export default function WebsiteSettingsManagement() {
                 onClick={() => {
                   setEditingMediaPost(null);
                   setMediaFile(null);
+                  setMediaExistingImages([]);
+                  setMediaAdditionalFiles([]);
                   setMediaFormData({
                     type: "news",
                     title_ar: "",
@@ -986,6 +1017,107 @@ export default function WebsiteSettingsManagement() {
                       onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
                     />
                   </div>
+
+                  {(mediaFormData.type === 'news' || mediaFormData.type === 'photo') && (
+                    <div className="form-group" style={{ border: "1px solid var(--border)", padding: "20px", borderRadius: "10px", background: "rgba(255,255,255,0.01)" }}>
+                      <label style={{ fontWeight: "bold", display: "block", marginBottom: "12px", color: "var(--text)" }}>الصور الإضافية للمنشور (يمكنك اختيار أكثر من صورة)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            const newFiles = Array.from(e.target.files);
+                            setMediaAdditionalFiles(prev => [...prev, ...newFiles]);
+                            e.target.value = "";
+                          }
+                        }}
+                        style={{ marginBottom: "15px", display: "block" }}
+                      />
+
+                      {/* local selected files preview */}
+                      {mediaAdditionalFiles.length > 0 && (
+                        <div style={{ marginBottom: "15px" }}>
+                          <p style={{ margin: "0 0 8px 0", fontSize: "0.85rem", color: "var(--accent-cyan)", fontWeight: "bold" }}>
+                            الصور الجديدة المحددة للرفع ({mediaAdditionalFiles.length}):
+                          </p>
+                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            {mediaAdditionalFiles.map((file, idx) => {
+                              const url = URL.createObjectURL(file);
+                              return (
+                                <div key={idx} style={{ position: "relative", width: "80px", height: "80px", border: "1px solid var(--border)", borderRadius: "6px", overflow: "hidden" }}>
+                                  <img src={url} alt="new-upload" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  <button
+                                    type="button"
+                                    onClick={() => setMediaAdditionalFiles(prev => prev.filter((_, i) => i !== idx))}
+                                    style={{
+                                      position: "absolute",
+                                      top: "4px",
+                                      right: "4px",
+                                      background: "rgba(225, 29, 72, 0.9)",
+                                      color: "#fff",
+                                      border: "none",
+                                      borderRadius: "50%",
+                                      width: "20px",
+                                      height: "20px",
+                                      cursor: "pointer",
+                                      fontSize: "11px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* existing uploaded files */}
+                      {mediaExistingImages.length > 0 && (
+                        <div>
+                          <p style={{ margin: "0 0 8px 0", fontSize: "0.85rem", color: "var(--muted)", fontWeight: "bold" }}>
+                            الصور المرفوعة حالياً ({mediaExistingImages.length}):
+                          </p>
+                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            {mediaExistingImages.map((imgUrl, idx) => (
+                              <div key={idx} style={{ position: "relative", width: "80px", height: "80px", border: "1px solid var(--border)", borderRadius: "6px", overflow: "hidden" }}>
+                                <img src={resolveImageUrl(imgUrl)} alt="existing" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                <button
+                                  type="button"
+                                  onClick={() => setMediaExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                                  style={{
+                                    position: "absolute",
+                                    top: "4px",
+                                    right: "4px",
+                                    background: "rgba(225, 29, 72, 0.9)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "50%",
+                                    width: "20px",
+                                    height: "20px",
+                                    cursor: "pointer",
+                                    fontSize: "11px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                                  }}
+                                  title="حذف الصورة"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                     <div className="form-group">
