@@ -12,6 +12,7 @@ type InternationalInsuranceDocument = {
   start_date: string; number_of_days: number; end_date: string; item_type?: string;
   number_of_countries: number; daily_premium: number; premium: number;
   tax: number; supervision_fees: number; issue_fees: number; stamp: number; total: number;
+  vehicle_brand?: string;
 };
 
 const toNum = (v: any) => (typeof v === 'number' ? v : parseFloat(String(v)) || 0);
@@ -155,7 +156,7 @@ export default function ViewInternationalInsurance() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <SectionCard title="معلومات المركبة" icon="fa-car">
-              <Row label="نوع السيارة" value={document.vehicleType?.brand ? `${document.vehicleType.brand}${document.vehicleType.category ? ' / ' + document.vehicleType.category : ''}` : '-'} />
+              <Row label="نوع السيارة" value={document.vehicle_brand || '-'} />
               <Row label="السنة" value={document.year || '-'} />
               <Row label="جنسية المركبة" value={document.vehicle_nationality || '-'} />
               <Row label="رقم الهيكل" value={document.chassis_number || '-'} />
