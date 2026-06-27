@@ -510,7 +510,7 @@ export default function EmployeeProfile() {
             <title>اعتماد صفة قانونية وختم وتوقيع - ${user?.name}</title>
             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
             <style>
-              @page { size: A4 portrait; margin: 10mm; }
+              @page { size: A4 portrait; margin: 6mm 10mm; }
               body { 
                 font-family: 'Cairo', sans-serif; 
                 margin: 0; 
@@ -523,11 +523,11 @@ export default function EmployeeProfile() {
               .page-container {
                 max-width: 800px;
                 margin: 0 auto;
-                padding: 30px;
+                padding: 24px;
                 box-sizing: border-box;
                 border: 3px double #0284c7;
                 position: relative;
-                min-height: 277mm;
+                min-height: 275mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -548,12 +548,12 @@ export default function EmployeeProfile() {
                 justify-content: space-between;
                 align-items: center;
                 border-bottom: 2px solid #0284c7; 
-                padding-bottom: 10px; 
-                margin-bottom: 20px;
+                padding-bottom: 8px; 
+                margin-bottom: 15px;
                 z-index: 1;
               }
               .header .company-logo img {
-                height: 65px;
+                height: 55px;
                 object-fit: contain;
               }
               .header .header-text-center {
@@ -561,20 +561,20 @@ export default function EmployeeProfile() {
                 flex: 1;
               }
               .header .header-text-center h1 { 
-                font-size: 20px; 
-                margin: 0 0 5px 0; 
+                font-size: 18px; 
+                margin: 0 0 3px 0; 
                 color: #0284c7; 
                 font-weight: 800;
               }
               .header .header-text-center p {
                 margin: 0;
-                font-size: 11px;
+                font-size: 10px;
                 color: #475569;
                 font-weight: 600;
               }
               .header .header-meta {
                 text-align: left;
-                font-size: 12px;
+                font-size: 11px;
                 color: #334155;
                 font-weight: bold;
               }
@@ -584,38 +584,38 @@ export default function EmployeeProfile() {
               .document-body {
                 flex: 1;
                 z-index: 1;
-                margin-top: 10px;
+                margin-top: 8px;
               }
               .intro-text {
-                line-height: 1.8;
-                font-size: 16px;
-                margin-bottom: 25px;
+                line-height: 1.6;
+                font-size: 15px;
+                margin-bottom: 15px;
                 color: #0f172a;
               }
               .intro-text p {
-                margin: 6px 0;
+                margin: 4px 0;
               }
               .subject-box {
                 background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
                 border: 1px solid #cbd5e1;
                 border-radius: 8px;
-                padding: 12px;
+                padding: 10px;
                 text-align: center;
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: 800;
                 color: #0f172a;
-                margin-bottom: 20px;
+                margin-bottom: 15px;
                 box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
               }
               .details-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 25px;
+                margin-bottom: 15px;
               }
               .details-table td {
-                padding: 12px 15px;
+                padding: 10px 12px;
                 border: 1px solid #cbd5e1;
-                font-size: 16px;
+                font-size: 15px;
               }
               .details-table td.label-cell {
                 background-color: #f8fafc;
@@ -629,8 +629,8 @@ export default function EmployeeProfile() {
               }
               .slots-container {
                 display: flex;
-                gap: 20px;
-                margin-bottom: 30px;
+                gap: 15px;
+                margin-bottom: 20px;
               }
               .slot-card {
                 flex: 1;
@@ -640,24 +640,24 @@ export default function EmployeeProfile() {
               }
               .slot-card-title {
                 background-color: #f1f5f9;
-                padding: 8px;
+                padding: 6px;
                 text-align: center;
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
                 color: #334155;
                 border-bottom: 1px solid #cbd5e1;
               }
               .slot-samples {
                 display: flex;
-                padding: 15px;
-                gap: 10px;
+                padding: 10px;
+                gap: 8px;
                 justify-content: space-around;
                 align-items: center;
-                min-height: 100px;
+                min-height: 80px;
               }
               .sample-box {
                 flex: 1;
-                height: 90px;
+                height: 80px;
                 border: 1px dashed #94a3b8;
                 border-radius: 6px;
                 display: flex;
@@ -677,7 +677,7 @@ export default function EmployeeProfile() {
               }
               .sample-box img {
                 max-width: 100%;
-                max-height: 80px;
+                max-height: 70px;
                 object-fit: contain;
               }
               .empty-sig, .empty-stamp {
@@ -688,19 +688,19 @@ export default function EmployeeProfile() {
               .approval-section {
                 border: 2px solid #0284c7;
                 border-radius: 8px;
-                padding: 15px;
+                padding: 12px;
                 background-color: #f8fafc;
-                margin-top: 15px;
+                margin-top: 10px;
                 page-break-inside: avoid;
               }
               .approval-title {
                 font-weight: 800;
-                font-size: 16px;
+                font-size: 14px;
                 color: #0284c7;
-                margin: 0 0 15px 0;
+                margin: 0 0 10px 0;
                 text-align: center;
                 border-bottom: 1px solid #cbd5e1;
-                padding-bottom: 6px;
+                padding-bottom: 4px;
               }
               .approval-columns {
                 display: flex;
@@ -713,24 +713,24 @@ export default function EmployeeProfile() {
               }
               .approval-col h4 {
                 margin: 0 0 10px 0;
-                font-size: 14px;
+                font-size: 13px;
                 color: #334155;
               }
               .approval-img-box {
-                height: 80px;
+                height: 70px;
                 display: flex;
                 justify-content: center;
                 align-items: center;
               }
               .approval-img-box img {
-                max-width: 150px;
-                max-height: 80px;
+                max-width: 130px;
+                max-height: 70px;
                 object-fit: contain;
               }
               .footer { 
                 border-top: 2px solid #0284c7; 
-                padding-top: 10px; 
-                margin-top: 20px;
+                padding-top: 8px; 
+                margin-top: 15px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -741,7 +741,7 @@ export default function EmployeeProfile() {
               }
               .footer-links {
                 text-align: right;
-                line-height: 1.6;
+                line-height: 1.5;
               }
               .footer-qr {
                 text-align: left;
@@ -771,12 +771,13 @@ export default function EmployeeProfile() {
                 body { background: none; }
                 .page-container { 
                   margin: 0; 
-                  padding: 20px; 
+                  padding: 15px 20px; 
                   max-width: 100%; 
                   box-shadow: none; 
                   height: 100%; 
                   min-height: auto;
                   border: 3px double #0284c7;
+                  page-break-inside: avoid;
                 }
               }
             </style>
@@ -793,7 +794,7 @@ export default function EmployeeProfile() {
                   </div>
                   <div class="header-text-center">
                     <h1>المدار الليبي للتأمين</h1>
-                    <h1>ALNADAR LIBYAN INSURANCE</h1>
+                    <h1>AL MADAR LIBYAN INSURANCE</h1>
                     <p>رأس مال الشركة (١٠) مليون د.ل - سجل تجاري رقم (٨٧٤٨) – EQUITYCAPITAL (10) MILLION L.Y.D – COMMERCIAL REG (8748)</p>
                   </div>
                   <div class="header-meta">
@@ -801,18 +802,18 @@ export default function EmployeeProfile() {
                     <p>الرقم: MLI-AUTH-${user?.id}-${year}</p>
                   </div>
                 </div>
-
+ 
                 <div class="document-body">
                   <div class="intro-text">
                     <p><strong>السادة / إدارة شركة المدار الليبي للتأمين - رؤساء الأقسام - الجهات المعنية .</strong></p>
                     <p>بناء على طلب مدير الشؤون الإدارية – الموارد البشرية.</p>
                     <p>اعتمد مدير عام شركة المدار الليبي للتأمين المساهمة، الصفة القانونية والختم والتوقيع المبين أدناه للموظف المذكور:</p>
                   </div>
-
+ 
                   <div class="subject-box">
                     الموضوع / اعتماد صفة قانونية وختم وتوقيع
                   </div>
-
+ 
                   <table class="details-table">
                     <tr>
                       <td class="label-cell">السيد / السيدة</td>
@@ -823,7 +824,7 @@ export default function EmployeeProfile() {
                       <td class="value-cell">${user?.job_title || 'موظف'}</td>
                     </tr>
                   </table>
-
+ 
                   <div class="slots-container">
                     <div class="slot-card" style="width: 60%;">
                       <div class="slot-card-title">نموذج التوقيع الإلكتروني (Signature Samples)</div>
@@ -854,7 +855,7 @@ export default function EmployeeProfile() {
                   </div>
                 </div>
               </div>
-
+ 
               <div>
                 <div class="approval-section">
                   <div class="approval-title">اعتماد المدير العام للشركة (General Manager Authorization)</div>
@@ -874,7 +875,7 @@ export default function EmployeeProfile() {
                     </div>
                   </div>
                 </div>
-
+ 
                 <div class="footer">
                   <div class="footer-links">
                     <p>العنوان: ليبيا – طرابلس | موبايل: 00218920003366 | صندوق بريد: P O BOX (83410)</p>
