@@ -165,6 +165,248 @@ export default function MonthlyAccountClosuresReport() {
     }
   };
 
+  const printReceipt = (closure: any) => {
+    let employeeName = "مندوب الشركة";
+    const loggedInUserStr = localStorage.getItem('user');
+    if (loggedInUserStr) {
+      try {
+        const parsed = JSON.parse(loggedInUserStr);
+        employeeName = parsed.name || parsed.username || "مندوب الشركة";
+      } catch {}
+    }
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+
+    w.document.write(`
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="utf-8">
+          <title>إيصال استلام قيمة مالية - إغلاق حساب شهري</title>
+          <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+          <style>
+            @page { size: A5 landscape; margin: 5mm; }
+            body {
+              font-family: 'Cairo', sans-serif;
+              margin: 0;
+              padding: 0;
+              color: #1e293b;
+              background: #fff;
+              font-size: 13px;
+              direction: rtl;
+            }
+            .receipt-container {
+              width: 100%;
+              max-width: 190mm;
+              margin: 0 auto;
+              padding: 12px;
+              box-sizing: border-box;
+              border: 3px double #0284c7;
+              border-radius: 8px;
+              position: relative;
+              background: #fff;
+              min-height: 125mm;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+            }
+            .watermark {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              opacity: 0.03;
+              width: 120px;
+              height: 120px;
+              pointer-events: none;
+              z-index: 0;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #0284c7;
+              padding-bottom: 8px;
+              margin-bottom: 10px;
+              z-index: 1;
+            }
+            .logo img {
+              height: 45px;
+              object-fit: contain;
+            }
+            .title-area {
+              text-align: center;
+            }
+            .title-area h1 {
+              font-size: 16px;
+              margin: 0;
+              color: #0284c7;
+              font-weight: 800;
+            }
+            .title-area p {
+              margin: 2px 0 0 0;
+              font-size: 10px;
+              color: #64748b;
+              font-weight: 600;
+            }
+            .meta-info {
+              text-align: left;
+              font-size: 10px;
+              font-weight: bold;
+            }
+            .meta-info p {
+              margin: 1px 0;
+            }
+            .content {
+              flex: 1;
+              margin-top: 8px;
+              z-index: 1;
+            }
+            .receipt-text {
+              font-size: 13px;
+              line-height: 1.8;
+              margin-bottom: 12px;
+              text-align: justify;
+              color: #0f172a;
+            }
+            .receipt-text span {
+              font-weight: bold;
+              border-bottom: 1px dashed #000;
+              padding: 0 4px;
+            }
+            .table-details {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 10px;
+            }
+            .table-details th, .table-details td {
+              border: 1px solid #cbd5e1;
+              padding: 6px 10px;
+              text-align: center;
+              font-size: 12px;
+            }
+            .table-details th {
+              background-color: #f1f5f9;
+              font-weight: bold;
+              color: #334155;
+            }
+            .footer {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              margin-top: 10px;
+              padding-top: 8px;
+              border-top: 1px solid #cbd5e1;
+              z-index: 1;
+            }
+            .sig-box {
+              text-align: center;
+              width: 35%;
+            }
+            .sig-box h4 {
+              margin: 0 0 35px 0;
+              font-size: 11px;
+              color: #475569;
+            }
+            .sig-box p {
+              margin: 0;
+              font-weight: bold;
+              font-size: 11px;
+              color: #0f172a;
+            }
+            .print-btn {
+              position: fixed;
+              top: 10px;
+              left: 10px;
+              padding: 6px 12px;
+              background: #0284c7;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-family: inherit;
+              font-weight: bold;
+              z-index: 1000;
+            }
+            @media print {
+              .print-btn { display: none; }
+              body { background: none; }
+              .receipt-container {
+                border: 2px solid #0284c7;
+                margin: 0;
+                padding: 10px;
+                height: 100%;
+              }
+            }
+          </style>
+        </head>
+        <body onload="window.print(); window.onafterprint = () => window.close();">
+          <button class="print-btn" onclick="window.print()">🖨️ طباعة الإيصال</button>
+          <div class="receipt-container">
+            <img class="watermark" src="${window.location.origin}/img/logo.png" onerror="this.src='${window.location.origin}/img/official_logo.PNG'" alt="شعار" />
+            
+            <div class="header">
+              <div class="logo">
+                <img src="${window.location.origin}/img/logo.png" onerror="this.src='${window.location.origin}/img/official_logo.PNG'" alt="المدار الليبي للتأمين" />
+              </div>
+              <div class="title-area">
+                <h1>إيصال استلام قيمة مالية</h1>
+                <p>إغلاق الحساب الشهري للوكيل</p>
+              </div>
+              <div class="meta-info">
+                <p>الرقم: MLI-REC-${closure.id}</p>
+                <p>التاريخ: ${new Date(closure.created_at || new Date()).toLocaleDateString('ar-LY')}</p>
+                <p>الوقت: ${new Date(closure.created_at || new Date()).toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            </div>
+            
+            <div class="content">
+              <div class="receipt-text">
+                استلمت أنا المندوب/الموظف: <span>${employeeName}</span>، 
+                من السيد/الوكيل: <span>${closure.branch_agent?.agency_name}</span> (كود الوكيل: <span>${closure.branch_agent?.code}</span>)، 
+                مبلغاً وقدره: <span style="font-size: 14px; color: #0284c7; font-weight: bold;">${formatCurrency(closure.paid_amount)}</span>، 
+                وذلك لتسوية وإغلاق الحساب للوكيل عن شهر: <span>${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</span> لسنة: <span>${closure.year}</span>.
+              </div>
+              
+              <table class="table-details">
+                <thead>
+                  <tr>
+                    <th>القيمة المستحقة (الشركة)</th>
+                    <th>القيمة المستلمة (المدفوعة)</th>
+                    <th>القيمة المتبقية (الديون)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>${formatCurrency(closure.due_amount)}</td>
+                    <td style="font-weight: bold; color: #059669;">${formatCurrency(closure.paid_amount)}</td>
+                    <td style="color: ${closure.remaining_amount > 0 ? '#dc2626' : '#059669'}; font-weight: bold;">
+                      ${formatCurrency(closure.remaining_amount)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              ${closure.notes ? `<div style="font-size: 11px; color: #475569; margin-top: 10px;"><strong>ملاحظات:</strong> ${closure.notes}</div>` : ''}
+            </div>
+            
+            <div class="footer">
+              <div class="sig-box">
+                <h4>توقيع المسلّم (الوكيل)</h4>
+                <p>${closure.branch_agent?.agent_name}</p>
+              </div>
+              <div class="sig-box">
+                <h4>توقيع وختم المستلِم (المندوب)</h4>
+                <p>${employeeName}</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    w.document.close();
+  };
+
   // حساب الإجماليات بدقة
   const totalCompanyShare = closures.reduce((sum, closure) => sum + (Number(closure.due_amount) || 0), 0);
   const totalAgentShare = closures.reduce((sum, closure) => {
@@ -495,6 +737,7 @@ export default function MonthlyAccountClosuresReport() {
                       <th>المدفوع</th>
                       <th>المتبقي</th>
                       <th>تاريخ الإغلاق</th>
+                      <th>إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -514,6 +757,26 @@ export default function MonthlyAccountClosuresReport() {
                           <td style={{ color: '#059669' }}>{formatCurrency(closure.paid_amount)}</td>
                           <td style={{ color: '#dc2626' }}>{formatCurrency(closure.remaining_amount)}</td>
                           <td>{formatDate(closure.created_at)}</td>
+                          <td>
+                            <button
+                              onClick={() => printReceipt(closure)}
+                              className="btn-submit"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '12px',
+                                backgroundColor: '#0284c7',
+                                minHeight: 'auto',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <i className="fa-solid fa-file-invoice-dollar"></i>
+                              إيصال
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -560,6 +823,27 @@ export default function MonthlyAccountClosuresReport() {
                   <div className="user-mobile-row">
                     <span className="user-mobile-label">تاريخ الإغلاق:</span>
                     <span className="user-mobile-value">{formatDate(closure.created_at)}</span>
+                  </div>
+                  
+                  <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #cbd5e1', paddingTop: '8px' }}>
+                    <button
+                      onClick={() => printReceipt(closure)}
+                      className="btn-submit"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        backgroundColor: '#0284c7',
+                        minHeight: 'auto',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <i className="fa-solid fa-file-invoice-dollar"></i>
+                      طباعة إيصال الاستلام
+                    </button>
                   </div>
                 </div>
               </div>
