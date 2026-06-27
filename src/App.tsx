@@ -151,7 +151,7 @@ function hasAccessToRoute(
     return true;
   }
 
-  // الفروع/الوكلاء لديهم وصول إلى صفحاتهم الخاصة وإعدادات أنواع السيارات وحوالات الوكلاء
+  // الفروع/الوكلاء لديهم وصول إلى صفحاتهم الخاصة وإعدادات أنواع السيارات وحوالات الوكلاء وطلبات الوثائق
   if (branchAgentId) {
     if (path.startsWith('/vehicle-types')) {
       return true;
@@ -163,6 +163,9 @@ function hasAccessToRoute(
       return true;
     }
     if (path.startsWith('/reports/branch-agent-account')) {
+      return true;
+    }
+    if (path.startsWith('/document-requests')) {
       return true;
     }
   }
@@ -840,6 +843,19 @@ const createMenuSections = (
     .filter(route => insuranceItemsMap.has(route))
     .map(route => insuranceItemsMap.get(route)!);
 
+  // إضافة "طلبات الوثائق" دائماً للوكلاء (غير admin وغير sub-user)
+  if (branchAgentId && !isAdmin && !isSubUser) {
+    const docRequestItem: SidebarItem = {
+      label: 'طلبات الوثائق',
+      icon: 'fa-solid fa-file-circle-exclamation',
+      to: '/document-requests',
+      badge: pendingDocsCount,
+    };
+    if (!insuranceItems.some(item => item.to === '/document-requests')) {
+      insuranceItems.push(docRequestItem);
+    }
+  }
+
   // العناصر الإضافية التي تظهر في القائمة الرئيسية مباشرة
   const extraMainItems: SidebarItem[] = [];
   if (insuranceItemsMap.has('/company-documents')) {
@@ -852,6 +868,28 @@ const createMenuSections = (
   const reportsItems: SidebarItem[] = reportsOrder
     .filter(route => reportsItemsMap.has(route))
     .map(route => reportsItemsMap.get(route)!);
+
+  // إضافة "كشف حساب الوكيل" و"حوالات الوكلاء المالية" دائماً للوكلاء (غير admin وغير sub-user)
+  if (branchAgentId && !isAdmin && !isSubUser) {
+    const accountReportItem: SidebarItem = {
+      label: 'كشف حساب الوكيل',
+      icon: 'fa-solid fa-file-invoice-dollar',
+      to: '/reports/branch-agent-account',
+    };
+    if (!reportsItems.some(item => item.to === '/reports/branch-agent-account')) {
+      reportsItems.push(accountReportItem);
+    }
+
+    const transfersItem: SidebarItem = {
+      label: 'حوالات الوكلاء المالية',
+      icon: 'fa-solid fa-money-bill-transfer',
+      to: '/reports/agent-transfers',
+      badge: adminCounts?.agent_transfers,
+    };
+    if (!reportsItems.some(item => item.to === '/reports/agent-transfers')) {
+      reportsItems.push(transfersItem);
+    }
+  }
   const adminItems: SidebarItem[] = adminOrder
     .filter(route => adminItemsMap.has(route))
     .map(route => adminItemsMap.get(route)!);
@@ -981,19 +1019,7 @@ const createMenuSections = (
     });
   }
 
-  // إضافة "كشف حساب الوكيل" دائماً للوكلاء (غير admin وغير sub-user)
-  if (branchAgentId && !isAdmin && !isSubUser) {
-    const accountReportItem: SidebarItem = {
-      label: 'كشف حساب الوكيل',
-      icon: 'fa-solid fa-file-invoice-dollar',
-      to: '/reports/branch-agent-account',
-    };
-
-    // إضافة إلى reportsItems إذا لم يكن موجوداً بالفعل
-    if (!reportsItems.some(item => item.to === '/reports/branch-agent-account')) {
-      reportsItems.push(accountReportItem);
-    }
-  }
+  // تم نقل إضافة "كشف حساب الوكيل" و"حوالات الوكلاء المالية" و"طلبات الوثائق" للوكلاء إلى أعلى مع بقية العناصر المصفاة
 
   if (reportsItems.length > 0) {
     const rootFinanceOrder = [
