@@ -137,7 +137,7 @@ export default function MonthlyAccountClosure() {
   const fetchAgents = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/branches-agents`, {
+      const res = await fetch(`${API_BASE_URL}/branches-agents?status=نشط`, {
         headers: { 
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
