@@ -42,7 +42,7 @@ export default function BranchesAgentsList() {
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("نشط");
   const perPage = 10;
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+  const [isAdmin] = useState<boolean>(() => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
