@@ -42,6 +42,18 @@ export default function BranchesAgentsList() {
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("نشط");
   const perPage = 10;
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.is_admin === true || user.is_admin === 1 || user.is_admin === 'true';
+      } catch (e) {
+        console.error("Error parsing user from localStorage", e);
+      }
+    }
+    return false;
+  });
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -806,14 +818,20 @@ export default function BranchesAgentsList() {
 
   const handleDeleteBranchAgent = async () => {
     if (!showDeleteModal) return;
+    if (!isAdmin) {
+      showToast('غير مصرح لك بإجراء هذا الحذف. الأدمن فقط من يمكنه الحذف.', 'error');
+      return;
+    }
 
     setDeleting(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/branches-agents/${showDeleteModal.id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
 
@@ -1126,6 +1144,16 @@ export default function BranchesAgentsList() {
                             >
                               <i className="fa-solid fa-pencil"></i>
                             </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => setShowDeleteModal(branchAgent)}
+                                className="action-btn delete"
+                                aria-label="حذف"
+                                title="حذف"
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                            )}
                             {branchAgent.status !== 'قيد الانتظار' && (
                               <>
                                 <button
@@ -1253,6 +1281,16 @@ export default function BranchesAgentsList() {
                         >
                           <i className="fa-solid fa-pencil"></i>
                         </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => setShowDeleteModal(branchAgent)}
+                            className="action-btn delete"
+                            aria-label="حذف"
+                            title="حذف"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        )}
                         {branchAgent.status !== 'قيد الانتظار' && (
                           <>
                             <button
