@@ -680,12 +680,13 @@ export default function BranchesAgentsList() {
           .card { 
             width: 85.6mm; 
             height: 53.98mm; 
+            box-sizing: border-box;
             background-color: #ffffff; 
             background-image: url('${bgSvg}');
             background-size: cover;
             background-position: center;
             border-radius: 8px; 
-            border: 1.5px solid #1e40af;
+            border: 3px solid #1e40af;
             overflow: hidden; 
             position: relative; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
