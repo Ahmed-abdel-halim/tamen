@@ -707,7 +707,7 @@ export default function LiveAgentsProduction() {
 
         {/* Table Content */}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+          <table style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: 'var(--table-header)' }}>
                 <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
