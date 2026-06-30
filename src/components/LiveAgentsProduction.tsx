@@ -302,7 +302,8 @@ export default function LiveAgentsProduction() {
     fontFamily: "'Cairo', 'Segoe UI', sans-serif",
     direction: 'rtl',
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+    background: 'var(--bg)',
+    color: 'var(--text)',
   };
 
   const headerStyle: React.CSSProperties = {
@@ -356,52 +357,55 @@ export default function LiveAgentsProduction() {
     position: 'relative',
     overflow: 'hidden',
     backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.3)',
+    border: '1px solid rgba(255,255,255,0.15)',
     transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
     cursor: 'default',
   };
 
   const filterSectionStyle: React.CSSProperties = {
-    background: 'white',
+    background: 'var(--card-bg)',
     borderRadius: '18px',
     padding: '20px 24px',
     marginBottom: '20px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+    border: '1px solid var(--border)',
+    color: 'var(--text)',
   };
 
   const presetBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 18px',
     borderRadius: '10px',
-    border: active ? '2px solid #1e40af' : '2px solid #e2e8f0',
+    border: active ? '2px solid #1e40af' : '2px solid var(--border)',
     cursor: 'pointer',
     fontFamily: "'Cairo', sans-serif",
     fontWeight: active ? 800 : 600,
     fontSize: '13px',
-    color: active ? 'white' : '#475569',
-    background: active ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : 'white',
+    color: active ? 'white' : 'var(--muted)',
+    background: active ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : 'var(--card-bg)',
     transition: 'all 0.3s ease',
-    boxShadow: active ? '0 4px 15px rgba(30,64,175,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
+    boxShadow: active ? '0 4px 15px rgba(30,64,175,0.3)' : '0 1px 3px rgba(0,0,0,0.02)',
   });
 
   const tableSectionStyle: React.CSSProperties = {
-    background: 'white',
+    background: 'var(--card-bg)',
     borderRadius: '18px',
     overflow: 'hidden',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-    border: '1px solid #e2e8f0',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
+    border: '1px solid var(--border)',
   };
 
   const inputStyle: React.CSSProperties = {
     padding: '10px 16px',
     borderRadius: '10px',
-    border: '2px solid #e2e8f0',
+    border: '2px solid var(--border)',
     fontFamily: "'Cairo', sans-serif",
     fontSize: '13px',
     outline: 'none',
     transition: 'border-color 0.3s ease',
     direction: 'rtl',
     minWidth: '140px',
+    background: 'var(--input-bg)',
+    color: 'var(--text)',
   };
 
   // ────────────── RENDER ──────────────
@@ -628,7 +632,7 @@ export default function LiveAgentsProduction() {
         {preset === 'custom' && (
           <div style={{ display: 'flex', gap: '14px', marginTop: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontWeight: 700, fontSize: '13px', color: '#475569' }}>من:</label>
+              <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>من:</label>
               <input
                 type="date"
                 value={customFrom}
@@ -637,7 +641,7 @@ export default function LiveAgentsProduction() {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontWeight: 700, fontSize: '13px', color: '#475569' }}>إلى:</label>
+              <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>إلى:</label>
               <input
                 type="date"
                 value={customTo}
@@ -657,14 +661,14 @@ export default function LiveAgentsProduction() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid #e2e8f0',
-          background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--table-header)',
           flexWrap: 'wrap',
           gap: '12px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <i className="fa-solid fa-table-list" style={{ color: '#1e40af', fontSize: '18px' }}></i>
-            <span style={{ fontWeight: 800, fontSize: '16px', color: '#1e293b' }}>
+            <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text)' }}>
               جدول إنتاجية الوكلاء
             </span>
             <span style={{
@@ -705,36 +709,36 @@ export default function LiveAgentsProduction() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
-              <tr style={{ background: 'linear-gradient(135deg, #1e293b, #334155)' }}>
-                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
-                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%' }}>الكود</th>
-                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '22%' }}>اسم الوكالة</th>
-                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '15%' }}>اسم الوكيل</th>
+              <tr style={{ background: 'var(--table-header)' }}>
+                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
+                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%' }}>الكود</th>
+                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '22%' }}>اسم الوكالة</th>
+                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '15%' }}>اسم الوكيل</th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('document_count')}
-                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   عدد الوثائق {sortField === 'document_count' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('total_sales')}
-                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '14%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '14%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   إجمالي المبيعات {sortField === 'total_sales' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('agent_share')}
-                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   حصة الوكيل {sortField === 'agent_share' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('company_share')}
-                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   حصة الشركة {sortField === 'company_share' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
@@ -743,7 +747,7 @@ export default function LiveAgentsProduction() {
             <tbody>
               {filteredAgents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '50px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={8} style={{ padding: '50px', textAlign: 'center', color: 'var(--muted)' }}>
                     <i className="fa-solid fa-inbox" style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}></i>
                     <span style={{ fontSize: '16px', fontWeight: 700 }}>
                       {searchTerm ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد بيانات للفترة المحددة'}
@@ -756,12 +760,12 @@ export default function LiveAgentsProduction() {
                     key={agent.id}
                     className="table-row"
                     style={{
-                      borderBottom: '1px solid #f1f5f9',
-                      background: idx % 2 === 0 ? 'white' : '#fafbfc',
+                      borderBottom: '1px solid var(--border)',
+                      background: idx % 2 === 0 ? 'var(--card-bg)' : 'var(--bg)',
                       transition: 'background 0.2s ease',
                     }}
                   >
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#94a3b8', fontSize: '13px' }}>
+                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: 'var(--muted)', fontSize: '13px' }}>
                       {idx + 1}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
@@ -777,10 +781,10 @@ export default function LiveAgentsProduction() {
                         {agent.code}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 700, color: '#1e293b', fontSize: '14px' }}>
+                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>
                       {agent.agency_name}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#475569', fontSize: '13px' }}>
+                    <td style={{ padding: '12px', textAlign: 'right', color: 'var(--muted)', fontSize: '13px' }}>
                       {agent.agent_name || '-'}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
@@ -795,17 +799,17 @@ export default function LiveAgentsProduction() {
                         {agent.document_count}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800, color: '#1e40af', fontSize: '14px' }}>
+                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800, color: '#3b82f6', fontSize: '14px' }}>
                       {formatNumber(agent.total_sales)}
-                      <span style={{ fontSize: '11px', color: '#64748b', marginRight: '4px' }}>د.ل</span>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: '13px' }}>
+                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#a78bfa', fontSize: '13px' }}>
                       {formatNumber(agent.agent_share)}
-                      <span style={{ fontSize: '11px', color: '#64748b', marginRight: '4px' }}>د.ل</span>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#0d9488', fontSize: '13px' }}>
+                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#2dd4bf', fontSize: '13px' }}>
                       {formatNumber(agent.company_share)}
-                      <span style={{ fontSize: '11px', color: '#64748b', marginRight: '4px' }}>د.ل</span>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
                     </td>
                   </tr>
                 ))
@@ -814,25 +818,25 @@ export default function LiveAgentsProduction() {
             {filteredAgents.length > 0 && data && (
               <tfoot>
                 <tr style={{
-                  background: 'linear-gradient(135deg, #f0f9ff, #dbeafe)',
-                  borderTop: '3px solid #1e40af',
+                  background: 'var(--table-header)',
+                  borderTop: '3px solid var(--border)',
                 }}>
-                  <td colSpan={4} style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 900, fontSize: '15px', color: '#1e40af' }}>
+                  <td colSpan={4} style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 900, fontSize: '15px', color: 'var(--text)' }}>
                     <i className="fa-solid fa-sigma" style={{ marginLeft: '8px' }}></i>
                     المجموع الكلي
                   </td>
-                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '15px', color: '#065f46' }}>
+                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '15px', color: 'var(--text)' }}>
                     {data.summary.total_documents.toLocaleString()}
                   </td>
-                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '15px', color: '#1e40af' }}>
+                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '15px', color: '#3b82f6' }}>
                     {formatNumber(data.summary.total_sales)}
                     <span style={{ fontSize: '12px', marginRight: '4px' }}>د.ل</span>
                   </td>
-                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#7c3aed' }}>
+                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#a78bfa' }}>
                     {formatNumber(data.summary.total_agent_share)}
                     <span style={{ fontSize: '12px', marginRight: '4px' }}>د.ل</span>
                   </td>
-                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#0d9488' }}>
+                  <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#2dd4bf' }}>
                     {formatNumber(data.summary.total_company_share)}
                     <span style={{ fontSize: '12px', marginRight: '4px' }}>د.ل</span>
                   </td>
