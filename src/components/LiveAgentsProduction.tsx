@@ -441,7 +441,7 @@ export default function LiveAgentsProduction() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .stat-card:hover { transform: translateY(-6px) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important; }
         .preset-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important; }
-        .action-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .prod-report-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .table-row:hover { background: #eff6ff !important; }
         .sort-header:hover { cursor: pointer; background: rgba(255,255,255,0.15) !important; }
       `}</style>
@@ -454,7 +454,7 @@ export default function LiveAgentsProduction() {
         </h1>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
-            className="action-btn"
+            className="prod-report-btn"
             style={actionBtnStyle('linear-gradient(135deg, #059669, #10b981)')}
             onClick={exportToExcel}
             disabled={!data || !data.agents.length}
@@ -463,7 +463,7 @@ export default function LiveAgentsProduction() {
             تصدير Excel
           </button>
           <button
-            className="action-btn"
+            className="prod-report-btn"
             style={actionBtnStyle('linear-gradient(135deg, #1e40af, #3b82f6)')}
             onClick={handlePrint}
             disabled={!data || !data.agents.length}
@@ -472,7 +472,7 @@ export default function LiveAgentsProduction() {
             طباعة
           </button>
           <button
-            className="action-btn"
+            className="prod-report-btn"
             style={actionBtnStyle('linear-gradient(135deg, #7c3aed, #a78bfa)')}
             onClick={fetchData}
             disabled={loading}
@@ -706,35 +706,35 @@ export default function LiveAgentsProduction() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, #1e293b, #334155)' }}>
-                <th style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
-                <th style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%' }}>الكود</th>
-                <th style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '22%' }}>اسم الوكالة</th>
-                <th style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '15%' }}>اسم الوكيل</th>
+                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
+                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%' }}>الكود</th>
+                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '22%' }}>اسم الوكالة</th>
+                <th style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '15%' }}>اسم الوكيل</th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('document_count')}
-                  style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   عدد الوثائق {sortField === 'document_count' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('total_sales')}
-                  style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '14%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '14%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   إجمالي المبيعات {sortField === 'total_sales' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('agent_share')}
-                  style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   حصة الوكيل {sortField === 'agent_share' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('company_share')}
-                  style={{ padding: '14px 12px', color: 'white', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 12px', color: 'white', background: '#1e293b', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   حصة الشركة {sortField === 'company_share' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
