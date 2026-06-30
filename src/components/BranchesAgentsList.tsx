@@ -671,6 +671,7 @@ export default function BranchesAgentsList() {
             background-size: cover;
             background-position: center;
             border-radius: 8px; 
+            border: 1.5px solid #1e40af;
             overflow: hidden; 
             position: relative; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
