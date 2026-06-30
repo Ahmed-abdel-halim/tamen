@@ -1104,8 +1104,8 @@ export default function UsersList() {
     const idPhotoSrc = resolvePublicUrl(employee.profile_photo_url);
     const logoSrc = resolvePublicUrl('/img/logo.png');
 
-    // Adjusted wave to make blue section visually equal/larger
-    const bgSvg = `data:image/svg+xml;utf8,<svg viewBox="0 0 830 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M856 0 L428 0 C328 150 528 350 428 540 L856 540 Z" fill="%231e40af"/><path d="M428 0 C328 150 528 350 428 540 L408 540 C508 350 308 150 408 0 Z" fill="%23139625"/></svg>`;
+    // Only green wave separator, background is fully white
+    const bgSvg = `data:image/svg+xml;utf8,<svg viewBox="0 0 830 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M428 0 C328 150 528 350 428 540 L408 540 C508 350 308 150 408 0 Z" fill="%23139625"/></svg>`;
 
     w.document.write(`<!DOCTYPE html>
       <html dir="rtl">
@@ -1139,7 +1139,7 @@ export default function UsersList() {
             display: flex; 
           }
           
-          /* Dark Blue Section (Logical Right in RTL, Physical Right) - Visually balanced */
+          /* Right section containing photo & metadata */
           .right-section {
             width: 55%;
             height: 100%;
@@ -1149,7 +1149,7 @@ export default function UsersList() {
             justify-content: center;
             padding: 4mm 4mm 4mm 2mm; /* Reduced right padding to move content closer to edge */
             box-sizing: border-box;
-            color: #ffffff;
+            color: #1e293b;
             z-index: 10;
           }
           
@@ -1161,7 +1161,7 @@ export default function UsersList() {
             background: #ffffff;
             overflow: hidden;
             margin-bottom: 4mm;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1184,9 +1184,9 @@ export default function UsersList() {
             font-size: 7.5pt;
             font-weight: 700;
           }
-          .id-row span:first-child { color: #93c5fd; }
+          .id-row span:first-child { color: #1e40af; }
           
-          /* White Left Section (Physical Left) - Visually balanced */
+          /* Left Section containing logo, name, role */
           .left-section {
             width: 45%;
             height: 100%;
@@ -1195,6 +1195,7 @@ export default function UsersList() {
             align-items: center;
             padding: 4mm;
             box-sizing: border-box;
+            color: #1e293b;
             z-index: 10;
           }
           
