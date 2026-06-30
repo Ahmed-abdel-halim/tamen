@@ -446,8 +446,18 @@ export default function LiveAgentsProduction() {
         .stat-card:hover { transform: translateY(-6px) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important; }
         .preset-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important; }
         .prod-report-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        .table-row:hover { background: #eff6ff !important; }
+        .table-row:hover { background: var(--hover-bg) !important; }
         .sort-header:hover { cursor: pointer; background: rgba(255,255,255,0.15) !important; }
+        .live-production-table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+          table-layout: fixed !important;
+        }
+        @media (max-width: 1100px) {
+          .live-production-table {
+            min-width: 1100px !important;
+          }
+        }
       `}</style>
 
       {/* Header */}
@@ -707,7 +717,7 @@ export default function LiveAgentsProduction() {
 
         {/* Table Content */}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '14px' }}>
+          <table className="live-production-table" style={{ fontSize: '14px' }}>
             <thead>
               <tr style={{ background: 'var(--table-header)' }}>
                 <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
