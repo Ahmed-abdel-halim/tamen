@@ -452,6 +452,8 @@ export default function LiveAgentsProduction() {
           width: 100% !important;
           border-collapse: collapse !important;
           table-layout: fixed !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         @media (max-width: 1100px) {
           .live-production-table {
@@ -716,8 +718,8 @@ export default function LiveAgentsProduction() {
         </div>
 
         {/* Table Content */}
-        <div style={{ overflowX: 'auto' }}>
-          <table className="live-production-table" style={{ fontSize: '14px' }}>
+        <div style={{ overflowX: 'auto', width: '100%', padding: '0', margin: '0' }}>
+          <table className="live-production-table" style={{ fontSize: '14px', width: '100%', margin: '0', padding: '0' }}>
             <thead>
               <tr style={{ background: 'var(--table-header)' }}>
                 <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
