@@ -188,8 +188,29 @@ export default function ViewInsuranceDocument() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/insurance-documents') },
-              { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
-              ...(document.eidc_pdf_url ? [{ label: 'وثيقة الهيئة (PDF)', icon: 'fa-file-pdf', bg: '#0284c7', border: '#0284c7', color: '#fff', onClick: () => window.open(`${API_BASE_URL}/insurance-documents/${id}/eidc-print`, '_blank') }] : []),
+              ...(!isMandatory ? [{ label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint }] : []),
+              ...(document.eidc_pdf_url ? [{
+                label: isMandatory ? 'طباعة الوثيقة' : 'وثيقة الهيئة (PDF)',
+                icon: 'fa-print',
+                bg: isMandatory ? '#0f766e' : '#0284c7',
+                border: isMandatory ? '#0f766e' : '#0284c7',
+                color: '#fff',
+                onClick: () => {
+                  const iframe = window.document.createElement('iframe');
+                  iframe.style.cssText = 'position:fixed;right:-9999px;width:0;height:0';
+                  iframe.src = `${API_BASE_URL}/insurance-documents/${id}/eidc-print?t=${Date.now()}`;
+                  window.document.body.appendChild(iframe);
+                  iframe.onload = () => {
+                    try {
+                      iframe.contentWindow?.focus();
+                      iframe.contentWindow?.print();
+                    } catch (e) {
+                      window.open(`${API_BASE_URL}/insurance-documents/${id}/eidc-print`, '_blank');
+                    }
+                  };
+                  setTimeout(() => { if (window.document.body.contains(iframe)) window.document.body.removeChild(iframe); }, 10000);
+                }
+              }] : []),
               ...(isAdmin ? [{ label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/edit`) }] : []),
               { label: 'نقل ملكية', icon: 'fa-exchange-alt', bg: '#10b981', border: '#10b981', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/transfer-ownership`) },
             ].map((btn, i) => (

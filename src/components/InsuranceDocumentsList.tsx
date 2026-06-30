@@ -586,29 +586,31 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                         )}
                         <td>
                           <div className="action-buttons">
-                            <button
-                              onClick={() => {
-                                const iframe = document.createElement('iframe');
-                                iframe.style.position = 'fixed';
-                                iframe.style.right = '-9999px';
-                                iframe.style.width = '0';
-                                iframe.style.height = '0';
-                                iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
-                                document.body.appendChild(iframe);
+                            {doc.insurance_type !== 'تأمين إجباري سيارات' && (
+                              <button
+                                onClick={() => {
+                                  const iframe = document.createElement('iframe');
+                                  iframe.style.position = 'fixed';
+                                  iframe.style.right = '-9999px';
+                                  iframe.style.width = '0';
+                                  iframe.style.height = '0';
+                                  iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
+                                  document.body.appendChild(iframe);
 
-                                setTimeout(() => {
-                                  if (document.body.contains(iframe)) {
-                                    document.body.removeChild(iframe);
-                                  }
-                                }, 5000);
-                              }}
-                              className="action-btn"
-                              aria-label="طباعة الوثيقة"
-                              title="طباعة الوثيقة"
+                                  setTimeout(() => {
+                                    if (document.body.contains(iframe)) {
+                                      document.body.removeChild(iframe);
+                                    }
+                                  }, 5000);
+                                }}
+                                className="action-btn"
+                                aria-label="طباعة الوثيقة"
+                                title="طباعة الوثيقة"
                                 style={{ background: '#3b82f6', color: '#fff' }}
                               >
                                 <i className="fa-solid fa-print"></i>
                               </button>
+                            )}
                               {doc.eidc_sync_status === 'failed' && (
                                 <button
                                   onClick={() => handleRetryEidcSync(doc.id)}
@@ -621,12 +623,35 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               )}
                               {doc.eidc_pdf_url && (
                                 <button
-                                  onClick={() => window.open(`${API_BASE_URL}/insurance-documents/${doc.id}/eidc-print`, '_blank')}
+                                  onClick={() => {
+                                    const iframe = document.createElement('iframe');
+                                    iframe.style.position = 'fixed';
+                                    iframe.style.right = '-9999px';
+                                    iframe.style.width = '0';
+                                    iframe.style.height = '0';
+                                    iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/eidc-print?t=${new Date().getTime()}`;
+                                    document.body.appendChild(iframe);
+
+                                    iframe.onload = () => {
+                                      try {
+                                        iframe.contentWindow?.focus();
+                                        iframe.contentWindow?.print();
+                                      } catch (e) {
+                                        window.open(`${API_BASE_URL}/insurance-documents/${doc.id}/eidc-print`, '_blank');
+                                      }
+                                    };
+
+                                    setTimeout(() => {
+                                      if (document.body.contains(iframe)) {
+                                        document.body.removeChild(iframe);
+                                      }
+                                    }, 10000);
+                                  }}
                                   className="action-btn"
                                   title="طابعة الهيئة"
                                   style={{ background: '#7c3aed', color: '#fff' }}
                                 >
-                                  <i className="fa-solid fa-file-pdf"></i>
+                                  <i className="fa-solid fa-print"></i>
                                 </button>
                               )}
                               <button
@@ -743,29 +768,64 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                           </div>
                         )}
                         <div className="user-mobile-actions">
-                          <button
-                            onClick={() => {
-                              const iframe = document.createElement('iframe');
-                              iframe.style.position = 'fixed';
-                              iframe.style.right = '-9999px';
-                              iframe.style.width = '0';
-                              iframe.style.height = '0';
-                              iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
-                              document.body.appendChild(iframe);
+                          {doc.insurance_type !== 'تأمين إجباري سيارات' && (
+                            <button
+                              onClick={() => {
+                                const iframe = document.createElement('iframe');
+                                iframe.style.position = 'fixed';
+                                iframe.style.right = '-9999px';
+                                iframe.style.width = '0';
+                                iframe.style.height = '0';
+                                iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
+                                document.body.appendChild(iframe);
 
-                              setTimeout(() => {
-                                if (document.body.contains(iframe)) {
-                                  document.body.removeChild(iframe);
-                                }
-                              }, 5000);
-                            }}
-                            className="action-btn"
-                            aria-label="طباعة الوثيقة"
-                            title="طباعة الوثيقة"
-                            style={{ background: '#3b82f6', color: '#fff' }}
-                          >
-                            <i className="fa-solid fa-print"></i>
-                          </button>
+                                setTimeout(() => {
+                                  if (document.body.contains(iframe)) {
+                                    document.body.removeChild(iframe);
+                                  }
+                                }, 5000);
+                              }}
+                              className="action-btn"
+                              aria-label="طباعة الوثيقة"
+                              title="طباعة الوثيقة"
+                              style={{ background: '#3b82f6', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-print"></i>
+                            </button>
+                          )}
+                          {doc.eidc_pdf_url && (
+                            <button
+                              onClick={() => {
+                                const iframe = document.createElement('iframe');
+                                iframe.style.position = 'fixed';
+                                iframe.style.right = '-9999px';
+                                iframe.style.width = '0';
+                                iframe.style.height = '0';
+                                iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/eidc-print?t=${new Date().getTime()}`;
+                                document.body.appendChild(iframe);
+
+                                iframe.onload = () => {
+                                  try {
+                                    iframe.contentWindow?.focus();
+                                    iframe.contentWindow?.print();
+                                  } catch (e) {
+                                    window.open(`${API_BASE_URL}/insurance-documents/${doc.id}/eidc-print`, '_blank');
+                                  }
+                                };
+
+                                setTimeout(() => {
+                                  if (document.body.contains(iframe)) {
+                                    document.body.removeChild(iframe);
+                                  }
+                                }, 10000);
+                              }}
+                              className="action-btn"
+                              title="طابعة الهيئة"
+                              style={{ background: '#7c3aed', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-print"></i>
+                            </button>
+                          )}
                           <button
                             onClick={() => navigate(`/insurance-documents/${doc.id}`)}
                             className="action-btn view"
