@@ -582,7 +582,11 @@ export default function MonthlyAccountClosure() {
                 استلمت أنا المندوب/الموظف: <span>${employeeName}</span>، 
                 من السيد/الوكيل: <span>${closure.branch_agent?.agency_name || selectedAgent?.agency_name}</span> (كود الوكيل: <span>${closure.branch_agent?.code || selectedAgent?.code}</span>)، 
                 مبلغاً وقدره: <span style="font-size: 14px; color: #0284c7; font-weight: bold;">${formatCurrency(closure.paid_amount)}</span>، 
-                وذلك لتسوية وإغلاق الحساب للوكيل عن شهر: <span>${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</span> لسنة: <span>${closure.year}</span>.
+                وذلك لتسوية وإغلاق الحساب للوكيل 
+                ${closure.from_date && closure.to_date 
+                  ? `للفترة من: <span>${formatDate(closure.from_date)}</span> إلى: <span>${formatDate(closure.to_date)}</span>`
+                  : `عن شهر: <span>${MONTHS.find(m => m.value === closure.month?.toString())?.label || closure.month}</span> لسنة: <span>${closure.year}</span>`
+                }.
               </div>
               
               <table class="table-details">
@@ -598,7 +602,7 @@ export default function MonthlyAccountClosure() {
                     <td>${formatCurrency(closure.due_amount)}</td>
                     <td style="font-weight: bold; color: #059669;">${formatCurrency(closure.paid_amount)}</td>
                     <td style="color: ${closure.remaining_amount > 0 ? '#dc2626' : '#059669'}; font-weight: bold;">
-                      ${formatCurrency(closure.remaining_amount)}
+                       ${formatCurrency(closure.remaining_amount)}
                     </td>
                   </tr>
                 </tbody>
@@ -625,12 +629,16 @@ export default function MonthlyAccountClosure() {
   };
 
   const handleSave = async () => {
-    if (filterMode !== 'monthly') {
-      showToast('الحفظ متاح في وضع الإغلاق الشهري فقط', 'error');
+    if (!selectedAgent) {
+      showToast('يرجى اختيار الوكيل', 'error');
       return;
     }
-    if (!selectedAgent || !selectedYear || !selectedMonth) {
-      showToast('يرجى اختيار الوكيل والسنة والشهر', 'error');
+    if (filterMode === 'monthly' && (!selectedYear || !selectedMonth)) {
+      showToast('يرجى اختيار السنة والشهر', 'error');
+      return;
+    }
+    if (filterMode === 'range' && (!dateFrom || !dateTo)) {
+      showToast('يرجى تحديد من/إلى تاريخ', 'error');
       return;
     }
 
@@ -645,6 +653,19 @@ export default function MonthlyAccountClosure() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const bodyPayload = {
+        branch_agent_id: selectedAgent.id,
+        due_amount: summary.due_amount,
+        paid_amount: paidAmountNum,
+        remaining_amount: remainingAmountNum,
+        documents_data: documents,
+        notes: notes,
+        ...(filterMode === 'monthly' 
+          ? { year: parseInt(selectedYear), month: parseInt(selectedMonth) }
+          : { from_date: dateFrom, to_date: dateTo }
+        )
+      };
+
       const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closure`, {
         method: 'POST',
         headers: {
@@ -652,16 +673,7 @@ export default function MonthlyAccountClosure() {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({
-          branch_agent_id: selectedAgent.id,
-          year: parseInt(selectedYear),
-          month: parseInt(selectedMonth),
-          due_amount: summary.due_amount,
-          paid_amount: paidAmountNum,
-          remaining_amount: remainingAmountNum,
-          documents_data: documents,
-          notes: notes,
-        }),
+        body: JSON.stringify(bodyPayload),
       });
 
       const data = await res.json();
@@ -1317,14 +1329,14 @@ export default function MonthlyAccountClosure() {
               <button
                 onClick={handleSave}
                 className="btn-submit"
-                disabled={filterMode !== 'monthly'}
+                disabled={loading || documents.length === 0}
                 style={{
                   padding: '12px 24px',
                   fontSize: '16px',
                   fontWeight: 600,
                   backgroundColor: '#10b981',
-                  opacity: filterMode !== 'monthly' ? 0.6 : 1,
-                  cursor: filterMode !== 'monthly' ? 'not-allowed' : 'pointer',
+                  opacity: (loading || documents.length === 0) ? 0.6 : 1,
+                  cursor: (loading || documents.length === 0) ? 'not-allowed' : 'pointer',
                 }}
               >
                 <i className="fa-solid fa-save" style={{ marginLeft: '8px' }}></i>
