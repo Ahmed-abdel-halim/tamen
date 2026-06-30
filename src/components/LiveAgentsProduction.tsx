@@ -460,6 +460,18 @@ export default function LiveAgentsProduction() {
             min-width: 1100px !important;
           }
         }
+        .prod-search-input {
+          background: var(--input-bg) !important;
+          color: var(--text) !important;
+          border: 2px solid var(--border) !important;
+        }
+        [data-theme='dark'] .prod-search-input {
+          border: 2px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        .prod-search-input::placeholder {
+          color: var(--muted) !important;
+          opacity: 0.8 !important;
+        }
       `}</style>
 
       {/* Header */}
@@ -610,11 +622,11 @@ export default function LiveAgentsProduction() {
       <div style={filterSectionStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
           <i className="fa-solid fa-filter" style={{ color: '#1e40af', fontSize: '16px' }}></i>
-          <span style={{ fontWeight: 800, fontSize: '15px', color: '#1e293b' }}>الفترة الزمنية</span>
+          <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>الفترة الزمنية</span>
           {loading && (
             <div style={{
               width: '18px', height: '18px',
-              border: '2px solid #e2e8f0', borderTopColor: '#1e40af',
+              border: '2px solid var(--border)', borderTopColor: '#1e40af',
               borderRadius: '50%', animation: 'spin 0.6s linear infinite',
               marginRight: '8px',
             }} />
@@ -705,6 +717,7 @@ export default function LiveAgentsProduction() {
             }}></i>
             <input
               type="text"
+              className="prod-search-input"
               placeholder="ابحث بالاسم أو الكود..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
