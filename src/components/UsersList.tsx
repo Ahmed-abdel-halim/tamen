@@ -1115,15 +1115,29 @@ export default function UsersList() {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
           @page { margin: 0; size: 85.6mm 53.98mm; }
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+          }
           body { 
             font-family: Cairo, 'Segoe UI', sans-serif; 
-            margin: 0; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             background: #e2e8f0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+          }
+          @media print {
+            body {
+              background: #ffffff !important;
+            }
+            .card {
+              box-shadow: none !important;
+              page-break-inside: avoid;
+            }
           }
           .card { 
             width: 85.6mm; 
