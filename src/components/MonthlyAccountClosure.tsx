@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { enhanceAuthorizedDocuments } from "../utils/insuranceTypeHelper";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CustomDateInput from './CustomDateInput';
 
 type BranchAgent = {
   id: number;
@@ -1010,8 +1011,8 @@ export default function MonthlyAccountClosure() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>من - إلى</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} lang="en-GB" />
-                  <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} lang="en-GB" />
+                  <CustomDateInput value={dateFrom} onChange={(val) => { setDateFrom(val); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                  <CustomDateInput value={dateTo} onChange={(val) => { setDateTo(val); if (datePreset !== 'custom') setDatePreset('custom'); }} />
                 </div>
               </div>
             </>

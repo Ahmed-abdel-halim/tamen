@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { showToast } from "./Toast";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
+import CustomDateInput from './CustomDateInput';
 
 type MonthlyAccountClosure = {
   id: number;
@@ -712,8 +713,8 @@ export default function MonthlyAccountClosuresReport() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>من - إلى</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} lang="en-GB" />
-                  <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} lang="en-GB" />
+                  <CustomDateInput value={dateFrom} onChange={(val) => { setDateFrom(val); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                  <CustomDateInput value={dateTo} onChange={(val) => { setDateTo(val); if (datePreset !== 'custom') setDatePreset('custom'); }} />
                 </div>
               </div>
             </>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import CustomDateInput from './CustomDateInput';
 
 interface AgentProduction {
   id: number;
@@ -657,22 +658,18 @@ export default function LiveAgentsProduction() {
           <div style={{ display: 'flex', gap: '14px', marginTop: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>من:</label>
-              <input
-                type="date"
+              <CustomDateInput
                 value={customFrom}
-                onChange={e => setCustomFrom(e.target.value)}
+                onChange={setCustomFrom}
                 style={inputStyle}
-                lang="en-GB"
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>إلى:</label>
-              <input
-                type="date"
+              <CustomDateInput
                 value={customTo}
-                onChange={e => setCustomTo(e.target.value)}
+                onChange={setCustomTo}
                 style={inputStyle}
-                lang="en-GB"
               />
             </div>
           </div>
