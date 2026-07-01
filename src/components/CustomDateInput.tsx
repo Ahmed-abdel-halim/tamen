@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 interface CustomDateInputProps {
   value: string; // YYYY-MM-DD
@@ -8,6 +8,8 @@ interface CustomDateInputProps {
 }
 
 export default function CustomDateInput({ value, onChange, style, className }: CustomDateInputProps) {
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
   // Convert YYYY-MM-DD to DD/MM/YYYY for display
   const formatDisplay = (val: string) => {
     if (!val) return '';
@@ -18,8 +20,30 @@ export default function CustomDateInput({ value, onChange, style, className }: C
     return val;
   };
 
+  const handleWrapperClick = () => {
+    if (dateInputRef.current) {
+      try {
+        // Triggers the native browser date picker popup
+        dateInputRef.current.showPicker();
+      } catch (err) {
+        // Fallback for older browsers
+        dateInputRef.current.focus();
+        dateInputRef.current.click();
+      }
+    }
+  };
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block', width: '100%', minWidth: '140px' }}>
+    <div 
+      onClick={handleWrapperClick}
+      style={{ 
+        position: 'relative', 
+        display: 'inline-block', 
+        width: '100%', 
+        minWidth: '140px',
+        cursor: 'pointer' 
+      }}
+    >
       <input
         type="text"
         readOnly
@@ -34,6 +58,7 @@ export default function CustomDateInput({ value, onChange, style, className }: C
         }}
       />
       <input
+        ref={dateInputRef}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -44,8 +69,8 @@ export default function CustomDateInput({ value, onChange, style, className }: C
           width: '100%',
           height: '100%',
           opacity: 0,
-          cursor: 'pointer',
-          zIndex: 2,
+          pointerEvents: 'none', // Ignore pointer events so click bubbles to parent wrapper
+          zIndex: -1,
         }}
       />
       <i 
