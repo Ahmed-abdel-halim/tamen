@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
@@ -46,6 +46,11 @@ export default function PaymentVouchers() {
   const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
   const [voucherNumber, setVoucherNumber] = useState('');
 
+  // Custom searchable dropdown states
+  const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
+  const [agentSearchText, setAgentSearchText] = useState('');
+  const agentDropdownRef = useRef<HTMLDivElement>(null);
+
   const resolveImageUrl = (path: string) => {
     if (path.startsWith('http')) return path;
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
@@ -55,6 +60,18 @@ export default function PaymentVouchers() {
   useEffect(() => {
     fetchAgents();
     fetchVouchers();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (agentDropdownRef.current && !agentDropdownRef.current.contains(event.target as Node)) {
+        setIsAgentDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const fetchAgents = async () => {
@@ -551,17 +568,151 @@ export default function PaymentVouchers() {
 
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>اختر الوكيل <span className="required">*</span></label>
-                <select
-                  required
-                  value={selectedAgent}
-                  onChange={(e) => setSelectedAgent(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
-                >
-                  <option value="">-- اختر الوكيل --</option>
-                  {agents.map(agent => (
-                    <option key={agent.id} value={agent.id}>{agent.agency_name}</option>
-                  ))}
-                </select>
+                <div ref={agentDropdownRef} style={{ position: 'relative' }}>
+                  {/* Select Trigger */}
+                  <div
+                    onClick={() => setIsAgentDropdownOpen(!isAgentDropdownOpen)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>
+                      {selectedAgent 
+                        ? agents.find(a => String(a.id) === String(selectedAgent))?.agency_name 
+                        : '-- اختر الوكيل --'}
+                    </span>
+                    <i className={`fa-solid fa-chevron-${isAgentDropdownOpen ? 'up' : 'down'}`} style={{ fontSize: '12px', color: 'var(--muted)' }}></i>
+                  </div>
+
+                  {/* Dropdown Panel */}
+                  {isAgentDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '105%',
+                        left: 0,
+                        right: 0,
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '10px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        padding: '8px',
+                        maxHeight: '300px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      {/* Search Input */}
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="ابحث باسم الوكالة أو الكود..."
+                          value={agentSearchText}
+                          onChange={(e) => setAgentSearchText(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 10px 10px 35px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--input-bg)',
+                            color: 'var(--text)',
+                            fontSize: '13px',
+                            outline: 'none',
+                          }}
+                        />
+                        <i
+                          className="fa-solid fa-magnifying-glass"
+                          style={{
+                            position: 'absolute',
+                            left: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: 'var(--muted)',
+                            fontSize: '14px',
+                          }}
+                        ></i>
+                      </div>
+
+                      {/* Options List */}
+                      <div
+                        style={{
+                          overflowY: 'auto',
+                          maxHeight: '200px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                        }}
+                      >
+                        {agents.filter(agent => {
+                          const query = agentSearchText.toLowerCase();
+                          return (
+                            agent.agency_name?.toLowerCase().includes(query) ||
+                            agent.code?.toLowerCase().includes(query) ||
+                            agent.agent_name?.toLowerCase().includes(query)
+                          );
+                        }).length === 0 ? (
+                          <div style={{ padding: '10px', color: 'var(--muted)', textAlign: 'center', fontSize: '13px' }}>
+                            لا يوجد نتائج مطابقة
+                          </div>
+                        ) : (
+                          agents
+                            .filter(agent => {
+                              const query = agentSearchText.toLowerCase();
+                              return (
+                                agent.agency_name?.toLowerCase().includes(query) ||
+                                agent.code?.toLowerCase().includes(query) ||
+                                agent.agent_name?.toLowerCase().includes(query)
+                              );
+                            })
+                            .map(agent => (
+                              <div
+                                key={agent.id}
+                                onClick={() => {
+                                  setSelectedAgent(String(agent.id));
+                                  setIsAgentDropdownOpen(false);
+                                  setAgentSearchText('');
+                                }}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  color: 'var(--text)',
+                                  background: String(agent.id) === String(selectedAgent) ? 'rgba(1, 76, 177, 0.1)' : 'transparent',
+                                  fontWeight: String(agent.id) === String(selectedAgent) ? 'bold' : 'normal',
+                                  transition: 'background 0.2s',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  direction: 'rtl'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = String(agent.id) === String(selectedAgent) ? 'rgba(1, 76, 177, 0.1)' : 'transparent'}
+                              >
+                                <span>{agent.agency_name}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--border)', padding: '2px 6px', borderRadius: '4px' }}>
+                                  {agent.code}
+                                </span>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Hidden field for validation */}
+                <input type="hidden" required value={selectedAgent} readOnly />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
