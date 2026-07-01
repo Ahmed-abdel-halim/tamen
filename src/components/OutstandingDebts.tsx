@@ -17,6 +17,12 @@ export default function OutstandingDebts() {
   const [debts, setDebts] = useState<DebtRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filter & Search states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [debtSizeFilter, setDebtSizeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('highest_debt');
+
   useEffect(() => {
     fetchDebts();
   }, []);
@@ -48,6 +54,46 @@ export default function OutstandingDebts() {
     }
   };
 
+  // Dynamic summary calculations
+  const totalOutstanding = debts.reduce((sum, d) => sum + (d.total_debt > 0 ? d.total_debt : 0), 0);
+  const totalCritical = debts.filter(d => d.status === 'critical').reduce((sum, d) => sum + d.total_debt, 0);
+  const totalNormalAgents = debts.filter(d => d.status === 'normal').length;
+
+  // Filtered & Sorted debts
+  const filteredDebts = debts
+    .filter(debt => {
+      // 1. Search Filter
+      const matchesSearch = debt.agency_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // 2. Status Filter
+      const matchesStatus = statusFilter === 'all' || debt.status === statusFilter;
+
+      // 3. Debt Size Filter
+      let matchesDebtSize = true;
+      if (debtSizeFilter === 'high') {
+        matchesDebtSize = debt.total_debt > 10000;
+      } else if (debtSizeFilter === 'medium') {
+        matchesDebtSize = debt.total_debt >= 5000 && debt.total_debt <= 10000;
+      } else if (debtSizeFilter === 'low') {
+        matchesDebtSize = debt.total_debt < 5000;
+      }
+
+      return matchesSearch && matchesStatus && matchesDebtSize;
+    })
+    .sort((a, b) => {
+      // 4. Sorting logic
+      if (sortBy === 'highest_debt') {
+        return b.total_debt - a.total_debt;
+      } else if (sortBy === 'lowest_debt') {
+        return a.total_debt - b.total_debt;
+      } else if (sortBy === 'latest_payment') {
+        const dateA = a.last_payment_date === 'لا يوجد' ? '' : a.last_payment_date;
+        const dateB = b.last_payment_date === 'لا يوجد' ? '' : b.last_payment_date;
+        return dateB.localeCompare(dateA);
+      }
+      return 0;
+    });
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb" style={{ 
@@ -70,18 +116,135 @@ export default function OutstandingDebts() {
         </button>
       </div>
 
+      {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
         <div style={{ background: 'var(--panel)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', borderTop: '4px solid #ef4444' }}>
           <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>إجمالي الديون القائمة</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>16,700 د.ل</div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
+            {totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+          </div>
         </div>
         <div style={{ background: 'var(--panel)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', borderTop: '4px solid #f59e0b' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>ديون متأخرة (أكثر من 30 يوم)</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>8,500 د.ل</div>
+          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>ديون متأخرة خطيرة (&gt; 10 آلاف)</div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
+            {totalCritical.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+          </div>
         </div>
         <div style={{ background: 'var(--panel)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', borderTop: '4px solid #139625' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>وكلاء ملتزمون بالسداد</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>12 وكيل</div>
+          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>وكلاء بمديونية طبيعية</div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>{totalNormalAgents} وكيل</div>
+        </div>
+      </div>
+
+      {/* Filtering and Search Bar */}
+      <div style={{
+        background: 'var(--panel)',
+        padding: '16px 20px',
+        borderRadius: '12px',
+        marginBottom: '20px',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        gap: '15px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        direction: 'rtl'
+      }}>
+        {/* Search */}
+        <div style={{ flex: '1', minWidth: '200px', position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="ابحث باسم الوكالة أو الجهة..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 40px 10px 15px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--input-bg)',
+              color: 'var(--text)',
+              fontSize: '14px',
+              outline: 'none',
+            }}
+          />
+          <i className="fa-solid fa-magnifying-glass" style={{
+            position: 'absolute',
+            right: '15px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--muted)',
+          }}></i>
+        </div>
+
+        {/* Filter by Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--muted)' }}>الحالة:</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--input-bg)',
+              color: 'var(--text)',
+              fontSize: '13px',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="all">الكل</option>
+            <option value="critical">خطير (متجاوز)</option>
+            <option value="warning">تنبيه</option>
+            <option value="normal">طبيعي</option>
+          </select>
+        </div>
+
+        {/* Filter by Debt Size */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--muted)' }}>حجم الدين:</label>
+          <select
+            value={debtSizeFilter}
+            onChange={(e) => setDebtSizeFilter(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--input-bg)',
+              color: 'var(--text)',
+              fontSize: '13px',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="all">الكل</option>
+            <option value="high">أكثر من 10,000 د.ل</option>
+            <option value="medium">بين 5,000 و 10,000 د.ل</option>
+            <option value="low">أقل من 5,000 د.ل</option>
+          </select>
+        </div>
+
+        {/* Sort By */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--muted)' }}>ترتيب حسب:</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--input-bg)',
+              color: 'var(--text)',
+              fontSize: '13px',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="highest_debt">المديونية الأعلى</option>
+            <option value="lowest_debt">المديونية الأقل</option>
+            <option value="latest_payment">تاريخ آخر دفعة (الأحدث)</option>
+          </select>
         </div>
       </div>
 
@@ -107,14 +270,20 @@ export default function OutstandingDebts() {
                   </div>
                 </td>
               </tr>
-            ) : debts.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>لا توجد ديون مستحقة حالياً</td></tr>
-            ) : debts.map(debt => {
+            ) : filteredDebts.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                  لا توجد مديونيات مطابقة للبحث أو الفلتر حالياً
+                </td>
+              </tr>
+            ) : filteredDebts.map(debt => {
               const badge = getStatusBadge(debt.status);
               return (
                 <tr key={debt.id}>
                   <td style={{ fontWeight: 'bold' }}>{debt.agency_name}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '16px' }}>{debt.total_debt.toLocaleString()} د.ل</td>
+                  <td style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '16px' }}>
+                    {debt.total_debt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+                  </td>
                   <td>{debt.last_payment_date}</td>
                   <td>
                     <span style={{ 
