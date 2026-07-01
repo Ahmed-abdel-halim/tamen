@@ -756,6 +756,7 @@ export default function CreateBranchAgent() {
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     placeholder="اسم المستخدم"
+                    autoComplete="off"
                   />
                   {formErrors.username && <span className="error-message">{formErrors.username}</span>}
                 </div>
@@ -768,6 +769,7 @@ export default function CreateBranchAgent() {
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="كلمة المرور"
                       style={{ width: '100%', paddingLeft: '40px' }}
+                      autoComplete="new-password"
                     />
                     <button
                       type="button"
