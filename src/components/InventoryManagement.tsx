@@ -619,7 +619,7 @@ export default function InventoryManagement() {
         <p><strong>تاريخ وتوقيت الصرف:</strong> ${formatDateTime(main.assigned_at)}</p>
         <p><strong>الرقم المرجعي لتسجيل العهدة:</strong> #${main.id.toString().padStart(5, '0')}</p>
         <p><strong>نوع العهدة:</strong> ${getInventoryTypeName(main.item.inventory_type)}</p>
-        <p><strong>الجهة المستلمة:</strong> ${main.recipient.agency_name || main.recipient.name}</p>
+        <p><strong>الجهة المستلمة:</strong> ${main.recipient?.agency_name || main.recipient?.name || 'مستلم مجهول'}</p>
 
         <table>
           <thead>
@@ -779,7 +779,7 @@ export default function InventoryManagement() {
     const main = group[0];
     const isActive = group.some((item) => item.status === 'active');
     const groupType = main.item.inventory_type ?? 'consumable';
-    const recipientName = (main.recipient.agency_name || main.recipient.name || '').toLowerCase();
+    const recipientName = (main.recipient?.agency_name || main.recipient?.name || 'مستلم مجهول').toLowerCase();
     const itemNames = group.map((entry) => entry.item.name.toLowerCase()).join(' ');
     const itemQuery = custodyFilterItem.trim().toLowerCase();
     const recipientQuery = custodyFilterRecipient.trim().toLowerCase();
@@ -977,7 +977,7 @@ export default function InventoryManagement() {
           index: index + 1,
           name: c.item.name,
           quantity: `${c.quantity} ${c.item.unit}`,
-          recipient: c.recipient.agency_name || c.recipient.name,
+          recipient: c.recipient?.agency_name || c.recipient?.name || 'مستلم مجهول',
           recipient_type: getRecipientTypeName(c.recipient_type),
           date: new Date(c.assigned_at).toLocaleDateString('ar-LY'),
           inventory_type: getInventoryTypeName(c.item.inventory_type),
@@ -1036,7 +1036,7 @@ export default function InventoryManagement() {
         <tr>
           <td>${index + 1}</td>
           <td style="text-align: right;">${c.item.name}</td>
-          <td>${c.recipient.agency_name || c.recipient.name || '-'}</td>
+          <td>${c.recipient?.agency_name || c.recipient?.name || '-'}</td>
           <td>${getRecipientTypeName(c.recipient_type)}</td>
           <td>${new Date(c.assigned_at).toLocaleDateString('ar-LY')}</td>
           <td>${getInventoryTypeName(c.item.inventory_type)}</td>
@@ -1695,7 +1695,7 @@ export default function InventoryManagement() {
                           <tr key={getBatchKey(main)}>
                             <td>{custodyIndex + 1}</td>
                             <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>
-                              {main.recipient.agency_name || main.recipient.name}
+                              {main.recipient?.agency_name || main.recipient?.name || 'مستلم مجهول'}
                             </td>
                             <td>
                               <span className={`premium-badge ${(main.recipient_type === 'agent' || main.recipient_type.includes('BranchAgent')) ? 'badge-info' : 'badge-purple'}`}>
@@ -1773,7 +1773,7 @@ export default function InventoryManagement() {
                           <h4 className="user-mobile-title">{getInventoryTypeName(main.item.inventory_type)}</h4>
                           <span className="user-mobile-number" style={{ color: 'var(--accent)' }}>
                             <i className="fa-solid fa-user" style={{ marginLeft: '5px' }}></i>
-                            {main.recipient.agency_name || main.recipient.name}
+                            {main.recipient?.agency_name || main.recipient?.name || 'مستلم مجهول'}
                           </span>
                         </div>
                       </div>
