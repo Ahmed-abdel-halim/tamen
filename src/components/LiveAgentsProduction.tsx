@@ -662,6 +662,7 @@ export default function LiveAgentsProduction() {
                 value={customFrom}
                 onChange={e => setCustomFrom(e.target.value)}
                 style={inputStyle}
+                lang="en-GB"
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -671,6 +672,7 @@ export default function LiveAgentsProduction() {
                 value={customTo}
                 onChange={e => setCustomTo(e.target.value)}
                 style={inputStyle}
+                lang="en-GB"
               />
             </div>
           </div>

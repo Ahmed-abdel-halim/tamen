@@ -1010,8 +1010,8 @@ export default function MonthlyAccountClosure() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>من - إلى</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} />
-                  <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} />
+                  <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} lang="en-GB" />
+                  <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); if (datePreset !== 'custom') setDatePreset('custom'); }} lang="en-GB" />
                 </div>
               </div>
             </>
