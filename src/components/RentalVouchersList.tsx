@@ -254,12 +254,145 @@ export default function RentalVouchersList() {
       if (!res.ok) throw new Error();
       const { data: voucher } = await res.json();
       
-      const totalAmount = (voucher.records || []).reduce((sum: number, r: any) => sum + parseFloat(r.total_amount || 0), 0);
-      const qrData = `ورقة إيجار رقم: ${voucher.id}\nالمالك: ${voucher.owner_name}\nالهاتف: ${voucher.phone}\nالإجمالي: ${totalAmount} د.ل`;
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
-
+      const records = voucher.records || [];
       const printWindow = window.open('', '', 'width=1200,height=900');
       if (!printWindow) return;
+
+      const pagesHtml = records.length > 0 
+        ? records.map((rec: any, idx: number) => {
+            const recordAmount = parseFloat(rec.total_amount || 0);
+            const qrData = `ورقة إيجار رقم: ${voucher.id} - دفعة ${idx + 1}\nالمالك: ${voucher.owner_name}\nالهاتف: ${voucher.phone}\nالقيمة: ${recordAmount.toLocaleString()} د.ل`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+            const dateString = new Date(voucher.created_at).toLocaleDateString('ar-LY');
+
+            return `
+              <div class="page-break">
+                <div class="main-border">
+                  <table class="header-table">
+                    <tr>
+                      <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
+                      <td class="title-cell">
+                        <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
+                        <h1 class="doc-title">إيـصـال سـداد إيـجـار عـقـاري</h1>
+                        <div style="font-size: 12px; margin-top: 5px;">إدارة العقارات والتحصيل</div>
+                      </td>
+                      <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
+                    </tr>
+                  </table>
+                  <div class="section-title">بيانات صاحب العقار</div>
+                  <table class="data-table">
+                    <tr>
+                      <td class="label">اسم صاحب العقار:</td><td>${voucher.owner_name}</td>
+                      <td class="label">رقم الإيصال:</td><td>${voucher.id}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">رقم الهاتف:</td><td>${voucher.phone}</td>
+                      <td class="label">الرقم الوطني:</td><td>${voucher.national_id}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">تاريخ الإصدار:</td><td>${dateString}</td>
+                      <td class="label">إجمالي المبلغ:</td><td style="font-weight: 900;">${recordAmount.toLocaleString()} د.ل</td>
+                    </tr>
+                  </table>
+                  <div class="section-title">تفاصيل دفعات الإيجار</div>
+                  <table class="items-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>الفترة من</th>
+                        <th>الفترة إلى</th>
+                        <th>الوحدات</th>
+                        <th>المستلم</th>
+                        <th>القيمة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>${idx + 1}</td>
+                        <td>${rec.from_date ? new Date(rec.from_date).toLocaleDateString('ar-LY') : '-'}</td>
+                        <td>${rec.to_date ? new Date(rec.to_date).toLocaleDateString('ar-LY') : '-'}</td>
+                        <td>${rec.apartments_count}</td>
+                        <td>${rec.recipient_name}</td>
+                        <td style="font-weight: bold;">${recordAmount.toLocaleString()} د.ل</td>
+                      </tr>
+                      <tr class="total-row">
+                        <td colspan="5" style="text-align: left; padding-left: 20px;">الإجمالي الكلي:</td>
+                        <td>${recordAmount.toLocaleString()} د.ل</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="section-title">ملاحظات إضافية</div>
+                  <div style="border: 1px solid #000; padding: 10px; min-height: 50px; font-size: 13px;">${voucher.notes || 'لا توجد ملاحظات'}</div>
+                  <div class="signature-box">
+                    <div class="sig-item"><div style="font-weight: 900;">توقيع المحصل</div><div class="sig-line">توقيع / ختم</div></div>
+                    <div class="sig-item"><div style="font-weight: 900;">توقيع المستأجر</div><div class="sig-line">توقيع / بصمة</div></div>
+                  </div>
+                  <div class="footer-meta">تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}</div>
+                </div>
+              </div>
+            `;
+          }).join('')
+        : `
+          <div class="page-break">
+            <div class="main-border">
+              <table class="header-table">
+                <tr>
+                  <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
+                  <td class="title-cell">
+                    <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
+                    <h1 class="doc-title">إيـصـال سـداد إيـجـار عـقـاري</h1>
+                    <div style="font-size: 12px; margin-top: 5px;">إدارة العقارات والتحصيل</div>
+                  </td>
+                  <td class="qr-cell"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=empty" style="width: 80px;"></td>
+                </tr>
+              </table>
+              <div class="section-title">بيانات صاحب العقار</div>
+              <table class="data-table">
+                <tr>
+                  <td class="label">اسم صاحب العقار:</td><td>${voucher.owner_name}</td>
+                  <td class="label">رقم الإيصال:</td><td>${voucher.id}</td>
+                </tr>
+                <tr>
+                  <td class="label">رقم الهاتف:</td><td>${voucher.phone}</td>
+                  <td class="label">الرقم الوطني:</td><td>${voucher.national_id}</td>
+                </tr>
+                <tr>
+                  <td class="label">تاريخ الإصدار:</td><td>${new Date(voucher.created_at).toLocaleDateString('ar-LY')}</td>
+                  <td class="label">إجمالي المبلغ:</td><td style="font-weight: 900;">0 د.ل</td>
+                </tr>
+              </table>
+              <div class="section-title">تفاصيل دفعات الإيجار</div>
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>الفترة من</th>
+                    <th>الفترة إلى</th>
+                    <th>الوحدات</th>
+                    <th>المستلم</th>
+                    <th>القيمة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="6">لا توجد سجلات دفع</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="5" style="text-align: left; padding-left: 20px;">الإجمالي الكلي:</td>
+                    <td>0 د.ل</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="section-title">ملاحظات إضافية</div>
+              <div style="border: 1px solid #000; padding: 10px; min-height: 50px; font-size: 13px;">${voucher.notes || 'لا توجد ملاحظات'}</div>
+              <div class="signature-box">
+                <div class="sig-item"><div style="font-weight: 900;">توقيع المحصل</div><div class="sig-line">توقيع / ختم</div></div>
+                <div class="sig-item"><div style="font-weight: 900;">توقيع المستأجر</div><div class="sig-line">توقيع / بصمة</div></div>
+              </div>
+              <div class="footer-meta">تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}</div>
+            </div>
+          </div>
+        `;
 
       printWindow.document.write(`
         <html dir="rtl">
@@ -267,9 +400,14 @@ export default function RentalVouchersList() {
           <title>ورقة إيجار #${voucher.id} - ${voucher.owner_name}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-            @media print { @page { margin: 10mm; size: A4; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+            @media print { 
+              @page { margin: 10mm; size: A4; } 
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+              .page-break { page-break-after: always; break-after: page; }
+              .page-break:last-child { page-break-after: avoid; break-after: avoid; }
+            }
             body { font-family: 'Cairo', sans-serif; margin: 0; padding: 10px; color: #000; background: #fff; }
-            .main-border { border: 2px solid #000; padding: 15px; min-height: 250mm; position: relative; }
+            .main-border { border: 2px solid #000; padding: 15px; min-height: 250mm; position: relative; box-sizing: border-box; }
             .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .header-table td { border: 1px solid #000; padding: 10px; vertical-align: middle; }
             .logo-cell { width: 20%; text-align: center; }
@@ -291,42 +429,7 @@ export default function RentalVouchersList() {
           </style>
         </head>
         <body onload="window.print(); window.onafterprint = () => window.close();">
-          <div class="main-border">
-            <table class="header-table">
-              <tr>
-                <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
-                <td class="title-cell">
-                  <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
-                  <h1 class="doc-title">إيـصـال سـداد إيـجـار عـقـاري</h1>
-                  <div style="font-size: 12px; margin-top: 5px;">إدارة العقارات والتحصيل</div>
-                </td>
-                <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
-              </tr>
-            </table>
-            <div class="section-title">بيانات صاحب العقار</div>
-            <table class="data-table">
-              <tr><td class="label">اسم صاحب العقار:</td><td>${voucher.owner_name}</td><td class="label">رقم الإيصال:</td><td>${voucher.id}</td></tr>
-              <tr><td class="label">رقم الهاتف:</td><td>${voucher.phone}</td><td class="label">الرقم الوطني:</td><td>${voucher.national_id}</td></tr>
-              <tr><td class="label">تاريخ الإصدار:</td><td>${new Date(voucher.created_at).toLocaleDateString('ar-LY')}</td><td class="label">إجمالي المبلغ:</td><td style="font-weight: 900;">${totalAmount.toLocaleString()} د.ل</td></tr>
-            </table>
-            <div class="section-title">تفاصيل دفعات الإيجار</div>
-            <table class="items-table">
-              <thead><tr><th>#</th><th>الفترة من</th><th>الفترة إلى</th><th>الوحدات</th><th>المستلم</th><th>القيمة</th></tr></thead>
-              <tbody>
-                ${(voucher.records || []).map((rec: any, idx: number) => `
-                  <tr><td>${idx + 1}</td><td>${rec.from_date ? new Date(rec.from_date).toLocaleDateString('ar-LY') : '-'}</td><td>${rec.to_date ? new Date(rec.to_date).toLocaleDateString('ar-LY') : '-'}</td><td>${rec.apartments_count}</td><td>${rec.recipient_name}</td><td style="font-weight: bold;">${parseFloat(rec.total_amount).toLocaleString()} د.ل</td></tr>
-                `).join('')}
-                <tr class="total-row"><td colspan="5" style="text-align: left; padding-left: 20px;">الإجمالي الكلي:</td><td>${totalAmount.toLocaleString()} د.ل</td></tr>
-              </tbody>
-            </table>
-            <div class="section-title">ملاحظات إضافية</div>
-            <div style="border: 1px solid #000; padding: 10px; min-height: 50px; font-size: 13px;">${voucher.notes || 'لا توجد ملاحظات'}</div>
-            <div class="signature-box">
-              <div class="sig-item"><div style="font-weight: 900;">توقيع المحصل</div><div class="sig-line">توقيع / ختم</div></div>
-              <div class="sig-item"><div style="font-weight: 900;">توقيع المستأجر</div><div class="sig-line">توقيع / بصمة</div></div>
-            </div>
-            <div class="footer-meta">تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}</div>
-          </div>
+          ${pagesHtml}
         </body>
         </html>
       `);
