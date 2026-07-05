@@ -52,6 +52,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState<InternationalInsuranceDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 10;
   const [isAdmin, setIsAdmin] = useState(false);
@@ -279,6 +280,47 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
     }
   };
 
+  const handleSyncUnion = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    showToast('جاري بدء المزامنة مع الاتحاد، يرجى الانتظار...', 'success');
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents/sync-union`, {
+        method: 'POST',
+        headers
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'حدث خطأ غير متوقع أثناء المزامنة' }));
+        throw new Error(errorData.message || 'فشلت عملية المزامنة');
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          `تمت المزامنة بنجاح! إضافة: ${data.created}، تحديث: ${data.updated}، فشل: ${data.failed}`, 
+          'success'
+        );
+        fetchDocuments();
+      } else {
+        showToast(data.message || 'فشلت عملية المزامنة مع الاتحاد', 'error');
+      }
+    } catch (error: any) {
+      showToast(error.message || 'تعذر الاتصال بالخادم لإجراء المزامنة', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -308,14 +350,27 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
               إضافة وثيقة
             </button>
           )}
-          <button
-            className="primary add-user-btn"
-            onClick={() => navigate('/international-insurance-documents/lifo-dashboard')}
-            style={{ background: 'var(--sidebar)', marginRight: '10px' }}
-          >
-            <i className="fa-solid fa-chart-pie"></i>
-            بوابة الاتحاد (LIFO)
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                className="primary add-user-btn"
+                onClick={() => navigate('/international-insurance-documents/lifo-dashboard')}
+                style={{ background: 'var(--sidebar)', marginRight: '10px' }}
+              >
+                <i className="fa-solid fa-chart-pie"></i>
+                بوابة الاتحاد (LIFO)
+              </button>
+              <button
+                className="primary add-user-btn"
+                onClick={handleSyncUnion}
+                disabled={isSyncing}
+                style={{ background: '#2563eb', marginRight: '10px' }}
+              >
+                <i className={`fa-solid ${isSyncing ? 'fa-spinner fa-spin' : 'fa-rotate'}`}></i>
+                {isSyncing ? 'جاري المزامنة...' : 'مزامنة مع الاتحاد'}
+              </button>
+            </>
+          )}
           <button
             className="primary add-user-btn"
             onClick={handleExportExcel}
