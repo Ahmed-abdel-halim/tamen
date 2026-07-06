@@ -287,7 +287,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
   const handleSyncUnion = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
-    showToast('جاري بدء المزامنة مع الاتحاد، يرجى الانتظار...', 'success');
+    showToast('جاري بدء المزامنة مع الاتحاد...', 'success');
     try {
       const token = localStorage.getItem('token');
       const headers: HeadersInit = { 
@@ -309,20 +309,70 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
       }
 
       const data = await res.json();
-      if (data.success) {
+      
+      if (data.already_running) {
+        showToast('عملية المزامنة قيد التشغيل بالفعل، يرجى الانتظار...', 'error');
+        setIsSyncing(false);
+        return;
+      }
+
+      if (data.background) {
+        showToast('بدأت المزامنة في الخلفية، سيتم إعلامك عند الانتهاء...', 'success');
+        // Start polling for status
+        pollSyncStatus(headers);
+      } else if (data.success) {
         showToast(
           `تمت المزامنة بنجاح! إضافة: ${data.created}، تحديث: ${data.updated}، فشل: ${data.failed}`, 
           'success'
         );
         fetchDocuments();
+        setIsSyncing(false);
       } else {
         showToast(data.message || 'فشلت عملية المزامنة مع الاتحاد', 'error');
+        setIsSyncing(false);
       }
     } catch (error: any) {
       showToast(error.message || 'تعذر الاتصال بالخادم لإجراء المزامنة', 'error');
-    } finally {
       setIsSyncing(false);
     }
+  };
+
+  const pollSyncStatus = (headers: HeadersInit) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/international-insurance-documents/sync-union-status`, {
+          headers
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.status === 'completed') {
+          clearInterval(interval);
+          showToast(
+            `تمت المزامنة بنجاح! إضافة: ${data.created ?? 0}، تحديث: ${data.updated ?? 0}، فشل: ${data.failed ?? 0}`,
+            'success'
+          );
+          fetchDocuments();
+          setIsSyncing(false);
+        } else if (data.status === 'failed') {
+          clearInterval(interval);
+          showToast(data.message || 'فشلت عملية المزامنة', 'error');
+          setIsSyncing(false);
+        }
+        // If still 'running', keep polling
+      } catch {
+        // Network error, keep trying
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Safety: stop polling after 20 minutes maximum
+    setTimeout(() => {
+      clearInterval(interval);
+      if (isSyncing) {
+        showToast('انتهت مهلة متابعة المزامنة. قد تكون لا تزال قيد التشغيل في الخلفية.', 'error');
+        setIsSyncing(false);
+      }
+    }, 20 * 60 * 1000);
   };
 
   return (

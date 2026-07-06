@@ -1194,6 +1194,7 @@ export default function App() {
         url.includes('/branches-agents/pending-counts') || 
         url.includes('/document-requests/pending-count') || 
         url.includes('/notifications/unread-count') ||
+        url.includes('/sync-union-status') ||
         (url.includes('/notifications') && !url.includes('/read-all') && !url.includes('/read'));
 
       if (!isBackground) {
