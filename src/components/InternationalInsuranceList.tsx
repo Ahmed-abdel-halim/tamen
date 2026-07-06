@@ -10,6 +10,10 @@ const getLifoCredentials = () => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const u = JSON.parse(userStr);
+      // Admin should always print using the master adminmli credentials to access all offices' cards
+      if (u.is_admin) {
+        return { user_name: 'adminmli', pass_word: '20232024' };
+      }
       if (u.lifo_username && u.lifo_password) {
         return { user_name: u.lifo_username, pass_word: u.lifo_password };
       }
