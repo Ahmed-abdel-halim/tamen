@@ -627,7 +627,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                             </button>
                             {doc.external_policy_number && (
                               <button
-                                onClick={() => handlePrintLifoCard(doc.id, doc.external_policy_number!)}
+                                onClick={() => handlePrintLifoCard(doc.id, doc.document_number || doc.external_policy_number!)}
                                 className="action-btn"
                                 aria-label="طباعة وثيقة الاتحاد"
                                 title={`طباعة وثيقة الاتحاد (${doc.external_policy_number})`}
@@ -773,7 +773,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                           </button>
                           {doc.external_policy_number && (
                             <button
-                              onClick={() => handlePrintLifoCard(doc.id, doc.external_policy_number!)}
+                              onClick={() => handlePrintLifoCard(doc.id, doc.document_number || doc.external_policy_number!)}
                               className="action-btn"
                               aria-label="طباعة وثيقة الاتحاد"
                               title={`طباعة وثيقة الاتحاد (${doc.external_policy_number})`}
