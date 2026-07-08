@@ -7,12 +7,14 @@ import CustomDateInput from './CustomDateInput';
 type MonthlyAccountClosure = {
   id: number;
   branch_agent_id: number;
-  year: number;
-  month: number;
+  year: number | null;
+  month: number | null;
   due_amount: number;
   paid_amount: number;
   remaining_amount: number;
   documents_data?: any[];
+  from_date?: string | null;
+  to_date?: string | null;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -366,7 +368,7 @@ export default function MonthlyAccountClosuresReport() {
                 استلمت أنا المندوب/الموظف: <span>${employeeName}</span>، 
                 من السيد/الوكيل: <span>${closure.branch_agent?.agency_name}</span> (كود الوكيل: <span>${closure.branch_agent?.code}</span>)، 
                 مبلغاً وقدره: <span style="font-size: 14px; color: #0284c7; font-weight: bold;">${formatCurrency(closure.paid_amount)}</span>، 
-                وذلك لتسوية وإغلاق الحساب للوكيل عن شهر: <span>${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</span> لسنة: <span>${closure.year}</span>.
+                وذلك لتسوية وإغلاق الحساب للوكيل عن ${closure.month ? `شهر: <span>${MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</span> لسنة: <span>${closure.year}</span>` : `فترة: <span>${closure.from_date && closure.to_date ? `من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` : '-'}</span>`}.
               </div>
               
               <table class="table-details">
@@ -446,8 +448,8 @@ export default function MonthlyAccountClosuresReport() {
         
         return {
           agency_name: `${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}`,
-          year: closure.year,
-          month: MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month,
+          year: closure.year || '-',
+          month: closure.month ? (MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month) : (closure.from_date && closure.to_date ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` : '-'),
           grand_total: grandTotal.toFixed(2) + ' د.ل',
           agent_share: agentShare.toFixed(2) + ' د.ل',
           company_share: companyShare.toFixed(2) + ' د.ل',
@@ -750,8 +752,16 @@ export default function MonthlyAccountClosuresReport() {
                       return (
                         <tr key={closure.id}>
                           <td>{closure.branch_agent.agency_name} - {closure.branch_agent.agent_name} ({closure.branch_agent.code})</td>
-                          <td>{closure.year}</td>
-                          <td>{MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</td>
+                          <td>{closure.year || '-'}</td>
+                          <td>
+                            {closure.month 
+                              ? (MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month) 
+                              : (closure.from_date && closure.to_date 
+                                ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` 
+                                : '-'
+                              )
+                            }
+                          </td>
                           <td style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotal)}</td>
                           <td style={{ color: '#6366f1', fontWeight: 'bold' }}>{formatCurrency(agentShare)}</td>
                           <td style={{ color: '#139625', fontWeight: 'bold' }}>{formatCurrency(companyShare)}</td>
@@ -803,11 +813,19 @@ export default function MonthlyAccountClosuresReport() {
                   </div>
                   <div className="user-mobile-row">
                     <span className="user-mobile-label">السنة:</span>
-                    <span className="user-mobile-value">{closure.year}</span>
+                    <span className="user-mobile-value">{closure.year || '-'}</span>
                   </div>
                   <div className="user-mobile-row">
                     <span className="user-mobile-label">الشهر:</span>
-                    <span className="user-mobile-value">{MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month}</span>
+                    <span className="user-mobile-value">
+                      {closure.month 
+                        ? (MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month) 
+                        : (closure.from_date && closure.to_date 
+                          ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` 
+                          : '-'
+                        )
+                      }
+                    </span>
                   </div>
                   <div className="user-mobile-row">
                     <span className="user-mobile-label">القيمة المستحقة:</span>
