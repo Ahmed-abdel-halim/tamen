@@ -58,6 +58,10 @@ export default function PaymentVouchers() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, agent, employee
   const [filterMethod, setFilterMethod] = useState('all'); // all, نقدي, شيك, تحويل, أخرى
+  const [filterAgentId, setFilterAgentId] = useState('all'); // specific agent ID or 'all'
+  const [isFilterAgentDropdownOpen, setIsFilterAgentDropdownOpen] = useState(false);
+  const [filterAgentSearchText, setFilterAgentSearchText] = useState('');
+  const filterAgentDropdownRef = useRef<HTMLDivElement>(null);
 
 
   const resolveImageUrl = (path: string) => {
@@ -82,6 +86,11 @@ export default function PaymentVouchers() {
         if (!matchesName && !matchesNum && !matchesNotes) return false;
       }
       
+      // Agent ID filter
+      if (filterAgentId !== 'all') {
+        if (String(v.agent_id) !== String(filterAgentId)) return false;
+      }
+      
       // Agent Type
       if (filterType === 'agent') {
         if (v.agent_type !== 'وكيل') return false;
@@ -100,7 +109,7 @@ export default function PaymentVouchers() {
       
       return true;
     });
-  }, [vouchers, filterDateFrom, filterDateTo, filterSearch, filterType, filterMethod]);
+  }, [vouchers, filterDateFrom, filterDateTo, filterSearch, filterType, filterMethod, filterAgentId]);
 
   useEffect(() => {
     fetchAgents();
@@ -111,6 +120,9 @@ export default function PaymentVouchers() {
     function handleClickOutside(event: MouseEvent) {
       if (agentDropdownRef.current && !agentDropdownRef.current.contains(event.target as Node)) {
         setIsAgentDropdownOpen(false);
+      }
+      if (filterAgentDropdownRef.current && !filterAgentDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterAgentDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -425,6 +437,10 @@ export default function PaymentVouchers() {
       ? 'جميع الجهات'
       : (filterType === 'agent' ? 'الوكلاء فقط' : 'الموظفين والفروع فقط');
 
+    const selectedAgentName = filterAgentId !== 'all'
+      ? (agents.find(a => String(a.id) === String(filterAgentId))?.agency_name || '')
+      : 'جميع الوكلاء';
+
     printWindow.document.write(`
       <html dir="rtl">
       <head>
@@ -459,7 +475,7 @@ export default function PaymentVouchers() {
             <strong>تاريخ التقرير:</strong> ${new Date().toLocaleString('ar-LY')}
           </div>
           <div>
-            <strong>نطاق التصفية:</strong> ${reportRange} &nbsp;|&nbsp; <strong>نوع الجهة:</strong> ${providerTypeLabel}
+            <strong>نطاق التصفية:</strong> ${reportRange} &nbsp;|&nbsp; <strong>الوكيل:</strong> ${selectedAgentName} &nbsp;|&nbsp; <strong>نوع الجهة:</strong> ${providerTypeLabel}
           </div>
           <div>
             <strong>إجمالي المقبوضات:</strong> ${totalAmount.toLocaleString()} د.ل &nbsp;|&nbsp; <strong>عدد الإيصالات:</strong> ${filteredVouchers.length}
@@ -578,7 +594,7 @@ export default function PaymentVouchers() {
 
                 await generatePremiumExcel({
                   title: 'شركة المدار الليبي للتأمين - سجل إيصالات القبض المالي',
-                  subtitle: `إجمالي المقبوضات: ${filteredVouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل - عدد الإيصالات: ${filteredVouchers.length}`,
+                  subtitle: `الوكيل: ${filterAgentId !== 'all' ? (agents.find(a => String(a.id) === String(filterAgentId))?.agency_name || '') : 'الكل'} - إجمالي المقبوضات: ${filteredVouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل - عدد الإيصالات: ${filteredVouchers.length}`,
                   columns,
                   data,
                   fileName: 'إيصالات_القبض',
@@ -644,6 +660,169 @@ export default function PaymentVouchers() {
               minHeight: 42,
             }}
           />
+        </div>
+
+        {/* اختيار الوكيل (البحث السريع) */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>الوكيل / المورد</label>
+          <div ref={filterAgentDropdownRef} style={{ position: 'relative' }}>
+            {/* Select Trigger */}
+            <div
+              onClick={() => setIsFilterAgentDropdownOpen(!isFilterAgentDropdownOpen)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--card-bg)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                minHeight: 42,
+                fontSize: 14,
+              }}
+            >
+              <span>
+                {filterAgentId !== 'all'
+                  ? agents.find(a => String(a.id) === String(filterAgentId))?.agency_name
+                  : 'الكل (جميع الوكلاء)'}
+              </span>
+              <i className={`fa-solid fa-chevron-${isFilterAgentDropdownOpen ? 'up' : 'down'}`} style={{ fontSize: '12px', color: 'var(--muted)' }}></i>
+            </div>
+
+            {/* Dropdown Panel */}
+            {isFilterAgentDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '105%',
+                  left: 0,
+                  right: 0,
+                  background: 'var(--panel)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                  zIndex: 1000,
+                  padding: '8px',
+                  maxHeight: '300px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+              >
+                {/* Search Input inside dropdown */}
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="ابحث باسم الوكالة أو الكود..."
+                    value={filterAgentSearchText}
+                    onChange={(e) => setFilterAgentSearchText(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 10px 10px 35px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text)',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  <i
+                    className="fa-solid fa-magnifying-glass"
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: 'var(--muted)',
+                      fontSize: '14px',
+                    }}
+                  ></i>
+                </div>
+
+                {/* Options List */}
+                <div
+                  style={{
+                    overflowY: 'auto',
+                    maxHeight: '200px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  {/* Default "All" option */}
+                  <div
+                    onClick={() => {
+                      setFilterAgentId('all');
+                      setIsFilterAgentDropdownOpen(false);
+                      setFilterAgentSearchText('');
+                    }}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      color: 'var(--text)',
+                      background: filterAgentId === 'all' ? 'rgba(1, 76, 177, 0.1)' : 'transparent',
+                      fontWeight: filterAgentId === 'all' ? 'bold' : 'normal',
+                      transition: 'background 0.2s',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      direction: 'rtl'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = filterAgentId === 'all' ? 'rgba(1, 76, 177, 0.1)' : 'transparent'}
+                  >
+                    <span>الكل (جميع الوكلاء)</span>
+                  </div>
+
+                  {/* Filtered agents list */}
+                  {agents.filter(agent => {
+                    const query = filterAgentSearchText.toLowerCase();
+                    return (
+                      agent.agency_name?.toLowerCase().includes(query) ||
+                      agent.code?.toLowerCase().includes(query) ||
+                      agent.agent_name?.toLowerCase().includes(query)
+                    );
+                  }).map(agent => (
+                    <div
+                      key={agent.id}
+                      onClick={() => {
+                        setFilterAgentId(String(agent.id));
+                        setIsFilterAgentDropdownOpen(false);
+                        setFilterAgentSearchText('');
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        color: 'var(--text)',
+                        background: String(agent.id) === String(filterAgentId) ? 'rgba(1, 76, 177, 0.1)' : 'transparent',
+                        fontWeight: String(agent.id) === String(filterAgentId) ? 'bold' : 'normal',
+                        transition: 'background 0.2s',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        direction: 'rtl'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = String(agent.id) === String(filterAgentId) ? 'rgba(1, 76, 177, 0.1)' : 'transparent'}
+                    >
+                      <span>{agent.agency_name}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--border)', padding: '2px 6px', borderRadius: '4px' }}>
+                        {agent.code}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* من تاريخ */}
@@ -743,6 +922,7 @@ export default function PaymentVouchers() {
               setFilterDateTo('');
               setFilterType('all');
               setFilterMethod('all');
+              setFilterAgentId('all');
             }}
             className="secondary"
             style={{
