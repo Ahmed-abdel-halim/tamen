@@ -25,6 +25,7 @@ interface Voucher {
   payment_date: string;
   notes: string;
   created_at: string;
+  agent_type?: string;
 }
 
 export default function PaymentVouchers() {
@@ -51,11 +52,55 @@ export default function PaymentVouchers() {
   const [agentSearchText, setAgentSearchText] = useState('');
   const agentDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Filter States
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterType, setFilterType] = useState('all'); // all, agent, employee
+  const [filterMethod, setFilterMethod] = useState('all'); // all, نقدي, شيك, تحويل, أخرى
+
+
   const resolveImageUrl = (path: string) => {
     if (path.startsWith('http')) return path;
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     return `${window.location.origin}/${cleanPath}`;
   };
+
+  const filteredVouchers = React.useMemo(() => {
+    return vouchers.filter(v => {
+      // Date From
+      if (filterDateFrom && v.payment_date < filterDateFrom) return false;
+      // Date To
+      if (filterDateTo && v.payment_date > filterDateTo) return false;
+      
+      // Search
+      if (filterSearch) {
+        const search = filterSearch.toLowerCase();
+        const matchesName = v.agent_name?.toLowerCase().includes(search);
+        const matchesNum = v.voucher_number?.toLowerCase().includes(search);
+        const matchesNotes = v.notes?.toLowerCase().includes(search);
+        if (!matchesName && !matchesNum && !matchesNotes) return false;
+      }
+      
+      // Agent Type
+      if (filterType === 'agent') {
+        if (v.agent_type !== 'وكيل') return false;
+      } else if (filterType === 'employee') {
+        if (v.agent_type !== 'فرع من شركة' && v.agent_type !== 'موظف') return false;
+      }
+      
+      // Payment Method
+      if (filterMethod !== 'all') {
+        if (filterMethod === 'أخرى') {
+          if (v.payment_method === 'نقدي' || v.payment_method === 'شيك' || v.payment_method === 'تحويل') return false;
+        } else {
+          if (v.payment_method !== filterMethod) return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [vouchers, filterDateFrom, filterDateTo, filterSearch, filterType, filterMethod]);
 
   useEffect(() => {
     fetchAgents();
@@ -105,7 +150,8 @@ export default function PaymentVouchers() {
           notes: v.notes || '',
           bank_name: v.bank_name || '',
           reference_number: v.reference_number || '',
-          created_at: v.created_at
+          created_at: v.created_at,
+          agent_type: v.agent?.type || 'وكيل'
         }));
         setVouchers(mappedVouchers);
       }
@@ -349,6 +395,110 @@ export default function PaymentVouchers() {
     }
   };
 
+  const handlePrintFilteredVouchers = () => {
+    const printWindow = window.open('', '', 'width=1200,height=900');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
+      return;
+    }
+
+    const rows = filteredVouchers.map((v, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td style="font-weight: bold;">${v.voucher_number}</td>
+        <td style="text-align: right; font-weight: bold;">${v.agent_name}</td>
+        <td>${v.agent_type || 'وكيل'}</td>
+        <td style="font-weight: bold; color: #139625;">${v.amount.toLocaleString()} د.ل</td>
+        <td>${v.payment_method}</td>
+        <td>${v.payment_date}</td>
+        <td style="text-align: right; font-size: 11px; max-width: 200px; word-wrap: break-word;">${v.notes || '-'}</td>
+      </tr>
+    `).join('');
+
+    const totalAmount = filteredVouchers.reduce((sum, v) => sum + v.amount, 0);
+
+    const reportRange = (filterDateFrom || filterDateTo)
+      ? `الفترة: ${filterDateFrom || '-'} إلى ${filterDateTo || '-'}`
+      : 'كافة الفترات';
+
+    const providerTypeLabel = filterType === 'all'
+      ? 'جميع الجهات'
+      : (filterType === 'agent' ? 'الوكلاء فقط' : 'الموظفين والفروع فقط');
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>تقرير إيصالات القبض المالي</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          @media print { 
+            @page { margin: 10mm; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+          body { font-family: 'Cairo', sans-serif; margin: 20px; padding: 20px; color: #1e293b; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #139625; padding-bottom: 15px; }
+          .header h1 { margin: 0; color: #139625; font-size: 24px; font-weight: 900; }
+          .meta-info { margin-bottom: 20px; font-size: 13px; color: #475569; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border-radius: 8px; border: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: center; font-size: 12px; }
+          th { background: #f1f5f9; font-weight: 900; color: #1e293b; }
+          .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 15px; }
+          .total-row { background: #f0fdf4; font-weight: 900; }
+        </style>
+      </head>
+      <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+        <div class="header">
+          <div>
+            <h1>شركة المدار الليبي للتأمين</h1>
+            <p style="margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #334155;">تقرير إيصالات القبض المالي</p>
+          </div>
+          <img src="/img/logo.png" style="height: 70px;" onerror="this.src='/img/official_logo.PNG'">
+        </div>
+        <div class="meta-info">
+          <div>
+            <strong>تاريخ التقرير:</strong> ${new Date().toLocaleString('ar-LY')}
+          </div>
+          <div>
+            <strong>نطاق التصفية:</strong> ${reportRange} &nbsp;|&nbsp; <strong>نوع الجهة:</strong> ${providerTypeLabel}
+          </div>
+          <div>
+            <strong>إجمالي المقبوضات:</strong> ${totalAmount.toLocaleString()} د.ل &nbsp;|&nbsp; <strong>عدد الإيصالات:</strong> ${filteredVouchers.length}
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%;">#</th>
+              <th style="width: 15%;">رقم الإيصال</th>
+              <th style="width: 25%; text-align: right;">اسم المورد / الوكيل</th>
+              <th style="width: 10%;">النوع</th>
+              <th style="width: 15%;">المبلغ</th>
+              <th style="width: 10%;">طريقة الدفع</th>
+              <th style="width: 12%;">التاريخ</th>
+              <th style="width: 18%; text-align: right;">ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.length > 0 ? rows : '<tr><td colspan="8">لا توجد إيصالات قبض مطابقة للفلاتر المحددة</td></tr>'}
+          </tbody>
+          ${rows.length > 0 ? `
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="4" style="text-align: right; padding-right: 20px;">المجموع الكلي</td>
+              <td style="color: #139625;">${totalAmount.toLocaleString()} د.ل</td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>` : ''}
+        </table>
+        <div class="footer">
+          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('ar-LY')}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb no-print" style={{
@@ -366,6 +516,20 @@ export default function PaymentVouchers() {
           نظام إيصالات القبض المالي
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handlePrintFilteredVouchers}
+            className="secondary"
+            style={{
+              padding: '10px 20px', borderRadius: '10px',
+              fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+              border: '1px solid var(--border)',
+              background: '#139625',
+              color: '#fff'
+            }}
+          >
+            <i className="fa-solid fa-print"></i>
+            طباعة كشف الإيصالات
+          </button>
           <button
             onClick={handlePrintAgentsRevenue}
             className="secondary"
@@ -393,7 +557,7 @@ export default function PaymentVouchers() {
                   { header: 'ملاحظات', key: 'notes', width: 35 },
                 ];
 
-                const data = vouchers.map((v) => ({
+                const data = filteredVouchers.map((v) => ({
                   voucher_number: v.voucher_number,
                   agent_name: v.agent_name,
                   amount: v.amount.toLocaleString() + ' د.ل',
@@ -406,7 +570,7 @@ export default function PaymentVouchers() {
                 data.push({
                   voucher_number: 'الإجمالي',
                   agent_name: '',
-                  amount: vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString() + ' د.ل',
+                  amount: filteredVouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString() + ' د.ل',
                   payment_method: '',
                   payment_date: '',
                   notes: '',
@@ -414,11 +578,11 @@ export default function PaymentVouchers() {
 
                 await generatePremiumExcel({
                   title: 'شركة المدار الليبي للتأمين - سجل إيصالات القبض المالي',
-                  subtitle: `إجمالي المقبوضات: ${vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل - عدد الإيصالات: ${vouchers.length}`,
+                  subtitle: `إجمالي المقبوضات: ${filteredVouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل - عدد الإيصالات: ${filteredVouchers.length}`,
                   columns,
                   data,
                   fileName: 'إيصالات_القبض',
-                  qrData: `إيصالات القبض - شركة المدار الليبي\nعدد الإيصالات: ${vouchers.length}\nإجمالي: ${vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+                  qrData: `إيصالات القبض - شركة المدار الليبي\nعدد الإيصالات: ${filteredVouchers.length}\nإجمالي: ${filteredVouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
                 });
 
                 showToast('تم تصدير سجل الإيصالات بنجاح', 'success');
@@ -450,20 +614,173 @@ export default function PaymentVouchers() {
         </div>
       </div>
 
+      {/* فلترة وبحث الإيصالات */}
+      <div className="no-print" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: '16px',
+        background: 'var(--panel)',
+        padding: '20px',
+        borderRadius: '12px',
+        border: '1px solid var(--border)',
+        marginBottom: '20px'
+      }}>
+        {/* البحث السريع */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>البحث السريع</label>
+          <input
+            type="text"
+            placeholder="ابحث بالاسم، رقم الإيصال..."
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              background: 'var(--card-bg)',
+              color: 'var(--text)',
+              fontSize: 14,
+              minHeight: 42,
+            }}
+          />
+        </div>
+
+        {/* من تاريخ */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>من تاريخ</label>
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              background: 'var(--card-bg)',
+              color: 'var(--text)',
+              fontSize: 14,
+              minHeight: 42,
+            }}
+          />
+        </div>
+
+        {/* إلى تاريخ */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>إلى تاريخ</label>
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              background: 'var(--card-bg)',
+              color: 'var(--text)',
+              fontSize: 14,
+              minHeight: 42,
+            }}
+          />
+        </div>
+
+        {/* نوع المورد */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>نوع الجهة (المورد)</label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              background: 'var(--card-bg)',
+              color: 'var(--text)',
+              fontSize: 14,
+              minHeight: 42,
+            }}
+          >
+            <option value="all">الكل</option>
+            <option value="agent">الوكلاء فقط</option>
+            <option value="employee">الموظفين والفروع فقط</option>
+          </select>
+        </div>
+
+        {/* طريقة الدفع */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>طريقة الدفع</label>
+          <select
+            value={filterMethod}
+            onChange={(e) => setFilterMethod(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              background: 'var(--card-bg)',
+              color: 'var(--text)',
+              fontSize: 14,
+              minHeight: 42,
+            }}
+          >
+            <option value="all">الكل</option>
+            <option value="نقدي">نقدي</option>
+            <option value="شيك">شيك</option>
+            <option value="تحويل">تحويل</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+
+        {/* إعادة تعيين */}
+        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <button
+            onClick={() => {
+              setFilterSearch('');
+              setFilterDateFrom('');
+              setFilterDateTo('');
+              setFilterType('all');
+              setFilterMethod('all');
+            }}
+            className="secondary"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--card-bg)',
+              color: 'var(--text)',
+              fontWeight: 'bold',
+              minHeight: 42,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fa-solid fa-arrow-rotate-left"></i>
+            تصفية
+          </button>
+        </div>
+      </div>
+
       <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
         <div style={{ background: 'var(--panel)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>إجمالي المقبوضات (اليوم)</div>
+          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>إجمالي المقبوضات (المصفاة)</div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#139625' }}>
-            {vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل
+            {filteredVouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()} د.ل
           </div>
         </div>
         <div style={{ background: 'var(--panel)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>عدد الإيصالات الصادرة</div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#014cb1' }}>{vouchers.length} إيصال</div>
+          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>عدد الإيصالات المصفاة</div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#014cb1' }}>{filteredVouchers.length} إيصال</div>
         </div>
         <div style={{ background: 'var(--panel)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>آخر عملية توريد</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text)' }}>{vouchers[0]?.agent_name || '-'}</div>
+          <div style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '5px' }}>آخر عملية توريد مصفاة</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text)' }}>{filteredVouchers[0]?.agent_name || '-'}</div>
         </div>
       </div>
 
@@ -481,7 +798,7 @@ export default function PaymentVouchers() {
               </tr>
             </thead>
             <tbody>
-              {vouchers.map((voucher) => (
+              {filteredVouchers.map((voucher) => (
                 <tr key={voucher.id}>
                   <td style={{ fontWeight: 'bold', color: '#014cb1' }}>{voucher.voucher_number}</td>
                   <td>{voucher.agent_name}</td>
