@@ -950,7 +950,10 @@ export default function InventoryManagement() {
   };
 
   const handleExportCustodiesReport = async () => {
-    const currentCustodies = filteredCustodyGroups.flat();
+    const query = custodyFilterItem.trim().toLowerCase();
+    const currentCustodies = filteredCustodyGroups.flatMap(group => 
+      group.filter(c => !query || c.item.name.toLowerCase().includes(query))
+    );
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     let grandTotalValue = 0;
     
@@ -1015,7 +1018,10 @@ export default function InventoryManagement() {
   };
 
   const handlePrintCustodiesReport = () => {
-    const currentCustodies = filteredCustodyGroups.flat();
+    const query = custodyFilterItem.trim().toLowerCase();
+    const currentCustodies = filteredCustodyGroups.flatMap(group => 
+      group.filter(c => !query || c.item.name.toLowerCase().includes(query))
+    );
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const printWindow = window.open('', '', 'width=1100,height=850');
@@ -1710,12 +1716,14 @@ export default function InventoryManagement() {
                             </td>
                             <td>
                               <ul style={{ margin: 0, paddingInlineStart: '16px', listStyleType: 'square' }}>
-                                {group.map((entry) => (
-                                  <li key={entry.id} style={{ fontSize: '0.85rem', marginBottom: '2px' }}>
-                                    {entry.item.name} - <span style={{ fontWeight: 'bold' }}>{entry.quantity}</span> {entry.item.unit}
-                                    {(entry.serial_start || entry.serial_end) ? ` (S/N: ${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
-                                  </li>
-                                ))}
+                                {group
+                                  .filter(entry => !custodyFilterItem.trim() || entry.item.name.toLowerCase().includes(custodyFilterItem.trim().toLowerCase()))
+                                  .map((entry) => (
+                                    <li key={entry.id} style={{ fontSize: '0.85rem', marginBottom: '2px' }}>
+                                      {entry.item.name} - <span style={{ fontWeight: 'bold' }}>{entry.quantity}</span> {entry.item.unit}
+                                      {(entry.serial_start || entry.serial_end) ? ` (S/N: ${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
+                                    </li>
+                                  ))}
                               </ul>
                             </td>
                             <td>
@@ -1780,18 +1788,22 @@ export default function InventoryManagement() {
                       <div className="user-mobile-body">
                         <div className="user-mobile-row">
                           <span className="user-mobile-label">عدد الأصناف:</span>
-                          <span className="user-mobile-value" style={{ fontWeight: 'bold' }}>{group.length}</span>
+                          <span className="user-mobile-value" style={{ fontWeight: 'bold' }}>
+                            {group.filter(entry => !custodyFilterItem.trim() || entry.item.name.toLowerCase().includes(custodyFilterItem.trim().toLowerCase())).length}
+                          </span>
                         </div>
                         <div className="user-mobile-row">
                           <span className="user-mobile-label">الأصناف المسلمة:</span>
                           <span className="user-mobile-value" style={{ display: 'block', width: '100%' }}>
                             <ul style={{ margin: '6px 0 0 0', paddingInlineStart: '16px' }}>
-                              {group.map((entry) => (
-                                <li key={entry.id} style={{ marginBottom: '4px' }}>
-                                  {entry.item.name} - {entry.quantity} {entry.item.unit}
-                                  {(entry.serial_start || entry.serial_end) ? ` (${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
-                                </li>
-                              ))}
+                              {group
+                                .filter(entry => !custodyFilterItem.trim() || entry.item.name.toLowerCase().includes(custodyFilterItem.trim().toLowerCase()))
+                                .map((entry) => (
+                                  <li key={entry.id} style={{ marginBottom: '4px' }}>
+                                    {entry.item.name} - {entry.quantity} {entry.item.unit}
+                                    {(entry.serial_start || entry.serial_end) ? ` (${entry.serial_start || ''}${entry.serial_end ? ` ➔ ${entry.serial_end}` : ''})` : ''}
+                                  </li>
+                                ))}
                             </ul>
                           </span>
                         </div>
