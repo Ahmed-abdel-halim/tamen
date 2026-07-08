@@ -449,7 +449,7 @@ export default function MonthlyAccountClosuresReport() {
         return {
           agency_name: `${closure.branch_agent.agency_name} - ${closure.branch_agent.agent_name}`,
           year: closure.year || '-',
-          month: closure.month ? (MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month) : (closure.from_date && closure.to_date ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` : '-'),
+          month: closure.month ? (MONTHS.find(m => m.value === closure.month!.toString())?.label || closure.month) : (closure.from_date && closure.to_date ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` : '-'),
           grand_total: grandTotal.toFixed(2) + ' د.ل',
           agent_share: agentShare.toFixed(2) + ' د.ل',
           company_share: companyShare.toFixed(2) + ' د.ل',
@@ -755,7 +755,7 @@ export default function MonthlyAccountClosuresReport() {
                           <td>{closure.year || '-'}</td>
                           <td>
                             {closure.month 
-                              ? (MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month) 
+                              ? (MONTHS.find(m => m.value === closure.month!.toString())?.label || closure.month) 
                               : (closure.from_date && closure.to_date 
                                 ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` 
                                 : '-'
@@ -819,7 +819,7 @@ export default function MonthlyAccountClosuresReport() {
                     <span className="user-mobile-label">الشهر:</span>
                     <span className="user-mobile-value">
                       {closure.month 
-                        ? (MONTHS.find(m => m.value === closure.month.toString())?.label || closure.month) 
+                        ? (MONTHS.find(m => m.value === closure.month!.toString())?.label || closure.month) 
                         : (closure.from_date && closure.to_date 
                           ? `فترة من ${formatDate(closure.from_date)} إلى ${formatDate(closure.to_date)}` 
                           : '-'
