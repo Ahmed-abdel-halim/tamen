@@ -92,16 +92,16 @@ const BANK_TRANSACTION_TYPES = [
   { id: 'other', name: 'أخرى' }
 ];
 
-export default function TreasuryAndBanksPage() {
+export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExpenses?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
 
   const activeTab = useMemo(() => {
-    if (tabParam === 'treasury' || tabParam === 'banks' || tabParam === 'pos' || tabParam === 'expenses') {
+    if (tabParam === 'treasury' || tabParam === 'banks' || tabParam === 'pos' || (!hideExpenses && tabParam === 'expenses')) {
       return tabParam as 'treasury' | 'banks' | 'pos' | 'expenses';
     }
     return 'banks';
-  }, [tabParam]);
+  }, [tabParam, hideExpenses]);
 
   const setActiveTab = (newTab: 'treasury' | 'banks' | 'pos' | 'expenses') => {
     setSearchParams({ tab: newTab });
@@ -1377,8 +1377,8 @@ export default function TreasuryAndBanksPage() {
         boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)'
       }}>
         <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-solid fa-vault" style={{ color: '#014cb1', fontSize: '22px' }}></i>
-          المصارف والخزينة الموحدة
+          <i className={hideExpenses ? "fa-solid fa-scale-balanced" : "fa-solid fa-vault"} style={{ color: '#014cb1', fontSize: '22px' }}></i>
+          {hideExpenses ? 'المطابقة والتحصيلات المالية' : 'المصارف والخزينة الموحدة'}
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
           {activeTab === 'treasury' && (
@@ -1517,23 +1517,25 @@ export default function TreasuryAndBanksPage() {
           <i className="fa-solid fa-credit-card" style={{ marginLeft: '8px' }}></i>
           نقاط البيع وماكينات POS
         </button>
-        <button 
-          onClick={() => setActiveTab('expenses')}
-          style={{
-            padding: '10px 24px',
-            borderRadius: '10px',
-            border: 'none',
-            fontWeight: '800',
-            fontSize: '14px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            background: activeTab === 'expenses' ? 'var(--panel)' : 'transparent',
-            color: activeTab === 'expenses' ? '#014cb1' : 'var(--muted)'
-          }}
-        >
-          <i className="fa-solid fa-money-bill-wave" style={{ marginLeft: '8px' }}></i>
-          المصروفات التشغيلية
-        </button>
+        {!hideExpenses && (
+          <button 
+            onClick={() => setActiveTab('expenses')}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '10px',
+              border: 'none',
+              fontWeight: '800',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              background: activeTab === 'expenses' ? 'var(--panel)' : 'transparent',
+              color: activeTab === 'expenses' ? '#014cb1' : 'var(--muted)'
+            }}
+          >
+            <i className="fa-solid fa-money-bill-wave" style={{ marginLeft: '8px' }}></i>
+            المصروفات التشغيلية
+          </button>
+        )}
       </div>
 
       {/* ========================================================================= */}

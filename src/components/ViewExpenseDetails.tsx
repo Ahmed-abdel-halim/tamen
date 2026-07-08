@@ -85,7 +85,7 @@ export default function ViewExpenseDetails() {
     <div style={{ padding: '100px', textAlign: 'center' }}>
       <i className="fa-solid fa-circle-exclamation" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '20px' }}></i>
       <p style={{ color: 'var(--text)' }}>المصروف غير موجود</p>
-      <button onClick={() => navigate('/reports/treasury-banks?tab=expenses')} className="btn-primary" style={{ marginTop: '20px' }}>العودة للقائمة</button>
+      <button onClick={() => navigate('/reports/expenses')} className="btn-primary" style={{ marginTop: '20px' }}>العودة للقائمة</button>
     </div>
   );
 
@@ -335,7 +335,7 @@ export default function ViewExpenseDetails() {
     <div style={{ padding: '100px', textAlign: 'center' }}>
       <i className="fa-solid fa-circle-exclamation" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '20px' }}></i>
       <p style={{ color: 'var(--text)' }}>المصروف غير موجود</p>
-      <button onClick={() => navigate('/reports/treasury-banks?tab=expenses')} className="btn-primary" style={{ marginTop: '20px' }}>العودة للقائمة</button>
+      <button onClick={() => navigate('/reports/expenses')} className="btn-primary" style={{ marginTop: '20px' }}>العودة للقائمة</button>
     </div>
   );
 
@@ -351,7 +351,7 @@ export default function ViewExpenseDetails() {
             <i className="fa-solid fa-print"></i> طباعة الواصل
           </button>
           <button
-            onClick={() => navigate('/reports/treasury-banks?tab=expenses')}
+            onClick={() => navigate('/reports/expenses')}
             style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <i className="fa-solid fa-arrow-right"></i> رجوع
