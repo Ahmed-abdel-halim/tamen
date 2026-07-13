@@ -103,7 +103,13 @@ export default function AgentTransfers() {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const user = JSON.parse(userStr);
-      setIsAdmin(user.is_admin || !user.branch_agent_id);
+      const hasNoAgent = !user.branch_agent_id || 
+                         user.branch_agent_id === 0 || 
+                         String(user.branch_agent_id).trim() === '' || 
+                         String(user.branch_agent_id).trim() === '0' || 
+                         String(user.branch_agent_id).trim().toLowerCase() === 'null' ||
+                         String(user.branch_agent_id).trim().toLowerCase() === 'undefined';
+      setIsAdmin(user.is_admin || hasNoAgent);
     }
   }, []);
 
