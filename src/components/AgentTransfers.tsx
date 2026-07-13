@@ -442,6 +442,11 @@ export default function AgentTransfers() {
         <span>الشؤون المالية / {isAdmin ? 'حوالات الوكلاء المالية' : 'التحويلات المالية للشركة'}</span>
       </div>
 
+      {/* Temporary Debug Info */}
+      <div style={{ padding: '10px', background: '#fee2e2', color: '#991b1b', marginBottom: '16px', borderRadius: '8px', fontSize: '12px' }}>
+        DEBUG - User: {localStorage.getItem('user')} | isAdmin state: {String(isAdmin)}
+      </div>
+
       {/* Stats Cards */}
       <div className="users-card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
