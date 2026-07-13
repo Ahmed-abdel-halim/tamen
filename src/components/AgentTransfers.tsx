@@ -104,11 +104,11 @@ export default function AgentTransfers() {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
-        const hasFinancePermission = Array.isArray(user.authorized_documents) && (
-          user.authorized_documents.includes('المحاسب المالي') || 
-          user.authorized_documents.includes('حوالات الوكلاء المالية')
-        );
-        setIsAdmin(user.is_admin || hasFinancePermission);
+        const isAgent = !!user.branch_agent_id && 
+                        String(user.branch_agent_id).trim() !== 'null' && 
+                        String(user.branch_agent_id).trim() !== '0' && 
+                        String(user.branch_agent_id).trim() !== '';
+        setIsAdmin(user.is_admin || !isAgent);
       }
     };
 
@@ -442,10 +442,7 @@ export default function AgentTransfers() {
         <span>الشؤون المالية / {isAdmin ? 'حوالات الوكلاء المالية' : 'التحويلات المالية للشركة'}</span>
       </div>
 
-      {/* Temporary Debug Info */}
-      <div style={{ padding: '10px', background: '#fee2e2', color: '#991b1b', marginBottom: '16px', borderRadius: '8px', fontSize: '12px' }}>
-        DEBUG - User: {localStorage.getItem('user')} | isAdmin state: {String(isAdmin)}
-      </div>
+
 
       {/* Stats Cards */}
       <div className="users-card" style={{ marginBottom: '16px' }}>
