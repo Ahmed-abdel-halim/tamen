@@ -100,17 +100,30 @@ export default function AgentTransfers() {
   const [formFile, setFormFile] = useState<File | null>(null);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      const hasNoAgent = !user.branch_agent_id || 
-                         user.branch_agent_id === 0 || 
-                         String(user.branch_agent_id).trim() === '' || 
-                         String(user.branch_agent_id).trim() === '0' || 
-                         String(user.branch_agent_id).trim().toLowerCase() === 'null' ||
-                         String(user.branch_agent_id).trim().toLowerCase() === 'undefined';
-      setIsAdmin(user.is_admin || hasNoAgent);
-    }
+    const updateUserPermissions = () => {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const hasFinancePermission = Array.isArray(user.authorized_documents) && (
+          user.authorized_documents.includes('المحاسب المالي') || 
+          user.authorized_documents.includes('حوالات الوكلاء المالية')
+        );
+        setIsAdmin(user.is_admin || hasFinancePermission);
+      }
+    };
+
+    updateUserPermissions();
+
+    // Listen for storage changes and custom login/permissions updates
+    window.addEventListener('storage', updateUserPermissions);
+    window.addEventListener('userLoggedIn', updateUserPermissions);
+    window.addEventListener('userPermissionsUpdated', updateUserPermissions);
+
+    return () => {
+      window.removeEventListener('storage', updateUserPermissions);
+      window.removeEventListener('userLoggedIn', updateUserPermissions);
+      window.removeEventListener('userPermissionsUpdated', updateUserPermissions);
+    };
   }, []);
 
   const loadData = async () => {

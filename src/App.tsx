@@ -1462,6 +1462,7 @@ export default function App() {
             setIsAdmin(latestUser.is_admin || false);
             setBranchAgentId(latestUser.branch_agent_id || null);
             setCurrentUserId(latestUser.id);
+            window.dispatchEvent(new Event('userPermissionsUpdated'));
           }
         }
       } catch (error) {
