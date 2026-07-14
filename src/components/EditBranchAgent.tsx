@@ -105,6 +105,7 @@ export default function EditBranchAgent() {
     agency_number: '',
     stamp_number: '',
     contract_date: new Date().toISOString().split('T')[0],
+    renewal_date: '',
     contract_end_date: '',
     contract_duration: '',
     city: '',
@@ -281,6 +282,7 @@ export default function EditBranchAgent() {
         agency_number: data.agency_number || '',
         stamp_number: data.stamp_number || '',
         contract_date: data.contract_date ? new Date(data.contract_date).toISOString().split('T')[0] : '',
+        renewal_date: data.renewal_date ? new Date(data.renewal_date).toISOString().split('T')[0] : '',
         contract_end_date: data.contract_end_date ? new Date(data.contract_end_date).toISOString().split('T')[0] : '',
         contract_duration: data.contract_duration || '',
         city: data.city || '',
@@ -424,6 +426,7 @@ export default function EditBranchAgent() {
       if (formData.agency_number) formDataToSend.append('agency_number', formData.agency_number);
       if (formData.stamp_number) formDataToSend.append('stamp_number', formData.stamp_number);
       formDataToSend.append('contract_date', formData.contract_date);
+      if (formData.renewal_date) formDataToSend.append('renewal_date', formData.renewal_date);
       if (formData.contract_end_date) formDataToSend.append('contract_end_date', formData.contract_end_date);
       if (formData.contract_duration) formDataToSend.append('contract_duration', formData.contract_duration);
       formDataToSend.append('city', formData.city);
@@ -749,6 +752,14 @@ export default function EditBranchAgent() {
                     onChange={(e) => setFormData({ ...formData, contract_date: e.target.value })}
                   />
                   {formErrors.contract_date && <span className="error-message">{formErrors.contract_date}</span>}
+                </div>
+                <div className="form-group">
+                  <label>تاريخ التجديد</label>
+                  <input
+                    type="date"
+                    value={formData.renewal_date}
+                    onChange={(e) => setFormData({ ...formData, renewal_date: e.target.value })}
+                  />
                 </div>
                 <div className="form-group">
                   <label>تاريخ انتهاء العقد</label>

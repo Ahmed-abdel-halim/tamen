@@ -436,7 +436,6 @@ const menuSections: SidebarSection[] = [
   {
     title: 'الشؤون المالية',
     items: [
-      { label: 'المصارف والخزنة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' },
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -680,11 +679,9 @@ const createMenuSections = (
       { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
       { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
       { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
-      { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
       { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     ],
     // تفصيل صلاحيات المحاسب المالي
-    'المصارف والخزنة': { label: 'المصارف والخزنة الموحدة', icon: 'fa-solid fa-vault', to: '/reports/treasury-banks' as const },
     'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
     'الديون المستحقة': { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
     'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -760,7 +757,6 @@ const createMenuSections = (
     '/reports/union-balances',
     '/reports/rental-vouchers',
     '/reports/expenses',
-    '/reports/treasury-banks',
     '/reports/financial-reconciliation',
   ];
   const adminOrder: string[] = [

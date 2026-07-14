@@ -608,6 +608,24 @@ export default function BranchAgentDetails() {
     };
   };
 
+  const handlePrintPermit = () => {
+    if (!id) return;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.src = `${API_BASE_URL}/branches-agents/${id}/print-permit?t=${new Date().getTime()}`;
+    document.body.appendChild(iframe);
+    iframe.onload = () => {
+      setTimeout(() => {
+        if (iframe.contentWindow) {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }
+        setTimeout(() => document.body.removeChild(iframe), 300);
+      }, 100);
+    };
+  };
+
   const loggedInUserStr = localStorage.getItem('user');
   let isAdmin = false;
   try {
@@ -701,6 +719,9 @@ export default function BranchAgentDetails() {
             )}
             <button className="btn-primary-sm" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className="fa-solid fa-print"></i> طباعة العقد
+            </button>
+            <button className="btn-primary-sm" onClick={handlePrintPermit} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#3b82f6', borderColor: '#3b82f6' }}>
+              <i className="fa-solid fa-file-invoice"></i> طباعة إذن المباشرة
             </button>
           </div>
         </div>

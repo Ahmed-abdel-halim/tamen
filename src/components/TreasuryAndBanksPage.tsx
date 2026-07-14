@@ -95,6 +95,18 @@ const BANK_TRANSACTION_TYPES = [
 export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExpenses?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
 
   const activeTab = useMemo(() => {
     if (tabParam === 'treasury' || tabParam === 'banks' || tabParam === 'pos' || (!hideExpenses && tabParam === 'expenses')) {
@@ -1755,14 +1767,16 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '5px' }}>
-                        <button 
-                          onClick={() => handleToggleBankReconcile(txn.id)}
-                          className="action-btn"
-                          style={{ background: txn.reconciled ? '#f43f5e' : '#10b981', color: '#fff', padding: '6px 10px', borderRadius: '8px', fontSize: '12px' }}
-                          title={txn.reconciled ? 'إلغاء التأكيد' : 'تأكيد مطابقة الحساب'}
-                        >
-                          <i className={`fa-solid ${txn.reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
-                        </button>
+                        {currentUser?.is_admin && (
+                          <button 
+                            onClick={() => handleToggleBankReconcile(txn.id)}
+                            className="action-btn"
+                            style={{ background: txn.reconciled ? '#f43f5e' : '#10b981', color: '#fff', padding: '6px 10px', borderRadius: '8px', fontSize: '12px' }}
+                            title={txn.reconciled ? 'إلغاء التأكيد' : 'تأكيد مطابقة الحساب'}
+                          >
+                            <i className={`fa-solid ${txn.reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
+                          </button>
+                        )}
                         <button 
                           onClick={() => handlePrintBankVoucher(txn)}
                           className="action-btn"
@@ -2357,14 +2371,16 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '5px' }}>
-                            <button 
-                              onClick={() => handleTogglePosReconcile(txn.id)}
-                              className="action-btn"
-                              style={{ background: txn.is_reconciled ? '#f43f5e' : '#10b981', color: '#fff', padding: '6px 10px', borderRadius: '8px', fontSize: '12px' }}
-                              title={txn.is_reconciled ? 'إلغاء مطابقة التسوية' : 'تأكيد مطابقة التسوية'}
-                            >
-                              <i className={`fa-solid ${txn.is_reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
-                            </button>
+                            {currentUser?.is_admin && (
+                              <button 
+                                onClick={() => handleTogglePosReconcile(txn.id)}
+                                className="action-btn"
+                                style={{ background: txn.is_reconciled ? '#f43f5e' : '#10b981', color: '#fff', padding: '6px 10px', borderRadius: '8px', fontSize: '12px' }}
+                                title={txn.is_reconciled ? 'إلغاء مطابقة التسوية' : 'تأكيد مطابقة التسوية'}
+                              >
+                                <i className={`fa-solid ${txn.is_reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
+                              </button>
+                            )}
                             <button 
                               onClick={() => handleDeletePosTxn(txn.id)}
                               className="action-btn"

@@ -128,6 +128,22 @@ export default function BranchesAgentsList() {
     }, 5000);
   };
 
+  const handlePrintPermit = async (ba: BranchAgent) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.src = `${API_BASE_URL}/branches-agents/${ba.id}/print-permit?t=${new Date().getTime()}`;
+    document.body.appendChild(iframe);
+
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 5000);
+  };
+
   const escapeHtml = (s: string): string => {
     return String(s ?? '')
       .replace(/&/g, '&amp;')
@@ -1201,6 +1217,15 @@ export default function BranchesAgentsList() {
                                   <i className="fa-solid fa-print"></i>
                                 </button>
                                 <button
+                                  onClick={() => handlePrintPermit(branchAgent)}
+                                  className="action-btn"
+                                  aria-label="طباعة إذن المباشرة"
+                                  title="طباعة إذن مباشرة العمل"
+                                  style={{ background: '#ec4899', color: '#fff' }}
+                                >
+                                  <i className="fa-solid fa-file-invoice"></i>
+                                </button>
+                                <button
                                   onClick={() => handleToggleBlock(branchAgent)}
                                   className={`action-btn ${branchAgent.user?.is_blocked ? 'unblock' : 'block'}`}
                                   aria-label={branchAgent.user?.is_blocked ? "إلغاء الحظر" : "حظر"}
@@ -1336,6 +1361,15 @@ export default function BranchesAgentsList() {
                               style={{ background: '#3b82f6', color: '#fff' }}
                             >
                               <i className="fa-solid fa-print"></i>
+                            </button>
+                            <button
+                              onClick={() => handlePrintPermit(branchAgent)}
+                              className="action-btn"
+                              aria-label="طباعة إذن المباشرة"
+                              title="طباعة إذن مباشرة العمل"
+                              style={{ background: '#ec4899', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-file-invoice"></i>
                             </button>
                             <button
                               onClick={() => handleToggleBlock(branchAgent)}
