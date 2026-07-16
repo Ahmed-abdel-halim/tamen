@@ -183,8 +183,16 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const error = await res.json();
+            console.error('API Error:', error);
             if (error.errors) {
-              errorMessage = Object.values(error.errors).flat().join(', ');
+              // عرض أخطاء التحقق التفصيلية أولاً
+              errorMessage = Object.values(error.errors).flat().join('\n') || error.message || errorMessage;
+              // عرض أخطاء الحقول في النموذج
+              const fieldErrors: Record<string, string> = {};
+              Object.entries(error.errors).forEach(([key, messages]) => {
+                fieldErrors[key] = Array.isArray(messages) ? (messages as string[])[0] : String(messages);
+              });
+              setFormErrors(prev => ({ ...prev, ...fieldErrors }));
             } else {
               errorMessage = error.message || error.error || errorMessage;
             }

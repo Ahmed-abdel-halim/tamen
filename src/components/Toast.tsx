@@ -23,10 +23,12 @@ export const ToastContainer: React.FC = () => {
   useEffect(() => {
     showToastFn = (message: string, type: ToastType) => {
       setToast({ message, type });
-      // Auto close after 3 seconds
+      // Auto close - longer for errors with multiple messages
+      const lines = message.split('\n').length;
+      const duration = type === 'error' ? Math.max(5000, lines * 2000) : 3000;
       setTimeout(() => {
         setToast(null);
-      }, 3000);
+      }, duration);
     };
   }, []);
 
@@ -36,7 +38,7 @@ export const ToastContainer: React.FC = () => {
     <div className={`toast toast-${toast.type}`}>
       <div className="toast-content">
         <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
-        <span>{toast.message}</span>
+        <span style={{ whiteSpace: 'pre-line' }}>{toast.message}</span>
       </div>
       <button className="toast-close" onClick={() => setToast(null)}>
         <i className="fa-solid fa-xmark"></i>

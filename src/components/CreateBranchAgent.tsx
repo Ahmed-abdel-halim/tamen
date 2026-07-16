@@ -375,11 +375,17 @@ export default function CreateBranchAgent() {
             const error = await res.json();
             console.error('API Error:', error);
             if (error.errors) {
-              // معالجة أخطاء التحقق
-              const errorMessages = Object.values(error.errors).flat().join(', ');
-              errorMessage = error.message || errorMessages || errorMessage;
+              // معالجة أخطاء التحقق - عرض التفاصيل أولاً
+              const errorMessages = Object.values(error.errors).flat().join('\n');
+              errorMessage = errorMessages || error.message || errorMessage;
               // عرض أخطاء التحقق في console للمساعدة في التصحيح
               console.error('Validation errors:', error.errors);
+              // عرض أخطاء الحقول في النموذج
+              const fieldErrors: Record<string, string> = {};
+              Object.entries(error.errors).forEach(([key, messages]) => {
+                fieldErrors[key] = Array.isArray(messages) ? (messages as string[])[0] : String(messages);
+              });
+              setFormErrors(prev => ({ ...prev, ...fieldErrors }));
             } else {
               errorMessage = error.message || error.error || errorMessage;
             }
