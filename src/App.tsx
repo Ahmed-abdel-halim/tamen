@@ -251,6 +251,8 @@ function hasAccessToRoute(
     // تفصيل صلاحيات المحاسب المالي
     'المصارف والخزنة': ['/reports/treasury-banks'],
     'المطابقة والتحصيلات المالية': ['/reports/financial-reconciliation'],
+    'إدخال مبيعات نقاط البيع (POS)': ['/reports/financial-reconciliation'],
+    'مطابقة مبيعات نقاط البيع (POS)': ['/reports/financial-reconciliation'],
     'الإحصائيات المالية': ['/reports/financial-statistics'],
     'الديون المستحقة': ['/reports/outstanding-debts'],
     'مرتبات الموظفين': ['/reports/employee-salaries'],

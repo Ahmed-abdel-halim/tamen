@@ -1439,10 +1439,15 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                 <i className="fa-solid fa-laptop-code" style={{ marginLeft: '8px' }}></i>
                 تعريف ماكينة POS
               </button>
-              <button className="primary" onClick={() => setShowPosTxnModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
-                <i className="fa-solid fa-receipt" style={{ marginLeft: '8px' }}></i>
-                تسجيل تسوية يومية (POS)
-              </button>
+              {(currentUser?.is_admin || 
+                currentUser?.authorized_documents?.includes('إدخال مبيعات نقاط البيع (POS)') || 
+                currentUser?.authorized_documents?.includes('المطابقة والتحصيلات المالية') || 
+                currentUser?.authorized_documents?.includes('المحاسب المالي')) && (
+                <button className="primary" onClick={() => setShowPosTxnModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
+                  <i className="fa-solid fa-receipt" style={{ marginLeft: '8px' }}></i>
+                  تسجيل تسوية يومية (POS)
+                </button>
+              )}
             </div>
           )}
           {activeTab === 'expenses' && (
@@ -2371,7 +2376,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '5px' }}>
-                            {currentUser?.is_admin && (
+                            {(currentUser?.is_admin || 
+                              currentUser?.authorized_documents?.includes('مطابقة مبيعات نقاط البيع (POS)') || 
+                              currentUser?.authorized_documents?.includes('المطابقة والتحصيلات المالية') || 
+                              currentUser?.authorized_documents?.includes('المحاسب المالي')) && (
                               <button 
                                 onClick={() => handleTogglePosReconcile(txn.id)}
                                 className="action-btn"
@@ -2381,14 +2389,19 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                                 <i className={`fa-solid ${txn.is_reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
                               </button>
                             )}
-                            <button 
-                              onClick={() => handleDeletePosTxn(txn.id)}
-                              className="action-btn"
-                              style={{ background: '#ef4444', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
-                              title="حذف التسوية"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
+                            {(currentUser?.is_admin || 
+                              currentUser?.authorized_documents?.includes('إدخال مبيعات نقاط البيع (POS)') || 
+                              currentUser?.authorized_documents?.includes('المطابقة والتحصيلات المالية') || 
+                              currentUser?.authorized_documents?.includes('المحاسب المالي')) && (
+                              <button 
+                                onClick={() => handleDeletePosTxn(txn.id)}
+                                className="action-btn"
+                                style={{ background: '#ef4444', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                                title="حذف التسوية"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
