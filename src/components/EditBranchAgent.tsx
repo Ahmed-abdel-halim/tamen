@@ -123,7 +123,7 @@ export default function EditBranchAgent() {
     contract_conditions: '',
     authorized_documents: [] as string[],
     requested_documents: [] as string[],
-    document_percentages: {} as Record<string, number>,
+    document_percentages: {} as any,
     eidc_username: '',
     eidc_password: '',
     lifo_username: '',
@@ -176,6 +176,12 @@ export default function EditBranchAgent() {
   const tbHealthCertificateRef = useRef<HTMLInputElement>(null);
   const academicQualificationRef = useRef<HTMLInputElement>(null);
   const activityLicenseRef = useRef<HTMLInputElement>(null);
+
+  // الحالات الخاصة بالنسب الاستثنائية الشهرية للعمولات
+  const [overrideYear, setOverrideYear] = useState<string>(new Date().getFullYear().toString());
+  const [overrideMonth, setOverrideMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
+  const [overrideDocType, setOverrideDocType] = useState<string>('');
+  const [overridePercentage, setOverridePercentage] = useState<number>(0);
 
   // حساب مدة العقد تلقائياً
   const calculateContractDuration = (startDate: string, endDate: string) => {
@@ -341,7 +347,7 @@ export default function EditBranchAgent() {
     if (isSelected) {
       // إزالة الوثيقة
       setFormData(prev => {
-        const pct = prev.document_percentages || {};
+        const pct: any = prev.document_percentages || {};
         let updatedPct: any = {};
         if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
           const defaultFiltered = Object.fromEntries(
@@ -361,12 +367,12 @@ export default function EditBranchAgent() {
           ...prev,
           authorized_documents: prev.authorized_documents.filter(d => d !== documentType),
           document_percentages: updatedPct
-        };
+        } as any;
       });
     } else {
       // إضافة الوثيقة
       setFormData(prev => {
-        const pct = prev.document_percentages || {};
+        const pct: any = prev.document_percentages || {};
         let updatedPct: any = {};
         if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
           updatedPct = {
@@ -388,14 +394,14 @@ export default function EditBranchAgent() {
           ...prev,
           authorized_documents: [...prev.authorized_documents, documentType],
           document_percentages: updatedPct
-        };
+        } as any;
       });
     }
   };
 
   const handlePercentageChange = (documentType: string, percentage: number) => {
     setFormData(prev => {
-      const currentPct = prev.document_percentages || {};
+      const currentPct: any = prev.document_percentages || {};
       let updatedPct: any = {};
       if (currentPct.default !== undefined || currentPct.monthly_overrides !== undefined) {
         updatedPct = {
@@ -418,12 +424,12 @@ export default function EditBranchAgent() {
       return {
         ...prev,
         document_percentages: updatedPct
-      };
+      } as any;
     });
   };
 
   const getDefaultPercentageValue = (documentType: string): number => {
-    const pct = formData.document_percentages || {};
+    const pct: any = formData.document_percentages || {};
     if (pct.default !== undefined) {
       return pct.default[documentType] || 0;
     }
@@ -438,7 +444,7 @@ export default function EditBranchAgent() {
     const monthKey = `${overrideYear}-${overrideMonth}`; // e.g. "2026-05"
     
     setFormData(prev => {
-      const pct = prev.document_percentages || {};
+      const pct: any = prev.document_percentages || {};
       let defaultPct = {};
       let monthlyPct: Record<string, Record<string, number>> = {};
       
@@ -462,7 +468,7 @@ export default function EditBranchAgent() {
           default: defaultPct,
           monthly_overrides: monthlyPct
         }
-      };
+      } as any;
     });
     
     showToast(`تمت إضافة نسبة استثنائية لـ ${overrideDocType} في شهر ${overrideMonth}/${overrideYear}`, 'success');
@@ -470,7 +476,7 @@ export default function EditBranchAgent() {
 
   const handleRemoveMonthlyOverride = (monthKey: string, docType: string) => {
     setFormData(prev => {
-      const pct = prev.document_percentages || {};
+      const pct: any = prev.document_percentages || {};
       let defaultPct = {};
       let monthlyPct: Record<string, Record<string, number>> = {};
       
@@ -495,12 +501,12 @@ export default function EditBranchAgent() {
           default: defaultPct,
           monthly_overrides: monthlyPct
         }
-      };
+      } as any;
     });
   };
 
   const getMonthlyOverridesList = () => {
-    const pct = formData.document_percentages || {};
+    const pct: any = formData.document_percentages || {};
     const monthlyPct = pct.monthly_overrides || {};
     const list: Array<{ monthKey: string; docType: string; percentage: number }> = [];
     
