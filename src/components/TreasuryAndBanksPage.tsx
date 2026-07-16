@@ -331,17 +331,17 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const fetchBankSettings = async () => {
     try {
-      const resBanks = await fetch(`${API_BASE_URL}/bank-settings/banks`);
+      const resBanks = await fetch(`${API_BASE_URL}/bank-settings/banks`, { headers: getAuthHeaders() });
       if (resBanks.ok) {
         const banksData = await resBanks.json();
         setDbBanks(banksData);
       }
-      const resSourceBanks = await fetch(`${API_BASE_URL}/bank-settings/source-banks`);
+      const resSourceBanks = await fetch(`${API_BASE_URL}/bank-settings/source-banks`, { headers: getAuthHeaders() });
       if (resSourceBanks.ok) {
         const sourceBanksData = await resSourceBanks.json();
         setDbSourceBanks(sourceBanksData);
       }
-      const resTypes = await fetch(`${API_BASE_URL}/bank-settings/transaction-types`);
+      const resTypes = await fetch(`${API_BASE_URL}/bank-settings/transaction-types`, { headers: getAuthHeaders() });
       if (resTypes.ok) {
         const typesData = await resTypes.json();
         setDbTypes(typesData);
@@ -588,7 +588,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/branches-agents`);
+      const res = await fetch(`${API_BASE_URL}/branches-agents`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setAgents(data);
@@ -610,7 +610,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
       if (treasuryFilter.to_date) queryParams.append('to_date', treasuryFilter.to_date);
       if (treasuryFilter.search) queryParams.append('search', treasuryFilter.search);
 
-      const res = await fetch(`${API_BASE_URL}/treasury?${queryParams.toString()}`);
+      const res = await fetch(`${API_BASE_URL}/treasury?${queryParams.toString()}`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setTreasuryTxns(data.data || []);
@@ -697,7 +697,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   const fetchBankData = async () => {
     setBanksLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/bank-transactions`);
+      const res = await fetch(`${API_BASE_URL}/bank-transactions`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setBankTxns(data || []);
@@ -807,7 +807,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   const fetchPosData = async () => {
     setPosLoading(true);
     try {
-      const mRes = await fetch(`${API_BASE_URL}/pos-machines`);
+      const mRes = await fetch(`${API_BASE_URL}/pos-machines`, { headers: getAuthHeaders() });
       if (mRes.ok) {
         const data = await mRes.json();
         setPosMachines(data.data || []);
@@ -819,7 +819,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
       if (posFilter.to_date) queryParams.append('to_date', posFilter.to_date);
       if (posFilter.is_reconciled !== 'all') queryParams.append('is_reconciled', posFilter.is_reconciled);
 
-      const tRes = await fetch(`${API_BASE_URL}/pos-transactions?${queryParams.toString()}`);
+      const tRes = await fetch(`${API_BASE_URL}/pos-transactions?${queryParams.toString()}`, { headers: getAuthHeaders() });
       if (tRes.ok) {
         const data = await tRes.json();
         setPosTxns(data.data || []);
