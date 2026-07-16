@@ -928,8 +928,7 @@ export default function EmployeeSalaries() {
         </div>
 
         <div class="report-title">
-          <h2>تقرير رواتب الموظفين للفترة من (${formatDateToDisplay(rangeFromDate)}) إلى (${formatDateToDisplay(rangeToDate)})</h2>
-          <p style="margin: 5px 0; font-weight: bold; color: #4a5568;">الموظف: ${employeeName}</p>
+          <h2>تقرير مرتبات الموظف (${employeeName}) للفترة من [ ${rangeFromDate} ] إلى [ ${rangeToDate} ]</h2>
         </div>
 
         <table>
@@ -985,6 +984,356 @@ export default function EmployeeSalaries() {
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const handlePrintSinglePayslip = (p: Payroll, emp: Employee) => {
+    const printWindow = window.open('', '', 'width=800,height=900');
+    if (!printWindow) return;
+
+    const base = toNum(p.base_salary);
+    const housing = toNum(p.housing_allowance);
+    const transport = toNum(p.transportation_allowance);
+    const communication = toNum(p.communication_allowance);
+    const misc = toNum(p.allowance_amount);
+    const bonus = toNum(p.bonus_amount);
+    const other = toNum(p.other_additions);
+    const deduction = toNum(p.deduction_amount);
+    const advance = toNum(p.advance_amount);
+    const penalty = toNum(p.penalty_amount);
+    const tax_val = toNum(p.tax_amount);
+    const ss_val = toNum(p.social_security_amount);
+    const extra_fields = p.extra_fields || [];
+    const net = toNum(p.net_salary);
+
+    const extrasHtml = extra_fields.map(f => `
+      <div class="row-item">
+        <span>${f.label}</span>
+        <span class="value">${money.format(toNum(f.amount))} د.ل</span>
+      </div>
+    `).join('');
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>قسيمة راتب - ${emp.name} - ${p.month}/${p.year}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          @media print { 
+            body { padding: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .no-print { display: none; }
+          }
+          body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 30px; 
+            color: #1e293b;
+            background: #fff;
+          }
+          .receipt-border {
+            border: 2px dashed #1a365d;
+            border-radius: 12px;
+            padding: 24px;
+            background: #fafafa;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+          }
+          .company-info h1 { margin: 0; font-size: 18px; color: #1a365d; font-weight: 800; }
+          .company-info p { margin: 4px 0 0 0; font-size: 13px; color: #4a5568; }
+          .logo { height: 60px; width: auto; object-fit: contain; }
+          
+          .receipt-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: #1a365d;
+            margin: 15px 0;
+            text-decoration: underline;
+          }
+          
+          .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+          }
+          .info-item {
+            display: flex;
+            gap: 6px;
+          }
+          .info-label { font-weight: bold; color: #475569; }
+          
+          .sections-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+          }
+          .section-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+          }
+          .section-title {
+            background: #1a365d;
+            color: #fff;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 14px;
+            margin: 0;
+            text-align: center;
+          }
+          .section-body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 13px;
+          }
+          .row-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 4px;
+          }
+          .row-item:last-child {
+            border-bottom: none;
+          }
+          .value {
+            font-weight: 600;
+          }
+          
+          .total-box {
+            background: #1e293b;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 30px;
+          }
+          .total-box .net-val {
+            font-size: 20px;
+            color: #10b981;
+          }
+          
+          .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            text-align: center;
+            margin-top: 40px;
+            font-size: 13px;
+          }
+          .signature-item {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+          }
+          .sig-line {
+            border-bottom: 1px solid #94a3b8;
+            width: 80%;
+            margin: 0 auto;
+          }
+          .print-btn {
+            background: #1a365d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            margin-bottom: 15px;
+          }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <div class="no-print" style="text-align: center;">
+          <button class="print-btn" onclick="window.print()">طباعة الوصل</button>
+        </div>
+        <div class="receipt-border">
+          <div class="header">
+            <div class="company-info">
+              <h1>المدار الليبي للتأمين</h1>
+              <p>قسم الشؤون المالية والموارد البشرية</p>
+            </div>
+            <img src="/img/logo.png" class="logo" alt="Logo" onerror="this.src='/img/official_logo.PNG'">
+          </div>
+          
+          <div class="receipt-title">قسيمة راتب شهري</div>
+          
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">اسم الموظف:</span>
+              <span>${emp.name}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">شهر / سنة:</span>
+              <span style="direction: ltr">${p.month} / ${p.year}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">تاريخ التعيين:</span>
+              <span>${emp.start_date ? formatDateToDisplay(emp.start_date) : '—'}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">طريقة التسليم:</span>
+              <span>${p.delivery_method === 'أخرى' ? p.custom_delivery_method : (p.delivery_method || '-')}</span>
+            </div>
+          </div>
+          
+          <div class="sections-container">
+            <!-- الاستحقاقات -->
+            <div class="section-box">
+              <h2 class="section-title" style="background-color: #10b981;">الاستحقاقات (الإضافات)</h2>
+              <div class="section-body">
+                <div class="row-item">
+                  <span>المرتب الأساسي</span>
+                  <span class="value">${money.format(base)} د.ل</span>
+                </div>
+                ${housing > 0 ? `
+                <div class="row-item">
+                  <span>بدل السكن</span>
+                  <span class="value">${money.format(housing)} د.ل</span>
+                </div>` : ''}
+                ${transport > 0 ? `
+                <div class="row-item">
+                  <span>بدل المواصلات</span>
+                  <span class="value">${money.format(transport)} د.ل</span>
+                </div>` : ''}
+                ${communication > 0 ? `
+                <div class="row-item">
+                  <span>بدل الاتصالات</span>
+                  <span class="value">${money.format(communication)} د.ل</span>
+                </div>` : ''}
+                ${bonus > 0 ? `
+                <div class="row-item">
+                  <span>المكافآت</span>
+                  <span class="value">${money.format(bonus)} د.ل</span>
+                </div>` : ''}
+                ${other > 0 ? `
+                <div class="row-item">
+                  <span>إضافات أخرى</span>
+                  <span class="value">${money.format(other)} د.ل</span>
+                </div>` : ''}
+                ${misc > 0 ? `
+                <div class="row-item">
+                  <span>بدلات متفرقة</span>
+                  <span class="value">${money.format(misc)} د.ل</span>
+                </div>` : ''}
+                ${extrasHtml}
+              </div>
+            </div>
+            
+            <!-- الاستقطاعات -->
+            <div class="section-box">
+              <h2 class="section-title" style="background-color: #ef4444;">الاستقطاعات (الخصومات)</h2>
+              <div class="section-body">
+                ${tax_val > 0 ? `
+                <div class="row-item">
+                  <span>ضرائب</span>
+                  <span class="value">${money.format(tax_val)} د.ل</span>
+                </div>` : ''}
+                ${ss_val > 0 ? `
+                <div class="row-item">
+                  <span>ضمان اجتماعي</span>
+                  <span class="value">${money.format(ss_val)} د.ل</span>
+                </div>` : ''}
+                ${deduction > 0 ? `
+                <div class="row-item">
+                  <span>خصومات</span>
+                  <span class="value">${money.format(deduction)} د.ل</span>
+                </div>` : ''}
+                ${advance > 0 ? `
+                <div class="row-item">
+                  <span>سلفيات</span>
+                  <span class="value">${money.format(advance)} د.ل</span>
+                </div>` : ''}
+                ${penalty > 0 ? `
+                <div class="row-item">
+                  <span>غرامات</span>
+                  <span class="value">${money.format(penalty)} د.ل</span>
+                </div>` : ''}
+              </div>
+            </div>
+          </div>
+          
+          <div class="total-box">
+            <span>صافي المرتب المستلم:</span>
+            <span class="net-val">${money.format(net)} د.ل</span>
+          </div>
+          
+          <div style="font-size: 12px; color: #64748b; margin-top: 15px; text-align: right;">
+            حالة الصرف: <strong>${p.status === 'paid' ? 'تم صرفه' : 'قيد الانتظار'}</strong>
+            ${p.paid_at ? ` | تاريخ الصرف: <strong>${new Date(p.paid_at).toLocaleDateString('ar-LY')}</strong>` : ''}
+          </div>
+          
+          <div class="signatures">
+            <div class="signature-item">
+              <span>توقيع الموظف بالاستلام</span>
+              <div class="sig-line"></div>
+            </div>
+            <div class="signature-item">
+              <span>المحاسب المسؤول</span>
+              <div class="sig-line"></div>
+            </div>
+            <div class="signature-item">
+              <span>اعتماد الموارد البشرية</span>
+              <div class="sig-line"></div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+            تمت الطباعة بواسطة النظام في: ${new Date().toLocaleString('ar-LY')}
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handlePrintPayslipFromRow = (r: (typeof rows)[number]) => {
+    const p: Payroll = r.p || {
+      id: 0,
+      user_id: r.e.id,
+      year,
+      month,
+      base_salary: r.base,
+      housing_allowance: r.housing,
+      transportation_allowance: r.transport,
+      communication_allowance: r.communication,
+      allowance_amount: r.misc,
+      bonus_amount: r.bonus,
+      other_additions: r.other,
+      penalty_amount: r.penalty,
+      tax_amount: r.tax_val,
+      social_security_amount: r.ss_val,
+      deduction_amount: r.deduction,
+      advance_amount: r.advance,
+      net_salary: r.net,
+      status: 'unpaid',
+      delivery_method: 'كاش',
+      custom_delivery_method: '',
+      extra_fields: r.extra_fields,
+      paid_at: null,
+      notes: ''
+    };
+    handlePrintSinglePayslip(p, r.e);
   };
 
   const handleRangeReportExportExcel = async () => {
@@ -1292,6 +1641,7 @@ export default function EmployeeSalaries() {
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button className="action-btn edit" onClick={() => openPayrollForm(r)} title="تعديل بيان المرتب"><i className="fa-solid fa-pen"></i></button>
+                          <button className="action-btn" onClick={() => handlePrintPayslipFromRow(r)} title="طباعة واصل المرتب" style={{ backgroundColor: '#10b981', color: 'white' }}><i className="fa-solid fa-print"></i></button>
                           <button className="action-btn" onClick={() => openHistory(r.e)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
                         </div>
                       </td>
@@ -1429,6 +1779,7 @@ export default function EmployeeSalaries() {
                         <td style={{ fontSize: '11px' }}>{p.delivery_method === 'أخرى' ? p.custom_delivery_method : (p.delivery_method || '-')}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
+                            <button className="action-btn" onClick={() => handlePrintSinglePayslip(p, emp!)} title="طباعة واصل المرتب" style={{ backgroundColor: '#10b981', color: 'white' }}><i className="fa-solid fa-print"></i></button>
                             <button className="action-btn" onClick={() => emp && openHistory(emp)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
                           </div>
                         </td>

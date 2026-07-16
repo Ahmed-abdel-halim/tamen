@@ -1161,7 +1161,7 @@ export default function EditBranchAgent() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>تأمين سيارات:</label>
                         <select
-                          value={formData.document_percentages['تأمين سيارات'] || 0}
+                          value={getDefaultPercentageValue('تأمين سيارات')}
                           onChange={(e) => handlePercentageChange('تأمين سيارات', parseInt(e.target.value))}
                           style={{
                             padding: '8px 12px',
@@ -1184,7 +1184,7 @@ export default function EditBranchAgent() {
                       <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
                         <select
-                          value={formData.document_percentages[docType] || 0}
+                          value={getDefaultPercentageValue(docType)}
                           onChange={(e) => handlePercentageChange(docType, parseInt(e.target.value))}
                           style={{
                             padding: '8px 12px',
@@ -1201,10 +1201,149 @@ export default function EditBranchAgent() {
                           ))}
                         </select>
                       </div>
-                    ))}
                   </div>
                 </div>
               )}
+
+              {/* النسب الاستثنائية الشهرية */}
+              <div style={{ marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                <h4 style={{ marginBottom: '6px', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
+                  النسب والعمولات الاستثنائية حسب الأشهر (اختياري)
+                </h4>
+                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
+                  يمكنك تحديد نسبة عمولة استثنائية لوثيقة معينة لشهر محدد. إذا لم يتم تحديد نسبة لشهر معين، فسيقوم النظام باعتماد النسبة الافتراضية أعلاه.
+                </p>
+                
+                {/* نموذج إضافة النسبة الاستثنائية */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '12px', 
+                  alignItems: 'flex-end', 
+                  padding: '16px', 
+                  background: '#f8fafc', 
+                  borderRadius: '8px', 
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>السنة</label>
+                    <select 
+                      value={overrideYear} 
+                      onChange={(e) => setOverrideYear(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    >
+                      {['2025', '2026', '2027', '2028'].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>الشهر</label>
+                    <select 
+                      value={overrideMonth} 
+                      onChange={(e) => setOverrideMonth(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>نوع التأمين المصرح به</label>
+                    <select 
+                      value={overrideDocType} 
+                      onChange={(e) => setOverrideDocType(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                    >
+                      <option value="">اختر نوع التأمين...</option>
+                      {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).map(docType => (
+                        <option key={docType} value={docType}>{docType}</option>
+                      ))}
+                      {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
+                        <option value="تأمين سيارات">تأمين سيارات (مظلة التأمين الإجباري)</option>
+                      )}
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>النسبة الاستثنائية</label>
+                    <select 
+                      value={overridePercentage} 
+                      onChange={(e) => setOverridePercentage(parseInt(e.target.value))}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', minWidth: '80px' }}
+                    >
+                      {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
+                        <option key={percent} value={percent}>{percent}%</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <button 
+                    type="button" 
+                    onClick={handleAddMonthlyOverride}
+                    style={{ 
+                      padding: '10px 20px', 
+                      background: '#1e293b', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '6px', 
+                      fontWeight: 'bold', 
+                      fontSize: '13px',
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    إضافة النسبة الاستثنائية
+                  </button>
+                </div>
+                
+                {/* جدول عرض النسب الاستثنائية المضافة */}
+                {getMonthlyOverridesList().length === 0 ? (
+                  <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
+                    لا توجد نسب استثنائية شهرية مضافة حالياً.
+                  </p>
+                ) : (
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>الشهر / السنة</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>نوع التأمين</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>النسبة الاستثنائية</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold', width: '80px' }}>الإجراء</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getMonthlyOverridesList().map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.monthKey}</td>
+                            <td style={{ padding: '10px 16px' }}>{item.docType}</td>
+                            <td style={{ padding: '10px 16px', color: '#10b981', fontWeight: 'bold' }}>{item.percentage}%</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveMonthlyOverride(item.monthKey, item.docType)}
+                                style={{ 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  color: '#ef4444', 
+                                  cursor: 'pointer', 
+                                  fontSize: '14px',
+                                  padding: 0 
+                                }}
+                                title="إزالة نسبة استثنائية"
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="form-actions">
