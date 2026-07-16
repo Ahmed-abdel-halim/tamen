@@ -340,58 +340,180 @@ export default function EditBranchAgent() {
     const isSelected = formData.authorized_documents.includes(documentType);
     if (isSelected) {
       // إزالة الوثيقة
-      if (documentType === 'تأمين سيارات إجباري') {
-        // إذا كان "تأمين سيارات إجباري" يتم إزالته، أزل "تأمين سيارات" أيضاً
-        setFormData(prev => ({
+      setFormData(prev => {
+        const pct = prev.document_percentages || {};
+        let updatedPct: any = {};
+        if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
+          const defaultFiltered = Object.fromEntries(
+            Object.entries(pct.default || {}).filter(([key]) => key !== documentType && (documentType !== 'تأمين سيارات إجباري' || key !== 'تأمين سيارات'))
+          );
+          updatedPct = {
+            default: defaultFiltered,
+            monthly_overrides: pct.monthly_overrides || {}
+          };
+        } else {
+          const flatFiltered = Object.fromEntries(
+            Object.entries(pct).filter(([key]) => key !== documentType && (documentType !== 'تأمين سيارات إجباري' || key !== 'تأمين سيارات'))
+          );
+          updatedPct = flatFiltered;
+        }
+        return {
           ...prev,
           authorized_documents: prev.authorized_documents.filter(d => d !== documentType),
-          document_percentages: Object.fromEntries(
-            Object.entries(prev.document_percentages).filter(([key]) => key !== documentType && key !== 'تأمين سيارات')
-          ),
-        }));
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          authorized_documents: prev.authorized_documents.filter(d => d !== documentType),
-          document_percentages: Object.fromEntries(
-            Object.entries(prev.document_percentages).filter(([key]) => key !== documentType)
-          ),
-        }));
-      }
+          document_percentages: updatedPct
+        };
+      });
     } else {
       // إضافة الوثيقة
-      if (documentType === 'تأمين سيارات إجباري') {
-        // عند اختيار "تأمين سيارات إجباري"، أضف "تأمين سيارات" تلقائياً
-        setFormData(prev => ({
+      setFormData(prev => {
+        const pct = prev.document_percentages || {};
+        let updatedPct: any = {};
+        if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
+          updatedPct = {
+            default: {
+              ...(pct.default || {}),
+              [documentType]: 0,
+              ...(documentType === 'تأمين سيارات إجباري' ? { 'تأمين سيارات': (pct.default?.['تأمين سيارات'] || 0) } : {})
+            },
+            monthly_overrides: pct.monthly_overrides || {}
+          };
+        } else {
+          updatedPct = {
+            ...pct,
+            [documentType]: 0,
+            ...(documentType === 'تأمين سيارات إجباري' ? { 'تأمين سيارات': (pct['تأمين سيارات'] || 0) } : {})
+          };
+        }
+        return {
           ...prev,
           authorized_documents: [...prev.authorized_documents, documentType],
-          document_percentages: {
-            ...prev.document_percentages,
-            [documentType]: 0,
-            'تأمين سيارات': prev.document_percentages['تأمين سيارات'] || 0,
-          },
-        }));
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          authorized_documents: [...prev.authorized_documents, documentType],
-          document_percentages: {
-            ...prev.document_percentages,
-            [documentType]: 0,
-          },
-        }));
-      }
+          document_percentages: updatedPct
+        };
+      });
     }
   };
 
   const handlePercentageChange = (documentType: string, percentage: number) => {
-    setFormData(prev => ({
-      ...prev,
-      document_percentages: {
-        ...prev.document_percentages,
-        [documentType]: percentage,
-      },
-    }));
+    setFormData(prev => {
+      const currentPct = prev.document_percentages || {};
+      let updatedPct: any = {};
+      if (currentPct.default !== undefined || currentPct.monthly_overrides !== undefined) {
+        updatedPct = {
+          default: {
+            ...(currentPct.default || {}),
+            [documentType]: percentage
+          },
+          monthly_overrides: currentPct.monthly_overrides || {}
+        };
+      } else {
+        // If old flat format, convert to nested format
+        updatedPct = {
+          default: {
+            ...currentPct,
+            [documentType]: percentage
+          },
+          monthly_overrides: {}
+        };
+      }
+      return {
+        ...prev,
+        document_percentages: updatedPct
+      };
+    });
+  };
+
+  const getDefaultPercentageValue = (documentType: string): number => {
+    const pct = formData.document_percentages || {};
+    if (pct.default !== undefined) {
+      return pct.default[documentType] || 0;
+    }
+    return pct[documentType] || 0; // Fallback to flat format
+  };
+
+  const handleAddMonthlyOverride = () => {
+    if (!overrideDocType) {
+      showToast('يرجى اختيار نوع التأمين', 'error');
+      return;
+    }
+    const monthKey = `${overrideYear}-${overrideMonth}`; // e.g. "2026-05"
+    
+    setFormData(prev => {
+      const pct = prev.document_percentages || {};
+      let defaultPct = {};
+      let monthlyPct: Record<string, Record<string, number>> = {};
+      
+      if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
+        defaultPct = pct.default || {};
+        monthlyPct = JSON.parse(JSON.stringify(pct.monthly_overrides || {}));
+      } else {
+        defaultPct = pct;
+        monthlyPct = {};
+      }
+      
+      if (!monthlyPct[monthKey]) {
+        monthlyPct[monthKey] = {};
+      }
+      
+      monthlyPct[monthKey][overrideDocType] = overridePercentage;
+      
+      return {
+        ...prev,
+        document_percentages: {
+          default: defaultPct,
+          monthly_overrides: monthlyPct
+        }
+      };
+    });
+    
+    showToast(`تمت إضافة نسبة استثنائية لـ ${overrideDocType} في شهر ${overrideMonth}/${overrideYear}`, 'success');
+  };
+
+  const handleRemoveMonthlyOverride = (monthKey: string, docType: string) => {
+    setFormData(prev => {
+      const pct = prev.document_percentages || {};
+      let defaultPct = {};
+      let monthlyPct: Record<string, Record<string, number>> = {};
+      
+      if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
+        defaultPct = pct.default || {};
+        monthlyPct = JSON.parse(JSON.stringify(pct.monthly_overrides || {}));
+      } else {
+        defaultPct = pct;
+        monthlyPct = {};
+      }
+      
+      if (monthlyPct[monthKey]) {
+        delete monthlyPct[monthKey][docType];
+        if (Object.keys(monthlyPct[monthKey]).length === 0) {
+          delete monthlyPct[monthKey];
+        }
+      }
+      
+      return {
+        ...prev,
+        document_percentages: {
+          default: defaultPct,
+          monthly_overrides: monthlyPct
+        }
+      };
+    });
+  };
+
+  const getMonthlyOverridesList = () => {
+    const pct = formData.document_percentages || {};
+    const monthlyPct = pct.monthly_overrides || {};
+    const list: Array<{ monthKey: string; docType: string; percentage: number }> = [];
+    
+    Object.entries(monthlyPct).forEach(([monthKey, docs]: [string, any]) => {
+      if (docs && typeof docs === 'object') {
+        Object.entries(docs).forEach(([docType, percentage]: [string, any]) => {
+          list.push({ monthKey, docType, percentage: Number(percentage) });
+        });
+      }
+    });
+    
+    list.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    return list;
   };
 
   const validateForm = () => {
