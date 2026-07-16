@@ -1201,6 +1201,7 @@ export default function EditBranchAgent() {
                           ))}
                         </select>
                       </div>
+                    ))}
                   </div>
                 </div>
               )}
