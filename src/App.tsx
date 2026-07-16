@@ -438,6 +438,7 @@ const menuSections: SidebarSection[] = [
   {
     title: 'الشؤون المالية',
     items: [
+      { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -663,6 +664,7 @@ const createMenuSections = (
     'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
+      { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
       { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -684,6 +686,9 @@ const createMenuSections = (
       { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     ],
     // تفصيل صلاحيات المحاسب المالي
+    'المصارف والخزنة': { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
+    'إدخال مبيعات نقاط البيع (POS)': { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
+    'مطابقة مبيعات نقاط البيع (POS)': { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
     'الإحصائيات المالية': { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
     'الديون المستحقة': { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
     'مرتبات الموظفين': { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
@@ -739,8 +744,10 @@ const createMenuSections = (
 
   // ترتيب التقارير
   const reportsOrder: string[] = [
+    '/reports/treasury-banks',
     '/reports/financial-statistics',
     '/reports/revenue',
+    '/reports/live-agents-production',
     '/reports/outstanding-debts',
     '/reports/commissions',
     '/reports/payment-vouchers',
