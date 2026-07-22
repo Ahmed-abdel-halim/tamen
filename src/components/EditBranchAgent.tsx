@@ -183,6 +183,12 @@ export default function EditBranchAgent() {
   const [overrideDocType, setOverrideDocType] = useState<string>('');
   const [overridePercentage, setOverridePercentage] = useState<number>(0);
 
+  // الحالات الخاصة بالنسب الاستثنائية حسب الفترة (من تاريخ إلى تاريخ)
+  const [periodStartDate, setPeriodStartDate] = useState<string>('');
+  const [periodEndDate, setPeriodEndDate] = useState<string>('');
+  const [periodDocType, setPeriodDocType] = useState<string>('');
+  const [periodPercentage, setPeriodPercentage] = useState<number>(0);
+
   // حساب مدة العقد تلقائياً
   const calculateContractDuration = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return '';
@@ -520,6 +526,80 @@ export default function EditBranchAgent() {
     
     list.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
     return list;
+  };
+
+  const handleAddPeriodOverride = () => {
+    if (!periodStartDate || !periodEndDate) {
+      showToast('يرجى تحديد تاريخ البداية وتاريخ النهاية للفترة', 'error');
+      return;
+    }
+    if (!periodDocType) {
+      showToast('يرجى اختيار نوع التأمين', 'error');
+      return;
+    }
+    if (periodStartDate > periodEndDate) {
+      showToast('تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية', 'error');
+      return;
+    }
+
+    setFormData(prev => {
+      const pct: any = prev.document_percentages || {};
+      let defaultPct = {};
+      let monthlyPct = {};
+      let periodPct: Array<{ id: string; start_date: string; end_date: string; doc_type: string; percentage: number }> = [];
+
+      if (pct.default !== undefined || pct.monthly_overrides !== undefined || pct.period_overrides !== undefined) {
+        defaultPct = pct.default || {};
+        monthlyPct = pct.monthly_overrides || {};
+        periodPct = [...(pct.period_overrides || [])];
+      } else {
+        defaultPct = pct;
+        monthlyPct = {};
+        periodPct = [];
+      }
+
+      periodPct.push({
+        id: Date.now().toString(),
+        start_date: periodStartDate,
+        end_date: periodEndDate,
+        doc_type: periodDocType,
+        percentage: periodPercentage
+      });
+
+      return {
+        ...prev,
+        document_percentages: {
+          default: defaultPct,
+          monthly_overrides: monthlyPct,
+          period_overrides: periodPct
+        }
+      } as any;
+    });
+
+    showToast(`تمت إضافة نسبة استثنائية للفترة (${periodStartDate} إلى ${periodEndDate})`, 'success');
+  };
+
+  const handleRemovePeriodOverride = (id: string) => {
+    setFormData(prev => {
+      const pct: any = prev.document_percentages || {};
+      let defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+      let monthlyPct = pct.monthly_overrides || {};
+      let periodPct = (pct.period_overrides || []).filter((item: any) => item.id !== id);
+
+      return {
+        ...prev,
+        document_percentages: {
+          default: defaultPct,
+          monthly_overrides: monthlyPct,
+          period_overrides: periodPct
+        }
+      } as any;
+    });
+  };
+
+  const getPeriodOverridesList = () => {
+    const pct: any = formData.document_percentages || {};
+    return (pct.period_overrides || []) as Array<{ id: string; start_date: string; end_date: string; doc_type: string; percentage: number }>;
   };
 
   const validateForm = () => {
@@ -1362,7 +1442,7 @@ export default function EditBranchAgent() {
                       onChange={(e) => setOverrideYear(e.target.value)}
                       style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
                     >
-                      {['2025', '2026', '2027', '2028'].map(y => <option key={y} value={y}>{y}</option>)}
+                      {['2023', '2024', '2025', '2026', '2027', '2028', '2029', '2030'].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
                   
@@ -1427,13 +1507,13 @@ export default function EditBranchAgent() {
                   </button>
                 </div>
                 
-                {/* جدول عرض النسب الاستثنائية المضافة */}
+                {/* جدول عرض النسب الاستثنائية الشهرية المضافة */}
                 {getMonthlyOverridesList().length === 0 ? (
                   <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
                     لا توجد نسب استثنائية شهرية مضافة حالياً.
                   </p>
                 ) : (
-                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '25px' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -1462,6 +1542,144 @@ export default function EditBranchAgent() {
                                   padding: 0 
                                 }}
                                 title="إزالة نسبة استثنائية"
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* النسب الاستثنائية حسب الفترة (من تاريخ إلى تاريخ) */}
+              <div style={{ marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                <h4 style={{ marginBottom: '6px', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
+                  النسب والعمولات الاستثنائية حسب الفترة المحددة (من تاريخ - إلى تاريخ)
+                </h4>
+                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
+                  يمكنك تحديد فترة زمنية محددة (مثل: من 01/01/2025 إلى 15/01/2025) بنسبة عمولة خاصة بالوكيل.
+                </p>
+                
+                {/* نموذج إضافة النسبة بالفترة */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '12px', 
+                  alignItems: 'flex-end', 
+                  padding: '16px', 
+                  background: '#f8fafc', 
+                  borderRadius: '8px', 
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>من تاريخ</label>
+                    <input 
+                      type="date"
+                      value={periodStartDate}
+                      onChange={(e) => setPeriodStartDate(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>إلى تاريخ</label>
+                    <input 
+                      type="date"
+                      value={periodEndDate}
+                      onChange={(e) => setPeriodEndDate(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>نوع التأمين المصرح به</label>
+                    <select 
+                      value={periodDocType} 
+                      onChange={(e) => setPeriodDocType(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                    >
+                      <option value="">اختر نوع التأمين...</option>
+                      {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).map(docType => (
+                        <option key={docType} value={docType}>{docType}</option>
+                      ))}
+                      {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
+                        <option value="تأمين سيارات">تأمين سيارات (مظلة التأمين الإجباري)</option>
+                      )}
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>النسبة الاستثنائية</label>
+                    <select 
+                      value={periodPercentage} 
+                      onChange={(e) => setPeriodPercentage(parseInt(e.target.value))}
+                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', minWidth: '80px' }}
+                    >
+                      {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
+                        <option key={percent} value={percent}>{percent}%</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <button 
+                    type="button" 
+                    onClick={handleAddPeriodOverride}
+                    style={{ 
+                      padding: '10px 20px', 
+                      background: '#0284c7', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '6px', 
+                      fontWeight: 'bold', 
+                      fontSize: '13px',
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    إضافة نسبة الفترة
+                  </button>
+                </div>
+                
+                {/* جدول عرض نسب الفترات الاستثنائية */}
+                {getPeriodOverridesList().length === 0 ? (
+                  <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
+                    لا توجد نسب فترات استثنائية مضافة حالياً.
+                  </p>
+                ) : (
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>من تاريخ</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>إلى تاريخ</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>نوع التأمين</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>النسبة الاستثنائية</th>
+                          <th style={{ padding: '10px 16px', fontWeight: 'bold', width: '80px' }}>الإجراء</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getPeriodOverridesList().map((item) => (
+                          <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.start_date}</td>
+                            <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.end_date}</td>
+                            <td style={{ padding: '10px 16px' }}>{item.doc_type}</td>
+                            <td style={{ padding: '10px 16px', color: '#0284c7', fontWeight: 'bold' }}>{item.percentage}%</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemovePeriodOverride(item.id)}
+                                style={{ 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  color: '#ef4444', 
+                                  cursor: 'pointer', 
+                                  fontSize: '14px',
+                                  padding: 0 
+                                }}
+                                title="إزالة نسبة الفترة"
                               >
                                 <i className="fa-solid fa-trash-can"></i>
                               </button>
