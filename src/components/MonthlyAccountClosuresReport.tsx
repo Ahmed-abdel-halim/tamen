@@ -92,6 +92,34 @@ export default function MonthlyAccountClosuresReport() {
   const [dateTo, setDateTo] = useState<string>(defaultRange.to);
   const [closures, setClosures] = useState<MonthlyAccountClosure[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+
+  const handleDeleteClosure = async (id: number) => {
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closure/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('تم حذف إغلاق الحساب والإيصال بنجاح', 'success');
+        setDeleteId(null);
+        fetchReport();
+      } else {
+        throw new Error(data.message || 'فشل في حذف الإيصال');
+      }
+    } catch (error: any) {
+      showToast(`خطأ أثناء الحذف: ${error.message}`, 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // توليد السنوات (من 2020 إلى السنة الحالية + 1)
   const currentYear = new Date().getFullYear();
@@ -994,6 +1022,73 @@ export default function MonthlyAccountClosuresReport() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '24px',
+            borderRadius: '12px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ fontSize: '40px', color: '#ef4444', marginBottom: '12px' }}>
+              <i className="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', fontWeight: 'bold', color: '#1e293b' }}>تأكيد مسح / حذف الإيصال</h3>
+            <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px', lineHeight: '1.5' }}>
+              هل أنت تأكد من رغبتك في حذف إغلاق الحساب وإيصال الاستلام رقم <strong>MLI-REC-{deleteId}</strong>؟ لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setDeleteId(null)}
+                disabled={deleting}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '13px'
+                }}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => handleDeleteClosure(deleteId)}
+                disabled={deleting}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: '#ef4444',
+                  color: 'white',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '13px'
+                }}
+              >
+                {deleting ? 'جاري الحذف...' : 'نعم، مسح الإيصال'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
