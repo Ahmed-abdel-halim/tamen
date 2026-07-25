@@ -132,6 +132,7 @@ import WebsiteSettingsManagement from './components/WebsiteSettingsManagement';
 import PublicInsuranceRequestsList from './components/PublicInsuranceRequestsList';
 import LoaderOverlay from './components/LoaderOverlay';
 import LiveAgentsProduction from './components/LiveAgentsProduction';
+import AgentMonthlyLedger from './components/AgentMonthlyLedger';
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -271,6 +272,7 @@ function hasAccessToRoute(
     'تسديد التعويضات': ['/reports/finance-claims'],
     'التحصيلات البنكية': ['/reports/bank-reconciliation'],
     'تقرير الإنتاجية المباشر': ['/reports/live-agents-production'],
+    'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger'],
 
     'اجور ومرتبات ضرائب': ['/reports/tax'],
     'اجور ومرتبات ضمان': ['/reports/social-security'],
@@ -449,6 +451,7 @@ const menuSections: SidebarSection[] = [
         label: 'المحاسب المالي', icon: 'fa-solid fa-file-contract', children: [
           { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
           { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
+          { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
           { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
           { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
           { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' },
@@ -671,6 +674,7 @@ const createMenuSections = (
       { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
       { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
       { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
+      { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
       { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
@@ -748,6 +752,7 @@ const createMenuSections = (
     '/reports/financial-statistics',
     '/reports/revenue',
     '/reports/live-agents-production',
+    '/reports/agent-monthly-ledger',
     '/reports/outstanding-debts',
     '/reports/commissions',
     '/reports/payment-vouchers',
@@ -1682,6 +1687,7 @@ export default function App() {
                   <Route path="/reports/financial-statistics" element={<AuthorizedRoute requiredPath="/reports/financial-statistics"><FinancialStatistics /></AuthorizedRoute>} />
                   <Route path="/reports/revenue" element={<AuthorizedRoute requiredPath="/reports/revenue"><RevenueManagement /></AuthorizedRoute>} />
                   <Route path="/reports/live-agents-production" element={<AuthorizedRoute requiredPath="/reports/live-agents-production"><LiveAgentsProduction /></AuthorizedRoute>} />
+                  <Route path="/reports/agent-monthly-ledger" element={<AuthorizedRoute requiredPath="/reports/agent-monthly-ledger"><AgentMonthlyLedger /></AuthorizedRoute>} />
                   <Route path="/reports/branch-agent-account" element={<AuthorizedRoute requiredPath="/reports/branch-agent-account"><BranchAgentAccountReport /></AuthorizedRoute>} />
                   <Route path="/reports/agent-transfers" element={<AuthorizedRoute requiredPath="/reports/agent-transfers"><AgentTransfers /></AuthorizedRoute>} />
                   <Route path="/agent-transfers" element={<AuthorizedRoute requiredPath="/agent-transfers"><AgentTransfers /></AuthorizedRoute>} />
