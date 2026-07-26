@@ -9,19 +9,6 @@ type Agent = {
   code: string;
 };
 
-type VehicleType = {
-  id: number;
-  brand: string;
-  category: string;
-};
-
-type Color = {
-  id: number;
-  name: string;
-};
-
-const YEARS = Array.from({ length: 70 }, (_, i) => new Date().getFullYear() - i);
-
 const LICENSE_PURPOSES = [
   'خاصة/Private',
   'عامة/Public',
