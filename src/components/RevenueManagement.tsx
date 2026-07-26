@@ -41,7 +41,9 @@ export default function RevenueManagement() {
 
         // Transform generic statistics into Revenue-focused stats
         const totalRevenue = data.stats.find((s: any) => s.label === 'إجمالي الإيرادات')?.value || 0;
-        const totalPaid = data.stats.find((s: any) => s.label === 'صافي الربح')?.value || 0; // Temporary mapping
+        const totalPaid = data.stats.find((s: any) => s.label === 'إجمالي المقبوضات الفعلية')?.value 
+                       ?? data.stats.find((s: any) => s.label === 'صافي الربح')?.value 
+                       || 0;
 
         setStats({
           total_revenue: totalRevenue,
