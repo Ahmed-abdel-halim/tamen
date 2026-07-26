@@ -1420,7 +1420,7 @@ export default function OldDocumentsManagement() {
 
         <div className="card-body" style={{ padding: '25px' }}>
           {/* الاختيارات الرئيسية العلوية */}
-          <div className="modern-grid-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '10px', marginBottom: '25px' }}>
+          <div className="modern-grid-2" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '10px', marginBottom: '25px' }}>
             <div className="form-group" ref={agentDropdownRef} style={{ position: 'relative' }}>
               <label style={{ fontWeight: '700', color: '#1e293b' }}>
                 <i className="fa-solid fa-building-user" style={{ marginLeft: '8px', color: '#014cb1' }}></i> اختر الوكيل المطلوب *
@@ -1538,79 +1538,154 @@ export default function OldDocumentsManagement() {
                 ))}
               </select>
             </div>
-
-            <div className="form-group">
-              <label style={{ fontWeight: '700', color: '#1e293b' }}>
-                <i className="fa-solid fa-calendar-day" style={{ marginLeft: '8px', color: '#014cb1' }}></i> تاريخ الإصدار القديم *
-              </label>
-              <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} required />
-            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="user-form">
-            {/* القسم الأول: بيانات المؤمن له */}
+            {/* القسم الأول: البيانات الأساسية للوثيقة يدوياً وبالتسلسل المطلوب */}
             <div className="grid-header" style={{ background: '#014cb1', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <i className="fa-solid fa-user-tag"></i> بيانات المؤمن له والمشترك
+              <i className="fa-solid fa-file-contract"></i> بيانات الوثيقة القديمة والمعلومات الأساسية
             </div>
 
             <div className="modern-grid-3">
+              {/* 1. رقم الوثيقة */}
               <div className="form-group">
-                <label>رقم الوثيقة القديمة (يدوي) *</label>
-                <input type="text" value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} required placeholder="الرقم التعريفي القديم للوثيقة لإعادة كتابته" />
+                <label>1. رقم الوثيقة (يدوي) *</label>
+                <input
+                  type="text"
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  required
+                  placeholder="رقم الوثيقة القديمة"
+                />
               </div>
 
+              {/* 2. اسم المؤمن له */}
               <div className="form-group span-2">
-                <label>اسم المؤمن له كما في الإثبات *</label>
-                <input type="text" value={insuredName} onChange={(e) => setInsuredName(e.target.value)} required placeholder="اسم المؤمن له كما في الإثبات" />
+                <label>2. اسم المؤمن له *</label>
+                <input
+                  type="text"
+                  value={insuredName}
+                  onChange={(e) => setInsuredName(e.target.value)}
+                  required
+                  placeholder="اسم المؤمن له كما في الإثبات"
+                />
               </div>
 
+              {/* 3. بداية التأمين (وتلقائياً يحسب التاريخ بعد سنة) */}
               <div className="form-group">
-                <label>رقم الهوية / الجواز *</label>
-                <input type="text" value={nidPassport} onChange={(e) => setNidPassport(e.target.value)} required placeholder="رقم الهوية الوطنية أو جواز السفر" />
+                <label>3. بداية التأمين *</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setStartDate(val);
+                    setIssueDate(val);
+                    if (val) {
+                      const d = new Date(val);
+                      if (!isNaN(d.getTime())) {
+                        d.setFullYear(d.getFullYear() + 1);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        setEndDate(`${y}-${m}-${day}`);
+                      }
+                    }
+                  }}
+                  required
+                />
               </div>
 
+              {/* 4. نهاية التأمين */}
               <div className="form-group">
-                <label>رقم الهاتف *</label>
-                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="0910000000" />
+                <label>4. نهاية التأمين (تلقائياً بعد سنة) *</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
               </div>
 
+              {/* 5. الغرض من الترخيص */}
               <div className="form-group">
-                <label>رقم الواتساب *</label>
-                <input type="text" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="رقم الواتساب للعميل" />
+                <label>5. الغرض من الترخيص *</label>
+                <select
+                  value={licensePurpose}
+                  onChange={(e) => setLicensePurpose(e.target.value)}
+                  required={['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType)}
+                >
+                  <option value="">-- اختر الغرض --</option>
+                  {LICENSE_PURPOSES.map(p => <option key={p} value={p}>{p.split('/')[0]}</option>)}
+                </select>
               </div>
 
+              {/* 6. قوة المحرك [[حصان]] */}
               <div className="form-group">
-                <label>البريد الإلكتروني</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
+                <label>6. قوة المحرك [[حصان]] *</label>
+                {['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType) ? (
+                  <select value={enginePower} onChange={(e) => setEnginePower(e.target.value)} required>
+                    <option value="">-- اختر الفئة / قوة المحرك --</option>
+                    {getAvailableEnginePowers().map((ep) => (
+                      <option key={ep} value={ep}>{ep}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type="text" value={enginePower} onChange={(e) => setEnginePower(e.target.value)} placeholder="قوة المحرك بالحُصان" />
+                )}
               </div>
 
+              {/* 7. رقم اللوحة */}
               <div className="form-group">
-                <label>الجنسية</label>
-                <input type="text" value={nationality} onChange={(e) => setNationality(e.target.value)} placeholder="مثال: ليبي، مصري..." />
+                <label>7. رقم اللوحة *</label>
+                <input
+                  type="text"
+                  value={plateNumberManual}
+                  onChange={(e) => setPlateNumberManual(e.target.value)}
+                  required
+                  placeholder="رقم اللوحة المعدنية"
+                />
               </div>
 
+              {/* 8. رقم الشاصي */}
               <div className="form-group">
-                <label>العنوان التفصيلي</label>
-                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="طرابلس، ليبيا" />
+                <label>8. رقم الشاصي (الهيكل) *</label>
+                <input
+                  type="text"
+                  value={chassisNumber}
+                  onChange={(e) => setChassisNumber(e.target.value)}
+                  required
+                  placeholder="رقم الشاصي"
+                />
               </div>
 
+              {/* 9. عدد الركاب */}
               <div className="form-group">
-                <label>تاريخ البدء *</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+                <label>9. عدد الركاب</label>
+                <input
+                  type="text"
+                  value={authorizedPassengers}
+                  onChange={(e) => setAuthorizedPassengers(e.target.value)}
+                  placeholder="عدد الركاب"
+                />
               </div>
 
+              {/* 10. الحمولة بالطن */}
               <div className="form-group">
-                <label>تاريخ الانتهاء *</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+                <label>10. الحمولة بالطن</label>
+                <input
+                  type="text"
+                  value={loadCapacity}
+                  onChange={(e) => setLoadCapacity(e.target.value)}
+                  placeholder="الحمولة بالطن"
+                />
               </div>
 
-
-
-              {/* حقول مسافر السفر والوافد */}
+              {/* حقول مسافر السفر والوافد الإضافية إذا تم تحديدها */}
               {['travel', 'resident'].includes(documentType) && (
                 <>
                   <div className="form-group">
-                    <label>الاسم بالإنجليزية (مطلوب للسفر/الوافد) *</label>
+                    <label>الاسم بالإنجليزية *</label>
                     <input type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} required placeholder="English Name" />
                   </div>
                   <div className="form-group">
@@ -1628,278 +1703,78 @@ export default function OldDocumentsManagement() {
                       <option value="أنثى">أنثى</option>
                     </select>
                   </div>
-                  <div className="form-group">
-                    <label>المنطقة الجغرافية / الوجهة *</label>
-                    {documentType === 'resident' ? (
-                      <select value={geographicArea} onChange={(e) => setGeographicArea(e.target.value)} required>
-                        <option value="داخل ليبيا (للأفراد)">داخل ليبيا (للأفراد)</option>
-                        <option value="داخل ليبيا (للعائلات)">داخل ليبيا (للعائلات)</option>
-                      </select>
-                    ) : (
-                      <input type="text" value={geographicArea} onChange={(e) => setGeographicArea(e.target.value)} required placeholder="مثال: دول الخليج، أوروبا..." />
-                    )}
-                  </div>
-                  <div className="form-group">
-                    <label>مدة التأمين *</label>
-                    {documentType === 'resident' ? (
-                      <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
-                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                      </select>
-                    ) : (
-                      <input type="text" value={duration} onChange={(e) => setDuration(e.target.value)} required placeholder="سنة، 3 أشهر..." />
-                    )}
-                  </div>
-                  {documentType === 'resident' && (
-                    <>
-                      <div className="form-group">
-                        <label>نوع الإقامة *</label>
-                        <select value={residenceType} onChange={(e) => setResidenceType(e.target.value)} required>
-                          <option value="تأشيرة إقامة Residence Visa">تأشيرة إقامة Residence Visa</option>
-                          <option value="تأشيرة عمل Work Visa">تأشيرة عمل Work Visa</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>مدة الإقامة (بالأشهر) *</label>
-                        <input type="number" value={residenceDuration} onChange={(e) => setResidenceDuration(e.target.value)} required placeholder="12" />
-                      </div>
-                      <div className="form-group">
-                        <label>المهنة / الوظيفة *</label>
-                        <input type="text" value={occupation} onChange={(e) => setOccupation(e.target.value)} required placeholder="المهنة للوافد" />
-                      </div>
-                    </>
-                  )}
                 </>
               )}
             </div>
 
-            {/* حقول المركبة (للتأمين الإجباري والدولي وفروع مركبات جمرك وطرف ثالث وسيارات أجنبية) */}
-            {['compulsory', 'customs', 'third_party', 'foreign_car', 'international'].includes(documentType) && (
-              <>
-                <div className="grid-header" style={{ background: '#014cb1', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '800', margin: '30px 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <i className="fa-solid fa-car"></i> بيانات المركبة
+            {/* تفاصيل إضافية مخصصة حسب نوع الوثيقة */}
+            {documentType === 'customs' && (
+              <div className="modern-grid-3" style={{ marginTop: '15px' }}>
+                <div className="form-group">
+                  <label>الميناء *</label>
+                  <select value={port} onChange={(e) => setPort(e.target.value)} required>
+                    <option value="ميناء طرابلس">ميناء طرابلس</option>
+                    <option value="ميناء مصراته">ميناء مصراته</option>
+                    <option value="ميناء الخمس">ميناء الخمس</option>
+                    <option value="ميناء بنغازي">ميناء بنغازي</option>
+                  </select>
                 </div>
-
-                <div className="modern-grid-3">
-                  {documentType === 'customs' && (
-                    <>
-                      <div className="form-group">
-                        <label>الميناء *</label>
-                        <select value={port} onChange={(e) => setPort(e.target.value)} required>
-                          <option value="ميناء طرابلس">ميناء طرابلس</option>
-                          <option value="ميناء مصراته">ميناء مصراته</option>
-                          <option value="ميناء الخمس">ميناء الخمس</option>
-                          <option value="ميناء بنغازي">ميناء بنغازي</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>مدة التأمين *</label>
-                        <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
-                          <option value="شهر (30 يوم)">شهر (30 يوم)</option>
-                          <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
-                          <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  {documentType === 'third_party' && (
-                    <>
-                      <div className="form-group">
-                        <label>الغرض من الطرف الثالث *</label>
-                        <select value={thirdPartyPurpose} onChange={(e) => setThirdPartyPurpose(e.target.value)} required>
-                          <option value="خاصة">خاصة</option>
-                          <option value="عامة">عامة</option>
-                          <option value="نقل">نقل</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>مدة التأمين *</label>
-                        <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
-                          <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                          <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  {documentType === 'foreign_car' && (
-                    <>
-                      <div className="form-group">
-                        <label>دولة السيارة *</label>
-                        <input type="text" value={foreignCarCountry} onChange={(e) => setForeignCarCountry(e.target.value)} required placeholder="مثال: تونس، الجزائر" />
-                      </div>
-                      <div className="form-group">
-                        <label>الغرض من السيارة *</label>
-                        <select value={foreignCarPurpose} onChange={(e) => setForeignCarPurpose(e.target.value)} required>
-                          <option value="سيارات خاصة سياحية">سيارات خاصة سياحية</option>
-                          <option value="سيارات نقل ركاب">سيارات نقل ركاب</option>
-                          <option value="سيارات نقل وشحن">سيارات نقل وشحن</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>مدة التأمين *</label>
-                        <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
-                          <option value="شهر (30 يوم)">شهر (30 يوم)</option>
-                          <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
-                          <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
-                          <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                          <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  {documentType === 'compulsory' && (
-                    <div className="form-group">
-                      <label>مدة التأمين *</label>
-                      <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
-                        <option value="سنة (365 يوم)">سنة (365 يوم)</option>
-                        <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* 1. الغرض من الترخيص */}
-                  <div className="form-group">
-                    <label>الغرض من الترخيص *</label>
-                    <select value={licensePurpose} onChange={(e) => setLicensePurpose(e.target.value)} required={['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType)}>
-                      <option value="">-- اختر الغرض --</option>
-                      {LICENSE_PURPOSES.map(p => <option key={p} value={p}>{p.split('/')[0]}</option>)}
-                    </select>
-                  </div>
-
-                  {/* 2. قوة المحرك / فئة المركبة */}
-                  <div className="form-group">
-                    <label>قوة المحرك (حصان) / فئة المركبة *</label>
-                    {['compulsory', 'customs', 'third_party', 'foreign_car'].includes(documentType) ? (
-                      <select value={enginePower} onChange={(e) => setEnginePower(e.target.value)} required>
-                        <option value="">-- اختر الفئة / قوة المحرك --</option>
-                        {getAvailableEnginePowers().map((ep) => (
-                          <option key={ep} value={ep}>{ep}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input type="text" value={enginePower} onChange={(e) => setEnginePower(e.target.value)} placeholder="16، 30، إلخ" />
-                    )}
-                  </div>
-
-                  {/* 3. رقم اللوحة المعدنية */}
-                  <div className="form-group">
-                    <label>رقم اللوحة المعدنية *</label>
-                    <input type="text" value={plateNumberManual} onChange={(e) => setPlateNumberManual(e.target.value)} required placeholder="مثال: 123456" />
-                  </div>
-
-                  {/* 4. رقم الشاصي */}
-                  <div className="form-group">
-                    <label>رقم الشاصي (الهيكل) *</label>
-                    <input type="text" value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value)} required placeholder="رقم الشاصي" />
-                  </div>
-
-                  {/* 5. نوع السيارة وموديلها */}
-                  <div className="form-group">
-                    <label>نوع السيارة وموديلها</label>
-                    <select value={vehicleTypeId} onChange={(e) => setVehicleTypeId(e.target.value)}>
-                      <option value="">-- اختر من القائمة أو اتركها --</option>
-                      {vehicleTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.brand} - {type.category}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 6. سنة الصنع */}
-                  <div className="form-group">
-                    <label>سنة الصنع *</label>
-                    <select value={year} onChange={(e) => setYear(e.target.value)} required>
-                      <option value="">اختر سنة الصنع...</option>
-                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-
-                  {/* 7. عدد الركاب */}
-                  <div className="form-group">
-                    <label>عدد الركاب</label>
-                    <input type="text" value={authorizedPassengers} onChange={(e) => setAuthorizedPassengers(e.target.value)} placeholder="4" />
-                  </div>
-
-                  {/* 8. الحمولة بالطن */}
-                  <div className="form-group">
-                    <label>الحمولة (بالطن)</label>
-                    <input type="text" value={loadCapacity} onChange={(e) => setLoadCapacity(e.target.value)} placeholder="0" />
-                  </div>
-
-                  {/* 9. اللون */}
-                  <div className="form-group">
-                    <label>اللون *</label>
-                    <select value={color} onChange={(e) => setColor(e.target.value)} required>
-                      <option value="">-- اختر اللون --</option>
-                      {colors.length > 0 ? (
-                        colors.map((c) => (
-                          <option key={c.id} value={c.name}>{c.name}</option>
-                        ))
-                      ) : (
-                        ['أبيض', 'أسود', 'فضي', 'رمادي', 'أحمر', 'أزرق', 'بني', 'بيج', 'أخضر', 'ذهبي', 'أصفر', 'برتقالي'].map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))
-                      )}
-                    </select>
-                  </div>
-
-                  {/* 10. رقم المحرك */}
-                  <div className="form-group">
-                    <label>رقم المحرك</label>
-                    <input type="text" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} placeholder="رقم المحرك" />
-                  </div>
-
-                  {/* 11. سعة المحرك CC */}
-                  <div className="form-group">
-                    <label>سعة المحرك (CC)</label>
-                    <input type="text" value={engineCc} onChange={(e) => setEngineCc(e.target.value)} placeholder="1600، 2000..." />
-                  </div>
-
-                  {/* 12. وزن المركبة */}
-                  <div className="form-group">
-                    <label>وزن المركبة</label>
-                    <input type="text" value={vehicleWeight} onChange={(e) => setVehicleWeight(e.target.value)} placeholder="وزن المركبة" />
-                  </div>
-
-                  {/* 13. نوع الوقود */}
-                  <div className="form-group">
-                    <label>نوع الوقود</label>
-                    <select value={fuelType} onChange={(e) => setFuelType(e.target.value)}>
-                      <option value="">-- اختر نوع الوقود --</option>
-                      {FUEL_TYPES.map(f => <option key={f} value={f}>{f.split('/')[0]}</option>)}
-                    </select>
-                  </div>
-
-                  {documentType === 'international' && (
-                    <>
-                      <div className="form-group">
-                        <label>جنسية السيارة</label>
-                        <input type="text" value={vehicleNationality} onChange={(e) => setVehicleNationality(e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label>البلد المراد زيارته</label>
-                        <select value={visitedCountry} onChange={(e) => setVisitedCountry(e.target.value)}>
-                          <option value="تونس">تونس</option>
-                          <option value="الجزائر">الجزائر</option>
-                          <option value="تونس و الجزائر">تونس و الجزائر</option>
-                          <option value="مصر">مصر</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>عدد الأيام</label>
-                        <input type="number" value={numberOfDays} onChange={(e) => setNumberOfDays(e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label>نوع/فئة المركبة</label>
-                        <input type="text" value={itemType} onChange={(e) => setItemType(e.target.value)} placeholder="سيارات خاصة ملاكي" />
-                      </div>
-                    </>
-                  )}
+                <div className="form-group">
+                  <label>مدة التأمين *</label>
+                  <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                    <option value="شهر (30 يوم)">شهر (30 يوم)</option>
+                    <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
+                    <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
+                  </select>
                 </div>
-              </>
+              </div>
+            )}
+
+            {documentType === 'third_party' && (
+              <div className="modern-grid-3" style={{ marginTop: '15px' }}>
+                <div className="form-group">
+                  <label>الغرض من الطرف الثالث *</label>
+                  <select value={thirdPartyPurpose} onChange={(e) => setThirdPartyPurpose(e.target.value)} required>
+                    <option value="خاصة">خاصة</option>
+                    <option value="عامة">عامة</option>
+                    <option value="نقل">نقل</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>مدة التأمين *</label>
+                  <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                    <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                    <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {documentType === 'foreign_car' && (
+              <div className="modern-grid-3" style={{ marginTop: '15px' }}>
+                <div className="form-group">
+                  <label>دولة السيارة *</label>
+                  <input type="text" value={foreignCarCountry} onChange={(e) => setForeignCarCountry(e.target.value)} required placeholder="مثال: تونس، الجزائر" />
+                </div>
+                <div className="form-group">
+                  <label>الغرض من السيارة *</label>
+                  <select value={foreignCarPurpose} onChange={(e) => setForeignCarPurpose(e.target.value)} required>
+                    <option value="سيارات خاصة سياحية">سيارات خاصة سياحية</option>
+                    <option value="سيارات نقل ركاب">سيارات نقل ركاب</option>
+                    <option value="سيارات نقل وشحن">سيارات نقل وشحن</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>مدة التأمين *</label>
+                  <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+                    <option value="شهر (30 يوم)">شهر (30 يوم)</option>
+                    <option value="شهرين (60 يوم)">شهرين (60 يوم)</option>
+                    <option value="ثلاثة أشهر (90 يوم)">ثلاثة أشهر (90 يوم)</option>
+                    <option value="سنة (365 يوم)">سنة (365 يوم)</option>
+                    <option value="سنتين (730 يوم)">سنتين (730 يوم)</option>
+                  </select>
+                </div>
+              </div>
             )}
 
             {/* الحقول الخاصة بالتأمين البحري */}
