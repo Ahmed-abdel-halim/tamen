@@ -112,12 +112,7 @@ export default function AgentMonthlyLedger() {
   }, []);
 
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const id = parseInt(e.target.value);
-    if (!id) return;
-    setSelectedAgentId(id);
-    fetchLedger(id);
-  };
+
 
   const fetchLedger = async (agentId: number, exclude?: boolean) => {
     const ex = exclude !== undefined ? exclude : excludeCanceled;
