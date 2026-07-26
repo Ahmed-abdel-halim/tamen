@@ -312,7 +312,7 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
     </div>
   );
 
-  const td: React.CSSProperties = { padding: '11px 10px', textAlign: 'center', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
+  const td: React.CSSProperties = { padding: '8px 4px', textAlign: 'center', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
 
   const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
@@ -326,7 +326,7 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
   });
 
   return (
-    <div style={{ padding: '24px 28px', fontFamily: "'Cairo','Segoe UI',sans-serif", direction: 'rtl', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
+    <div style={{ padding: '16px 18px', fontFamily: "'Cairo','Segoe UI',sans-serif", direction: 'rtl', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <style>{`
         @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -344,9 +344,9 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
       `}</style>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 900, background: 'linear-gradient(135deg,#1e40af,#3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' } as React.CSSProperties}>
-          <i className="fa-solid fa-book-open-reader" style={{ fontSize: '28px' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 900, background: 'linear-gradient(135deg,#1e40af,#3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' } as React.CSSProperties}>
+          <i className="fa-solid fa-book-open-reader" style={{ fontSize: '26px' }} />
           كشف حساب الوكيل الشهري
         </h1>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -357,25 +357,25 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
       </div>
 
       {/* Filter Box */}
-      <div style={{ background: 'var(--card-bg)', borderRadius: '18px', padding: '20px 24px', marginBottom: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <i className="fa-solid fa-filter" style={{ color: '#1e40af', fontSize: '16px' }} />
+      <div style={{ background: 'var(--card-bg)', borderRadius: '18px', padding: '16px 20px', marginBottom: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+          <i className="fa-solid fa-filter" style={{ color: '#1e40af', fontSize: '15px' }} />
           <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>اختيار الوكيل والإعدادات</span>
         </div>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {/* Custom Searchable Agent Dropdown */}
-          <div ref={agentDropdownRef} style={{ position: 'relative', minWidth: '320px', flex: 1 }}>
+          <div ref={agentDropdownRef} style={{ position: 'relative', minWidth: '300px', flex: 1 }}>
             <i className="fa-solid fa-user-tie" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px', pointerEvents: 'none', zIndex: 1 }} />
             
             <div
               onClick={() => setIsAgentDropdownOpen(!isAgentDropdownOpen)}
               style={{
                 width: '100%',
-                padding: '11px 42px 11px 36px',
+                padding: '10px 40px 10px 34px',
                 borderRadius: '12px',
                 border: `2px solid ${isAgentDropdownOpen ? '#3b82f6' : 'var(--border)'}`,
                 fontFamily: "'Cairo',sans-serif",
-                fontSize: '14px',
+                fontSize: '13px',
                 background: 'var(--input-bg)',
                 color: selectedAgent ? 'var(--text)' : 'var(--muted)',
                 boxSizing: 'border-box',
@@ -385,7 +385,7 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
                 justifyContent: 'space-between',
                 userSelect: 'none',
                 transition: 'border-color .2s',
-                minHeight: '46px'
+                minHeight: '44px'
               }}
             >
               <span style={{ fontWeight: selectedAgent ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -490,7 +490,7 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
               </div>
             )}
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', padding: '10px 16px', borderRadius: '12px', border: `2px solid ${excludeCanceled ? '#dc2626' : 'var(--border)'}`, background: excludeCanceled ? 'rgba(254,226,226,0.4)' : 'var(--card-bg)', transition: 'all .3s' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', padding: '9px 14px', borderRadius: '12px', border: `2px solid ${excludeCanceled ? '#dc2626' : 'var(--border)'}`, background: excludeCanceled ? 'rgba(254,226,226,0.4)' : 'var(--card-bg)', transition: 'all .3s' }}>
             <input type="checkbox" checked={excludeCanceled} onChange={handleExcludeToggle} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#dc2626' }} />
             <span style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', color: excludeCanceled ? '#dc2626' : 'var(--muted)', whiteSpace: 'nowrap' }}>
               <i className="fa-solid fa-ban" style={{ marginLeft: '6px' }} />استبعاد الملغية من الإجباري
@@ -520,17 +520,17 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
       {!loading && ledger && (
         <>
           {/* Agent banner */}
-          <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '16px 24px', marginBottom: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '14px 20px', marginBottom: '18px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ background: 'linear-gradient(135deg,#1e40af,#3b82f6)', color: 'white', padding: '4px 14px', borderRadius: '10px', fontWeight: 800, fontSize: '13px' }}>{ledger.agent.code}</span>
-              <span style={{ fontWeight: 900, fontSize: '17px', color: '#1e40af' }}>{ledger.agent.agency_name}</span>
+              <span style={{ background: 'linear-gradient(135deg,#1e40af,#3b82f6)', color: 'white', padding: '4px 12px', borderRadius: '10px', fontWeight: 800, fontSize: '13px' }}>{ledger.agent.code}</span>
+              <span style={{ fontWeight: 900, fontSize: '16px', color: '#1e40af' }}>{ledger.agent.agency_name}</span>
             </div>
-            {ledger.agent.agent_name && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '14px' }}><i className="fa-solid fa-user" style={{ marginLeft: '6px' }} />{ledger.agent.agent_name}</span>}
+            {ledger.agent.agent_name && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '13px' }}><i className="fa-solid fa-user" style={{ marginLeft: '6px' }} />{ledger.agent.agent_name}</span>}
             {ledger.agent.contract_date && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '13px' }}><i className="fa-solid fa-calendar-check" style={{ marginLeft: '6px' }} />تاريخ التعاقد: {ledger.agent.contract_date}</span>}
           </div>
 
           {/* 7 Stat Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: '14px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '12px', marginBottom: '20px' }}>
             <StatCard grad="linear-gradient(135deg,#1e40af 0%,#3b82f6 50%,#60a5fa 100%)" icon="fa-coins" label="إجمالي المبيعات" value={fmt(ledger.summary.total_sales)} sub="دينار ليبي" delay="0.45s" />
             <StatCard grad="linear-gradient(135deg,#059669 0%,#10b981 50%,#34d399 100%)" icon="fa-file-lines" label="إجمالي الوثائق" value={ledger.summary.total_documents.toLocaleString()} sub="وثيقة تأمين" delay="0.5s" />
             <StatCard grad="linear-gradient(135deg,#7c3aed 0%,#8b5cf6 50%,#a78bfa 100%)" icon="fa-hand-holding-dollar" label="حصة الوكيل" value={fmt(ledger.summary.total_agent_share)} sub="دينار ليبي" delay="0.55s" />
@@ -549,23 +549,23 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
 
           {/* Table */}
           <div style={{ background: 'var(--card-bg)', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid var(--border)' }}>
-            <div style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--table-header)', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--table-header)', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <i className="fa-solid fa-table-list" style={{ color: '#1e40af', fontSize: '18px' }} />
-                <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text)' }}>جدول الإنتاجية الشهرية التفصيلي</span>
-                <span style={{ background: 'linear-gradient(135deg,#1e40af,#3b82f6)', color: 'white', padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800 }}>{ledger.summary.total_months} شهر</span>
+                <i className="fa-solid fa-table-list" style={{ color: '#1e40af', fontSize: '17px' }} />
+                <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>جدول الإنتاجية الشهرية التفصيلي</span>
+                <span style={{ background: 'linear-gradient(135deg,#1e40af,#3b82f6)', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 800 }}>{ledger.summary.total_months} شهر</span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', color: '#065f46', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700 }}><i className="fa-solid fa-circle-check" style={{ marginLeft: '5px' }} />مسدد</span>
-                <span style={{ background: 'linear-gradient(135deg,#fee2e2,#fecaca)', color: '#991b1b', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700 }}><i className="fa-solid fa-circle-exclamation" style={{ marginLeft: '5px' }} />باقي عليه</span>
+                <span style={{ background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', color: '#065f46', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}><i className="fa-solid fa-circle-check" style={{ marginLeft: '5px' }} />مسدد</span>
+                <span style={{ background: 'linear-gradient(135deg,#fee2e2,#fecaca)', color: '#991b1b', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}><i className="fa-solid fa-circle-exclamation" style={{ marginLeft: '5px' }} />باقي عليه</span>
               </div>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ background: 'var(--table-header)' }}>
                     {['#','الشهر','نسبة %','عدد الوثائق','إجمالي المبيعات','حصة الوكيل','حصة الشركة','دين مترحل','المستلم','الباقي','إجراء'].map(h => (
-                      <th key={h} style={{ padding: '13px 10px', fontWeight: 800, fontSize: '12px', textAlign: 'center', background: 'var(--table-header)', color: 'var(--text)', borderBottom: '2px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '9px 4px', fontWeight: 800, fontSize: '11px', textAlign: 'center', background: 'var(--table-header)', color: 'var(--text)', borderBottom: '2px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -577,45 +577,45 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
                     const rowBg = isDebt ? 'rgba(254,226,226,0.35)' : isPaidFull ? 'rgba(209,250,229,0.3)' : idx % 2 === 0 ? 'var(--card-bg)' : 'var(--bg)';
                     return (
                       <tr key={row.month_key} className="ledger-row" style={{ background: rowBg, transition: 'background .2s' }}>
-                        <td style={{ ...td, fontWeight: 700, color: 'var(--muted)', fontSize: '12px' }}>{idx + 1}</td>
-                        <td style={{ ...td, textAlign: 'right', paddingRight: '16px', fontWeight: 800, color: 'var(--text)', fontSize: '13px' }}>{row.month_label}</td>
-                        <td style={td}>{row.percentage > 0 ? <span style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#5b21b6', padding: '3px 10px', borderRadius: '20px', fontWeight: 800, fontSize: '12px' }}>{row.percentage}%</span> : <span style={{ color: 'var(--muted)', fontSize: '12px' }}>—</span>}</td>
-                        <td style={td}>{row.document_count > 0 ? <span style={{ background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', color: '#065f46', padding: '3px 12px', borderRadius: '20px', fontWeight: 800, fontSize: '12px' }}>{row.document_count}</span> : <span style={{ color: 'var(--muted)', fontSize: '12px' }}>—</span>}</td>
-                        <td style={{ ...td, fontWeight: 800, color: '#3b82f6', fontSize: '13px' }}>{row.total_sales > 0 ? <>{fmt(row.total_sales)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '3px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                        <td style={{ ...td, fontWeight: 700, color: '#a78bfa', fontSize: '13px' }}>{row.agent_share > 0 ? <>{fmt(row.agent_share)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '3px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                        <td style={{ ...td, fontWeight: 700, color: '#2dd4bf', fontSize: '13px' }}>{row.company_share > 0 ? <>{fmt(row.company_share)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '3px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                        <td style={{ ...td, fontWeight: 700, color: '#dc2626', fontSize: '13px' }}>{row.carried_balance > 0.01 ? <><i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '11px', marginLeft: '4px' }} />{fmt(row.carried_balance)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '3px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                        <td style={{ ...td, fontWeight: 700, color: '#059669', fontSize: '13px' }}>{row.paid_amount > 0 ? <>{fmt(row.paid_amount)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '3px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                        <td style={{ ...td, fontWeight: 700, color: 'var(--muted)', fontSize: '11px' }}>{idx + 1}</td>
+                        <td style={{ ...td, textAlign: 'right', paddingRight: '8px', fontWeight: 800, color: 'var(--text)', fontSize: '12px' }}>{row.month_label}</td>
+                        <td style={td}>{row.percentage > 0 ? <span style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#5b21b6', padding: '2px 8px', borderRadius: '20px', fontWeight: 800, fontSize: '11px' }}>{row.percentage}%</span> : <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>}</td>
+                        <td style={td}>{row.document_count > 0 ? <span style={{ background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', color: '#065f46', padding: '2px 8px', borderRadius: '20px', fontWeight: 800, fontSize: '11px' }}>{row.document_count}</span> : <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>}</td>
+                        <td style={{ ...td, fontWeight: 800, color: '#3b82f6', fontSize: '12px' }}>{row.total_sales > 0 ? <>{fmt(row.total_sales)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                        <td style={{ ...td, fontWeight: 700, color: '#a78bfa', fontSize: '12px' }}>{row.agent_share > 0 ? <>{fmt(row.agent_share)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                        <td style={{ ...td, fontWeight: 700, color: '#2dd4bf', fontSize: '12px' }}>{row.company_share > 0 ? <>{fmt(row.company_share)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                        <td style={{ ...td, fontWeight: 700, color: '#dc2626', fontSize: '12px' }}>{row.carried_balance > 0.01 ? <><i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '10px', marginLeft: '3px' }} />{fmt(row.carried_balance)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                        <td style={{ ...td, fontWeight: 700, color: '#059669', fontSize: '12px' }}>{row.paid_amount > 0 ? <>{fmt(row.paid_amount)}<span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span></> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
                         <td style={{ ...td, fontWeight: 900 }}>
-                          {isEmpty ? <span style={{ color: 'var(--muted)', fontSize: '12px' }}>لا يوجد</span>
-                            : isDebt ? <span style={{ color: '#dc2626', fontSize: '13px', fontWeight: 900 }}>{fmt(row.remaining)}<span style={{ fontSize: '10px', marginRight: '3px' }}>د.ل</span></span>
-                              : <span style={{ color: '#059669', fontSize: '12px', fontWeight: 800 }}><i className="fa-solid fa-circle-check" style={{ marginLeft: '4px' }} />مسدد</span>}
+                          {isEmpty ? <span style={{ color: 'var(--muted)', fontSize: '11px' }}>لا يوجد</span>
+                            : isDebt ? <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 900 }}>{fmt(row.remaining)}<span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span></span>
+                              : <span style={{ color: '#059669', fontSize: '11px', fontWeight: 800 }}><i className="fa-solid fa-circle-check" style={{ marginLeft: '3px' }} />مسدد</span>}
                         </td>
-                        <td style={{ ...td, whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                        <td style={{ ...td, whiteSpace: 'nowrap', padding: '6px 4px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
                             {!isEmpty && (
                               <button
                                 className="pay-btn"
                                 onClick={() => openPay(row)}
                                 title="تسديد دفعة لهذا الشهر"
                                 style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '10px',
+                                  padding: '4px 8px',
+                                  borderRadius: '8px',
                                   border: 'none',
                                   cursor: 'pointer',
                                   fontFamily: "'Cairo',sans-serif",
                                   fontWeight: 700,
-                                  fontSize: '12px',
+                                  fontSize: '11px',
                                   color: 'white',
                                   background: 'linear-gradient(135deg,#1e40af,#3b82f6)',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '5px',
+                                  gap: '4px',
                                   transition: 'all .2s',
-                                  boxShadow: '0 3px 8px rgba(30,64,175,0.25)'
+                                  boxShadow: '0 2px 6px rgba(30,64,175,0.2)'
                                 }}
                               >
-                                <i className="fa-solid fa-money-bill-transfer" />تسديد
+                                <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '10px' }} />تسديد
                               </button>
                             )}
 
@@ -624,23 +624,23 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
                               onClick={() => navigate('/old-documents', { state: { branchAgentId: ledger.agent.id, issueDate: `${row.year}-${String(row.month).padStart(2, '0')}-01` } })}
                               title="إضافة وثيقة قديمة لهذا الشهر"
                               style={{
-                                padding: '6px 12px',
-                                borderRadius: '10px',
+                                padding: '4px 8px',
+                                borderRadius: '8px',
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontFamily: "'Cairo',sans-serif",
                                 fontWeight: 700,
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 color: 'white',
                                 background: 'linear-gradient(135deg,#7c3aed,#8b5cf6)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '5px',
+                                gap: '4px',
                                 transition: 'all .2s',
-                                boxShadow: '0 3px 8px rgba(124,58,237,0.25)'
+                                boxShadow: '0 2px 6px rgba(124,58,237,0.2)'
                               }}
                             >
-                              <i className="fa-solid fa-clock-rotate-left" />وثائق قديمة
+                              <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '10px' }} />وثائق قديمة
                             </button>
 
                             <button
@@ -648,23 +648,23 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
                               onClick={() => navigate(`/branches-agents/${ledger.agent.id}`)}
                               title="الانتقال لبروفايل الوكيل"
                               style={{
-                                padding: '6px 12px',
-                                borderRadius: '10px',
+                                padding: '4px 8px',
+                                borderRadius: '8px',
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontFamily: "'Cairo',sans-serif",
                                 fontWeight: 700,
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 color: 'white',
                                 background: 'linear-gradient(135deg,#0d9488,#14b8a6)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '5px',
+                                gap: '4px',
                                 transition: 'all .2s',
-                                boxShadow: '0 3px 8px rgba(13,148,136,0.25)'
+                                boxShadow: '0 2px 6px rgba(13,148,136,0.2)'
                               }}
                             >
-                              <i className="fa-solid fa-id-card" />البروفايل
+                              <i className="fa-solid fa-id-card" style={{ fontSize: '10px' }} />البروفايل
                             </button>
                           </div>
                         </td>
