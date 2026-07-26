@@ -168,6 +168,7 @@ export default function AgentMonthlyLedger() {
           year: payModal.row.year,
           month: payModal.row.month,
           paid_amount: newPaid,
+          payment_amount: parseFloat(payAmount || '0'),
           due_amount: payModal.row.agent_share + payModal.row.carried_balance,
           notes: payNotes,
         }),
