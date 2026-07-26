@@ -277,7 +277,10 @@ export default function PaymentVouchers() {
         showToast('تم حذف الإيصال بنجاح', 'success');
         fetchVouchers();
       } else {
-        showToast('حدث خطأ أثناء الحذف', 'error');
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData.message || errData.error || `خطأ ${response.status}`;
+        console.error('Delete error from server:', errMsg);
+        showToast(errMsg, 'error');
       }
     } catch (error) {
       console.error('Error deleting voucher:', error);
