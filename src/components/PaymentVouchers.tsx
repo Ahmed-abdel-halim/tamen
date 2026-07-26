@@ -269,8 +269,15 @@ export default function PaymentVouchers() {
     if (!window.confirm('هل أنت متأكد من حذف هذا الإيصال؟')) return;
 
     try {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      const headers: HeadersInit = {};
+      if (userId) headers['X-User-Id'] = userId.toString();
+
       const response = await fetch(`${API_BASE_URL}/payment-vouchers/${id}`, {
         method: 'DELETE',
+        headers,
       });
 
       if (response.ok) {
