@@ -30,13 +30,7 @@ const LICENSE_PURPOSES = [
   'صناعي/Industrial',
 ];
 
-const FUEL_TYPES = [
-  'بنزين/Gasoline',
-  'ديزل/Diesel',
-  'كهرباء/Electric',
-  'غاز طبيعي/CNG',
-  'هيدروجين/Hydrogen',
-];
+
 
 const DOCUMENT_TYPES = [
   { value: 'compulsory', label: 'تأمين إجباري سيارات' },
@@ -111,8 +105,6 @@ export default function OldDocumentsManagement() {
   const navigate = useNavigate();
   const location = useLocation();
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [colors, setColors] = useState<Color[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Search Agent Dropdown State
@@ -143,12 +135,12 @@ export default function OldDocumentsManagement() {
 
   // Client Details
   const [insuredName, setInsuredName] = useState('');
-  const [nidPassport, setNidPassport] = useState('111111111111');
-  const [phone, setPhone] = useState('0910000000');
-  const [whatsappNumber, setWhatsappNumber] = useState('0910000000');
-  const [email, setEmail] = useState('info@mli.ly');
-  const [address, setAddress] = useState('طرابلس');
-  const [nationality, setNationality] = useState('ليبي');
+  const nidPassport = '111111111111';
+  const phone = '0910000000';
+  const whatsappNumber = '0910000000';
+  const email = 'info@mli.ly';
+  const address = 'طرابلس';
+  const nationality = 'ليبي';
   const [gender, setGender] = useState('ذكر');
   const [age, setAge] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -166,16 +158,16 @@ export default function OldDocumentsManagement() {
   // 1. Vehicles (compulsory / international / customs / third_party / foreign_car)
   const [chassisNumber, setChassisNumber] = useState('');
   const [plateNumberManual, setPlateNumberManual] = useState('');
-  const [color, setColor] = useState('');
-  const [year, setYear] = useState('');
+  const color = 'أبيض';
+  const year = new Date().getFullYear().toString();
   const [enginePower, setEnginePower] = useState('');
-  const [engineNumber, setEngineNumber] = useState('');
-  const [engineCc, setEngineCc] = useState('');
+  const engineNumber = '';
+  const engineCc = '';
   const [authorizedPassengers, setAuthorizedPassengers] = useState('');
   const [loadCapacity, setLoadCapacity] = useState('');
-  const [vehicleWeight, setVehicleWeight] = useState('');
-  const [vehicleTypeId, setVehicleTypeId] = useState('');
-  const [fuelType, setFuelType] = useState('');
+  const vehicleWeight = '';
+  const vehicleTypeId = '';
+  const fuelType = '';
   const [licensePurpose, setLicensePurpose] = useState('');
 
   // Vehicle Subtype Specifics
@@ -186,17 +178,17 @@ export default function OldDocumentsManagement() {
   const prevEnginePowerRef = useRef<string>('');
 
   // 2. International specific
-  const [vehicleNationality, setVehicleNationality] = useState('ليبية- LBY');
-  const [visitedCountry, setVisitedCountry] = useState('تونس');
-  const [numberOfDays, setNumberOfDays] = useState('30');
-  const [itemType, setItemType] = useState('سيارات خاصة ملاكي');
+  const vehicleNationality = 'ليبية- LBY';
+  const visitedCountry = 'تونس';
+  const numberOfDays = '30';
+  const itemType = 'سيارات خاصة ملاكي';
 
   // 3. Travel / Resident
   const [geographicArea, setGeographicArea] = useState('');
   const [duration, setDuration] = useState('سنة');
   const [residenceType, setResidenceType] = useState('تأشيرة إقامة Residence Visa');
-  const [residenceDuration, setResidenceDuration] = useState('');
-  const [occupation, setOccupation] = useState('');
+  const residenceDuration = '12';
+  const occupation = 'موظف';
 
   // 4. Marine
   const [structureName, setStructureName] = useState('');
@@ -230,8 +222,6 @@ export default function OldDocumentsManagement() {
 
   useEffect(() => {
     fetchAgents();
-    fetchVehicleTypes();
-    fetchColors();
   }, []);
 
   // Click outside listener to close the searchable agent select
@@ -1200,43 +1190,6 @@ export default function OldDocumentsManagement() {
     }
   };
 
-  const fetchVehicleTypes = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/vehicle-types?per_page=1000`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVehicleTypes(data.data || data || []);
-      }
-    } catch (e) {
-      console.error('Error fetching vehicle types:', e);
-    }
-  };
-
-  const fetchColors = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/colors`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const colorsList = Array.isArray(data) ? data : (data.data && Array.isArray(data.data) ? data.data : []);
-        setColors(colorsList);
-      }
-    } catch (e) {
-      console.error('Error fetching colors:', e);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -1800,7 +1753,7 @@ export default function OldDocumentsManagement() {
                     <label>سنة الصنع *</label>
                     <select value={manufacturingYear} onChange={(e) => setManufacturingYear(e.target.value)} required>
                       <option value="">اختر سنة الصنع...</option>
-                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                      {Array.from({ length: 70 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
