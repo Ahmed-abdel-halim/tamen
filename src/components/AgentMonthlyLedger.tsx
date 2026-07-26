@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
@@ -65,8 +65,23 @@ export default function AgentMonthlyLedger() {
   const [payNotes, setPayNotes] = useState('');
   const [payLoading, setPayLoading] = useState(false);
 
+  // Searchable Dropdown State
+  const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
+  const [agentSearchText, setAgentSearchText] = useState('');
+  const agentDropdownRef = useRef<HTMLDivElement>(null);
+
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (agentDropdownRef.current && !agentDropdownRef.current.contains(event.target as Node)) {
+        setIsAgentDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
 
   useEffect(() => {
@@ -297,6 +312,17 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
 
   const td: React.CSSProperties = { padding: '11px 10px', textAlign: 'center', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
 
+  const selectedAgent = agents.find(a => a.id === selectedAgentId);
+
+  const filteredAgents = agents.filter(a => {
+    if (!agentSearchText.trim()) return true;
+    const searchLower = agentSearchText.trim().toLowerCase();
+    const agencyName = (a.agency_name || '').toLowerCase();
+    const agentName = (a.agent_name || '').toLowerCase();
+    const code = (a.code || '').toLowerCase();
+    return agencyName.includes(searchLower) || agentName.includes(searchLower) || code.includes(searchLower);
+  });
+
   return (
     <div style={{ padding: '24px 28px', fontFamily: "'Cairo','Segoe UI',sans-serif", direction: 'rtl', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <style>{`
@@ -335,38 +361,132 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
           <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>اختيار الوكيل والإعدادات</span>
         </div>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ position: 'relative', minWidth: '300px', flex: 1 }}>
+          {/* Custom Searchable Agent Dropdown */}
+          <div ref={agentDropdownRef} style={{ position: 'relative', minWidth: '320px', flex: 1 }}>
             <i className="fa-solid fa-user-tie" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px', pointerEvents: 'none', zIndex: 1 }} />
-            <select
-              value={selectedAgentId ?? ''}
-              onChange={handleSelectChange}
+            
+            <div
+              onClick={() => setIsAgentDropdownOpen(!isAgentDropdownOpen)}
               style={{
                 width: '100%',
-                padding: '11px 42px 11px 16px',
+                padding: '11px 42px 11px 36px',
                 borderRadius: '12px',
-                border: '2px solid var(--border)',
+                border: `2px solid ${isAgentDropdownOpen ? '#3b82f6' : 'var(--border)'}`,
                 fontFamily: "'Cairo',sans-serif",
                 fontSize: '14px',
-                outline: 'none',
                 background: 'var(--input-bg)',
-                color: 'var(--text)',
+                color: selectedAgent ? 'var(--text)' : 'var(--muted)',
                 boxSizing: 'border-box',
                 cursor: 'pointer',
-                appearance: 'none',
-                WebkitAppearance: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                userSelect: 'none',
                 transition: 'border-color .2s',
+                minHeight: '46px'
               }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#3b82f6'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
             >
-              <option value="" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>— اختر الوكيل —</option>
-              {agents.map(a => (
-                <option key={a.id} value={a.id} style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
-                  {a.code ? `[${a.code}] ` : ''}{a.agency_name || a.agent_name || `وكيل #${a.id}`}
-                </option>
-              ))}
-            </select>
-            <i className="fa-solid fa-chevron-down" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px', pointerEvents: 'none' }} />
+              <span style={{ fontWeight: selectedAgent ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedAgent
+                  ? `${selectedAgent.code ? `[${selectedAgent.code}] ` : ''}${selectedAgent.agency_name || selectedAgent.agent_name || `وكيل #${selectedAgent.id}`}`
+                  : '— اختر الوكيل —'}
+              </span>
+              <i className={`fa-solid fa-chevron-${isAgentDropdownOpen ? 'up' : 'down'}`} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px', pointerEvents: 'none' }} />
+            </div>
+
+            {isAgentDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  left: 0,
+                  zIndex: 9999,
+                  background: 'var(--card-bg)',
+                  border: '2px solid var(--border)',
+                  borderRadius: '14px',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+                  maxHeight: '320px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  <div style={{ position: 'relative' }}>
+                    <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '13px' }} />
+                    <input
+                      type="text"
+                      placeholder="ابحث بالاسم أو الكود..."
+                      value={agentSearchText}
+                      onChange={(e) => setAgentSearchText(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: '100%',
+                        padding: '8px 36px 8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text)',
+                        fontFamily: "'Cairo',sans-serif",
+                        fontSize: '13px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div style={{ overflowY: 'auto', flex: 1, padding: '4px 0' }}>
+                  {filteredAgents.length > 0 ? (
+                    filteredAgents.map((a) => {
+                      const isSelected = a.id === selectedAgentId;
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={() => {
+                            setSelectedAgentId(a.id);
+                            fetchLedger(a.id);
+                            setIsAgentDropdownOpen(false);
+                            setAgentSearchText('');
+                          }}
+                          style={{
+                            padding: '10px 16px',
+                            cursor: 'pointer',
+                            fontFamily: "'Cairo',sans-serif",
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: isSelected ? 'var(--hover-bg)' : 'transparent',
+                            color: isSelected ? '#3b82f6' : 'var(--text)',
+                            fontWeight: isSelected ? 800 : 600,
+                            transition: 'background .15s'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = 'var(--hover-bg)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <span>
+                            {a.code && <span style={{ color: '#64748b', marginLeft: '6px', fontWeight: 600 }}>[{a.code}]</span>}
+                            {a.agency_name || a.agent_name || `وكيل #${a.id}`}
+                          </span>
+                          {isSelected && <i className="fa-solid fa-check" style={{ color: '#3b82f6', fontSize: '12px' }} />}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: '16px', color: 'var(--muted)', textAlign: 'center', fontFamily: "'Cairo',sans-serif", fontSize: '13px' }}>
+                      <i className="fa-solid fa-circle-exclamation" style={{ marginLeft: '6px' }} />
+                      لا توجد نتائج مطابقة
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', padding: '10px 16px', borderRadius: '12px', border: `2px solid ${excludeCanceled ? '#dc2626' : 'var(--border)'}`, background: excludeCanceled ? 'rgba(254,226,226,0.4)' : 'var(--card-bg)', transition: 'all .3s' }}>
             <input type="checkbox" checked={excludeCanceled} onChange={handleExcludeToggle} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#dc2626' }} />
