@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 
@@ -109,6 +109,7 @@ const HIGH_VALUE_ITEMS = [
 
 export default function OldDocumentsManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [colors, setColors] = useState<Color[]>([]);
@@ -124,6 +125,19 @@ export default function OldDocumentsManagement() {
   const [branchAgentId, setBranchAgentId] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    if (location.state) {
+      const stateObj = location.state as { branchAgentId?: number | string; issueDate?: string };
+      if (stateObj.branchAgentId) {
+        setBranchAgentId(stateObj.branchAgentId.toString());
+      }
+      if (stateObj.issueDate) {
+        setIssueDate(stateObj.issueDate);
+        setStartDate(stateObj.issueDate);
+      }
+    }
+  }, [location.state]);
   const [endDate, setEndDate] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
 

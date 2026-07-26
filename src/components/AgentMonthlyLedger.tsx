@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
@@ -55,6 +56,7 @@ interface BranchAgent {
 }
 
 export default function AgentMonthlyLedger() {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [excludeCanceled, setExcludeCanceled] = useState(false);
@@ -589,13 +591,82 @@ td{border:1px solid #e2e8f0;padding:7px 6px;text-align:center;}tr:nth-child(even
                             : isDebt ? <span style={{ color: '#dc2626', fontSize: '13px', fontWeight: 900 }}>{fmt(row.remaining)}<span style={{ fontSize: '10px', marginRight: '3px' }}>د.ل</span></span>
                               : <span style={{ color: '#059669', fontSize: '12px', fontWeight: 800 }}><i className="fa-solid fa-circle-check" style={{ marginLeft: '4px' }} />مسدد</span>}
                         </td>
-                        <td style={td}>
-                          {!isEmpty && (
-                            <button className="pay-btn" onClick={() => openPay(row)}
-                              style={{ padding: '6px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '12px', color: 'white', background: 'linear-gradient(135deg,#1e40af,#3b82f6)', display: 'inline-flex', alignItems: 'center', gap: '5px', transition: 'all .2s', boxShadow: '0 3px 10px rgba(30,64,175,0.3)' }}>
-                              <i className="fa-solid fa-money-bill-transfer" />تسديد
+                        <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                            {!isEmpty && (
+                              <button
+                                className="pay-btn"
+                                onClick={() => openPay(row)}
+                                title="تسديد دفعة لهذا الشهر"
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '10px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontFamily: "'Cairo',sans-serif",
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  color: 'white',
+                                  background: 'linear-gradient(135deg,#1e40af,#3b82f6)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  transition: 'all .2s',
+                                  boxShadow: '0 3px 8px rgba(30,64,175,0.25)'
+                                }}
+                              >
+                                <i className="fa-solid fa-money-bill-transfer" />تسديد
+                              </button>
+                            )}
+
+                            <button
+                              className="pay-btn"
+                              onClick={() => navigate('/old-documents', { state: { branchAgentId: ledger.agent.id, issueDate: `${row.year}-${String(row.month).padStart(2, '0')}-01` } })}
+                              title="إضافة وثيقة قديمة لهذا الشهر"
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontFamily: "'Cairo',sans-serif",
+                                fontWeight: 700,
+                                fontSize: '12px',
+                                color: 'white',
+                                background: 'linear-gradient(135deg,#7c3aed,#8b5cf6)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                transition: 'all .2s',
+                                boxShadow: '0 3px 8px rgba(124,58,237,0.25)'
+                              }}
+                            >
+                              <i className="fa-solid fa-clock-rotate-left" />وثائق قديمة
                             </button>
-                          )}
+
+                            <button
+                              className="pay-btn"
+                              onClick={() => navigate(`/branches-agents/${ledger.agent.id}`)}
+                              title="الانتقال لبروفايل الوكيل"
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontFamily: "'Cairo',sans-serif",
+                                fontWeight: 700,
+                                fontSize: '12px',
+                                color: 'white',
+                                background: 'linear-gradient(135deg,#0d9488,#14b8a6)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                transition: 'all .2s',
+                                boxShadow: '0 3px 8px rgba(13,148,136,0.25)'
+                              }}
+                            >
+                              <i className="fa-solid fa-id-card" />البروفايل
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
