@@ -226,11 +226,15 @@ export default function OldDocumentsManagement() {
   const [tableSearch, setTableSearch] = useState('');
   const [tableFilterType, setTableFilterType] = useState('all');
 
-  const fetchOldDocs = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [totalDocs, setTotalDocs] = useState(0);
+
+  const fetchOldDocs = async (page = 1) => {
     setLoadingOldDocs(true);
     try {
       const token = localStorage.getItem('token');
-      let url = `${API_BASE_URL}/old-documents?per_page=100`;
+      let url = `${API_BASE_URL}/old-documents?page=${page}&per_page=15`;
       if (branchAgentId) {
         url += `&branch_agent_id=${branchAgentId}`;
       }
@@ -250,6 +254,9 @@ export default function OldDocumentsManagement() {
       if (res.ok) {
         const data = await res.json();
         setOldDocsList(data.data || []);
+        setCurrentPage(data.current_page || 1);
+        setLastPage(data.last_page || 1);
+        setTotalDocs(data.total || 0);
       }
     } catch (err) {
       console.error('Error fetching old docs list:', err);
@@ -260,11 +267,11 @@ export default function OldDocumentsManagement() {
 
   useEffect(() => {
     fetchAgents();
-    fetchOldDocs();
+    fetchOldDocs(1);
   }, []);
 
   useEffect(() => {
-    fetchOldDocs();
+    fetchOldDocs(1);
   }, [branchAgentId, tableFilterType]);
 
   // Click outside listener to close the searchable agent select
@@ -1932,70 +1939,82 @@ export default function OldDocumentsManagement() {
               </>
             )}
 
-            {/* القسم المالي */}
-            <div className="grid-header" style={{ background: '#014cb1', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '800', margin: '30px 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <i className="fa-solid fa-calculator"></i> بيانات التأمين والأسعار
-            </div>
-
-            <div className="modern-grid-3">
-              <div className="form-group">
-                <label>صافي القسط (Premium) *</label>
-                <div className="price-input-wrapper">
-                  <span className="currency">د.ل</span>
-                  <input type="number" step="any" value={premium} onChange={(e) => setPremium(e.target.value)} required />
-                </div>
+            {/* القسم المالي المصمم بشكل ممتاز ومنظم */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginTop: '30px' }}>
+              <div className="grid-header" style={{ background: 'linear-gradient(135deg, #014cb1, #002d75)', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <i className="fa-solid fa-calculator"></i> بيانات التأمين والأسعار
               </div>
 
-              {!['school_student', 'cash_in_transit', 'cargo'].includes(documentType) && (
-                <>
-                  <div className="form-group">
-                    <label>الضريبة (Tax)</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="number" step="any" value={tax} onChange={(e) => setTax(e.target.value)} />
-                    </div>
+              <div className="modern-grid-3">
+                <div className="form-group">
+                  <label style={{ fontWeight: '700', color: '#1e293b' }}>صافي القسط (Premium) *</label>
+                  <div className="price-input-wrapper">
+                    <span className="currency">د.ل</span>
+                    <input type="number" step="any" value={premium} onChange={(e) => setPremium(e.target.value)} required />
                   </div>
+                </div>
 
-                  <div className="form-group">
-                    <label>الدمغة (Stamp)</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="number" step="any" value={stamp} onChange={(e) => setStamp(e.target.value)} />
+                {!['school_student', 'cash_in_transit', 'cargo'].includes(documentType) && (
+                  <>
+                    <div className="form-group">
+                      <label style={{ fontWeight: '700', color: '#1e293b' }}>الضريبة (Tax)</label>
+                      <div className="price-input-wrapper">
+                        <span className="currency">د.ل</span>
+                        <input type="number" step="any" value={tax} onChange={(e) => setTax(e.target.value)} />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="form-group">
-                    <label>رسوم الإصدار (Issue Fees)</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="number" step="any" value={issueFees} onChange={(e) => setIssueFees(e.target.value)} />
+                    <div className="form-group">
+                      <label style={{ fontWeight: '700', color: '#1e293b' }}>الدمغة (Stamp)</label>
+                      <div className="price-input-wrapper">
+                        <span className="currency">د.ل</span>
+                        <input type="number" step="any" value={stamp} onChange={(e) => setStamp(e.target.value)} />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="form-group">
-                    <label>رسوم الإشراف (Supervision Fees)</label>
-                    <div className="price-input-wrapper">
-                      <span className="currency">د.ل</span>
-                      <input type="number" step="any" value={supervisionFees} onChange={(e) => setSupervisionFees(e.target.value)} />
+                    <div className="form-group">
+                      <label style={{ fontWeight: '700', color: '#1e293b' }}>رسوم الإصدار (Issue Fees)</label>
+                      <div className="price-input-wrapper">
+                        <span className="currency">د.ل</span>
+                        <input type="number" step="any" value={issueFees} onChange={(e) => setIssueFees(e.target.value)} />
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
 
-              <div className="form-group span-2" style={{ paddingTop: '5px' }}>
-                <label style={{ color: '#014cb1', fontWeight: '800' }}>الإجمالي النهائي (شامل الرسوم والضرائب)</label>
-                <div className="price-input-wrapper" style={{ border: '2px solid #014cb1', height: '40px', background: '#f0f9ff' }}>
-                  <span className="currency" style={{ background: '#014cb1', color: '#fff', fontSize: '13px' }}>د.ل</span>
-                  <input type="text" value={total} readOnly style={{ fontWeight: '900', color: '#014cb1', fontSize: '1.2rem' }} />
+                    <div className="form-group">
+                      <label style={{ fontWeight: '700', color: '#1e293b' }}>رسوم الإشراف (Supervision Fees)</label>
+                      <div className="price-input-wrapper">
+                        <span className="currency">د.ل</span>
+                        <input type="number" step="any" value={supervisionFees} onChange={(e) => setSupervisionFees(e.target.value)} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* صندوق الإجمالي النهائي الأنيق والمنظم */}
+              <div style={{ marginTop: '20px', background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)', border: '2px solid #0284c7', borderRadius: '10px', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
+                    <i className="fa-solid fa-coins" style={{ marginLeft: '8px' }}></i> الإجمالي النهائي (شامل الرسوم والضرائب)
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#0284c7', marginTop: '2px' }}>
+                    المبلغ الكلي المستحق عن الوثيقة
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '2px solid #0284c7', borderRadius: '8px', overflow: 'hidden', minWidth: '220px', boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.1)' }}>
+                  <span style={{ background: '#0284c7', color: '#fff', padding: '10px 16px', fontWeight: '800', fontSize: '14px' }}>د.ل</span>
+                  <input type="text" value={total} readOnly style={{ border: 'none', outline: 'none', width: '100%', padding: '0 16px', fontSize: '20px', fontWeight: '900', color: '#0369a1', textAlign: 'center', background: 'transparent' }} />
                 </div>
               </div>
             </div>
 
-            <div className="form-actions span-4" style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'center' }}>
-              <button type="submit" disabled={submitting} className="btn-submit" style={{ background: '#10b981', border: 'none', height: '55px', fontSize: '18px', borderRadius: '10px', width: '100%', maxWidth: '350px', fontWeight: '700', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)' }}>
+            {/* أزرار الإجراءات المنتظمة والمحاذية */}
+            <div className="form-actions" style={{ marginTop: '25px', display: 'flex', gap: '15px', justifyContent: 'center', alignItems: 'center' }}>
+              <button type="submit" disabled={submitting} className="btn-submit" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', height: '48px', fontSize: '16px', borderRadius: '8px', padding: '0 30px', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }}>
                 <i className="fa-solid fa-check-circle"></i> {submitting ? 'جاري الحفظ...' : 'اعتماد وحفظ الوثيقة القديمة'}
               </button>
-              <button type="button" onClick={() => navigate('/dashboard')} className="btn-cancel" style={{ height: '55px', fontSize: '16px', borderRadius: '10px', width: '100%', maxWidth: '150px' }}>
+              <button type="button" onClick={() => navigate('/dashboard')} className="btn-cancel" style={{ background: '#fff', border: '1px solid #cbd5e1', height: '48px', fontSize: '15px', borderRadius: '8px', padding: '0 24px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
                 إلغاء
               </button>
             </div>
@@ -2052,7 +2071,7 @@ export default function OldDocumentsManagement() {
 
                 <button
                   type="button"
-                  onClick={fetchOldDocs}
+                  onClick={() => fetchOldDocs(1)}
                   className="btn-refresh"
                   style={{
                     padding: '8px 15px',
@@ -2129,6 +2148,88 @@ export default function OldDocumentsManagement() {
                 </tbody>
               </table>
             </div>
+
+            {/* عناصر الترقيم والصفحات Pagination Controls */}
+            {lastPage > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', padding: '12px 18px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>
+                  عرض الصفحة <span style={{ color: '#014cb1', fontWeight: '800' }}>{currentPage}</span> من <span style={{ color: '#014cb1', fontWeight: '800' }}>{lastPage}</span> (إجمالي <span style={{ color: '#10b981', fontWeight: '800' }}>{totalDocs}</span> وثيقة قديمة)
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1 || loadingOldDocs}
+                    onClick={() => fetchOldDocs(currentPage - 1)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage <= 1 ? '#f1f5f9' : '#fff',
+                      color: currentPage <= 1 ? '#94a3b8' : '#1e293b',
+                      cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <i className="fa-solid fa-chevron-right"></i> السابق
+                  </button>
+
+                  {Array.from({ length: lastPage }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === lastPage || Math.abs(p - currentPage) <= 2)
+                    .map((p, idx, arr) => {
+                      const prev = arr[idx - 1];
+                      const showEllipsis = prev && p - prev > 1;
+                      return (
+                        <span key={p} style={{ display: 'flex', alignItems: 'center' }}>
+                          {showEllipsis && <span style={{ padding: '0 5px', color: '#94a3b8', fontSize: '13px' }}>...</span>}
+                          <button
+                            type="button"
+                            onClick={() => fetchOldDocs(p)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: p === currentPage ? '1px solid #014cb1' : '1px solid #cbd5e1',
+                              background: p === currentPage ? '#014cb1' : '#fff',
+                              color: p === currentPage ? '#fff' : '#1e293b',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: p === currentPage ? '800' : '600',
+                              boxShadow: p === currentPage ? '0 2px 4px rgba(1, 76, 177, 0.2)' : 'none',
+                            }}
+                          >
+                            {p}
+                          </button>
+                        </span>
+                      );
+                    })}
+
+                  <button
+                    type="button"
+                    disabled={currentPage >= lastPage || loadingOldDocs}
+                    onClick={() => fetchOldDocs(currentPage + 1)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage >= lastPage ? '#f1f5f9' : '#fff',
+                      color: currentPage >= lastPage ? '#94a3b8' : '#1e293b',
+                      cursor: currentPage >= lastPage ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    التالي <i className="fa-solid fa-chevron-left"></i>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <style>{`
