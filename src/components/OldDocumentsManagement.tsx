@@ -9,6 +9,20 @@ type Agent = {
   code: string;
 };
 
+type OldDocItem = {
+  id: number;
+  document_type: string;
+  type_label: string;
+  document_number: string;
+  insured_name: string;
+  branch_agent_id?: number | null;
+  agent_name: string;
+  start_date: string;
+  end_date: string;
+  total: number;
+  created_at: string;
+};
+
 const LICENSE_PURPOSES = [
   'خاصة/Private',
   'عامة/Public',
@@ -206,10 +220,52 @@ export default function OldDocumentsManagement() {
   const [voyageFrom, setVoyageFrom] = useState('');
   const [voyageTo, setVoyageTo] = useState('');
   const [sumInsured, setSumInsured] = useState('');
+  // Table State for added old documents
+  const [oldDocsList, setOldDocsList] = useState<OldDocItem[]>([]);
+  const [loadingOldDocs, setLoadingOldDocs] = useState(false);
+  const [tableSearch, setTableSearch] = useState('');
+  const [tableFilterType, setTableFilterType] = useState('all');
+
+  const fetchOldDocs = async () => {
+    setLoadingOldDocs(true);
+    try {
+      const token = localStorage.getItem('token');
+      let url = `${API_BASE_URL}/old-documents?per_page=100`;
+      if (branchAgentId) {
+        url += `&branch_agent_id=${branchAgentId}`;
+      }
+      if (tableFilterType && tableFilterType !== 'all') {
+        url += `&document_type=${tableFilterType}`;
+      }
+      if (tableSearch) {
+        url += `&search=${encodeURIComponent(tableSearch)}`;
+      }
+
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOldDocsList(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching old docs list:', err);
+    } finally {
+      setLoadingOldDocs(false);
+    }
+  };
 
   useEffect(() => {
     fetchAgents();
+    fetchOldDocs();
   }, []);
+
+  useEffect(() => {
+    fetchOldDocs();
+  }, [branchAgentId, tableFilterType]);
 
   // Click outside listener to close the searchable agent select
   useEffect(() => {
@@ -1330,8 +1386,14 @@ export default function OldDocumentsManagement() {
 
       if (res.ok && data.success) {
         showToast(data.message || 'تم حفظ الوثيقة القديمة بنجاح', 'success');
-        // Reset or Navigate
-        navigate('/dashboard');
+        // Reset inputs for next document entry
+        setDocumentNumber('');
+        setInsuredName('');
+        setChassisNumber('');
+        setPlateNumberManual('');
+        setAuthorizedPassengers('');
+        setLoadCapacity('');
+        fetchOldDocs();
       } else {
         showToast(data.message || 'فشل في حفظ الوثيقة القديمة', 'error');
       }
@@ -1938,6 +2000,136 @@ export default function OldDocumentsManagement() {
               </button>
             </div>
           </form>
+
+          {/* قسم جدول الوثائق القديمة المضافة */}
+          <div style={{ marginTop: '40px', paddingTop: '25px', borderTop: '2px dashed #cbd5e1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="fa-solid fa-list-check" style={{ color: '#014cb1' }}></i>
+                  جدول الوثائق القديمة المضافة ({oldDocsList.length})
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+                  سجل استعراض ومراجعة سريعة للوثائق القديمة التي تم إدخالها
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative' }}>
+                  <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}></i>
+                  <input
+                    type="text"
+                    placeholder="بحث برقم الوثيقة أو اسم المؤمن له..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && fetchOldDocs()}
+                    style={{
+                      padding: '8px 35px 8px 12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      width: '250px',
+                    }}
+                  />
+                </div>
+
+                <select
+                  value={tableFilterType}
+                  onChange={(e) => setTableFilterType(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: '#fff',
+                  }}
+                >
+                  <option value="all">جميع أنواع التأمين</option>
+                  {DOCUMENT_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={fetchOldDocs}
+                  className="btn-refresh"
+                  style={{
+                    padding: '8px 15px',
+                    background: '#014cb1',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <i className={`fa-solid fa-rotate-right ${loadingOldDocs ? 'fa-spin' : ''}`}></i> تحديث
+                </button>
+              </div>
+            </div>
+
+            <div className="table-responsive" style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '13px', fontWeight: '700' }}>
+                    <th style={{ padding: '12px 15px' }}>#</th>
+                    <th style={{ padding: '12px 15px' }}>رقم الوثيقة</th>
+                    <th style={{ padding: '12px 15px' }}>اسم المؤمن له</th>
+                    <th style={{ padding: '12px 15px' }}>نوع التأمين</th>
+                    <th style={{ padding: '12px 15px' }}>الوكيل / الفرع</th>
+                    <th style={{ padding: '12px 15px' }}>تاريخ البدء</th>
+                    <th style={{ padding: '12px 15px' }}>تاريخ الانتهاء</th>
+                    <th style={{ padding: '12px 15px' }}>الإجمالي</th>
+                    <th style={{ padding: '12px 15px' }}>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingOldDocs ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                        <i className="fa-solid fa-spinner fa-spin" style={{ marginLeft: '8px', fontSize: '18px' }}></i> جاري تحميل الوثائق...
+                      </td>
+                    </tr>
+                  ) : oldDocsList.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                        لا توجد وثائق قديمة مضافة مطابقة للبحث
+                      </td>
+                    </tr>
+                  ) : (
+                    oldDocsList.map((doc, idx) => (
+                      <tr key={`${doc.document_type}-${doc.id}-${idx}`} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                        <td style={{ padding: '12px 15px', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ padding: '12px 15px', fontWeight: '700', color: '#014cb1' }}>{doc.document_number}</td>
+                        <td style={{ padding: '12px 15px', fontWeight: '600', color: '#1e293b' }}>{doc.insured_name}</td>
+                        <td style={{ padding: '12px 15px' }}>
+                          <span style={{ background: '#f0f9ff', color: '#0284c7', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                            {doc.type_label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.agent_name}</td>
+                        <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.start_date}</td>
+                        <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.end_date}</td>
+                        <td style={{ padding: '12px 15px', fontWeight: '700', color: '#10b981' }}>
+                          {doc.total.toLocaleString('ar-LY', { minimumFractionDigits: 2 })} د.ل
+                        </td>
+                        <td style={{ padding: '12px 15px' }}>
+                          <span style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }}>
+                            <i className="fa-solid fa-circle-check" style={{ marginLeft: '4px' }}></i> وثيقة قديمة
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
           <style>{`
             .modern-grid-3 {
