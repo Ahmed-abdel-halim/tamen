@@ -226,6 +226,7 @@ function hasAccessToRoute(
     'أرشيف المستندات الإدارية': ['/archive'],
     'طلبات الوثائق': ['/document-requests'],
     'ملفات الشركة': ['/company-documents'],
+    'الوثائق القديمة': ['/old-documents'],
 
     'المحاسب المالي': [
       '/reports/financial-statistics',
