@@ -359,20 +359,46 @@ export default function AgentMonthlyLedger() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!ledger) return;
-    const excelRows = ledger.months.map((m) => ({
-      month_label: m.month_label,
-      document_count: m.document_count,
-      total_sales: m.total_sales,
-      agent_share: m.agent_share,
-      company_share: m.company_share,
-      paid_amount: m.paid_amount,
-      remaining: m.remaining,
-      carried_balance: m.carried_balance,
-      notes: m.notes || '',
-    }));
-    generatePremiumExcel(excelRows, `كشف_حساب_الوكيل_${ledger.agent.agency_name}`);
+    try {
+      const columns = [
+        { header: 'الشهر', key: 'month_label', width: 20 },
+        { header: 'عدد الوثائق', key: 'document_count', width: 15 },
+        { header: 'إجمالي المبيعات (د.ل)', key: 'total_sales', width: 22 },
+        { header: 'حصة الوكيل (د.ل)', key: 'agent_share', width: 20 },
+        { header: 'حصة الشركة (د.ل)', key: 'company_share', width: 20 },
+        { header: 'المستلم (د.ل)', key: 'paid_amount', width: 18 },
+        { header: 'الباقي (د.ل)', key: 'remaining', width: 18 },
+        { header: 'دين مترحل (د.ل)', key: 'carried_balance', width: 20 },
+        { header: 'ملاحظات', key: 'notes', width: 30 },
+      ];
+
+      const data = ledger.months.map((m) => ({
+        month_label: m.month_label,
+        document_count: m.document_count,
+        total_sales: m.total_sales,
+        agent_share: m.agent_share,
+        company_share: m.company_share,
+        paid_amount: m.paid_amount,
+        remaining: m.remaining,
+        carried_balance: m.carried_balance,
+        notes: m.notes || '-',
+      }));
+
+      await generatePremiumExcel({
+        title: `كشف الحساب الشهري للوكيل - ${ledger.agent.agency_name}`,
+        subtitle: `كود الوكيل: ${ledger.agent.code} | المسؤول: ${ledger.agent.agent_name}`,
+        columns,
+        data,
+        fileName: `كشف_حساب_الوكيل_${ledger.agent.agency_name}`,
+      });
+
+      showToast('تم تصدير ملف الإكسيل بنجاح', 'success');
+    } catch (err) {
+      console.error('Excel Export Error:', err);
+      showToast('حدث خطأ أثناء تصدير ملف الإكسيل', 'error');
+    }
   };
 
   const selectedAgentObj = agents.find((a) => a.id === selectedAgentId);
