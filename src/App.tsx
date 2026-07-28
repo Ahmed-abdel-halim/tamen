@@ -1059,6 +1059,7 @@ const createMenuSections = (
     const accountantOrder = [
       '/reports/revenue',
       '/reports/live-agents-production',
+      '/reports/agent-monthly-ledger',
       '/reports/payment-vouchers',
       '/reports/inventory',
       '/reports/financial-reconciliation',
