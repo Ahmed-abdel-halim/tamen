@@ -170,6 +170,9 @@ function hasAccessToRoute(
     if (path.startsWith('/document-requests')) {
       return true;
     }
+    if (path.startsWith('/reports/agent-monthly-ledger') || path.startsWith('/old-documents')) {
+      return true;
+    }
   }
 
   // إذا لم يكن هناك صلاحيات، لا وصول
@@ -249,7 +252,8 @@ function hasAccessToRoute(
       '/reports/treasury-banks',
       '/reports/financial-reconciliation',
       '/reports/live-agents-production',
-      '/reports/agent-monthly-ledger'
+      '/reports/agent-monthly-ledger',
+      '/old-documents'
     ],
     // تفصيل صلاحيات المحاسب المالي
     'المصارف والخزنة': ['/reports/treasury-banks'],
@@ -274,7 +278,7 @@ function hasAccessToRoute(
     'تسديد التعويضات': ['/reports/finance-claims'],
     'التحصيلات البنكية': ['/reports/bank-reconciliation'],
     'تقرير الإنتاجية المباشر': ['/reports/live-agents-production'],
-    'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger'],
+    'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/old-documents'],
 
     'اجور ومرتبات ضرائب': ['/reports/tax'],
     'اجور ومرتبات ضمان': ['/reports/social-security'],
