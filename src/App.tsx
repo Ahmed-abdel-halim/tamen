@@ -248,7 +248,8 @@ function hasAccessToRoute(
       '/reports/financial-archive',
       '/reports/treasury-banks',
       '/reports/financial-reconciliation',
-      '/reports/live-agents-production'
+      '/reports/live-agents-production',
+      '/reports/agent-monthly-ledger'
     ],
     // تفصيل صلاحيات المحاسب المالي
     'المصارف والخزنة': ['/reports/treasury-banks'],
@@ -713,6 +714,7 @@ const createMenuSections = (
     'المطابقة والتحصيلات المالية': { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
     'تسديد التعويضات': { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     'تقرير الإنتاجية المباشر': { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
+    'كشف الحساب الشهري للوكيل': { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
 
     'الشؤون الفنية': [
       { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
