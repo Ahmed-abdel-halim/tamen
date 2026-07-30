@@ -89,6 +89,7 @@ export default function AgentMonthlyLedger() {
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [excludeCanceled, setExcludeCanceled] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState('all');
   const [loading, setLoading] = useState(false);
   const [ledger, setLedger] = useState<LedgerData | null>(null);
   const [payModal, setPayModal] = useState<{ row: MonthRow } | null>(null);
@@ -147,6 +148,20 @@ export default function AgentMonthlyLedger() {
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const LEDGER_DOC_TYPES = [
+    { key: 'all', label: 'جميع أنواع التأمين (الكل)' },
+    { key: 'insurance_documents', label: 'تأمين سيارات' },
+    { key: 'international_insurance_documents', label: 'تأمين سيارات دولي' },
+    { key: 'travel_insurance_documents', label: 'تأمين المسافرين' },
+    { key: 'resident_insurance_documents', label: 'تأمين الوافدين' },
+    { key: 'marine_structure_insurance_documents', label: 'تأمين الهياكل البحرية' },
+    { key: 'professional_liability_insurance_documents', label: 'تأمين المسؤولية المهنية' },
+    { key: 'personal_accident_insurance_documents', label: 'تأمين الحوادث الشخصية' },
+    { key: 'school_student_insurance_documents', label: 'تأمين طلاب المدارس' },
+    { key: 'cargo_insurance_documents', label: 'تأمين شحن البضائع' },
+    { key: 'cash_in_transit_insurance_documents', label: 'تأمين نقل النقدية' },
+  ];
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (agentDropdownRef.current && !agentDropdownRef.current.contains(event.target as Node)) {
@@ -182,14 +197,15 @@ export default function AgentMonthlyLedger() {
     loadAgents();
   }, []);
 
-  const fetchLedger = async (agentId: number, exclude?: boolean) => {
+  const fetchLedger = async (agentId: number, exclude?: boolean, docType?: string) => {
     const ex = exclude !== undefined ? exclude : excludeCanceled;
+    const dt = docType !== undefined ? docType : selectedDocType;
     setLoading(true);
     setLedger(null);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${agentId}&exclude_canceled=${ex}`,
+        `${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${agentId}&exclude_canceled=${ex}&document_type=${dt}`,
         { headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
       );
       if (!res.ok) throw new Error();
@@ -202,11 +218,20 @@ export default function AgentMonthlyLedger() {
     }
   };
 
+  const handleDocTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedDocType(val);
+    if (selectedAgentId) {
+      fetchLedger(selectedAgentId, undefined, val);
+    }
+  };
+
   const handleExcludeToggle = () => {
     const next = !excludeCanceled;
     setExcludeCanceled(next);
     if (selectedAgentId) fetchLedger(selectedAgentId, next);
   };
+
 
   const openPay = (row: MonthRow) => {
     setPayModal({ row });
@@ -723,8 +748,40 @@ export default function AgentMonthlyLedger() {
           )}
         </div>
 
+
+        {/* Filter by Insurance Type */}
+        <div style={{ flex: '1', minWidth: '220px', maxWidth: '320px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 800, fontSize: '13px', color: 'var(--text)', fontFamily: "'Cairo',sans-serif" }}>
+            <i className="fa-solid fa-layer-group" style={{ marginLeft: '6px', color: '#0284c7' }} />
+            نوع الوثيقة / التأمين:
+          </label>
+          <select
+            value={selectedDocType}
+            onChange={handleDocTypeChange}
+            style={{
+              width: '100%',
+              padding: '11px 16px',
+              borderRadius: '12px',
+              border: '2px solid var(--border)',
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              fontFamily: "'Cairo',sans-serif",
+              fontWeight: 700,
+              fontSize: '13px',
+              outline: 'none',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+            }}
+          >
+            {LEDGER_DOC_TYPES.map((t) => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Toggle Switch Exclude Canceled */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
           <label style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", cursor: 'pointer' }}>
             استبعاد الوثائق الملغاة من الإحصائيات:
           </label>
