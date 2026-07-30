@@ -48,6 +48,10 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState<InsuranceDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Cancel document state
+  const [showCancelModal, setShowCancelModal] = useState<InsuranceDocument | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [canceling, setCanceling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [syncing, setSyncing] = useState(false);
   const perPage = 15;
@@ -195,6 +199,44 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
       showToast(`حدث خطأ أثناء حذف الوثيقة: ${error.message || ''}`, 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // ─── Cancel Document Handler ───────────────────────────────────────────────
+  const handleCancel = async () => {
+    if (!showCancelModal) return;
+    if (!cancelReason.trim()) {
+      showToast('يرجى إدخال سبب الإلغاء', 'error');
+      return;
+    }
+    setCanceling(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+      if (userId) headers['X-User-Id'] = userId.toString();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/insurance-documents/${showCancelModal.id}/cancel`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ cancel_reason: cancelReason.trim(), user_id: userId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'حدث خطأ أثناء إلغاء الوثيقة');
+      }
+
+      showToast('تم إلغاء الوثيقة بنجاح — لن تظهر في الحسابات', 'success');
+      setShowCancelModal(null);
+      setCancelReason('');
+      fetchDocuments();
+    } catch (error: any) {
+      showToast(`خطأ: ${error.message || ''}`, 'error');
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -675,6 +717,17 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                             )}
                             {isAdmin && (
                               <button
+                                onClick={() => { setShowCancelModal(doc); setCancelReason(''); }}
+                                className="action-btn cancel-btn"
+                                style={{ background: '#e74c3c', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}
+                                aria-label="إلغاء الوثيقة"
+                                title="إلغاء الوثيقة (تستثنى من الحسابات)"
+                              >
+                                <i className="fa-solid fa-ban"></i> إلغاء
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
                                 onClick={() => setShowDeleteModal(doc)}
                                 className="action-btn delete"
                                 aria-label="حذف"
@@ -956,7 +1009,57 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         </div>
       )}
 
+      {showCancelModal && (
+        <div className="modal-overlay" onClick={() => !canceling && setShowCancelModal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ background: '#1e1e38', border: '1px solid rgba(231,76,60,0.4)', borderRadius: '16px', padding: '24px', maxWidth: '480px', width: '90%', direction: 'rtl', color: '#fff' }}>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(231,76,60,0.2)', color: '#e74c3c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 12px' }}>
+                🚫
+              </div>
+              <h3 style={{ margin: 0, fontSize: '20px', color: '#e74c3c' }}>إلغاء الوثيقة</h3>
+              <p style={{ margin: '8px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                الوثيقة رقم: <strong style={{ color: '#fff' }}>{showCancelModal.insurance_number}</strong>
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px', fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.5' }}>
+              💡 <strong>تنويه هام:</strong> سيتم إلغاء هذه الوثيقة واستبعادها تماماً من كشف حساب الوكيل والتقارير المالية، لكن يمكن استعراضها دائماً في قسم "الوثائق الملغية".
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
+                سبب الإلغاء <span style={{ color: '#e74c3c' }}>*</span>
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="اكتب سبب إلغاء الوثيقة هنا (مثال: بناءً على طلب المؤمن / استبدال بوليسة)..."
+                rows={4}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCancelModal(null)}
+                disabled={canceling}
+                style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '14px' }}
+              >
+                تراجع
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={canceling}
+                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #e74c3c, #c0392b)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
+              >
+                {canceling ? 'جاري الإلغاء...' : 'تأكيد الإلغاء'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
+
 

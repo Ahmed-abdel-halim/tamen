@@ -41,6 +41,7 @@ import ColorsList from './components/ColorsList';
 import VehicleTypesList from './components/VehicleTypesList';
 import LoyaltySettings from './components/LoyaltySettings';
 import InsuranceDocumentsList from './components/InsuranceDocumentsList';
+import CanceledDocumentsList from './components/CanceledDocumentsList';
 import CreateInsuranceDocument from './components/CreateInsuranceDocument';
 import EditInsuranceDocument from './components/EditInsuranceDocument';
 import ViewInsuranceDocument from './components/ViewInsuranceDocument';
@@ -199,6 +200,7 @@ function hasAccessToRoute(
     'تأمين شحن البضائع': ['/cargo-insurance'],
     'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
     'إدارة الوثائق القديمة': ['/old-documents'],
+    'الوثائق الملغية': ['/canceled-documents'],
 
     // تفصيل صلاحيات الفروع والوكلاء
     'قائمة الفروع والوكلاء': ['/branches-agents'],
@@ -398,6 +400,7 @@ const menuSections: SidebarSection[] = [
           { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
           { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
           { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' },
+          { label: 'الوثائق الملغية', icon: 'fa-solid fa-ban', to: '/canceled-documents' },
         ]
       },
       { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
@@ -631,6 +634,7 @@ const createMenuSections = (
     'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests', badge: pendingDocsCount },
     'إدارة الوثائق القديمة': { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' },
+    'الوثائق الملغية': { label: 'الوثائق الملغية', icon: 'fa-solid fa-ban', to: '/canceled-documents' },
     'إدارة الفروع والوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
       { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
@@ -1623,6 +1627,7 @@ export default function App() {
                   <Route path="/public-insurance-requests" element={isAdmin ? <PublicInsuranceRequestsList /> : <Navigate to="/dashboard" />} />
                   {/* إدارة وثائق تأمين السيارات */}
                   <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList /></AuthorizedRoute>} />
+                  <Route path="/canceled-documents" element={<AuthorizedRoute requiredPath="/canceled-documents"><CanceledDocumentsList /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/:id" element={<AuthorizedRoute requiredPath="/insurance-documents"><ViewInsuranceDocument /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/insurance-documents"><EditInsuranceDocument /></AuthorizedRoute>} />

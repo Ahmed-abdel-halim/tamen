@@ -39,6 +39,8 @@ interface LedgerSummary {
   total_company_share: number;
   total_paid: number;
   total_remaining: number;
+  total_canceled_count?: number;
+  total_canceled_value?: number;
 }
 
 interface LedgerData {
