@@ -253,10 +253,12 @@ export default function MonthlyAccountClosure() {
         
         // معالجة خاصة لتأمين السيارات الدولي
         // قد يكون في authorized_documents بأسماء مختلفة
-        const internationalNames = ['تأمين السيارات الدولي', 'تأمين سيارات دولي'];
+        const internationalNames = ['تأمين السيارات الدولي', 'تأمين سيارات دولي', 'تأمين دولي'];
         if (internationalNames.includes(insuranceType)) {
           return doc.insurance_type === 'تأمين السيارات الدولي' || 
-                 doc.category === 'تأمين السيارات الدولي';
+                 doc.category === 'تأمين السيارات الدولي' ||
+                 doc.insurance_type === 'تأمين سيارات دولي' ||
+                 doc.category === 'تأمين سيارات دولي';
         }
         
         return false;
