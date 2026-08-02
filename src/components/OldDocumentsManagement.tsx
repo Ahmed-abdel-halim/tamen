@@ -2,6 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
+import CustomDateInput from './CustomDateInput';
+
+const ARABIC_MONTHS = [
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+];
+
+function getArabicMonthLabel(dateStr: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  const month = parseInt(parts[1], 10);
+  const year = parts[0];
+  if (month < 1 || month > 12) return '';
+  return `${ARABIC_MONTHS[month - 1]} ${year}`;
+}
 
 type Agent = {
   id: number;
@@ -225,10 +241,19 @@ export default function OldDocumentsManagement() {
   const [loadingOldDocs, setLoadingOldDocs] = useState(false);
   const [tableSearch, setTableSearch] = useState('');
   const [tableFilterType, setTableFilterType] = useState('all');
+  const [tableFilterMonth, setTableFilterMonth] = useState('');
+  const [tableFilterYear, setTableFilterYear] = useState(new Date().getFullYear().toString());
 
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [totalDocs, setTotalDocs] = useState(0);
+
+  // Edit date modal state
+  const [editDateDocId, setEditDateDocId] = useState<number | null>(null);
+  const [editDateDocType, setEditDateDocType] = useState('');
+  const [editDateNewStart, setEditDateNewStart] = useState('');
+  const [editDateNewEnd, setEditDateNewEnd] = useState('');
+  const [editDateSubmitting, setEditDateSubmitting] = useState(false);
 
   const fetchOldDocs = async (page = 1) => {
     setLoadingOldDocs(true);
@@ -243,6 +268,12 @@ export default function OldDocumentsManagement() {
       }
       if (tableSearch) {
         url += `&search=${encodeURIComponent(tableSearch)}`;
+      }
+      if (tableFilterMonth) {
+        url += `&month=${tableFilterMonth}`;
+      }
+      if (tableFilterYear) {
+        url += `&year=${tableFilterYear}`;
       }
 
       const res = await fetch(url, {
@@ -262,6 +293,40 @@ export default function OldDocumentsManagement() {
       console.error('Error fetching old docs list:', err);
     } finally {
       setLoadingOldDocs(false);
+    }
+  };
+
+  const handleEditDate = async () => {
+    if (!editDateDocId || !editDateNewStart) return;
+    setEditDateSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/old-documents/${editDateDocId}/update-date`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          document_type: editDateDocType,
+          start_date: editDateNewStart,
+          issue_date: editDateNewStart,
+          end_date: editDateNewEnd || null,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('تم تعديل تاريخ الوثيقة بنجاح ✅', 'success');
+        setEditDateDocId(null);
+        fetchOldDocs(currentPage);
+      } else {
+        showToast(data.message || 'فشل في تعديل التاريخ', 'error');
+      }
+    } catch {
+      showToast('حدث خطأ أثناء تعديل التاريخ', 'error');
+    } finally {
+      setEditDateSubmitting(false);
     }
   };
 
@@ -1580,14 +1645,12 @@ export default function OldDocumentsManagement() {
                 />
               </div>
 
-              {/* 3. بداية التأمين (وتلقائياً يحسب التاريخ بعد سنة) */}
+              {/* 3. بداية التأمين */}
               <div className="form-group">
-                <label>3. بداية التأمين *</label>
-                <input
-                  type="date"
+                <label style={{ fontWeight: '700', color: '#1e293b' }}>3. بداية التأمين *</label>
+                <CustomDateInput
                   value={startDate}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     setStartDate(val);
                     setIssueDate(val);
                     if (val) {
@@ -1601,19 +1664,52 @@ export default function OldDocumentsManagement() {
                       }
                     }
                   }}
-                  required
                 />
+                {startDate && (
+                  <div style={{
+                    marginTop: '6px',
+                    background: 'linear-gradient(135deg, #014cb1, #0369a1)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(1,76,177,0.3)',
+                  }}>
+                    <i className="fa-solid fa-calendar-check"></i>
+                    الشهر: <span style={{ fontSize: '15px', textDecoration: 'underline' }}>{getArabicMonthLabel(startDate)}</span>
+                  </div>
+                )}
               </div>
 
               {/* 4. نهاية التأمين */}
               <div className="form-group">
-                <label>4. نهاية التأمين (تلقائياً بعد سنة) *</label>
-                <input
-                  type="date"
+                <label style={{ fontWeight: '700', color: '#1e293b' }}>4. نهاية التأمين (تلقائياً بعد سنة) *</label>
+                <CustomDateInput
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  required
+                  onChange={(val) => setEndDate(val)}
                 />
+                {endDate && (
+                  <div style={{
+                    marginTop: '6px',
+                    background: 'linear-gradient(135deg, #059669, #047857)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(5,150,105,0.3)',
+                  }}>
+                    <i className="fa-solid fa-calendar-check"></i>
+                    الشهر: <span style={{ fontSize: '15px', textDecoration: 'underline' }}>{getArabicMonthLabel(endDate)}</span>
+                  </div>
+                )}
               </div>
 
               {/* 5. الغرض من الترخيص */}
@@ -2022,74 +2118,90 @@ export default function OldDocumentsManagement() {
 
           {/* قسم جدول الوثائق القديمة المضافة */}
           <div style={{ marginTop: '40px', paddingTop: '25px', borderTop: '2px dashed #cbd5e1' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <i className="fa-solid fa-list-check" style={{ color: '#014cb1' }}></i>
-                  جدول الوثائق القديمة المضافة ({oldDocsList.length})
+                  جدول الوثائق القديمة المضافة
+                  <span style={{ background: '#014cb1', color: '#fff', borderRadius: '20px', padding: '2px 12px', fontSize: '14px' }}>{totalDocs} وثيقة</span>
                 </h3>
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-                  سجل استعراض ومراجعة سريعة للوثائق القديمة التي تم إدخالها
+                  سجل استعراض ومراجعة سريعة للوثائق القديمة - استخدم فلتر الشهر لإيجاد الوثائق
                 </p>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* شريط الفلترة المحسّن */}
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '15px 20px', marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1', display: 'block', marginBottom: '4px' }}>
+                  <i className="fa-solid fa-calendar-days" style={{ marginLeft: '4px' }}></i> فلتر الشهر
+                </label>
+                <select
+                  value={tableFilterMonth}
+                  onChange={(e) => setTableFilterMonth(e.target.value)}
+                  style={{ padding: '8px 12px', border: '2px solid #0284c7', borderRadius: '8px', fontSize: '13px', fontWeight: '700', background: '#fff', color: '#0369a1' }}
+                >
+                  <option value="">كل الأشهر</option>
+                  {ARABIC_MONTHS.map((m, i) => (
+                    <option key={i + 1} value={String(i + 1).padStart(2, '0')}>{m} ({i + 1})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1', display: 'block', marginBottom: '4px' }}>
+                  <i className="fa-solid fa-calendar" style={{ marginLeft: '4px' }}></i> السنة
+                </label>
+                <select
+                  value={tableFilterYear}
+                  onChange={(e) => setTableFilterYear(e.target.value)}
+                  style={{ padding: '8px 12px', border: '2px solid #0284c7', borderRadius: '8px', fontSize: '13px', fontWeight: '700', background: '#fff', color: '#0369a1' }}
+                >
+                  {[2022,2023,2024,2025,2026,2027].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1', display: 'block', marginBottom: '4px' }}>
+                  <i className="fa-solid fa-magnifying-glass" style={{ marginLeft: '4px' }}></i> بحث
+                </label>
                 <div style={{ position: 'relative' }}>
                   <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}></i>
                   <input
                     type="text"
-                    placeholder="بحث برقم الوثيقة أو اسم المؤمن له..."
+                    placeholder="رقم الوثيقة أو اسم المؤمن له..."
                     value={tableSearch}
                     onChange={(e) => setTableSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && fetchOldDocs()}
-                    style={{
-                      padding: '8px 35px 8px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      width: '250px',
-                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && fetchOldDocs(1)}
+                    style={{ padding: '8px 35px 8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', width: '100%' }}
                   />
                 </div>
+              </div>
 
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1', display: 'block', marginBottom: '4px' }}>نوع التأمين</label>
                 <select
                   value={tableFilterType}
                   onChange={(e) => setTableFilterType(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    background: '#fff',
-                  }}
+                  style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', background: '#fff' }}
                 >
-                  <option value="all">جميع أنواع التأمين</option>
+                  <option value="all">جميع الأنواع</option>
                   {DOCUMENT_TYPES.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
-
-                <button
-                  type="button"
-                  onClick={() => fetchOldDocs(1)}
-                  className="btn-refresh"
-                  style={{
-                    padding: '8px 15px',
-                    background: '#014cb1',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <i className={`fa-solid fa-rotate-right ${loadingOldDocs ? 'fa-spin' : ''}`}></i> تحديث
-                </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => fetchOldDocs(1)}
+                style={{ padding: '9px 20px', background: '#014cb1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+              >
+                <i className={`fa-solid fa-rotate-right ${loadingOldDocs ? 'fa-spin' : ''}`}></i> بحث وتحديث
+              </button>
             </div>
 
             <div className="table-responsive" style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
@@ -2104,7 +2216,7 @@ export default function OldDocumentsManagement() {
                     <th style={{ padding: '12px 15px' }}>تاريخ البدء</th>
                     <th style={{ padding: '12px 15px' }}>تاريخ الانتهاء</th>
                     <th style={{ padding: '12px 15px' }}>الإجمالي</th>
-                    <th style={{ padding: '12px 15px' }}>الحالة</th>
+                    <th style={{ padding: '12px 15px' }}>تعديل التاريخ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2132,15 +2244,55 @@ export default function OldDocumentsManagement() {
                           </span>
                         </td>
                         <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.agent_name}</td>
-                        <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.start_date}</td>
-                        <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.end_date}</td>
+                        <td style={{ padding: '12px 15px' }}>
+                          <span style={{ fontWeight: '700', color: doc.start_date ? '#1e293b' : '#ef4444' }}>
+                            {doc.start_date ? (() => {
+                              const parts = doc.start_date.split('-');
+                              if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                              return doc.start_date;
+                            })() : '—'}
+                          </span>
+                          {doc.start_date && (
+                            <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: '700', marginTop: '2px' }}>
+                              {getArabicMonthLabel(doc.start_date)}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 15px', color: '#475569' }}>{doc.end_date ? (() => {
+                          const parts = doc.end_date.split('-');
+                          if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                          return doc.end_date;
+                        })() : '—'}</td>
                         <td style={{ padding: '12px 15px', fontWeight: '700', color: '#10b981' }}>
                           {doc.total.toLocaleString('ar-LY', { minimumFractionDigits: 2 })} د.ل
                         </td>
-                        <td style={{ padding: '12px 15px' }}>
-                          <span style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }}>
-                            <i className="fa-solid fa-circle-check" style={{ marginLeft: '4px' }}></i> وثيقة قديمة
-                          </span>
+                        <td style={{ padding: '10px 15px' }}>
+                          <button
+                            type="button"
+                            title="تعديل تاريخ الوثيقة"
+                            onClick={() => {
+                              setEditDateDocId(doc.id);
+                              setEditDateDocType(doc.document_type);
+                              setEditDateNewStart(doc.start_date || '');
+                              setEditDateNewEnd(doc.end_date || '');
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '7px',
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <i className="fa-solid fa-pen-to-square"></i> تعديل التاريخ
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -2148,6 +2300,101 @@ export default function OldDocumentsManagement() {
                 </tbody>
               </table>
             </div>
+
+            {/* Modal تعديل التاريخ */}
+            {editDateDocId && (
+              <div style={{
+                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+                zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <div style={{
+                  background: '#fff', borderRadius: '16px', padding: '30px',
+                  width: '480px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ background: '#fef3c7', borderRadius: '10px', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-calendar-pen" style={{ color: '#d97706', fontSize: '20px' }}></i>
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontWeight: '800', fontSize: '17px', color: '#1e293b' }}>تعديل تاريخ الوثيقة</h3>
+                      <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>تصحيح الوثائق التي دخلت في شهر خطأ</p>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontWeight: '700', fontSize: '14px', color: '#374151', display: 'block', marginBottom: '8px' }}>
+                      <i className="fa-solid fa-calendar-day" style={{ marginLeft: '6px', color: '#014cb1' }}></i>
+                      تاريخ بداية التأمين الصحيح
+                    </label>
+                    <CustomDateInput
+                      value={editDateNewStart}
+                      onChange={(val) => {
+                        setEditDateNewStart(val);
+                        if (val) {
+                          const d = new Date(val);
+                          if (!isNaN(d.getTime())) {
+                            d.setFullYear(d.getFullYear() + 1);
+                            setEditDateNewEnd(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+                          }
+                        }
+                      }}
+                    />
+                    {editDateNewStart && (
+                      <div style={{ marginTop: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-circle-check" style={{ color: '#2563eb' }}></i>
+                        <span style={{ fontWeight: '800', color: '#1d4ed8', fontSize: '15px' }}>الشهر: {getArabicMonthLabel(editDateNewStart)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{ fontWeight: '700', fontSize: '14px', color: '#374151', display: 'block', marginBottom: '8px' }}>
+                      <i className="fa-solid fa-calendar-xmark" style={{ marginLeft: '6px', color: '#059669' }}></i>
+                      تاريخ نهاية التأمين
+                    </label>
+                    <CustomDateInput
+                      value={editDateNewEnd}
+                      onChange={(val) => setEditDateNewEnd(val)}
+                    />
+                    {editDateNewEnd && (
+                      <div style={{ marginTop: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-circle-check" style={{ color: '#059669' }}></i>
+                        <span style={{ fontWeight: '800', color: '#065f46', fontSize: '15px' }}>الشهر: {getArabicMonthLabel(editDateNewEnd)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-start' }}>
+                    <button
+                      type="button"
+                      onClick={handleEditDate}
+                      disabled={editDateSubmitting || !editDateNewStart}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#fff', border: 'none', borderRadius: '8px',
+                        padding: '10px 24px', fontWeight: '800', fontSize: '14px',
+                        cursor: editDateSubmitting ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '8px'
+                      }}
+                    >
+                      <i className="fa-solid fa-floppy-disk"></i>
+                      {editDateSubmitting ? 'جاري الحفظ...' : 'حفظ التعديل'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditDateDocId(null)}
+                      style={{
+                        background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1',
+                        borderRadius: '8px', padding: '10px 20px', fontWeight: '700',
+                        fontSize: '14px', cursor: 'pointer'
+                      }}
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* عناصر الترقيم والصفحات Pagination Controls */}
             {lastPage > 1 && (

@@ -3,6 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import CustomDateInput from './CustomDateInput';
+
+const ARABIC_MONTHS_LDG = [
+  'يناير','فبراير','مارس','أبريل','مايو','يونيو',
+  'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'
+];
+function ldgArabicMonth(dateStr: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  const m = parseInt(parts[1], 10);
+  if (m < 1 || m > 12) return '';
+  return `${ARABIC_MONTHS_LDG[m-1]} ${parts[0]}`;
+}
 
 interface MonthRow {
   closure_id: number | null;
@@ -2501,12 +2515,9 @@ export default function AgentMonthlyLedger() {
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, marginBottom: '6px', color: '#0284c7' }}>
                     بداية التأمين (تاريخ الإصدار) *
                   </label>
-                  <input
-                    type="date"
-                    required
+                  <CustomDateInput
                     value={quickStartDate}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onChange={(val) => {
                       setQuickStartDate(val);
                       setQuickIssueDate(val);
                       if (val) {
@@ -2521,39 +2532,53 @@ export default function AgentMonthlyLedger() {
                       }
                     }}
                     style={{
-                      width: '100%',
-                      padding: '10px 14px',
                       borderRadius: '10px',
                       border: '2px solid #0284c7',
-                      background: 'var(--bg)',
-                      color: 'var(--text)',
-                      fontSize: '13px',
-                      fontFamily: "'Cairo',sans-serif",
                       fontWeight: 800,
                     }}
                   />
+                  {quickStartDate && (
+                    <div style={{
+                      marginTop: '6px',
+                      background: quickStartDate.substring(0,7) === `${monthDocsModal?.row.year}-${String(monthDocsModal?.row.month).padStart(2,'0')}`
+                        ? 'linear-gradient(135deg,#059669,#047857)'
+                        : 'linear-gradient(135deg,#dc2626,#b91c1c)',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      padding: '5px 12px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}>
+                      <i className="fa-solid fa-calendar-check"></i>
+                      الشهر: {ldgArabicMonth(quickStartDate)}
+                      {quickStartDate.substring(0,7) !== `${monthDocsModal?.row.year}-${String(monthDocsModal?.row.month).padStart(2,'0')}` && (
+                        <span> ⚠️ تحذير: ليس شهر {monthDocsModal?.row.month_label}!</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, marginBottom: '6px', color: 'var(--text)' }}>
                     نهاية التأمين *
                   </label>
-                  <input
-                    type="date"
-                    required
+                  <CustomDateInput
                     value={quickEndDate}
-                    onChange={(e) => setQuickEndDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg)',
-                      color: 'var(--text)',
-                      fontSize: '13px',
-                      fontFamily: "'Cairo',sans-serif",
-                    }}
+                    onChange={(val) => setQuickEndDate(val)}
+                    style={{ borderRadius: '10px' }}
                   />
+                  {quickEndDate && (
+                    <div style={{
+                      marginTop: '6px', background: 'linear-gradient(135deg,#0369a1,#075985)',
+                      color: '#fff', borderRadius: '8px', padding: '5px 12px',
+                      fontSize: '12px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      <i className="fa-solid fa-calendar"></i> شهر الانتهاء: {ldgArabicMonth(quickEndDate)}
+                    </div>
+                  )}
                 </div>
 
                 {/* حقول المركبات */}
