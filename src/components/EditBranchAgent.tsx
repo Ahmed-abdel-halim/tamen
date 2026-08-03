@@ -285,6 +285,26 @@ export default function EditBranchAgent() {
         throw new Error(errorMessage);
       }
       const data = await res.json();
+      let parsedPct: any = data.document_percentages;
+      if (typeof parsedPct === 'string') {
+        try { parsedPct = JSON.parse(parsedPct); } catch (e) { parsedPct = {}; }
+      }
+      if (!parsedPct || typeof parsedPct !== 'object' || Array.isArray(parsedPct)) {
+        parsedPct = {};
+      }
+      if (parsedPct.default === undefined && parsedPct.monthly_overrides === undefined && parsedPct.period_overrides === undefined) {
+        parsedPct = {
+          default: parsedPct,
+          monthly_overrides: {},
+          period_overrides: []
+        };
+      } else {
+        parsedPct = {
+          default: parsedPct.default || {},
+          monthly_overrides: parsedPct.monthly_overrides || {},
+          period_overrides: Array.isArray(parsedPct.period_overrides) ? parsedPct.period_overrides : []
+        };
+      }
 
       setFormData({
         type: data.type,
@@ -314,7 +334,7 @@ export default function EditBranchAgent() {
           ? data.authorized_documents 
           : (data.status === 'قيد الانتظار' ? (data.requested_documents || []) : []),
         requested_documents: data.requested_documents || [],
-        document_percentages: data.document_percentages || {},
+        document_percentages: parsedPct,
         eidc_username: data.user?.eidc_username || '',
         eidc_password: data.user?.eidc_password || '',
         lifo_username: data.user?.lifo_username || '',
@@ -354,52 +374,44 @@ export default function EditBranchAgent() {
       // إزالة الوثيقة
       setFormData(prev => {
         const pct: any = prev.document_percentages || {};
-        let updatedPct: any = {};
-        if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
-          const defaultFiltered = Object.fromEntries(
-            Object.entries(pct.default || {}).filter(([key]) => key !== documentType && (documentType !== 'تأمين سيارات إجباري' || key !== 'تأمين سيارات'))
-          );
-          updatedPct = {
-            default: defaultFiltered,
-            monthly_overrides: pct.monthly_overrides || {}
-          };
-        } else {
-          const flatFiltered = Object.fromEntries(
-            Object.entries(pct).filter(([key]) => key !== documentType && (documentType !== 'تأمين سيارات إجباري' || key !== 'تأمين سيارات'))
-          );
-          updatedPct = flatFiltered;
-        }
+        const defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+        const monthlyPct = pct.monthly_overrides || {};
+        const periodPct = Array.isArray(pct.period_overrides) ? pct.period_overrides : [];
+
+        const defaultFiltered = Object.fromEntries(
+          Object.entries(defaultPct).filter(([key]) => key !== documentType && (documentType !== 'تأمين سيارات إجباري' || key !== 'تأمين سيارات'))
+        );
+
         return {
           ...prev,
           authorized_documents: prev.authorized_documents.filter(d => d !== documentType),
-          document_percentages: updatedPct
+          document_percentages: {
+            default: defaultFiltered,
+            monthly_overrides: monthlyPct,
+            period_overrides: periodPct
+          }
         } as any;
       });
     } else {
       // إضافة الوثيقة
       setFormData(prev => {
         const pct: any = prev.document_percentages || {};
-        let updatedPct: any = {};
-        if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
-          updatedPct = {
-            default: {
-              ...(pct.default || {}),
-              [documentType]: 0,
-              ...(documentType === 'تأمين سيارات إجباري' ? { 'تأمين سيارات': (pct.default?.['تأمين سيارات'] || 0) } : {})
-            },
-            monthly_overrides: pct.monthly_overrides || {}
-          };
-        } else {
-          updatedPct = {
-            ...pct,
-            [documentType]: 0,
-            ...(documentType === 'تأمين سيارات إجباري' ? { 'تأمين سيارات': (pct['تأمين سيارات'] || 0) } : {})
-          };
-        }
+        const defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+        const monthlyPct = pct.monthly_overrides || {};
+        const periodPct = Array.isArray(pct.period_overrides) ? pct.period_overrides : [];
+
         return {
           ...prev,
           authorized_documents: [...prev.authorized_documents, documentType],
-          document_percentages: updatedPct
+          document_percentages: {
+            default: {
+              ...defaultPct,
+              [documentType]: 0,
+              ...(documentType === 'تأمين سيارات إجباري' ? { 'تأمين سيارات': (defaultPct['تأمين سيارات'] || 0) } : {})
+            },
+            monthly_overrides: monthlyPct,
+            period_overrides: periodPct
+          }
         } as any;
       });
     }
@@ -408,28 +420,20 @@ export default function EditBranchAgent() {
   const handlePercentageChange = (documentType: string, percentage: number) => {
     setFormData(prev => {
       const currentPct: any = prev.document_percentages || {};
-      let updatedPct: any = {};
-      if (currentPct.default !== undefined || currentPct.monthly_overrides !== undefined) {
-        updatedPct = {
-          default: {
-            ...(currentPct.default || {}),
-            [documentType]: percentage
-          },
-          monthly_overrides: currentPct.monthly_overrides || {}
-        };
-      } else {
-        // If old flat format, convert to nested format
-        updatedPct = {
-          default: {
-            ...currentPct,
-            [documentType]: percentage
-          },
-          monthly_overrides: {}
-        };
-      }
+      const defaultPct = currentPct.default || (currentPct.monthly_overrides || currentPct.period_overrides ? {} : currentPct);
+      const monthlyPct = currentPct.monthly_overrides || {};
+      const periodPct = Array.isArray(currentPct.period_overrides) ? currentPct.period_overrides : [];
+
       return {
         ...prev,
-        document_percentages: updatedPct
+        document_percentages: {
+          default: {
+            ...defaultPct,
+            [documentType]: percentage
+          },
+          monthly_overrides: monthlyPct,
+          period_overrides: periodPct
+        }
       } as any;
     });
   };
@@ -451,16 +455,9 @@ export default function EditBranchAgent() {
     
     setFormData(prev => {
       const pct: any = prev.document_percentages || {};
-      let defaultPct = {};
-      let monthlyPct: Record<string, Record<string, number>> = {};
-      
-      if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
-        defaultPct = pct.default || {};
-        monthlyPct = JSON.parse(JSON.stringify(pct.monthly_overrides || {}));
-      } else {
-        defaultPct = pct;
-        monthlyPct = {};
-      }
+      const defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+      const monthlyPct = JSON.parse(JSON.stringify(pct.monthly_overrides || {}));
+      const periodPct = Array.isArray(pct.period_overrides) ? pct.period_overrides : [];
       
       if (!monthlyPct[monthKey]) {
         monthlyPct[monthKey] = {};
@@ -472,27 +469,23 @@ export default function EditBranchAgent() {
         ...prev,
         document_percentages: {
           default: defaultPct,
-          monthly_overrides: monthlyPct
+          monthly_overrides: monthlyPct,
+          period_overrides: periodPct
         }
       } as any;
     });
     
-    showToast(`تمت إضافة نسبة استثنائية لـ ${overrideDocType} في شهر ${overrideMonth}/${overrideYear}`, 'success');
+    setOverrideDocType('');
+    setOverridePercentage(0);
+    showToast(`تمت إضافة نسبة استثنائية لـ ${overrideDocType} في شهر ${overrideMonth}/${overrideYear} (يُرجى الضغط على زر "تحديث بيانات الوكيل" بالأسفل لحفظ التغييرات)`, 'success');
   };
 
   const handleRemoveMonthlyOverride = (monthKey: string, docType: string) => {
     setFormData(prev => {
       const pct: any = prev.document_percentages || {};
-      let defaultPct = {};
-      let monthlyPct: Record<string, Record<string, number>> = {};
-      
-      if (pct.default !== undefined || pct.monthly_overrides !== undefined) {
-        defaultPct = pct.default || {};
-        monthlyPct = JSON.parse(JSON.stringify(pct.monthly_overrides || {}));
-      } else {
-        defaultPct = pct;
-        monthlyPct = {};
-      }
+      const defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+      const monthlyPct = JSON.parse(JSON.stringify(pct.monthly_overrides || {}));
+      const periodPct = Array.isArray(pct.period_overrides) ? pct.period_overrides : [];
       
       if (monthlyPct[monthKey]) {
         delete monthlyPct[monthKey][docType];
@@ -505,7 +498,8 @@ export default function EditBranchAgent() {
         ...prev,
         document_percentages: {
           default: defaultPct,
-          monthly_overrides: monthlyPct
+          monthly_overrides: monthlyPct,
+          period_overrides: periodPct
         }
       } as any;
     });
@@ -544,19 +538,9 @@ export default function EditBranchAgent() {
 
     setFormData(prev => {
       const pct: any = prev.document_percentages || {};
-      let defaultPct = {};
-      let monthlyPct = {};
-      let periodPct: Array<{ id: string; start_date: string; end_date: string; doc_type: string; percentage: number }> = [];
-
-      if (pct.default !== undefined || pct.monthly_overrides !== undefined || pct.period_overrides !== undefined) {
-        defaultPct = pct.default || {};
-        monthlyPct = pct.monthly_overrides || {};
-        periodPct = [...(pct.period_overrides || [])];
-      } else {
-        defaultPct = pct;
-        monthlyPct = {};
-        periodPct = [];
-      }
+      const defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+      const monthlyPct = pct.monthly_overrides || {};
+      const periodPct = Array.isArray(pct.period_overrides) ? [...pct.period_overrides] : [];
 
       periodPct.push({
         id: Date.now().toString(),
@@ -576,15 +560,20 @@ export default function EditBranchAgent() {
       } as any;
     });
 
-    showToast(`تمت إضافة نسبة استثنائية للفترة (${periodStartDate} إلى ${periodEndDate})`, 'success');
+    setPeriodStartDate('');
+    setPeriodEndDate('');
+    setPeriodDocType('');
+    setPeriodPercentage(0);
+
+    showToast(`تمت إضافة نسبة استثنائية للفترة (${periodStartDate} إلى ${periodEndDate}) (يُرجى الضغط على زر "تحديث بيانات الوكيل" بالأسفل لحفظ التغييرات)`, 'success');
   };
 
   const handleRemovePeriodOverride = (id: string) => {
     setFormData(prev => {
       const pct: any = prev.document_percentages || {};
-      let defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
-      let monthlyPct = pct.monthly_overrides || {};
-      let periodPct = (pct.period_overrides || []).filter((item: any) => item.id !== id);
+      const defaultPct = pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct);
+      const monthlyPct = pct.monthly_overrides || {};
+      const periodPct = (Array.isArray(pct.period_overrides) ? pct.period_overrides : []).filter((item: any) => item.id !== id);
 
       return {
         ...prev,
