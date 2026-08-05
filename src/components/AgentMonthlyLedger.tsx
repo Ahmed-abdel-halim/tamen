@@ -2221,19 +2221,19 @@ export default function AgentMonthlyLedger() {
             className="modal-box"
             style={{
               background: '#ffffff',
-              borderRadius: '24px',
-              maxWidth: '500px',
-              width: '100%',
+              borderRadius: '20px',
+              maxWidth: '720px',
+              width: '95%',
               boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8)',
               overflow: 'hidden',
               animation: 'modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
               direction: 'rtl',
             }}
           >
-            {/* Header */}
+            {/* Compact Header */}
             <div
               style={{
-                padding: '20px 24px',
+                padding: '14px 20px',
                 background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%)',
                 color: '#ffffff',
                 display: 'flex',
@@ -2241,20 +2241,19 @@ export default function AgentMonthlyLedger() {
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div
                   style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '12px',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
                     background: 'rgba(255, 255, 255, 0.15)',
                     backdropFilter: 'blur(4px)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '18px',
+                    fontSize: '16px',
                     color: '#ffffff',
-                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.3)',
                   }}
                 >
                   <i className="fa-solid fa-money-bill-wave" />
@@ -2265,23 +2264,13 @@ export default function AgentMonthlyLedger() {
                       margin: 0,
                       fontFamily: "'Cairo', sans-serif",
                       fontWeight: 800,
-                      fontSize: '18px',
-                      lineHeight: 1.3,
+                      fontSize: '16px',
+                      lineHeight: 1.2,
                       color: '#ffffff',
                     }}
                   >
-                    تسديد دفعة مالية
+                    تسديد دفعة مالية — {payModal.row.month_label}
                   </h3>
-                  <span
-                    style={{
-                      fontSize: '13px',
-                      color: 'rgba(255, 255, 255, 0.85)',
-                      fontWeight: 600,
-                      fontFamily: "'Cairo', sans-serif",
-                    }}
-                  >
-                    {payModal.row.month_label}
-                  </span>
                 </div>
               </div>
 
@@ -2291,8 +2280,8 @@ export default function AgentMonthlyLedger() {
                 style={{
                   border: 'none',
                   background: 'rgba(255, 255, 255, 0.15)',
-                  width: '32px',
-                  height: '32px',
+                  width: '30px',
+                  height: '30px',
                   borderRadius: '50%',
                   color: '#ffffff',
                   cursor: 'pointer',
@@ -2310,310 +2299,287 @@ export default function AgentMonthlyLedger() {
             </div>
 
             {/* Content Body */}
-            <div style={{ padding: '24px' }}>
-              {/* Summary Card */}
+            <div style={{ padding: '16px 20px' }}>
+              {/* Summary 4-Column Row */}
               <div
                 style={{
                   background: '#f8fafc',
-                  borderRadius: '16px',
+                  borderRadius: '14px',
                   border: '1px solid #e2e8f0',
-                  padding: '16px',
-                  marginBottom: '20px',
+                  padding: '12px 14px',
+                  marginBottom: '16px',
                 }}
               >
-                <div
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    color: '#64748b',
-                    marginBottom: '12px',
-                    fontFamily: "'Cairo', sans-serif",
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <i className="fa-solid fa-chart-pie" style={{ color: '#3b82f6' }} /> ملخص حساب شهر {payModal.row.month_label}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                   <div
                     style={{
                       background: '#ffffff',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
                     <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, fontFamily: "'Cairo', sans-serif" }}>حصة الشهر</span>
-                    <span style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.agent_share)} <small style={{ fontSize: '11px', fontWeight: 600 }}>د.ل</small>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                      {fmt(payModal.row.agent_share)} <small style={{ fontSize: '10px' }}>د.ل</small>
                     </span>
                   </div>
 
                   <div
                     style={{
                       background: '#ffffff',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
                     <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, fontFamily: "'Cairo', sans-serif" }}>دين متأخر</span>
-                    <span style={{ fontSize: '15px', fontWeight: 800, color: payModal.row.carried_balance > 0 ? '#d97706' : '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.carried_balance)} <small style={{ fontSize: '11px', fontWeight: 600 }}>د.ل</small>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: payModal.row.carried_balance > 0 ? '#d97706' : '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                      {fmt(payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
                     </span>
                   </div>
 
                   <div
                     style={{
                       background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
                       border: '1px solid #bfdbfe',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
                     <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>الإجمالي المطلوب</span>
-                    <span style={{ fontSize: '16px', fontWeight: 900, color: '#1e3a8a', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.agent_share + payModal.row.carried_balance)} <small style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</small>
+                    <span style={{ fontSize: '14px', fontWeight: 900, color: '#1e3a8a', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                      {fmt(payModal.row.agent_share + payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
                     </span>
                   </div>
 
                   <div
                     style={{
                       background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
                       border: '1px solid #a7f3d0',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
                     <span style={{ fontSize: '11px', color: '#047857', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>مدفوع سابقاً</span>
-                    <span style={{ fontSize: '16px', fontWeight: 900, color: '#065f46', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.paid_amount)} <small style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</small>
+                    <span style={{ fontSize: '14px', fontWeight: 900, color: '#065f46', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                      {fmt(payModal.row.paid_amount)} <small style={{ fontSize: '10px' }}>د.ل</small>
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Input Field: Amount */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label
-                    style={{
-                      fontFamily: "'Cairo', sans-serif",
-                      fontWeight: 800,
-                      fontSize: '14px',
-                      color: '#0f172a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <i className="fa-solid fa-coins" style={{ color: '#2563eb' }} />
-                    المبلغ المستلم الآن
-                  </label>
+              {/* 2-Column Form Layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                {/* Right Column: Amount & Status */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label
+                      style={{
+                        fontFamily: "'Cairo', sans-serif",
+                        fontWeight: 800,
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <i className="fa-solid fa-coins" style={{ color: '#2563eb' }} />
+                      المبلغ المستلم الآن
+                    </label>
 
-                  {/* Quick Fill Button */}
-                  {(() => {
-                    const due = Math.max(0, payModal.row.agent_share + payModal.row.carried_balance - payModal.row.paid_amount);
-                    if (due > 0 && parseFloat(payAmount || '0') !== due) {
+                    {/* Quick Fill Button */}
+                    {(() => {
+                      const due = Math.max(0, payModal.row.agent_share + payModal.row.carried_balance - payModal.row.paid_amount);
+                      if (due > 0 && parseFloat(payAmount || '0') !== due) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setPayAmount(due.toFixed(2))}
+                            style={{
+                              border: 'none',
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              borderRadius: '6px',
+                              padding: '2px 8px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              fontFamily: "'Cairo', sans-serif",
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                          >
+                            <i className="fa-solid fa-bolt" style={{ marginLeft: '4px' }} />
+                            تسديد الكل ({fmt(due)})
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                    <input
+                      type="number"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px 10px 50px',
+                        borderRadius: '10px',
+                        border: '2px solid #cbd5e1',
+                        fontSize: '16px',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        background: '#ffffff',
+                        outline: 'none',
+                        fontFamily: "'Cairo', sans-serif",
+                        boxSizing: 'border-box',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#cbd5e1';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '10px',
+                        background: '#f1f5f9',
+                        color: '#475569',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        fontFamily: "'Cairo', sans-serif",
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      د.ل
+                    </div>
+                  </div>
+
+                  {/* Dynamic Remaining Balance Badge */}
+                  {payAmount !== '' && !isNaN(parseFloat(payAmount)) && (() => {
+                    const totalReq = payModal.row.agent_share + payModal.row.carried_balance;
+                    const currentInput = parseFloat(payAmount || '0');
+                    const totalAfterPay = payModal.row.paid_amount + currentInput;
+                    const rem = totalReq - totalAfterPay;
+
+                    if (rem <= 0.009) {
                       return (
-                        <button
-                          type="button"
-                          onClick={() => setPayAmount(due.toFixed(2))}
+                        <div
                           style={{
-                            border: 'none',
-                            background: '#eff6ff',
-                            color: '#2563eb',
-                            borderRadius: '8px',
-                            padding: '4px 10px',
-                            fontSize: '12px',
-                            fontWeight: 700,
+                            padding: '8px 12px',
+                            borderRadius: '10px',
                             fontFamily: "'Cairo', sans-serif",
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
+                            background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+                            border: '1px solid #86efac',
+                            color: '#15803d',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
                         >
-                          <i className="fa-solid fa-bolt" style={{ marginLeft: '4px' }} />
-                          تسديد كامل المطلوب ({fmt(due)} د.ل)
-                        </button>
+                          <i className="fa-solid fa-circle-check" style={{ fontSize: '15px', color: '#16a34a' }} />
+                          <div style={{ fontSize: '12px', fontWeight: 800 }}>تسديد كامل المطلوب (الباقي: 0.00 د.ل)</div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            fontFamily: "'Cairo', sans-serif",
+                            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                            border: '1px solid #fcd34d',
+                            color: '#92400e',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <i className="fa-solid fa-clock" style={{ fontSize: '15px', color: '#d97706' }} />
+                          <div style={{ fontSize: '12px', fontWeight: 800 }}>تسديد جزئي (الباقي: {fmt(rem)} د.ل)</div>
+                        </div>
                       );
                     }
-                    return null;
                   })()}
                 </div>
 
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type="number"
-                    value={payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
+                {/* Left Column: Notes */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontFamily: "'Cairo', sans-serif",
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      color: '#334155',
+                    }}
+                  >
+                    ملاحظات التسديد (اختياري)
+                  </label>
+                  <textarea
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                    placeholder="رقم الحوالة، المصرف، أو ملاحظات إضافية..."
                     style={{
                       width: '100%',
-                      padding: '14px 16px 14px 60px',
-                      borderRadius: '14px',
+                      flex: 1,
+                      minHeight: '85px',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
                       border: '2px solid #cbd5e1',
-                      fontSize: '18px',
-                      fontWeight: 800,
+                      fontSize: '12px',
+                      fontFamily: "'Cairo', sans-serif",
                       color: '#0f172a',
                       background: '#ffffff',
                       outline: 'none',
-                      fontFamily: "'Cairo', sans-serif",
+                      resize: 'none',
                       boxSizing: 'border-box',
                       transition: 'border-color 0.2s, box-shadow 0.2s',
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
                     }}
                     onBlur={(e) => {
                       e.target.style.borderColor = '#cbd5e1';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '12px',
-                      background: '#f1f5f9',
-                      color: '#475569',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      fontFamily: "'Cairo', sans-serif",
-                      pointerEvents: 'none',
-                    }}
-                  >
-                    د.ل
-                  </div>
                 </div>
-              </div>
-
-              {/* Dynamic Remaining Balance Badge */}
-              {payAmount !== '' && !isNaN(parseFloat(payAmount)) && (() => {
-                const totalReq = payModal.row.agent_share + payModal.row.carried_balance;
-                const currentInput = parseFloat(payAmount || '0');
-                const totalAfterPay = payModal.row.paid_amount + currentInput;
-                const rem = totalReq - totalAfterPay;
-
-                if (rem <= 0.009) {
-                  return (
-                    <div
-                      style={{
-                        padding: '12px 16px',
-                        borderRadius: '14px',
-                        marginBottom: '16px',
-                        fontFamily: "'Cairo', sans-serif",
-                        background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
-                        border: '1px solid #86efac',
-                        color: '#15803d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        boxShadow: '0 2px 8px rgba(22, 163, 74, 0.1)',
-                      }}
-                    >
-                      <i className="fa-solid fa-circle-check" style={{ fontSize: '18px', color: '#16a34a' }} />
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '13px' }}>تسديد كامل المبلغ المطلوب ✅</div>
-                        <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.9 }}>الباقي بعد التسديد: 0.00 د.ل</div>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div
-                      style={{
-                        padding: '12px 16px',
-                        borderRadius: '14px',
-                        marginBottom: '16px',
-                        fontFamily: "'Cairo', sans-serif",
-                        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                        border: '1px solid #fcd34d',
-                        color: '#92400e',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        boxShadow: '0 2px 8px rgba(217, 119, 6, 0.1)',
-                      }}
-                    >
-                      <i className="fa-solid fa-clock" style={{ fontSize: '18px', color: '#d97706' }} />
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '13px' }}>تسديد جزئي (سيتبقى مديونية على الوكيل)</div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#b45309' }}>
-                          الباقي بعد التسديد: {fmt(rem)} د.ل
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-              })()}
-
-              {/* Textarea: Notes */}
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontFamily: "'Cairo', sans-serif",
-                    fontWeight: 800,
-                    fontSize: '13px',
-                    color: '#334155',
-                  }}
-                >
-                  ملاحظات التسديد (اختياري)
-                </label>
-                <textarea
-                  value={payNotes}
-                  onChange={(e) => setPayNotes(e.target.value)}
-                  placeholder="أدخل رقم الحوالة، اسم المصرف، أو أي ملاحظات إضافية..."
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    border: '2px solid #cbd5e1',
-                    fontSize: '13px',
-                    fontFamily: "'Cairo', sans-serif",
-                    color: '#0f172a',
-                    background: '#ffffff',
-                    outline: 'none',
-                    resize: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#2563eb';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#cbd5e1';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
               </div>
 
               {/* Action Buttons */}
               <div
                 style={{
                   display: 'flex',
-                  gap: '12px',
+                  gap: '10px',
                   justifyContent: 'flex-end',
-                  paddingTop: '16px',
+                  paddingTop: '12px',
                   borderTop: '1px solid #f1f5f9',
                 }}
               >
@@ -2621,14 +2587,14 @@ export default function AgentMonthlyLedger() {
                   type="button"
                   onClick={() => setPayModal(null)}
                   style={{
-                    padding: '12px 22px',
-                    borderRadius: '14px',
+                    padding: '10px 20px',
+                    borderRadius: '10px',
                     border: '1.5px solid #cbd5e1',
                     background: '#ffffff',
                     cursor: 'pointer',
                     fontFamily: "'Cairo', sans-serif",
                     fontWeight: 700,
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#64748b',
                     transition: 'all 0.15s ease',
                   }}
@@ -2649,13 +2615,13 @@ export default function AgentMonthlyLedger() {
                   onClick={submitPayment}
                   disabled={payLoading || payAmount === '' || parseFloat(payAmount) <= 0}
                   style={{
-                    padding: '12px 28px',
-                    borderRadius: '14px',
+                    padding: '10px 24px',
+                    borderRadius: '10px',
                     border: 'none',
                     cursor: payLoading || payAmount === '' || parseFloat(payAmount) <= 0 ? 'not-allowed' : 'pointer',
                     fontFamily: "'Cairo', sans-serif",
                     fontWeight: 800,
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#ffffff',
                     background:
                       payLoading || payAmount === '' || parseFloat(payAmount) <= 0
@@ -2664,11 +2630,11 @@ export default function AgentMonthlyLedger() {
                     opacity: payLoading ? 0.8 : 1,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
                     boxShadow:
                       payLoading || payAmount === '' || parseFloat(payAmount) <= 0
                         ? 'none'
-                        : '0 8px 20px -4px rgba(37, 99, 235, 0.4)',
+                        : '0 6px 16px -3px rgba(37, 99, 235, 0.4)',
                     transition: 'all 0.2s ease',
                   }}
                 >
