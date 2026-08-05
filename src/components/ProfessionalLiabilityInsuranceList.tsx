@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
+import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
 
 type ProfessionalLiabilityInsuranceDocument = {
   id: number;
@@ -37,6 +38,7 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
   const [agentSearch, setAgentSearch] = useState("");
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const agentDropdownRef = useRef<HTMLDivElement>(null);
+  const [statusFilter, setStatusFilter] = useState<DocumentStatusType>('all');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -54,7 +56,7 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
 
   useEffect(() => {
     fetchDocuments();
-  }, [currentPage, searchQuery, isArchive, filters]);
+  }, [currentPage, searchQuery, isArchive, filters, statusFilter]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -107,7 +109,11 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
       }
       
       const params = new URLSearchParams();
-      if (isArchive) params.append('archived', 'true');
+      if (isArchive) {
+        params.append('archived', 'true');
+      } else if (statusFilter) {
+        params.append('status', statusFilter);
+      }
       if (searchQuery) params.append('search', searchQuery);
       if (filters.agentId) params.append('branch_agent_id', filters.agentId);
       if (filters.year) params.append('year', filters.year);
@@ -215,8 +221,17 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
 
   return (
     <section className="users-management">
-      <div className="users-breadcrumb">
+      <div className="users-breadcrumb" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
         <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين المسؤولية المهنية (الطبية)' : ' تأمين المسؤولية المهنية (الطبية) / قائمة الوثائق'}</span>
+        {!isArchive && (
+          <DocumentStatusFilter
+            status={statusFilter}
+            onChange={(s) => {
+              setStatusFilter(s);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       <div className="users-card">

@@ -229,6 +229,7 @@ function hasAccessToRoute(
 
     'دليل الجهات الخارجية': ['/external-entities'],
     'أرشيف المستندات الإدارية': ['/archive'],
+    'الوثائق المنتهية': ['/archive'],
     'طلبات الوثائق': ['/document-requests'],
     'ملفات الشركة': ['/company-documents'],
     'الوثائق القديمة': ['/old-documents'],
@@ -434,7 +435,7 @@ const menuSections: SidebarSection[] = [
           { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
         ]
       },
-      { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+      { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
 
 
@@ -674,7 +675,8 @@ const createMenuSections = (
     'البريد الوارد': { label: 'البريد الوارد', icon: 'fa-solid fa-file-import', to: '/mail/incoming' },
     'البريد الصادر': { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
 
-    'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'الوثائق المنتهية': { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'أرشيف المستندات الإدارية': { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
       { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
