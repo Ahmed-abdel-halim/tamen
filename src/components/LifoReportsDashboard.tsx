@@ -1293,12 +1293,14 @@ export default function LifoReportsDashboard() {
       const columns = [
         { header: 'رقم البطاقة', key: 'card_number', width: 25 },
         { header: 'حالة البطاقة', key: 'cardstautesname', width: 25 },
+        { header: 'الوكيل / المكتب', key: 'offices', width: 25 },
         { header: 'رقم الطلب', key: 'request_numberr', width: 25 },
       ];
 
       const data = inventoryData.map(card => ({
         card_number: card.card_number || '-',
         cardstautesname: card.cardstautesname || '-',
+        offices: card.offices || 'الفرع الرئيسي',
         request_numberr: card.request_numberr || '-',
       }));
 
@@ -4034,6 +4036,7 @@ export default function LifoReportsDashboard() {
                       <tr>
                         <th>رقم البطاقة</th>
                         <th>حالة البطاقة</th>
+                        <th>الوكيل / المكتب</th>
                         <th>رقم الطلب</th>
                       </tr>
                     </thead>
@@ -4045,6 +4048,9 @@ export default function LifoReportsDashboard() {
                             <span className={`lifo-badge ${card.cardstautesname === 'البطاقات المعينة' || card.cardstautesname === 'البطاقات النشطة' ? 'lifo-badge-success' : card.cardstautesname === 'البطاقات الملغية' ? 'lifo-badge-danger' : 'lifo-badge-info'}`}>
                               {card.cardstautesname || 'غير محدد'}
                             </span>
+                          </td>
+                          <td style={{ fontWeight: '700', color: 'var(--text)' }}>
+                            {card.offices || 'الفرع الرئيسي'}
                           </td>
                           <td style={{ fontFamily: 'monospace' }}>{card.request_numberr || '-'}</td>
                         </tr>
