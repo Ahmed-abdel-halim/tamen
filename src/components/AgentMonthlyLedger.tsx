@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
-import { generatePremiumExcel } from '../utils/excelGenerator';
+import { generatePremiumExcel, generateGroupedDocsExcel } from '../utils/excelGenerator';
 import CustomDateInput from './CustomDateInput';
 
 const ARABIC_MONTHS_LDG = [
@@ -128,6 +128,7 @@ export default function AgentMonthlyLedger() {
   const [searchMonthDocs, setSearchMonthDocs] = useState('');
   const [filterDocType, setFilterDocType] = useState('all');
   const [monthStatusFilter, setMonthStatusFilter] = useState<'all' | 'active' | 'expired' | 'canceled'>('all');
+  const [exportingDocsExcel, setExportingDocsExcel] = useState(false);
 
   // Edit Document state
   const [editDocModal, setEditDocModal] = useState<MonthDocItem | null>(null);
@@ -585,6 +586,62 @@ export default function AgentMonthlyLedger() {
     }
   };
 
+  const handleExportGroupedDocsExcel = async () => {
+    if (!ledger || !selectedAgentId) return;
+    setExportingDocsExcel(true);
+    showToast('جاري تجديد وتجميع وثائق جميع الأشهر لتصدير الإكسيل...', 'success');
+
+    try {
+      const token = localStorage.getItem('token');
+      const activeMonths = ledger.months.filter((m) => m.document_count > 0);
+
+      if (activeMonths.length === 0) {
+        showToast('لا توجد وثائق صادرة في هذا الكشف للتصدير', 'error');
+        setExportingDocsExcel(false);
+        return;
+      }
+
+      const monthDocsResults = await Promise.all(
+        activeMonths.map(async (m) => {
+          try {
+            const res = await fetch(
+              `${API_BASE_URL}/financial-statistics/agent-month-documents?agent_id=${selectedAgentId}&year=${m.year}&month=${m.month}&document_type=${selectedDocType}`,
+              { headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+            );
+            if (!res.ok) return { month: m, docs: [] };
+            const data = await res.json();
+            return { month: m, docs: data.documents || [] };
+          } catch {
+            return { month: m, docs: [] };
+          }
+        })
+      );
+
+      const monthGroups = monthDocsResults.map((res) => ({
+        month_label: res.month.month_label,
+        document_count: res.month.document_count,
+        total_sales: res.month.total_sales,
+        agent_share: res.month.agent_share,
+        company_share: res.month.company_share,
+        docs: res.docs,
+      }));
+
+      await generateGroupedDocsExcel({
+        title: `تفاصيل وثائق كشف الحساب الشهري - ${ledger.agent.agency_name}`,
+        subtitle: `كود الوكيل: ${ledger.agent.code} | المسؤول: ${ledger.agent.agent_name}`,
+        monthGroups,
+        fileName: `تفاصيل_وثائق_كشف_حساب_${ledger.agent.agency_name}`,
+      });
+
+      showToast('تم تصدير ملف وثائق الكشف التفصيلي بنجاح', 'success');
+    } catch (err) {
+      console.error('Error exporting grouped docs excel:', err);
+      showToast('حدث خطأ أثناء تصدير وثائق الكشف', 'error');
+    } finally {
+      setExportingDocsExcel(false);
+    }
+  };
+
   const selectedAgentObj = agents.find((a) => a.id === selectedAgentId);
   const filteredAgentsDropdown = agents.filter(
     (a) =>
@@ -648,26 +705,54 @@ export default function AgentMonthlyLedger() {
         </div>
 
         {ledger && (
-          <button
-            onClick={handleExportExcel}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 800,
-              fontSize: '13px',
-              color: 'white',
-              background: 'linear-gradient(135deg,#10b981,#059669)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontFamily: "'Cairo',sans-serif",
-              boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
-            }}
-          >
-            <i className="fa-solid fa-file-excel" /> تصدير إكسيل
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={handleExportExcel}
+              title="تصدير جدول ملخص كشف الحساب الشهري"
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '13px',
+                color: 'white',
+                background: 'linear-gradient(135deg,#10b981,#059669)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: "'Cairo',sans-serif",
+                boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+              }}
+            >
+              <i className="fa-solid fa-file-excel" /> تصدير إكسيل (الكشف)
+            </button>
+
+            <button
+              onClick={handleExportGroupedDocsExcel}
+              disabled={exportingDocsExcel}
+              title="تصدير جميع الوثائق الصادرة مقسمة بشريط عنوان لكل شهر وتفاصيل وثائقه"
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: exportingDocsExcel ? 'wait' : 'pointer',
+                fontWeight: 800,
+                fontSize: '13px',
+                color: 'white',
+                background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: "'Cairo',sans-serif",
+                boxShadow: '0 4px 12px rgba(2,132,199,0.3)',
+                opacity: exportingDocsExcel ? 0.7 : 1,
+              }}
+            >
+              <i className={`fa-solid ${exportingDocsExcel ? 'fa-circle-notch fa-spin' : 'fa-file-excel'}`} />
+              {exportingDocsExcel ? 'جاري التصدير...' : 'تصدير وثائق الكشف (إكسيل)'}
+            </button>
+          </div>
         )}
       </div>
 
