@@ -28,6 +28,9 @@ interface MonthRow {
   to_date: string;
   percentage: number;
   document_count: number;
+  active_count?: number;
+  expired_count?: number;
+  canceled_count?: number;
   total_sales: number;
   agent_share: number;
   company_share: number;
@@ -48,6 +51,9 @@ interface AgentInfo {
 interface LedgerSummary {
   total_months: number;
   total_documents: number;
+  active_documents?: number;
+  expired_documents?: number;
+  canceled_documents?: number;
   total_sales: number;
   total_agent_share: number;
   total_company_share: number;
@@ -93,6 +99,9 @@ interface MonthDocItem {
 
 interface MonthDocsSummary {
   total_documents: number;
+  active_documents?: number;
+  expired_documents?: number;
+  canceled_documents?: number;
   total_sales: number;
   total_agent_share: number;
   total_company_share: number;
@@ -161,6 +170,18 @@ export default function AgentMonthlyLedger() {
 
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const statCardBase: React.CSSProperties = {
+    borderRadius: '18px',
+    padding: '22px 24px',
+    position: 'relative',
+    overflow: 'hidden',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.18)',
+    transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+    cursor: 'default',
+    boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+  };
 
   const LEDGER_DOC_TYPES = [
     { key: 'all', label: 'جميع أنواع التأمين (الكل)' },
@@ -573,6 +594,9 @@ export default function AgentMonthlyLedger() {
 
   return (
     <div style={{ padding: '24px', width: '100%', boxSizing: 'border-box' }}>
+      <style>{`
+        .stat-card:hover { transform: translateY(-6px) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important; }
+      `}</style>
       {/* Header Bar */}
       <div
         style={{
@@ -897,318 +921,213 @@ export default function AgentMonthlyLedger() {
             </div>
           </div>
 
-          {/* 8 Standalone KPI Summary Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          {/* 8 Standalone KPI Summary Cards Grid (Live Agents Production Card Style) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px', marginBottom: '24px' }}>
             {/* Card 1: Total Sales */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  إجمالي المبيعات
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>إجمالي المبيعات</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-coins" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#2563eb', fontFamily: "'Cairo',sans-serif" }}>
-                  {fmt(ledger.summary.total_sales)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {fmt(ledger.summary.total_sales)}
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
-                  color: '#1d4ed8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-chart-line" />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>دينار ليبي</div>
               </div>
             </div>
 
             {/* Card 2: Agent Share */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  عمولة الوكيل
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>عمولة الوكيل</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#7c3aed', fontFamily: "'Cairo',sans-serif" }}>
-                  {fmt(ledger.summary.total_agent_share)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {fmt(ledger.summary.total_agent_share)}
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)',
-                  color: '#6d28d9',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-hand-holding-dollar" />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>دينار ليبي</div>
               </div>
             </div>
 
             {/* Card 3: Company Share */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  حصة الشركة
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>حصة الشركة</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-building-columns" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#0d9488', fontFamily: "'Cairo',sans-serif" }}>
-                  {fmt(ledger.summary.total_company_share)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {fmt(ledger.summary.total_company_share)}
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)',
-                  color: '#0f766e',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-building-columns" />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>دينار ليبي</div>
               </div>
             </div>
 
             {/* Card 4: Total Paid */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  المستلم حتى الآن
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>المستلم حتى الآن</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-circle-check" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#059669', fontFamily: "'Cairo',sans-serif" }}>
-                  {fmt(ledger.summary.total_paid)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {fmt(ledger.summary.total_paid)}
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
-                  color: '#047857',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-circle-check" />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>دينار ليبي</div>
               </div>
             </div>
 
             {/* Card 5: Total Remaining / Debt */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: ledger.summary.total_remaining > 0 ? '1px solid #fca5a5' : '1px solid var(--border)',
-                boxShadow: ledger.summary.total_remaining > 0 ? '0 4px 15px rgba(239,68,68,0.1)' : '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: ledger.summary.total_remaining > 0
+                  ? 'linear-gradient(135deg, #b91c1c 0%, #ef4444 50%, #f87171 100%)'
+                  : 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  المتبقي المطلوب
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>المتبقي المطلوب</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className={`fa-solid ${ledger.summary.total_remaining > 0 ? 'fa-triangle-exclamation' : 'fa-check-double'}`} style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 900,
-                    color: ledger.summary.total_remaining > 0 ? '#dc2626' : '#059669',
-                    fontFamily: "'Cairo',sans-serif",
-                  }}
-                >
-                  {fmt(ledger.summary.total_remaining)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {fmt(ledger.summary.total_remaining)}
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: ledger.summary.total_remaining > 0 ? 'linear-gradient(135deg, #fee2e2, #fecaca)' : 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
-                  color: ledger.summary.total_remaining > 0 ? '#b91c1c' : '#047857',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className={`fa-solid ${ledger.summary.total_remaining > 0 ? 'fa-triangle-exclamation' : 'fa-check-double'}`} />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>دينار ليبي</div>
               </div>
             </div>
 
             {/* Card 6: Total Documents Count */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #38bdf8 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  إجمالي الوثائق المصدَرة
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>إجمالي الوثائق المصدَرة</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-file-lines" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#0284c7', fontFamily: "'Cairo',sans-serif" }}>
-                  {ledger.summary.total_documents.toLocaleString()} <span style={{ fontSize: '11px', fontWeight: 700 }}>وثيقة</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {ledger.summary.total_documents.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: 600, opacity: 0.8 }}>وثيقة</span>
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)',
-                  color: '#0369a1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-file-contract" />
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px', fontSize: '10px', fontWeight: 700, flexWrap: 'wrap' }}>
+                  <span style={{ background: 'rgba(255,255,255,0.22)', padding: '2px 7px', borderRadius: '10px' }}>🟢 {ledger.summary.active_documents ?? 0} نشطة</span>
+                  <span style={{ background: 'rgba(255,255,255,0.22)', padding: '2px 7px', borderRadius: '10px' }}>🟠 {ledger.summary.expired_documents ?? 0} منتهية</span>
+                  <span style={{ background: 'rgba(255,255,255,0.22)', padding: '2px 7px', borderRadius: '10px' }}>🔴 {ledger.summary.canceled_documents ?? 0} ملغية</span>
+                </div>
               </div>
             </div>
 
             {/* Card 7: Total Months Count */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  عدد الأشهر المسجلة
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>عدد الأشهر المسجلة</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-calendar-days" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#d97706', fontFamily: "'Cairo',sans-serif" }}>
-                  {ledger.summary.total_months} <span style={{ fontSize: '11px', fontWeight: 700 }}>شهر</span>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {ledger.summary.total_months}
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-                  color: '#b45309',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-calendar-days" />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>شهر مسجل</div>
               </div>
             </div>
 
-            {/* Card 8: Settlement Percentage / Ratio */}
+            {/* Card 8: Settlement Percentage */}
             <div
+              className="stat-card"
               style={{
-                background: 'var(--card-bg)',
-                padding: '18px 20px',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #818cf8 100%)',
+                color: 'white',
               }}
             >
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", marginBottom: '4px' }}>
-                  نسبة تصفية الحساب
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>نسبة تصفية الحساب</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-percent" style={{ fontSize: '20px' }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#6366f1', fontFamily: "'Cairo',sans-serif" }}>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
                   {ledger.summary.total_agent_share > 0
                     ? Math.min(100, Math.round((ledger.summary.total_paid / ledger.summary.total_agent_share) * 100))
                     : 100}%
                 </div>
-              </div>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)',
-                  color: '#4338ca',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                }}
-              >
-                <i className="fa-solid fa-percent" />
+                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>نسبة السداد الفعلي</div>
               </div>
             </div>
           </div>
@@ -1321,11 +1240,24 @@ export default function AgentMonthlyLedger() {
                             <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>
                           )}
                         </td>
-                        <td style={td}>
+                        <td style={{ ...td, padding: '6px 4px' }}>
                           {row.document_count > 0 ? (
-                            <span style={{ background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', color: '#065f46', padding: '2px 8px', borderRadius: '20px', fontWeight: 800, fontSize: '11px' }}>
-                              {row.document_count}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                              <span style={{ background: 'linear-gradient(135deg,#e0f2fe,#bae6fd)', color: '#0369a1', padding: '2px 10px', borderRadius: '20px', fontWeight: 900, fontSize: '12px' }}>
+                                {row.document_count}
+                              </span>
+                              <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', justifyContent: 'center', fontSize: '10px', fontFamily: "'Cairo',sans-serif" }}>
+                                <span title="وثائق نشطة" style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '8px', fontWeight: 700 }}>
+                                  نشطة: {row.active_count ?? 0}
+                                </span>
+                                <span title="وثائق منتهية" style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '8px', fontWeight: 700 }}>
+                                  منتهية: {row.expired_count ?? 0}
+                                </span>
+                                <span title="وثائق ملغية" style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 700 }}>
+                                  ملغية: {row.canceled_count ?? 0}
+                                </span>
+                              </div>
+                            </div>
                           ) : (
                             <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>
                           )}
@@ -1656,14 +1588,15 @@ export default function AgentMonthlyLedger() {
                   background: 'var(--table-header)',
                   borderBottom: '1px solid var(--border)',
                   display: 'flex',
-                  gap: '16px',
+                  gap: '12px',
                   flexWrap: 'wrap',
+                  alignItems: 'center',
                 }}
               >
                 <div
                   style={{
                     background: 'var(--card-bg)',
-                    padding: '8px 16px',
+                    padding: '8px 14px',
                     borderRadius: '12px',
                     border: '1px solid var(--border)',
                     fontSize: '12px',
@@ -1671,12 +1604,51 @@ export default function AgentMonthlyLedger() {
                     fontWeight: 700,
                   }}
                 >
-                  📄 عدد الوثائق: <strong style={{ color: '#0284c7' }}>{monthDocsSummary.total_documents}</strong>
+                  📄 إجمالي الوثائق: <strong style={{ color: '#0284c7' }}>{monthDocsSummary.total_documents}</strong>
+                </div>
+                <div
+                  style={{
+                    background: '#d1fae5',
+                    color: '#065f46',
+                    padding: '8px 14px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                  }}
+                >
+                  🟢 نشطة: <strong>{monthDocsSummary.active_documents ?? 0}</strong>
+                </div>
+                <div
+                  style={{
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    padding: '8px 14px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                  }}
+                >
+                  🟠 منتهية: <strong>{monthDocsSummary.expired_documents ?? 0}</strong>
+                </div>
+                <div
+                  style={{
+                    background: '#fee2e2',
+                    color: '#991b1b',
+                    padding: '8px 14px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                  }}
+                >
+                  🔴 ملغية: <strong>{monthDocsSummary.canceled_documents ?? 0}</strong>
                 </div>
                 <div
                   style={{
                     background: 'var(--card-bg)',
-                    padding: '8px 16px',
+                    padding: '8px 14px',
                     borderRadius: '12px',
                     border: '1px solid var(--border)',
                     fontSize: '12px',
@@ -1684,12 +1656,12 @@ export default function AgentMonthlyLedger() {
                     fontWeight: 700,
                   }}
                 >
-                  💰 إجمالي المبيعات: <strong style={{ color: '#3b82f6' }}>{fmt(monthDocsSummary.total_sales)} د.ل</strong>
+                  💰 إجمالي المبيعات (بدون الملغية): <strong style={{ color: '#3b82f6' }}>{fmt(monthDocsSummary.total_sales)} د.ل</strong>
                 </div>
                 <div
                   style={{
                     background: 'var(--card-bg)',
-                    padding: '8px 16px',
+                    padding: '8px 14px',
                     borderRadius: '12px',
                     border: '1px solid var(--border)',
                     fontSize: '12px',
@@ -1702,7 +1674,7 @@ export default function AgentMonthlyLedger() {
                 <div
                   style={{
                     background: 'var(--card-bg)',
-                    padding: '8px 16px',
+                    padding: '8px 14px',
                     borderRadius: '12px',
                     border: '1px solid var(--border)',
                     fontSize: '12px',
@@ -1917,9 +1889,13 @@ export default function AgentMonthlyLedger() {
                             <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
                               ملغية
                             </span>
+                          ) : doc.status === 'منتهية' ? (
+                            <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
+                              منتهية
+                            </span>
                           ) : (
                             <span style={{ background: '#d1fae5', color: '#047857', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
-                              فعالة
+                              نشطة
                             </span>
                           )}
                         </td>
