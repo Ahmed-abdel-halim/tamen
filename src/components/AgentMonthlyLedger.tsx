@@ -594,14 +594,15 @@ export default function AgentMonthlyLedger() {
   );
 
   const td: React.CSSProperties = {
-    padding: '8px 4px',
+    padding: '6px 3px',
     textAlign: 'center',
     borderBottom: '1px solid var(--border)',
     fontFamily: "'Cairo', sans-serif",
+    fontSize: '11px',
   };
 
   return (
-    <div style={{ padding: '24px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ padding: '16px 12px', width: '100%', boxSizing: 'border-box' }}>
       <style>{`
         .stat-card:hover { transform: translateY(-6px) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important; }
       `}</style>
@@ -1145,7 +1146,7 @@ export default function AgentMonthlyLedger() {
             style={{
               background: 'var(--card-bg)',
               borderRadius: '20px',
-              padding: '20px',
+              padding: '16px 10px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
               border: '1px solid var(--border)',
               overflowX: 'auto',
@@ -1205,9 +1206,9 @@ export default function AgentMonthlyLedger() {
                         <th
                           key={h}
                           style={{
-                            padding: '9px 4px',
+                            padding: '7px 2px',
                             fontWeight: 800,
-                            fontSize: '11px',
+                            fontSize: '10.5px',
                             textAlign: 'center',
                             background: 'var(--table-header)',
                             color: 'var(--text)',
@@ -1258,17 +1259,17 @@ export default function AgentMonthlyLedger() {
                           )}
                         </td>
                         <td style={td}>
-                          <span style={{ background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                          <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
                             {row.active_count ?? 0}
                           </span>
                         </td>
                         <td style={td}>
-                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
                             {row.expired_count ?? 0}
                           </span>
                         </td>
                         <td style={td}>
-                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
                             {row.canceled_count ?? 0}
                           </span>
                         </td>
@@ -1337,31 +1338,31 @@ export default function AgentMonthlyLedger() {
                             </span>
                           )}
                         </td>
-                        <td style={{ ...td, whiteSpace: 'nowrap', padding: '6px 4px' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                        <td style={{ ...td, whiteSpace: 'nowrap', padding: '4px 2px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
                             {/* View Month Documents Button */}
                             <button
                               className="pay-btn"
                               onClick={() => openMonthDocs(row)}
                               title="عرض وثائق هذا الشهر بالتفصيل"
                               style={{
-                                padding: '4px 8px',
-                                borderRadius: '8px',
+                                padding: '3px 6px',
+                                borderRadius: '7px',
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontFamily: "'Cairo',sans-serif",
                                 fontWeight: 800,
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 color: 'white',
                                 background: 'linear-gradient(135deg,#0284c7,#0369a1)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
+                                gap: '3px',
                                 transition: 'all .2s',
-                                boxShadow: '0 2px 6px rgba(2,132,199,0.25)',
+                                boxShadow: '0 2px 5px rgba(2,132,199,0.2)',
                               }}
                             >
-                              <i className="fa-solid fa-folder-open" style={{ fontSize: '10px' }} />وثائق الشهر
+                              <i className="fa-solid fa-folder-open" style={{ fontSize: '9px' }} />وثائق الشهر
                             </button>
 
                             {!isEmpty && (
@@ -1370,23 +1371,23 @@ export default function AgentMonthlyLedger() {
                                 onClick={() => openPay(row)}
                                 title="تسديد دفعة لهذا الشهر"
                                 style={{
-                                  padding: '4px 8px',
-                                  borderRadius: '8px',
+                                  padding: '3px 6px',
+                                  borderRadius: '7px',
                                   border: 'none',
                                   cursor: 'pointer',
                                   fontFamily: "'Cairo',sans-serif",
                                   fontWeight: 700,
-                                  fontSize: '11px',
+                                  fontSize: '10px',
                                   color: 'white',
                                   background: 'linear-gradient(135deg,#1e40af,#3b82f6)',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '4px',
+                                  gap: '3px',
                                   transition: 'all .2s',
-                                  boxShadow: '0 2px 6px rgba(30,64,175,0.2)',
+                                  boxShadow: '0 2px 5px rgba(30,64,175,0.2)',
                                 }}
                               >
-                                <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '10px' }} />تسديد
+                                <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '9px' }} />تسديد
                               </button>
                             )}
 
@@ -1402,23 +1403,23 @@ export default function AgentMonthlyLedger() {
                               }
                               title="إضافة وثيقة قديمة لهذا الشهر"
                               style={{
-                                padding: '4px 8px',
-                                borderRadius: '8px',
+                                padding: '3px 6px',
+                                borderRadius: '7px',
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontFamily: "'Cairo',sans-serif",
                                 fontWeight: 700,
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 color: 'white',
                                 background: 'linear-gradient(135deg,#7c3aed,#8b5cf6)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
+                                gap: '3px',
                                 transition: 'all .2s',
-                                boxShadow: '0 2px 6px rgba(124,58,237,0.2)',
+                                boxShadow: '0 2px 5px rgba(124,58,237,0.2)',
                               }}
                             >
-                              <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '10px' }} />وثائق قديمة
+                              <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '9px' }} />وثائق قديمة
                             </button>
 
                             <button
@@ -1426,23 +1427,23 @@ export default function AgentMonthlyLedger() {
                               onClick={() => navigate(`/branches-agents/${ledger.agent.id}`)}
                               title="الانتقال لبروفايل الوكيل"
                               style={{
-                                padding: '4px 8px',
-                                borderRadius: '8px',
+                                padding: '3px 6px',
+                                borderRadius: '7px',
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontFamily: "'Cairo',sans-serif",
                                 fontWeight: 700,
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 color: 'white',
                                 background: 'linear-gradient(135deg,#0d9488,#14b8a6)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
+                                gap: '3px',
                                 transition: 'all .2s',
-                                boxShadow: '0 2px 6px rgba(13,148,136,0.2)',
+                                boxShadow: '0 2px 5px rgba(13,148,136,0.2)',
                               }}
                             >
-                              <i className="fa-solid fa-id-card" style={{ fontSize: '10px' }} />البروفايل
+                              <i className="fa-solid fa-id-card" style={{ fontSize: '9px' }} />البروفايل
                             </button>
                           </div>
                         </td>
@@ -1452,40 +1453,55 @@ export default function AgentMonthlyLedger() {
                 </tbody>
                 <tfoot>
                   <tr style={{ background: 'var(--table-header)', borderTop: '3px solid var(--border)' }}>
-                    <td colSpan={3} style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 900, fontSize: '15px', color: 'var(--text)' }}>
-                      <i className="fa-solid fa-sigma" style={{ marginLeft: '8px' }} />المجموع الكلي
+                    <td colSpan={3} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, fontSize: '13px', color: 'var(--text)' }}>
+                      <i className="fa-solid fa-sigma" style={{ marginLeft: '6px' }} />المجموع الكلي
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: 'var(--text)' }}>
+                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#0284c7' }}>
                       {ledger.summary.total_documents.toLocaleString()}
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#3b82f6' }}>
+                    <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                      <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
+                        {ledger.summary.active_documents ?? 0}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                      <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
+                        {ledger.summary.expired_documents ?? 0}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                      <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
+                        {ledger.summary.canceled_documents ?? 0}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#3b82f6' }}>
                       {fmt(ledger.summary.total_sales)}
-                      <span style={{ fontSize: '11px', marginRight: '3px' }}>د.ل</span>
+                      <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#a78bfa' }}>
+                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#a78bfa' }}>
                       {fmt(ledger.summary.total_agent_share)}
-                      <span style={{ fontSize: '11px', marginRight: '3px' }}>د.ل</span>
+                      <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#2dd4bf' }}>
+                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#2dd4bf' }}>
                       {fmt(ledger.summary.total_company_share)}
-                      <span style={{ fontSize: '11px', marginRight: '3px' }}>د.ل</span>
+                      <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'center', color: 'var(--muted)' }}>—</td>
-                    <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '14px', color: '#059669' }}>
+                    <td style={{ padding: '10px 4px', textAlign: 'center', color: 'var(--muted)', fontSize: '11px' }}>—</td>
+                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#059669' }}>
                       {fmt(ledger.summary.total_paid)}
-                      <span style={{ fontSize: '11px', marginRight: '3px' }}>د.ل</span>
+                      <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
                     </td>
                     <td
                       style={{
-                        padding: '14px',
+                        padding: '10px 4px',
                         textAlign: 'center',
                         fontWeight: 900,
-                        fontSize: '14px',
+                        fontSize: '12px',
                         color: ledger.summary.total_remaining > 0 ? '#dc2626' : '#059669',
                       }}
                     >
                       {fmt(ledger.summary.total_remaining)}
-                      <span style={{ fontSize: '11px', marginRight: '3px' }}>د.ل</span>
+                      <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
                     </td>
                     <td />
                   </tr>
