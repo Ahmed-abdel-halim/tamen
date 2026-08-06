@@ -127,6 +127,7 @@ export default function AgentMonthlyLedger() {
   const [loadingMonthDocs, setLoadingMonthDocs] = useState(false);
   const [searchMonthDocs, setSearchMonthDocs] = useState('');
   const [filterDocType, setFilterDocType] = useState('all');
+  const [monthStatusFilter, setMonthStatusFilter] = useState<'all' | 'active' | 'expired' | 'canceled'>('all');
 
   // Edit Document state
   const [editDocModal, setEditDocModal] = useState<MonthDocItem | null>(null);
@@ -319,6 +320,7 @@ export default function AgentMonthlyLedger() {
     setMonthDocsModal({ row });
     setSearchMonthDocs('');
     setFilterDocType('all');
+    setMonthStatusFilter('all');
     fetchMonthDocsData(row.year, row.month, '', 'all');
   };
 
@@ -1580,7 +1582,7 @@ export default function AgentMonthlyLedger() {
               </button>
             </div>
 
-            {/* Summary Stat Chips Bar */}
+            {/* Summary Stat Chips Bar (Interactive Filter Buttons) */}
             {monthDocsSummary && (
               <div
                 style={{
@@ -1593,58 +1595,98 @@ export default function AgentMonthlyLedger() {
                   alignItems: 'center',
                 }}
               >
-                <div
+                <button
+                  onClick={() => setMonthStatusFilter('all')}
+                  title="عرض جميع الوثائق"
                   style={{
-                    background: 'var(--card-bg)',
-                    padding: '8px 14px',
+                    background: monthStatusFilter === 'all' ? 'linear-gradient(135deg, #0284c7, #0369a1)' : 'var(--card-bg)',
+                    color: monthStatusFilter === 'all' ? 'white' : 'var(--text)',
+                    padding: '8px 16px',
                     borderRadius: '12px',
-                    border: '1px solid var(--border)',
-                    fontSize: '12px',
-                    fontFamily: "'Cairo',sans-serif",
-                    fontWeight: 700,
-                  }}
-                >
-                  📄 إجمالي الوثائق: <strong style={{ color: '#0284c7' }}>{monthDocsSummary.total_documents}</strong>
-                </div>
-                <div
-                  style={{
-                    background: '#d1fae5',
-                    color: '#065f46',
-                    padding: '8px 14px',
-                    borderRadius: '12px',
+                    border: monthStatusFilter === 'all' ? '2px solid #0284c7' : '1px solid var(--border)',
                     fontSize: '12px',
                     fontFamily: "'Cairo',sans-serif",
                     fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: monthStatusFilter === 'all' ? '0 4px 14px rgba(2, 132, 199, 0.35)' : 'none',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  📄 إجمالي الوثائق: <strong style={{ color: monthStatusFilter === 'all' ? 'white' : '#0284c7' }}>{monthDocsSummary.total_documents}</strong>
+                </button>
+
+                <button
+                  onClick={() => setMonthStatusFilter('active')}
+                  title="تصفية الوثائق النشطة فقط"
+                  style={{
+                    background: monthStatusFilter === 'active' ? 'linear-gradient(135deg, #059669, #10b981)' : '#d1fae5',
+                    color: monthStatusFilter === 'active' ? 'white' : '#065f46',
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    border: monthStatusFilter === 'active' ? '2px solid #059669' : '1px solid #a7f3d0',
+                    fontSize: '12px',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: monthStatusFilter === 'active' ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
                   🟢 نشطة: <strong>{monthDocsSummary.active_documents ?? 0}</strong>
-                </div>
-                <div
+                </button>
+
+                <button
+                  onClick={() => setMonthStatusFilter('expired')}
+                  title="تصفية الوثائق المنتهية فقط"
                   style={{
-                    background: '#fef3c7',
-                    color: '#92400e',
-                    padding: '8px 14px',
+                    background: monthStatusFilter === 'expired' ? 'linear-gradient(135deg, #d97706, #f59e0b)' : '#fef3c7',
+                    color: monthStatusFilter === 'expired' ? 'white' : '#92400e',
+                    padding: '8px 16px',
                     borderRadius: '12px',
+                    border: monthStatusFilter === 'expired' ? '2px solid #d97706' : '1px solid #fde68a',
                     fontSize: '12px',
                     fontFamily: "'Cairo',sans-serif",
                     fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: monthStatusFilter === 'expired' ? '0 4px 14px rgba(245, 158, 11, 0.35)' : 'none',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
                   🟠 منتهية: <strong>{monthDocsSummary.expired_documents ?? 0}</strong>
-                </div>
-                <div
+                </button>
+
+                <button
+                  onClick={() => setMonthStatusFilter('canceled')}
+                  title="تصفية الوثائق الملغية فقط"
                   style={{
-                    background: '#fee2e2',
-                    color: '#991b1b',
-                    padding: '8px 14px',
+                    background: monthStatusFilter === 'canceled' ? 'linear-gradient(135deg, #dc2626, #ef4444)' : '#fee2e2',
+                    color: monthStatusFilter === 'canceled' ? 'white' : '#991b1b',
+                    padding: '8px 16px',
                     borderRadius: '12px',
+                    border: monthStatusFilter === 'canceled' ? '2px solid #dc2626' : '1px solid #fecaca',
                     fontSize: '12px',
                     fontFamily: "'Cairo',sans-serif",
                     fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: monthStatusFilter === 'canceled' ? '0 4px 14px rgba(239, 68, 68, 0.35)' : 'none',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
                   🔴 ملغية: <strong>{monthDocsSummary.canceled_documents ?? 0}</strong>
-                </div>
+                </button>
+
                 <div
                   style={{
                     background: 'var(--card-bg)',
@@ -1808,146 +1850,173 @@ export default function AgentMonthlyLedger() {
 
             {/* Documents List Table */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px' }}>
-              {loadingMonthDocs ? (
-                <div style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '32px', color: '#0284c7', marginBottom: '12px' }} />
-                  <p style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 700 }}>جاري تحميل وثائق الشهر...</p>
-                </div>
-              ) : monthDocsList.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>
-                  <i className="fa-solid fa-folder-open" style={{ fontSize: '40px', marginBottom: '12px' }} />
-                  <p style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 700 }}>لا توجد وثائق صادرة في هذا الشهر بحسب البحث الفعلي</p>
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                  <thead>
-                    <tr style={{ background: 'var(--table-header)' }}>
-                      {['#', 'نوع الوثيقة', 'رقم الوثيقة', 'اسم المؤمن له', 'تاريخ الإصدار', 'القيمة الإجمالية', 'عمولة الوكيل', 'حالة الوثيقة', 'إجراءات'].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            style={{
-                              padding: '10px 8px',
-                              fontWeight: 800,
-                              fontSize: '11px',
-                              textAlign: 'center',
-                              color: 'var(--text)',
-                              borderBottom: '2px solid var(--border)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {h}
-                          </th>
-                        )
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthDocsList.map((doc, i) => (
-                      <tr
-                        key={`${doc.table}_${doc.id}`}
-                        style={{
-                          borderBottom: '1px solid var(--border)',
-                          background: i % 2 === 0 ? 'var(--card-bg)' : 'var(--bg)',
-                        }}
-                      >
-                        <td style={{ ...td, fontWeight: 700, color: 'var(--muted)' }}>{i + 1}</td>
-                        <td style={td}>
-                          <span
-                            style={{
-                              background: 'linear-gradient(135deg,#e0f2fe,#bae6fd)',
-                              color: '#0369a1',
-                              padding: '3px 9px',
-                              borderRadius: '12px',
-                              fontWeight: 800,
-                              fontSize: '11px',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {doc.type_label}
-                          </span>
-                        </td>
-                        <td style={{ ...td, fontWeight: 800, color: 'var(--text)', direction: 'ltr' }}>{doc.document_number}</td>
-                        <td style={{ ...td, textAlign: 'right', paddingRight: '12px', fontWeight: 800, color: 'var(--text)' }}>
-                          {doc.insured_name}
-                        </td>
-                        <td style={{ ...td, color: 'var(--muted)', fontSize: '11px' }}>
-                          {doc.issue_date ? doc.issue_date.substring(0, 10) : '-'}
-                        </td>
-                        <td style={{ ...td, fontWeight: 800, color: '#3b82f6' }}>
-                          {fmt(doc.total)} <span style={{ fontSize: '10px', color: 'var(--muted)' }}>د.ل</span>
-                        </td>
-                        <td style={{ ...td, fontWeight: 800, color: '#8b5cf6' }}>
-                          {fmt(doc.agent_share)} <span style={{ fontSize: '10px', color: 'var(--muted)' }}>د.ل</span>
-                        </td>
-                        <td style={td}>
-                          {doc.is_old_document ? (
-                            <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
-                              وثيقة قديمة
-                            </span>
-                          ) : doc.status === 'ملغية' ? (
-                            <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
-                              ملغية
-                            </span>
-                          ) : doc.status === 'منتهية' ? (
-                            <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
-                              منتهية
-                            </span>
-                          ) : (
-                            <span style={{ background: '#d1fae5', color: '#047857', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
-                              نشطة
-                            </span>
-                          )}
-                        </td>
-                        <td style={td}>
-                          <div style={{ display: 'inline-flex', gap: '6px' }}>
-                            <button
-                              onClick={() => handleOpenEditDoc(doc)}
-                              title="تعديل الوثيقة"
+              {(() => {
+                const filteredDocsList = monthDocsList.filter((doc) => {
+                  if (monthStatusFilter === 'active') {
+                    return doc.status === 'نشطة' || doc.status === 'فعالة' || doc.status === 'سارية';
+                  }
+                  if (monthStatusFilter === 'expired') {
+                    return doc.status === 'منتهية';
+                  }
+                  if (monthStatusFilter === 'canceled') {
+                    return doc.status === 'ملغية';
+                  }
+                  return true;
+                });
+
+                if (loadingMonthDocs) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>
+                      <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '32px', color: '#0284c7', marginBottom: '12px' }} />
+                      <p style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 700 }}>جاري تحميل وثائق الشهر...</p>
+                    </div>
+                  );
+                }
+
+                if (filteredDocsList.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '50px', color: 'var(--muted)' }}>
+                      <i className="fa-solid fa-folder-open" style={{ fontSize: '40px', marginBottom: '12px' }} />
+                      <p style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 700 }}>
+                        {monthStatusFilter !== 'all'
+                          ? `لا توجد وثائق حالة (${monthStatusFilter === 'active' ? 'نشطة' : monthStatusFilter === 'expired' ? 'منتهية' : 'ملغية'}) في هذا الشهر`
+                          : 'لا توجد وثائق صادرة في هذا الشهر بحسب البحث الفعلي'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--table-header)' }}>
+                        {['#', 'نوع الوثيقة', 'رقم الوثيقة', 'اسم المؤمن له', 'تاريخ الإصدار', 'القيمة الإجمالية', 'عمولة الوكيل', 'حالة الوثيقة', 'إجراءات'].map(
+                          (h) => (
+                            <th
+                              key={h}
                               style={{
-                                padding: '5px 10px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg,#f59e0b,#d97706)',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontWeight: 700,
+                                padding: '10px 8px',
+                                fontWeight: 800,
                                 fontSize: '11px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                boxShadow: '0 2px 6px rgba(245,158,11,0.25)',
+                                textAlign: 'center',
+                                color: 'var(--text)',
+                                borderBottom: '2px solid var(--border)',
+                                whiteSpace: 'nowrap',
                               }}
                             >
-                              <i className="fa-solid fa-pen-to-square" /> تعديل
-                            </button>
-                            <button
-                              onClick={() => setDeleteDocTarget(doc)}
-                              title="مسح/حذف الوثيقة"
-                              style={{
-                                padding: '5px 10px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg,#ef4444,#dc2626)',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontWeight: 700,
-                                fontSize: '11px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                boxShadow: '0 2px 6px rgba(239,68,68,0.25)',
-                              }}
-                            >
-                              <i className="fa-solid fa-trash-can" /> مسح
-                            </button>
-                          </div>
-                        </td>
+                              {h}
+                            </th>
+                          )
+                        )}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody>
+                      {filteredDocsList.map((doc, i) => (
+                        <tr
+                          key={`${doc.table}_${doc.id}`}
+                          style={{
+                            borderBottom: '1px solid var(--border)',
+                            background: i % 2 === 0 ? 'var(--card-bg)' : 'var(--bg)',
+                          }}
+                        >
+                          <td style={{ ...td, fontWeight: 700, color: 'var(--muted)' }}>{i + 1}</td>
+                          <td style={td}>
+                            <span
+                              style={{
+                                background: 'linear-gradient(135deg,#e0f2fe,#bae6fd)',
+                                color: '#0369a1',
+                                padding: '3px 9px',
+                                borderRadius: '12px',
+                                fontWeight: 800,
+                                fontSize: '11px',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {doc.type_label}
+                            </span>
+                          </td>
+                          <td style={{ ...td, fontWeight: 800, color: 'var(--text)', direction: 'ltr' }}>{doc.document_number}</td>
+                          <td style={{ ...td, textAlign: 'right', paddingRight: '12px', fontWeight: 800, color: 'var(--text)' }}>
+                            {doc.insured_name}
+                          </td>
+                          <td style={{ ...td, color: 'var(--muted)', fontSize: '11px' }}>
+                            {doc.issue_date ? doc.issue_date.substring(0, 10) : '-'}
+                          </td>
+                          <td style={{ ...td, fontWeight: 800, color: '#3b82f6' }}>
+                            {fmt(doc.total)} <span style={{ fontSize: '10px', color: 'var(--muted)' }}>د.ل</span>
+                          </td>
+                          <td style={{ ...td, fontWeight: 800, color: '#8b5cf6' }}>
+                            {fmt(doc.agent_share)} <span style={{ fontSize: '10px', color: 'var(--muted)' }}>د.ل</span>
+                          </td>
+                          <td style={td}>
+                            {doc.is_old_document ? (
+                              <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
+                                وثيقة قديمة
+                              </span>
+                            ) : doc.status === 'ملغية' ? (
+                              <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
+                                ملغية
+                              </span>
+                            ) : doc.status === 'منتهية' ? (
+                              <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
+                                منتهية
+                              </span>
+                            ) : (
+                              <span style={{ background: '#d1fae5', color: '#047857', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
+                                نشطة
+                              </span>
+                            )}
+                          </td>
+                          <td style={td}>
+                            <div style={{ display: 'inline-flex', gap: '6px' }}>
+                              <button
+                                onClick={() => handleOpenEditDoc(doc)}
+                                title="تعديل الوثيقة"
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  fontSize: '11px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  boxShadow: '0 2px 6px rgba(245,158,11,0.25)',
+                                }}
+                              >
+                                <i className="fa-solid fa-pen-to-square" /> تعديل
+                              </button>
+                              <button
+                                onClick={() => setDeleteDocTarget(doc)}
+                                title="مسح/حذف الوثيقة"
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  fontSize: '11px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  boxShadow: '0 2px 6px rgba(239,68,68,0.25)',
+                                }}
+                              >
+                                <i className="fa-solid fa-trash-can" /> مسح
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
 
             {/* Modal Footer */}
