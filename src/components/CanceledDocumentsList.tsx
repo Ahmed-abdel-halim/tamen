@@ -488,7 +488,7 @@ export default function CanceledDocumentsList() {
                 <span style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 700 }}>
                   صفحة {page} من {lastPage}
                 </span>
-                <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === page}
+                <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
                   style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border, #cbd5e1)', background: 'var(--panel, #f8fafc)', color: 'var(--text)', cursor: page === lastPage ? 'not-allowed' : 'pointer', opacity: page === lastPage ? 0.4 : 1, fontWeight: 600, fontSize: '13px' }}>
                   التالي
                 </button>
