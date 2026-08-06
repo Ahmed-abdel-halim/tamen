@@ -542,7 +542,10 @@ export default function AgentMonthlyLedger() {
     try {
       const columns = [
         { header: 'الشهر', key: 'month_label', width: 20 },
-        { header: 'عدد الوثائق', key: 'document_count', width: 15 },
+        { header: 'عدد الوثائق الإجمالي', key: 'document_count', width: 15 },
+        { header: 'الوثائق النشطة', key: 'active_count', width: 15 },
+        { header: 'الوثائق المنتهية', key: 'expired_count', width: 15 },
+        { header: 'الوثائق الملغية', key: 'canceled_count', width: 15 },
         { header: 'إجمالي المبيعات (د.ل)', key: 'total_sales', width: 22 },
         { header: 'حصة الوكيل (د.ل)', key: 'agent_share', width: 20 },
         { header: 'حصة الشركة (د.ل)', key: 'company_share', width: 20 },
@@ -555,6 +558,9 @@ export default function AgentMonthlyLedger() {
       const data = ledger.months.map((m) => ({
         month_label: m.month_label,
         document_count: m.document_count,
+        active_count: m.active_count ?? 0,
+        expired_count: m.expired_count ?? 0,
+        canceled_count: m.canceled_count ?? 0,
         total_sales: m.total_sales,
         agent_share: m.agent_share,
         company_share: m.company_share,
@@ -1194,7 +1200,7 @@ export default function AgentMonthlyLedger() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ background: 'var(--table-header)' }}>
-                    {['#', 'الشهر', 'نسبة %', 'عدد الوثائق', 'إجمالي المبيعات', 'حصة الوكيل', 'حصة الشركة', 'دين مترحل', 'المستلم', 'الباقي', 'إجراء'].map(
+                    {['#', 'الشهر', 'نسبة %', 'عدد الوثائق', 'نشطة', 'منتهية', 'ملغية', 'إجمالي المبيعات', 'حصة الوكيل', 'حصة الشركة', 'دين مترحل', 'المستلم', 'الباقي', 'إجراء'].map(
                       (h) => (
                         <th
                           key={h}
@@ -1244,25 +1250,27 @@ export default function AgentMonthlyLedger() {
                         </td>
                         <td style={{ ...td, padding: '6px 4px' }}>
                           {row.document_count > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ background: 'linear-gradient(135deg,#e0f2fe,#bae6fd)', color: '#0369a1', padding: '2px 10px', borderRadius: '20px', fontWeight: 900, fontSize: '12px' }}>
-                                {row.document_count}
-                              </span>
-                              <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', justifyContent: 'center', fontSize: '10px', fontFamily: "'Cairo',sans-serif" }}>
-                                <span title="وثائق نشطة" style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '8px', fontWeight: 700 }}>
-                                  نشطة: {row.active_count ?? 0}
-                                </span>
-                                <span title="وثائق منتهية" style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '8px', fontWeight: 700 }}>
-                                  منتهية: {row.expired_count ?? 0}
-                                </span>
-                                <span title="وثائق ملغية" style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 700 }}>
-                                  ملغية: {row.canceled_count ?? 0}
-                                </span>
-                              </div>
-                            </div>
+                            <span style={{ background: 'linear-gradient(135deg,#e0f2fe,#bae6fd)', color: '#0369a1', padding: '2px 10px', borderRadius: '20px', fontWeight: 900, fontSize: '12px' }}>
+                              {row.document_count}
+                            </span>
                           ) : (
                             <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>
                           )}
+                        </td>
+                        <td style={td}>
+                          <span style={{ background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                            {row.active_count ?? 0}
+                          </span>
+                        </td>
+                        <td style={td}>
+                          <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                            {row.expired_count ?? 0}
+                          </span>
+                        </td>
+                        <td style={td}>
+                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                            {row.canceled_count ?? 0}
+                          </span>
                         </td>
                         <td style={{ ...td, fontWeight: 800, color: '#3b82f6', fontSize: '12px' }}>
                           {row.total_sales > 0 ? (
