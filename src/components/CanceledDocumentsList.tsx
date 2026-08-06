@@ -577,7 +577,7 @@ export default function CanceledDocumentsList() {
                 ...inputStyle,
                 cursor: 'pointer',
                 display: 'flex',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 background: isAgentDropdownOpen ? '#ffffff' : 'var(--panel, #f8fafc)',
               }}
@@ -803,7 +803,7 @@ export default function CanceledDocumentsList() {
             {/* Pagination Controls */}
             <div style={{
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               padding: '18px 24px',
               borderTop: '1px solid var(--border, #e2e8f0)',
