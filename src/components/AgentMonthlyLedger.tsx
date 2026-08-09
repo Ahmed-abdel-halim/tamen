@@ -46,6 +46,7 @@ interface AgentInfo {
   agency_name: string;
   agent_name: string;
   contract_date: string | null;
+  notes?: string | null;
 }
 
 interface LedgerSummary {
@@ -119,6 +120,11 @@ export default function AgentMonthlyLedger() {
   const [payAmount, setPayAmount] = useState('');
   const [payNotes, setPayNotes] = useState('');
   const [payLoading, setPayLoading] = useState(false);
+
+  // Audit / Verification Modal State
+  const [notesModal, setNotesModal] = useState<boolean | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
 
   // Month Documents Modal State
   const [monthDocsModal, setMonthDocsModal] = useState<{ row: MonthRow } | null>(null);
@@ -275,6 +281,31 @@ export default function AgentMonthlyLedger() {
     const due = row.agent_share + row.carried_balance - row.paid_amount;
     setPayAmount(due > 0 ? due.toFixed(2) : '0');
     setPayNotes(row.notes || '');
+  };
+
+  const submitNote = async () => {
+    if (!selectedAgentId) return;
+    setSavingNote(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ notes: noteText }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('تم حفظ الملاحظة بنجاح', 'success');
+      setNotesModal(null);
+      fetchLedger(selectedAgentId);
+    } catch {
+      showToast('حدث خطأ أثناء حفظ الملاحظة', 'error');
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const submitPayment = async () => {
@@ -973,44 +1004,98 @@ export default function AgentMonthlyLedger() {
               color: 'white',
               marginBottom: '20px',
               boxShadow: '0 10px 25px rgba(15,23,42,0.15)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '16px',
               border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '22px',
-                  boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
-                }}
-              >
-                <i className="fa-solid fa-building-user" />
+            {/* Top row: icon + info + note button */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div
+                  style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '22px',
+                    boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
+                  }}
+                >
+                  <i className="fa-solid fa-building-user" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 700, fontFamily: "'Cairo',sans-serif" }}>
+                    الوكيل / الفرع المحدد
+                  </div>
+                  <h2 style={{ margin: '2px 0 6px 0', fontSize: '22px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
+                    {ledger.agent.agency_name}
+                  </h2>
+                  <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif" }}>
+                    <span>كود الوكيل: <strong style={{ color: '#38bdf8' }}>{ledger.agent.code}</strong></span>
+                    <span>المسؤول: <strong>{ledger.agent.agent_name}</strong></span>
+                    {ledger.agent.contract_date && (
+                      <span>تاريخ العقد: <strong>{ledger.agent.contract_date.substring(0, 10)}</strong></span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 700, fontFamily: "'Cairo',sans-serif" }}>
-                  الوكيل / الفرع المحدد
-                </div>
-                <h2 style={{ margin: '2px 0 6px 0', fontSize: '22px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
-                  {ledger.agent.agency_name}
-                </h2>
-                <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif" }}>
-                  <span>كود الوكيل: <strong style={{ color: '#38bdf8' }}>{ledger.agent.code}</strong></span>
-                  <span>المسؤول: <strong>{ledger.agent.agent_name}</strong></span>
-                  {ledger.agent.contract_date && (
-                    <span>تاريخ العقد: <strong>{ledger.agent.contract_date.substring(0, 10)}</strong></span>
-                  )}
-                </div>
+
+              {/* Audit / Verification Toggle Button */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    setNoteText(ledger.agent.notes || '');
+                    setNotesModal(true);
+                  }}
+                  style={{
+                    padding: '12px 22px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    color: 'white',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    transition: 'all .3s cubic-bezier(0.4,0,0.2,1)',
+                    background: ledger.agent.notes
+                      ? 'linear-gradient(135deg, #059669, #10b981)'
+                      : 'linear-gradient(135deg, #dc2626, #ef4444)',
+                    boxShadow: ledger.agent.notes
+                      ? '0 6px 20px rgba(16,185,129,0.45)'
+                      : '0 6px 20px rgba(220,38,38,0.45)',
+                    letterSpacing: '0.3px',
+                  }}
+                >
+                  <i
+                    className={`fa-solid ${
+                      ledger.agent.notes ? 'fa-circle-check' : 'fa-circle-xmark'
+                    }`}
+                    style={{ fontSize: '18px' }}
+                  />
+                  {ledger.agent.notes ? 'تم التدقيق بنجاح' : 'لم يتم التدقيق'}
+                </button>
+
+                {/* Show note text below button when verified */}
+                {ledger.agent.notes && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#6ee7b7',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 600,
+                    maxWidth: '260px',
+                    textAlign: 'right',
+                    lineHeight: '1.5',
+                    opacity: 0.9,
+                  }}>
+                    <i className="fa-solid fa-note-sticky" style={{ marginLeft: '4px' }} />
+                    {ledger.agent.notes}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1595,6 +1680,222 @@ export default function AgentMonthlyLedger() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ======= Audit / Verification Modal ======= */}
+      {notesModal === true && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) setNotesModal(null); }}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '500px',
+              boxShadow: '0 30px 70px rgba(0,0,0,0.4)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+              animation: 'modalSlideUp 0.25s ease-out',
+            }}
+          >
+            {/* Header — red if not verified, green if already verified */}
+            <div style={{
+              padding: '22px 28px',
+              background: ledger?.agent?.notes
+                ? 'linear-gradient(135deg, #065f46, #059669)'
+                : 'linear-gradient(135deg, #991b1b, #dc2626)',
+              color: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '14px',
+                  background: 'rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '22px',
+                }}>
+                  <i className={`fa-solid ${ ledger?.agent?.notes ? 'fa-circle-check' : 'fa-circle-xmark' }`} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
+                    {ledger?.agent?.notes ? 'تعديل حالة التدقيق' : 'تأكيد التدقيق'}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontFamily: "'Cairo',sans-serif" }}>
+                    {ledger?.agent.agency_name} — {ledger?.agent.code}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNotesModal(null)}
+                style={{
+                  border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white',
+                  width: '34px', height: '34px', borderRadius: '50%', cursor: 'pointer',
+                  fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '26px 28px' }}>
+
+              {/* Status indicator */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 18px',
+                borderRadius: '12px',
+                marginBottom: '20px',
+                background: ledger?.agent?.notes
+                  ? 'linear-gradient(135deg, rgba(5,150,105,0.1), rgba(16,185,129,0.05))'
+                  : 'linear-gradient(135deg, rgba(220,38,38,0.08), rgba(239,68,68,0.04))',
+                border: `1px solid ${ ledger?.agent?.notes ? 'rgba(16,185,129,0.25)' : 'rgba(220,38,38,0.2)' }`,
+              }}>
+                <div style={{
+                  width: '12px', height: '12px', borderRadius: '50%', flexShrink: 0,
+                  background: ledger?.agent?.notes ? '#10b981' : '#ef4444',
+                  boxShadow: `0 0 8px ${ ledger?.agent?.notes ? '#10b981' : '#ef4444' }`,
+                }} />
+                <span style={{
+                  fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px',
+                  color: ledger?.agent?.notes ? '#059669' : '#dc2626',
+                }}>
+                  {ledger?.agent?.notes
+                    ? `تم التدقيق بنجاح — الملاحظة: ${ledger?.agent?.notes}`
+                    : 'الحالة الحالية: لم يتم التدقيق بعد'
+                  }
+                </span>
+              </div>
+
+              <label style={{
+                display: 'block', marginBottom: '10px',
+                fontWeight: 800, fontSize: '13px',
+                color: 'var(--text)', fontFamily: "'Cairo',sans-serif",
+              }}>
+                <i className="fa-solid fa-file-signature" style={{ marginLeft: '6px', color: '#3b82f6' }} />
+                ملاحظة التدقيق: <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: '11px' }}>(اختياري)</span>
+              </label>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="مثلاً: تم تدقيق الوثائق والبيانات بشكل كامل..."
+                rows={3}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '13px 16px',
+                  borderRadius: '12px',
+                  border: '2px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  fontFamily: "'Cairo',sans-serif",
+                  fontSize: '13px',
+                  resize: 'vertical',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  lineHeight: '1.7',
+                  transition: 'border-color .2s',
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = '#10b981')}
+                onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
+              />
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
+                {/* Reset / Un-verify button — only if currently verified */}
+                {ledger?.agent?.notes && (
+                  <button
+                    onClick={async () => {
+                      setSavingNote(true);
+                      try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                          },
+                          body: JSON.stringify({ notes: '' }),
+                        });
+                        if (!res.ok) throw new Error();
+                        showToast('تم إلغاء التدقيق', 'success');
+                        setNotesModal(null);
+                        fetchLedger(selectedAgentId!);
+                      } catch {
+                        showToast('حدث خطأ', 'error');
+                      } finally {
+                        setSavingNote(false);
+                      }
+                    }}
+                    disabled={savingNote}
+                    style={{
+                      padding: '10px 18px', borderRadius: '10px', border: 'none',
+                      background: 'linear-gradient(135deg,#dc2626,#ef4444)',
+                      color: 'white', cursor: savingNote ? 'wait' : 'pointer',
+                      fontWeight: 800, fontFamily: "'Cairo',sans-serif", fontSize: '12px',
+                      display: 'flex', alignItems: 'center', gap: '7px',
+                      boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
+                    }}
+                  >
+                    <i className="fa-solid fa-circle-xmark" />
+                    إلغاء التدقيق
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setNotesModal(null)}
+                  style={{
+                    padding: '10px 20px', borderRadius: '10px',
+                    border: '1px solid var(--border)', background: 'var(--bg)',
+                    color: 'var(--text)', cursor: 'pointer', fontWeight: 700,
+                    fontFamily: "'Cairo',sans-serif", fontSize: '13px',
+                    marginRight: 'auto',
+                  }}
+                >
+                  إلغاء
+                </button>
+
+                <button
+                  onClick={submitNote}
+                  disabled={savingNote}
+                  style={{
+                    padding: '11px 26px', borderRadius: '10px', border: 'none',
+                    background: 'linear-gradient(135deg, #059669, #10b981)',
+                    color: 'white',
+                    cursor: savingNote ? 'wait' : 'pointer',
+                    fontWeight: 900, fontFamily: "'Cairo',sans-serif", fontSize: '14px',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    boxShadow: '0 6px 18px rgba(16,185,129,0.4)',
+                    transition: 'all .2s',
+                    letterSpacing: '0.3px',
+                  }}
+                >
+                  {savingNote
+                    ? <><i className="fa-solid fa-circle-notch fa-spin" /> جاري الحفظ...</>
+                    : <><i className="fa-solid fa-circle-check" /> تأكيد التدقيق</>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Month Documents View Modal */}
