@@ -165,6 +165,7 @@ export default function ViewInsuranceDocument() {
   );
 
   const isMandatory = document.insurance_type === 'تأمين إجباري سيارات';
+  const isAuthorityLinked = Boolean(document.eidc_pdf_url || document.eidc_policy_id);
   const vt = document.vehicleType || document.vehicle_type;
 
   return (
@@ -188,12 +189,12 @@ export default function ViewInsuranceDocument() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/insurance-documents') },
-              ...(!isMandatory ? [{ label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint }] : []),
+              ...((!isMandatory || !isAuthorityLinked) ? [{ label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint }] : []),
               ...(document.eidc_pdf_url ? [{
-                label: isMandatory ? 'طباعة الوثيقة' : 'وثيقة الهيئة (PDF)',
+                label: isMandatory ? 'طباعة وثيقة الهيئة' : 'وثيقة الهيئة (PDF)',
                 icon: 'fa-print',
-                bg: isMandatory ? '#0f766e' : '#0284c7',
-                border: isMandatory ? '#0f766e' : '#0284c7',
+                bg: '#0284c7',
+                border: '#0284c7',
                 color: '#fff',
                 onClick: () => {
                   const iframe = window.document.createElement('iframe');

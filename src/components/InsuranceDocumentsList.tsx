@@ -643,7 +643,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                         )}
                         <td>
                           <div className="action-buttons">
-                            {doc.insurance_type !== 'تأمين إجباري سيارات' && (
+                            {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id)) && (
                               <button
                                 onClick={() => {
                                   const iframe = document.createElement('iframe');
@@ -662,7 +662,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                                 }}
                                 className="action-btn"
                                 aria-label="طباعة الوثيقة"
-                                title="طباعة الوثيقة"
+                                title="طباعة الوثيقة (طابعة المنظومة)"
                                 style={{ background: '#3b82f6', color: '#fff' }}
                               >
                                 <i className="fa-solid fa-print"></i>
@@ -836,7 +836,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                           </div>
                         )}
                         <div className="user-mobile-actions">
-                          {doc.insurance_type !== 'تأمين إجباري سيارات' && (
+                          {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id)) && (
                             <button
                               onClick={() => {
                                 const iframe = document.createElement('iframe');
@@ -855,7 +855,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               }}
                               className="action-btn"
                               aria-label="طباعة الوثيقة"
-                              title="طباعة الوثيقة"
+                              title="طباعة الوثيقة (طابعة المنظومة)"
                               style={{ background: '#3b82f6', color: '#fff' }}
                             >
                               <i className="fa-solid fa-print"></i>
