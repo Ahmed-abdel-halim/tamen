@@ -38,6 +38,7 @@ interface MonthRow {
   paid_amount: number;
   remaining: number;
   notes: string | null;
+  is_audited?: boolean;
 }
 
 interface AgentInfo {
@@ -123,7 +124,7 @@ export default function AgentMonthlyLedger() {
   const [payLoading, setPayLoading] = useState(false);
 
   // Audit / Verification State
-  const [togglingAudit, setTogglingAudit] = useState(false);
+  const [togglingMonthKey, setTogglingMonthKey] = useState<string | null>(null);
 
   // Month Documents Modal State
   const [monthDocsModal, setMonthDocsModal] = useState<{ row: MonthRow } | null>(null);
@@ -282,28 +283,32 @@ export default function AgentMonthlyLedger() {
     setPayNotes(row.notes || '');
   };
 
-  const toggleAuditStatus = async () => {
-    if (!selectedAgentId || !ledger?.agent) return;
-    setTogglingAudit(true);
-    const newAuditedState = !Boolean(ledger.agent.is_audited);
+  const toggleMonthAuditStatus = async (row: MonthRow) => {
+    if (!selectedAgentId) return;
+    setTogglingMonthKey(row.month_key);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
-        method: 'PUT',
+      const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/audit`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ is_audited: newAuditedState }),
+        body: JSON.stringify({
+          branch_agent_id: selectedAgentId,
+          year: row.year,
+          month: row.month,
+        }),
       });
-      if (!res.ok) throw new Error();
-      showToast(newAuditedState ? 'تم التدقيق بنجاح' : 'تم تغيير الحالة إلى لم يتم التدقيق', 'success');
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data?.message || 'فشل تحديث حالة التدقيق للشهر');
+      showToast(data.message || 'تم تحديث حالة التدقيق للشهر بنجاح', 'success');
       fetchLedger(selectedAgentId);
-    } catch {
-      showToast('حدث خطأ أثناء تغيير حالة التدقيق', 'error');
+    } catch (err: any) {
+      showToast(err?.message || 'حدث خطأ أثناء تغيير حالة التدقيق للشهر', 'error');
     } finally {
-      setTogglingAudit(false);
+      setTogglingMonthKey(null);
     }
   };
 
@@ -1041,48 +1046,6 @@ export default function AgentMonthlyLedger() {
                 </div>
               </div>
 
-              {/* Audit / Verification Toggle Button */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                <button
-                  onClick={toggleAuditStatus}
-                  disabled={togglingAudit}
-                  title="انقر لتغيير حالة التدقيق"
-                  style={{
-                    padding: '12px 22px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    cursor: togglingAudit ? 'wait' : 'pointer',
-                    fontFamily: "'Cairo',sans-serif",
-                    fontWeight: 900,
-                    fontSize: '14px',
-                    color: 'white',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    transition: 'all .3s cubic-bezier(0.4,0,0.2,1)',
-                    background: ledger.agent.is_audited
-                      ? 'linear-gradient(135deg, #059669, #10b981)'
-                      : 'linear-gradient(135deg, #dc2626, #ef4444)',
-                    boxShadow: ledger.agent.is_audited
-                      ? '0 6px 20px rgba(16,185,129,0.45)'
-                      : '0 6px 20px rgba(220,38,38,0.45)',
-                    letterSpacing: '0.3px',
-                    opacity: togglingAudit ? 0.7 : 1,
-                  }}
-                >
-                  <i
-                    className={`fa-solid ${
-                      togglingAudit
-                        ? 'fa-circle-notch fa-spin'
-                        : ledger.agent.is_audited
-                        ? 'fa-circle-check'
-                        : 'fa-circle-xmark'
-                    }`}
-                    style={{ fontSize: '18px' }}
-                  />
-                  {ledger.agent.is_audited ? 'تم التدقيق بنجاح' : 'لم يتم التدقيق'}
-                </button>
-              </div>
             </div>
           </div>
 
@@ -1496,6 +1459,47 @@ export default function AgentMonthlyLedger() {
                         </td>
                         <td style={{ ...td, whiteSpace: 'nowrap', padding: '4px 2px' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
+                            {/* Monthly Audit Toggle Button */}
+                            <button
+                              className="pay-btn"
+                              disabled={togglingMonthKey === row.month_key}
+                              onClick={() => toggleMonthAuditStatus(row)}
+                              title={row.is_audited ? 'انقر لإلغاء التدقيق لهذا الشهر' : 'انقر لتدقيق حساب هذا الشهر'}
+                              style={{
+                                padding: '3px 6px',
+                                borderRadius: '7px',
+                                border: 'none',
+                                cursor: togglingMonthKey === row.month_key ? 'wait' : 'pointer',
+                                fontFamily: "'Cairo',sans-serif",
+                                fontWeight: 800,
+                                fontSize: '10px',
+                                color: 'white',
+                                background: row.is_audited
+                                  ? 'linear-gradient(135deg,#059669,#10b981)'
+                                  : 'linear-gradient(135deg,#dc2626,#ef4444)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                transition: 'all .2s',
+                                boxShadow: row.is_audited
+                                  ? '0 2px 5px rgba(16,185,129,0.3)'
+                                  : '0 2px 5px rgba(220,38,38,0.3)',
+                                opacity: togglingMonthKey === row.month_key ? 0.7 : 1,
+                              }}
+                            >
+                              <i
+                                className={`fa-solid ${
+                                  togglingMonthKey === row.month_key
+                                    ? 'fa-circle-notch fa-spin'
+                                    : row.is_audited
+                                    ? 'fa-circle-check'
+                                    : 'fa-circle-xmark'
+                                }`}
+                                style={{ fontSize: '9px' }}
+                              />
+                              {row.is_audited ? 'تم التدقيق' : 'لم يتم التدقيق'}
+                            </button>
+
                             {/* View Month Documents Button */}
                             <button
                               className="pay-btn"
