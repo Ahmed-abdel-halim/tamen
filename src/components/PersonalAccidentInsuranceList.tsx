@@ -13,6 +13,10 @@ type PersonalAccidentInsuranceDocument = {
   phone?: string;
   total: number | string;
   agency_name?: string; // اسم الوكالة (يظهر للادمن فقط)
+  branch_agent_id?: number | null;
+  user_name?: string;
+  is_agency?: boolean;
+  user?: { id?: number; name?: string; username?: string };
 };
 
 export default function PersonalAccidentInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
@@ -450,8 +454,19 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
                           <td>{doc.total ? (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) : '0.000'} د.ل</td>
                           <td>تأمين الحوادث الشخصية</td>
                           {isAdmin && (
-                            <td>{doc.agency_name || '-'}</td>
-                          )}
+                          <td>
+                            {doc.branch_agent_id ? (
+                              doc.agency_name || '-'
+                            ) : (doc.agency_name || doc.user_name || doc.user?.name) ? (
+                              <span className="employee-issuer-badge" title="موظف بالشركة (إصدار مباشر)">
+                                <i className="fa-solid fa-user-tie"></i>
+                                {doc.user_name || doc.agency_name || doc.user?.name}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        )}
                           <td>
                         <div className="action-buttons">
                           <button
@@ -564,10 +579,19 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
                             {doc.total ? (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) : '0.000'} د.ل
                           </span>
                         </div>
-                        {isAdmin && doc.agency_name && (
+                        {isAdmin && (doc.agency_name || doc.user_name || doc.user?.name) && (
                           <div className="user-mobile-row">
-                            <span className="user-mobile-label">اسم الوكالة:</span>
-                            <span className="user-mobile-value">{doc.agency_name}</span>
+                            <span className="user-mobile-label">الجهة المصدرة:</span>
+                            <span className="user-mobile-value">
+                              {doc.branch_agent_id ? (
+                                doc.agency_name
+                              ) : (
+                                <span className="employee-issuer-badge" title="موظف بالشركة (إصدار مباشر)">
+                                  <i className="fa-solid fa-user-tie"></i>
+                                  {doc.user_name || doc.agency_name || doc.user?.name}
+                                </span>
+                              )}
+                            </span>
                           </div>
                         )}
                         <div className="user-mobile-actions">

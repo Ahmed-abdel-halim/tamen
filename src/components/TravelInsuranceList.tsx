@@ -21,6 +21,10 @@ type TravelInsuranceDocument = {
   total: number | string;
   passengers?: TravelInsurancePassenger[];
   agency_name?: string; // اسم الوكالة (يظهر للادمن فقط)
+  branch_agent_id?: number | null;
+  user_name?: string;
+  is_agency?: boolean;
+  user?: { id?: number; name?: string; username?: string };
 };
 
 export default function TravelInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
@@ -462,37 +466,32 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
                         <td>{doc.total ? (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) : '0.000'} د.ل</td>
                         <td>{doc.insurance_type}</td>
                         {isAdmin && (
-                          <td>{doc.agency_name || '-'}</td>
+                          <td>
+                            {doc.branch_agent_id ? (
+                              doc.agency_name || '-'
+                            ) : (doc.agency_name || doc.user_name || doc.user?.name) ? (
+                              <span className="employee-issuer-badge" title="موظف بالشركة (إصدار مباشر)">
+                                <i className="fa-solid fa-user-tie"></i>
+                                {doc.user_name || doc.agency_name || doc.user?.name}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
                         )}
                         <td>
                           <div className="action-buttons">
                             <button
                               onClick={() => {
-                                const iframe = document.createElement('iframe');
-                                iframe.style.position = 'fixed';
-                                iframe.style.right = '-9999px';
-                                iframe.style.width = '0';
-                                iframe.style.height = '0';
-                                iframe.src = `${API_BASE_URL}/travel-insurance-documents/${doc.id}/print`;
-                                document.body.appendChild(iframe);
-                                
-                                iframe.onload = () => {
-                                  setTimeout(() => {
-                                    if (iframe.contentWindow) {
-                                      iframe.contentWindow.focus();
-                                      iframe.contentWindow.print();
-                                    }
-                                    setTimeout(() => {
-                                      if (document.body.contains(iframe)) {
-                                        document.body.removeChild(iframe);
-                                      }
-                                    }, 300);
-                                  }, 100);
-                                };
+                                window.open(
+                                  `${API_BASE_URL}/travel-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`,
+                                  'print_popup',
+                                  'width=850,height=750,toolbar=0,scrollbars=1,resizable=1'
+                                );
                               }}
                               className="action-btn"
-                              aria-label="طباعة الوثيقة"
-                              title="طباعة الوثيقة"
+                              aria-label="طباعة"
+                              title="طباعة"
                               style={{ background: '#3b82f6', color: '#fff' }}
                             >
                               <i className="fa-solid fa-print"></i>
@@ -535,7 +534,6 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
               </table>
             </div>
 
-            {/* Mobile Cards View */}
             <div className="users-mobile-cards">
               {totalDocuments === 0 ? (
                 <div className="empty-state">لا توجد نتائج</div>
@@ -581,10 +579,19 @@ export default function TravelInsuranceList({ isArchive = false }: { isArchive?:
                             {doc.total ? (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) : '0.000'} د.ل
                           </span>
                         </div>
-                        {isAdmin && doc.agency_name && (
+                        {isAdmin && (doc.agency_name || doc.user_name || doc.user?.name) && (
                           <div className="user-mobile-row">
-                            <span className="user-mobile-label">اسم الوكالة:</span>
-                            <span className="user-mobile-value">{doc.agency_name}</span>
+                            <span className="user-mobile-label">الجهة المصدرة:</span>
+                            <span className="user-mobile-value">
+                              {doc.branch_agent_id ? (
+                                doc.agency_name
+                              ) : (
+                                <span className="employee-issuer-badge" title="موظف بالشركة (إصدار مباشر)">
+                                  <i className="fa-solid fa-user-tie"></i>
+                                  {doc.user_name || doc.agency_name || doc.user?.name}
+                                </span>
+                              )}
+                            </span>
                           </div>
                         )}
                         <div className="user-mobile-actions">

@@ -26,6 +26,10 @@ type MarineStructureInsuranceDocument = {
   total: number | string;
   structure_type: string;
   agency_name?: string; // اسم الوكالة (يظهر للادمن فقط)
+  branch_agent_id?: number | null;
+  user_name?: string;
+  is_agency?: boolean;
+  user?: { id?: number; name?: string; username?: string };
 };
 
 export default function MarineStructureInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
@@ -464,7 +468,18 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
                         <td>{doc.total ? (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) : '0.000'} د.ل</td>
                         <td>{doc.structure_type}</td>
                         {isAdmin && (
-                          <td>{doc.agency_name || '-'}</td>
+                          <td>
+                            {doc.branch_agent_id ? (
+                              doc.agency_name || '-'
+                            ) : (doc.agency_name || doc.user_name || doc.user?.name) ? (
+                              <span className="employee-issuer-badge" title="موظف بالشركة (إصدار مباشر)">
+                                <i className="fa-solid fa-user-tie"></i>
+                                {doc.user_name || doc.agency_name || doc.user?.name}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
                         )}
                         <td>
                           <div className="action-buttons">
@@ -585,10 +600,19 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
                             {doc.total ? (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) : '0.000'} د.ل
                           </span>
                         </div>
-                        {isAdmin && doc.agency_name && (
+                        {isAdmin && (doc.agency_name || doc.user_name || doc.user?.name) && (
                           <div className="user-mobile-row">
-                            <span className="user-mobile-label">اسم الوكالة:</span>
-                            <span className="user-mobile-value">{doc.agency_name}</span>
+                            <span className="user-mobile-label">الجهة المصدرة:</span>
+                            <span className="user-mobile-value">
+                              {doc.branch_agent_id ? (
+                                doc.agency_name
+                              ) : (
+                                <span className="employee-issuer-badge" title="موظف بالشركة (إصدار مباشر)">
+                                  <i className="fa-solid fa-user-tie"></i>
+                                  {doc.user_name || doc.agency_name || doc.user?.name}
+                                </span>
+                              )}
+                            </span>
                           </div>
                         )}
                         <div className="user-mobile-actions">
