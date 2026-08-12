@@ -47,6 +47,8 @@ interface AgentInfo {
   agency_name: string;
   agent_name: string;
   contract_date: string | null;
+  contract_end_date?: string | null;
+  status?: string | null;
   notes?: string | null;
   is_audited?: boolean;
 }
@@ -1036,11 +1038,16 @@ export default function AgentMonthlyLedger() {
                   <h2 style={{ margin: '2px 0 6px 0', fontSize: '22px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
                     {ledger.agent.agency_name}
                   </h2>
-                  <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif" }}>
+                  <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif", alignItems: 'center', flexWrap: 'wrap' }}>
                     <span>كود الوكيل: <strong style={{ color: '#38bdf8' }}>{ledger.agent.code}</strong></span>
                     <span>المسؤول: <strong>{ledger.agent.agent_name}</strong></span>
                     {ledger.agent.contract_date && (
                       <span>تاريخ العقد: <strong>{ledger.agent.contract_date.substring(0, 10)}</strong></span>
+                    )}
+                    {ledger.agent.contract_end_date && (
+                      <span style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#fca5a5', padding: '3px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="fa-solid fa-user-slash" /> تاريخ إلغاء الوكالة: {ledger.agent.contract_end_date.substring(0, 10)}
+                      </span>
                     )}
                   </div>
                 </div>
