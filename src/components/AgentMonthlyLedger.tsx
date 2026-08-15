@@ -1615,60 +1615,7 @@ export default function AgentMonthlyLedger() {
                               </button>
                             )}
 
-                            <button
-                              className="pay-btn"
-                              onClick={() =>
-                                navigate('/old-documents', {
-                                  state: {
-                                    branchAgentId: ledger.agent.id,
-                                    issueDate: `${row.year}-${String(row.month).padStart(2, '0')}-01`,
-                                  },
-                                })
-                              }
-                              title="إضافة وثيقة قديمة لهذا الشهر"
-                              style={{
-                                padding: '3px 6px',
-                                borderRadius: '7px',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontFamily: "'Cairo',sans-serif",
-                                fontWeight: 700,
-                                fontSize: '10px',
-                                color: 'white',
-                                background: 'linear-gradient(135deg,#7c3aed,#8b5cf6)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                transition: 'all .2s',
-                                boxShadow: '0 2px 5px rgba(124,58,237,0.2)',
-                              }}
-                            >
-                              <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '9px' }} />وثائق قديمة
-                            </button>
 
-                            <button
-                              className="pay-btn"
-                              onClick={() => navigate(`/branches-agents/${ledger.agent.id}`)}
-                              title="الانتقال لبروفايل الوكيل"
-                              style={{
-                                padding: '3px 6px',
-                                borderRadius: '7px',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontFamily: "'Cairo',sans-serif",
-                                fontWeight: 700,
-                                fontSize: '10px',
-                                color: 'white',
-                                background: 'linear-gradient(135deg,#0d9488,#14b8a6)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                transition: 'all .2s',
-                                boxShadow: '0 2px 5px rgba(13,148,136,0.2)',
-                              }}
-                            >
-                              <i className="fa-solid fa-id-card" style={{ fontSize: '9px' }} />البروفايل
-                            </button>
                           </div>
                         </td>
                       </tr>
