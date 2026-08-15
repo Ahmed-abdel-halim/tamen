@@ -97,6 +97,7 @@ export default function EditBranchAgent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState({
     type: 'وكيل' as 'وكيل' | 'فرع من شركة',
     agency_name: '',
@@ -741,6 +742,14 @@ export default function EditBranchAgent() {
     );
   }
 
+  const TABS = [
+    { icon: 'fa-solid fa-building', label: 'البيانات الرئيسية', shortLabel: 'الرئيسية' },
+    { icon: 'fa-solid fa-file-signature', label: 'التعاقد والعقد', shortLabel: 'العقد' },
+    { icon: 'fa-solid fa-folder-open', label: 'المستندات الثبوتية', shortLabel: 'المستندات' },
+    { icon: 'fa-solid fa-shield-halved', label: 'الوثائق والنسب', shortLabel: 'الوثائق' },
+    { icon: 'fa-solid fa-user-lock', label: 'دخول المنظومة', shortLabel: 'الدخول' },
+  ];
+
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
@@ -752,944 +761,1070 @@ export default function EditBranchAgent() {
       </div>
 
       <div className="users-card">
-        <div className="form-page-container">
-          <form onSubmit={handleSubmit} className="user-form">
-            {/* 1. البيانات الأساسية للوكالة/الفرع */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-circle-info" style={{ color: '#3b82f6' }}></i>
-                البيانات الأساسية للوكالة/الفرع
-              </h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>النوع *</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'وكيل' | 'فرع من شركة' })}
-                  >
-                    <option value="وكيل">وكيل</option>
-                    <option value="فرع من شركة">فرع من شركة</option>
-                  </select>
+        <div className="edit-agent-wrapper">
+          <form onSubmit={handleSubmit}>
+
+            {/* ===== TAB NAVIGATION BAR ===== */}
+            <div className="edit-agent-tabs">
+              {TABS.map((tab, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className={`edit-agent-tab ${activeTab === index ? 'active' : ''}`}
+                  onClick={() => setActiveTab(index)}
+                >
+                  <span className="edit-agent-tab-icon">
+                    <i className={tab.icon}></i>
+                  </span>
+                  <span className="edit-agent-tab-label">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* ===== TAB 1: البيانات الرئيسية للوكالة/الفرع ===== */}
+            {activeTab === 0 && (
+              <div className="edit-agent-panel" key="tab-0">
+                {/* Header */}
+                <div className="edit-agent-section-header">
+                  <div className="edit-agent-section-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                    <i className="fa-solid fa-building"></i>
+                  </div>
+                  <div>
+                    <h3 className="edit-agent-section-title">البيانات الرئيسية للوكالة / الفرع</h3>
+                    <p className="edit-agent-section-subtitle">بيانات الوكالة الأساسية والموقع</p>
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label>نشاط الوكيل</label>
-                  <select
-                    value={formData.activity}
-                    onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
-                  >
-                    <option value="">اختر نشاط الوكيل</option>
-                    {AGENT_ACTIVITIES.map((activity, index) => (
-                      <option key={index} value={activity}>
-                        {activity}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>اسم الوكالة *</label>
-                  <input
-                    type="text"
-                    value={formData.agency_name}
-                    onChange={(e) => setFormData({ ...formData, agency_name: e.target.value })}
-                    placeholder="اسم الوكالة"
-                  />
-                  {formErrors.agency_name && <span className="error-message">{formErrors.agency_name}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>اسم الوكيل *</label>
-                  <input
-                    type="text"
-                    value={formData.agent_name}
-                    onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
-                    placeholder="اسم الوكيل"
-                  />
-                  {formErrors.agent_name && <span className="error-message">{formErrors.agent_name}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>المدينة *</label>
-                  {isCustomCity ? (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="اكتب اسم المدينة الجديدة"
-                        style={{ flex: 1 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCustomCity(false);
-                          setFormData({ ...formData, city: '' });
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#f3f4f6',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          color: '#374151',
-                          fontWeight: '500'
-                        }}
-                      >
-                        إلغاء
-                      </button>
-                    </div>
-                  ) : (
+                <div className="edit-agent-grid">
+                  <div className="form-group">
+                    <label>النوع *</label>
                     <select
-                      value={formData.city}
-                      onChange={(e) => {
-                        if (e.target.value === 'other') {
-                          setIsCustomCity(true);
-                          setFormData({ ...formData, city: '' });
-                        } else {
-                          setFormData({ ...formData, city: e.target.value });
-                        }
-                      }}
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value as 'وكيل' | 'فرع من شركة' })}
                     >
-                      <option value="">اختر المدينة</option>
-                      {LIBYAN_CITIES.map((city, index) => (
-                        <option key={index} value={city.ar}>
-                          {city.ar} - {city.en}
+                      <option value="وكيل">وكيل</option>
+                      <option value="فرع من شركة">فرع من شركة</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>نشاط الوكيل</label>
+                    <select
+                      value={formData.activity}
+                      onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
+                    >
+                      <option value="">اختر نشاط الوكيل</option>
+                      {AGENT_ACTIVITIES.map((activity, index) => (
+                        <option key={index} value={activity}>
+                          {activity}
                         </option>
                       ))}
-                      <option value="other">أخرى (إضافة مدينة جديدة...)</option>
                     </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>اسم الوكالة *</label>
+                    <input
+                      type="text"
+                      value={formData.agency_name}
+                      onChange={(e) => setFormData({ ...formData, agency_name: e.target.value })}
+                      placeholder="اسم الوكالة"
+                    />
+                    {formErrors.agency_name && <span className="error-message">{formErrors.agency_name}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>اسم الوكيل *</label>
+                    <input
+                      type="text"
+                      value={formData.agent_name}
+                      onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
+                      placeholder="اسم الوكيل"
+                    />
+                    {formErrors.agent_name && <span className="error-message">{formErrors.agent_name}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>المدينة *</label>
+                    {isCustomCity ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          placeholder="اكتب اسم المدينة الجديدة"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomCity(false);
+                            setFormData({ ...formData, city: '' });
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#f3f4f6',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            color: '#374151',
+                            fontWeight: '500'
+                          }}
+                        >
+                          إلغاء
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.city}
+                        onChange={(e) => {
+                          if (e.target.value === 'other') {
+                            setIsCustomCity(true);
+                            setFormData({ ...formData, city: '' });
+                          } else {
+                            setFormData({ ...formData, city: e.target.value });
+                          }
+                        }}
+                      >
+                        <option value="">اختر المدينة</option>
+                        {LIBYAN_CITIES.map((city, index) => (
+                          <option key={index} value={city.ar}>
+                            {city.ar} - {city.en}
+                          </option>
+                        ))}
+                        <option value="other">أخرى (إضافة مدينة جديدة...)</option>
+                      </select>
+                    )}
+                    {formErrors.city && <span className="error-message">{formErrors.city}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>الجنسية</label>
+                    <input
+                      type="text"
+                      value={formData.nationality}
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                      placeholder="الجنسية"
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>العنوان</label>
+                    <textarea
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="العنوان"
+                      rows={1}
+                      style={{ minHeight: '45px' }}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>لوكيشن المكتب (رابط خرائط جوجل)</label>
+                    <input
+                      type="text"
+                      value={formData.office_location}
+                      onChange={(e) => setFormData({ ...formData, office_location: e.target.value })}
+                      placeholder="رابط الموقع الجغرافي"
+                    />
+                  </div>
+                </div>
+
+                {/* بيانات الوكيل الشخصية */}
+                <div className="edit-agent-subsection">
+                  <h4 className="edit-agent-subsection-title">
+                    <i className="fa-solid fa-id-card" style={{ color: '#8b5cf6' }}></i>
+                    بيانات الوكيل الشخصية
+                  </h4>
+                  <div className="edit-agent-grid">
+                    <div className="form-group">
+                      <label>الرقم الوطني / رقم إثبات الشخصية</label>
+                      <input
+                        type="text"
+                        value={formData.national_id}
+                        onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
+                        placeholder="الرقم الوطني"
+                        maxLength={50}
+                      />
+                      {formErrors.national_id && <span className="error-message">{formErrors.national_id}</span>}
+                    </div>
+
+                    <div className="form-group">
+                      <label>رقم إثبات الشخصية</label>
+                      <input
+                        type="text"
+                        value={formData.identity_number}
+                        onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
+                        placeholder="حروف وأرقام"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>رقم الهاتف الشخصي</label>
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="رقم الهاتف الشخصي"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>رقم هاتف الوكالة</label>
+                      <input
+                        type="text"
+                        value={formData.office_phone}
+                        onChange={(e) => setFormData({ ...formData, office_phone: e.target.value })}
+                        placeholder="رقم هاتف الوكالة"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== TAB 2: بيانات التعاقد والعقد ===== */}
+            {activeTab === 1 && (
+              <div className="edit-agent-panel" key="tab-1">
+                <div className="edit-agent-section-header">
+                  <div className="edit-agent-section-icon" style={{ background: '#f0fdf4', color: '#10b981' }}>
+                    <i className="fa-solid fa-file-signature"></i>
+                  </div>
+                  <div>
+                    <h3 className="edit-agent-section-title">بيانات التعاقد والعقد</h3>
+                    <p className="edit-agent-section-subtitle">تفاصيل العقد والتواريخ وشروط التعاقد</p>
+                  </div>
+                </div>
+
+                <div className="edit-agent-grid">
+                  <div className="form-group">
+                    <label>رقم الوكالة</label>
+                    <input
+                      type="text"
+                      value={formData.agency_number}
+                      onChange={(e) => setFormData({ ...formData, agency_number: e.target.value })}
+                      placeholder="رقم الوكالة"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>رقم الختم</label>
+                    <input
+                      type="text"
+                      value={formData.stamp_number}
+                      onChange={(e) => setFormData({ ...formData, stamp_number: e.target.value })}
+                      placeholder="رقم الختم"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>تاريخ التعاقد *</label>
+                    <input
+                      type="date"
+                      value={formData.contract_date}
+                      onChange={(e) => setFormData({ ...formData, contract_date: e.target.value })}
+                    />
+                    {formErrors.contract_date && <span className="error-message">{formErrors.contract_date}</span>}
+                  </div>
+                  <div className="form-group">
+                    <label>تاريخ التجديد</label>
+                    <input
+                      type="date"
+                      value={formData.renewal_date}
+                      onChange={(e) => setFormData({ ...formData, renewal_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>تاريخ انتهاء العقد</label>
+                    <input
+                      type="date"
+                      value={formData.contract_end_date}
+                      onChange={(e) => setFormData({ ...formData, contract_end_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>مدة العقد</label>
+                    <input
+                      type="text"
+                      value={formData.contract_duration}
+                      onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })}
+                      placeholder="سيتم حسابها تلقائياً عند اختيار تاريخ انتهاء العقد"
+                      readOnly={!!(formData.contract_date && formData.contract_end_date)}
+                      style={formData.contract_date && formData.contract_end_date ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
+                    />
+                  </div>
+                </div>
+
+                {/* شروط العقد */}
+                <div className="edit-agent-subsection">
+                  <h4 className="edit-agent-subsection-title">
+                    <i className="fa-solid fa-scroll" style={{ color: '#10b981' }}></i>
+                    شروط العقد
+                  </h4>
+                  <div className="form-group">
+                    <textarea
+                      value={formData.contract_conditions}
+                      onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })}
+                      placeholder="أدخل شروط العقد هنا..."
+                      rows={5}
+                    />
+                  </div>
+                </div>
+
+                {/* الحالة */}
+                <div className="edit-agent-subsection">
+                  <h4 className="edit-agent-subsection-title">
+                    <i className="fa-solid fa-toggle-on" style={{ color: '#f59e0b' }}></i>
+                    حالة الوكالة
+                  </h4>
+                  <div className="edit-agent-grid">
+                    <div className="form-group">
+                      <label>الحالة</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as 'نشط' | 'غير نشط' })}
+                      >
+                        <option value="نشط">وكالة نشطة</option>
+                        <option value="غير نشط">وكالة ملغية</option>
+                        {formData.status === 'قيد الانتظار' && <option value="قيد الانتظار">قيد الانتظار</option>}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
+                      <span className={`agent-status-badge ${formData.status === 'نشط' ? 'active' : formData.status === 'قيد الانتظار' ? 'pending' : 'cancelled'}`}>
+                        <i className={`fa-solid ${formData.status === 'نشط' ? 'fa-circle-check' : formData.status === 'قيد الانتظار' ? 'fa-clock' : 'fa-circle-xmark'}`}></i>
+                        {formData.status === 'نشط' ? 'وكالة نشطة' : formData.status === 'قيد الانتظار' ? 'قيد الانتظار' : 'وكالة ملغية'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* عرض تاريخ الإلغاء عند اختيار غير نشط */}
+                  {formData.status === 'غير نشط' && formData.contract_end_date && (
+                    <div className="agent-cancellation-info">
+                      <i className="fa-solid fa-calendar-xmark"></i>
+                      وكالة ملغية بتاريخ: {formData.contract_end_date}
+                    </div>
                   )}
-                  {formErrors.city && <span className="error-message">{formErrors.city}</span>}
-                </div>
 
-                <div className="form-group">
-                  <label>رقم الهاتف</label>
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="رقم الهاتف"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>هاتف المكتب</label>
-                  <input
-                    type="text"
-                    value={formData.office_phone}
-                    onChange={(e) => setFormData({ ...formData, office_phone: e.target.value })}
-                    placeholder="هاتف المكتب"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>لوكيشن المكتب (رابط خرائط جوجل)</label>
-                  <input
-                    type="text"
-                    value={formData.office_location}
-                    onChange={(e) => setFormData({ ...formData, office_location: e.target.value })}
-                    placeholder="رابط الموقع الجغرافي"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>الجنسية</label>
-                  <input
-                    type="text"
-                    value={formData.nationality}
-                    onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                    placeholder="الجنسية"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>العنوان</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="العنوان"
-                    rows={1}
-                    style={{ minHeight: '45px' }}
-                  />
+                  <div className="form-group" style={{ marginTop: '16px' }}>
+                    <label>ملاحظات عن الوكيل</label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="ملاحظات"
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* 2. بيانات التعاقد والعقد */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-file-signature" style={{ color: '#10b981' }}></i>
-                بيانات التعاقد والعقد
-              </h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>رقم الوكالة</label>
-                  <input
-                    type="text"
-                    value={formData.agency_number}
-                    onChange={(e) => setFormData({ ...formData, agency_number: e.target.value })}
-                    placeholder="رقم الوكالة"
-                  />
+            {/* ===== TAB 3: المستندات والأوراق الثبوتية ===== */}
+            {activeTab === 2 && (
+              <div className="edit-agent-panel" key="tab-2">
+                <div className="edit-agent-section-header">
+                  <div className="edit-agent-section-icon" style={{ background: '#f0fdfa', color: '#14b8a6' }}>
+                    <i className="fa-solid fa-folder-open"></i>
+                  </div>
+                  <div>
+                    <h3 className="edit-agent-section-title">المستندات والأوراق الثبوتية للوكيل</h3>
+                    <p className="edit-agent-section-subtitle">الصور والشهادات والمستندات الرسمية</p>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>رقم الختم</label>
-                  <input
-                    type="text"
-                    value={formData.stamp_number}
-                    onChange={(e) => setFormData({ ...formData, stamp_number: e.target.value })}
-                    placeholder="رقم الختم"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>تاريخ التعاقد *</label>
-                  <input
-                    type="date"
-                    value={formData.contract_date}
-                    onChange={(e) => setFormData({ ...formData, contract_date: e.target.value })}
-                  />
-                  {formErrors.contract_date && <span className="error-message">{formErrors.contract_date}</span>}
-                </div>
-                <div className="form-group">
-                  <label>تاريخ التجديد</label>
-                  <input
-                    type="date"
-                    value={formData.renewal_date}
-                    onChange={(e) => setFormData({ ...formData, renewal_date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>تاريخ انتهاء العقد</label>
-                  <input
-                    type="date"
-                    value={formData.contract_end_date}
-                    onChange={(e) => setFormData({ ...formData, contract_end_date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label>مدة العقد</label>
-                  <input
-                    type="text"
-                    value={formData.contract_duration}
-                    onChange={(e) => setFormData({ ...formData, contract_duration: e.target.value })}
-                    placeholder="سيتم حسابها تلقائياً عند اختيار تاريخ انتهاء العقد"
-                    readOnly={!!(formData.contract_date && formData.contract_end_date)}
-                    style={formData.contract_date && formData.contract_end_date ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* 3. الهوية والبيانات الشخصية للوكيل */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-id-card" style={{ color: '#8b5cf6' }}></i>
-                الهوية والبيانات الشخصية للوكيل
-              </h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>الرقم الوطني</label>
-                  <input
-                    type="text"
-                    value={formData.national_id}
-                    onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
-                    placeholder="الرقم الوطني"
-                    maxLength={50}
-                  />
-                  {formErrors.national_id && <span className="error-message">{formErrors.national_id}</span>}
-                </div>
-                <div className="form-group">
-                  <label>رقم إثبات الشخصية</label>
-                  <input
-                    type="text"
-                    value={formData.identity_number}
-                    onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
-                    placeholder="حروف وأرقام"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 4. المستندات والأوراق الثبوتية للوكيل */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-folder-open" style={{ color: '#14b8a6' }}></i>
-                المستندات والأوراق الثبوتية للوكيل
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
-                {[
-                  { ref: personalPhotoRef, newFile: personalPhoto, setter: setPersonalPhoto, existing: existingPersonalPhoto, label: 'صورة شخصية' },
-                  { ref: officeFacadePhotoRef, newFile: officeFacadePhoto, setter: setOfficeFacadePhoto, existing: existingOfficeFacadePhoto, label: 'صورة واجهة المكتب' },
-                  { ref: identityPhotoRef, newFile: identityPhoto, setter: setIdentityPhoto, existing: existingIdentityPhoto, label: 'صورة إثبات الهوية' },
-                  { ref: nationalIdPhotoRef, newFile: nationalIdPhoto, setter: setNationalIdPhoto, existing: existingNationalIdPhoto, label: 'صورة الرقم الوطني' },
-                  { ref: contractPhotoRef, newFile: contractPhoto, setter: setContractPhoto, existing: existingContractPhoto, label: 'صورة العقد' },
-                  { ref: passportPhotoRef, newFile: passportPhoto, setter: setPassportPhoto, existing: existingPassportPhoto, label: 'جواز السفر' },
-                  { ref: clearanceCertificateRef, newFile: clearanceCertificate, setter: setClearanceCertificate, existing: existingClearanceCertificate, label: 'شهادة البراءة' },
-                  { ref: nonBankruptcyCertificateRef, newFile: nonBankruptcyCertificate, setter: setNonBankruptcyCertificate, existing: existingNonBankruptcyCertificate, label: 'شهادة عدم الإفلاس' },
-                  { ref: experienceCertificateRef, newFile: experienceCertificate, setter: setExperienceCertificate, existing: existingExperienceCertificate, label: 'شهادة خبرة' },
-                  { ref: nonEmploymentCertificateRef, newFile: nonEmploymentCertificate, setter: setNonEmploymentCertificate, existing: existingNonEmploymentCertificate, label: 'شهادة عدم عمل' },
-                  { ref: tbHealthCertificateRef, newFile: tbHealthCertificate, setter: setTbHealthCertificate, existing: existingTbHealthCertificate, label: 'شهادة صحية الدرن' },
-                  { ref: academicQualificationRef, newFile: academicQualification, setter: setAcademicQualification, existing: existingAcademicQualification, label: 'المؤهل العلمي' },
-                  { ref: activityLicenseRef, newFile: activityLicense, setter: setActivityLicense, existing: existingActivityLicense, label: 'إذن مزاولة نشاط' },
-                ].map((doc, idx) => (
-                  <div key={idx} className="form-group" style={{ 
-                    border: doc.newFile ? '1px solid #3b82f6' : doc.existing ? '1px solid #10b981' : '1px dashed #cbd5e1', 
-                    borderRadius: '12px', 
-                    padding: '16px', 
-                    background: doc.newFile ? '#eff6ff' : doc.existing ? '#f0fdf4' : '#ffffff',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '12px'
-                  }}>
-                    <label style={{ margin: 0, fontWeight: 'bold', fontSize: '14px', color: 'var(--text)' }}>{doc.label}</label>
-                    
-                    {doc.existing && !doc.newFile && (
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60px' }}>
-                        {doc.existing.match(/\.(pdf|doc|docx)$/i) ? (
-                          <a
-                            href={`${BACKEND_URL}/storage/${doc.existing}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#2563eb', fontSize: '0.85rem', textDecoration: 'none', background: '#fff', width: '100%', justifyContent: 'center' }}
-                          >
-                            <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444', fontSize: '16px' }}></i>
-                            عرض الملف الحالي
-                          </a>
-                        ) : (
-                          <div style={{ position: 'relative', width: '60px', height: '60px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                  {[
+                    { ref: personalPhotoRef, newFile: personalPhoto, setter: setPersonalPhoto, existing: existingPersonalPhoto, label: 'صورة شخصية', icon: 'fa-user' },
+                    { ref: officeFacadePhotoRef, newFile: officeFacadePhoto, setter: setOfficeFacadePhoto, existing: existingOfficeFacadePhoto, label: 'صورة واجهة المكتب', icon: 'fa-store' },
+                    { ref: identityPhotoRef, newFile: identityPhoto, setter: setIdentityPhoto, existing: existingIdentityPhoto, label: 'صورة إثبات الهوية', icon: 'fa-id-card' },
+                    { ref: nationalIdPhotoRef, newFile: nationalIdPhoto, setter: setNationalIdPhoto, existing: existingNationalIdPhoto, label: 'صورة الرقم الوطني', icon: 'fa-hashtag' },
+                    { ref: contractPhotoRef, newFile: contractPhoto, setter: setContractPhoto, existing: existingContractPhoto, label: 'صورة العقد', icon: 'fa-file-contract' },
+                    { ref: passportPhotoRef, newFile: passportPhoto, setter: setPassportPhoto, existing: existingPassportPhoto, label: 'جواز السفر', icon: 'fa-passport' },
+                    { ref: clearanceCertificateRef, newFile: clearanceCertificate, setter: setClearanceCertificate, existing: existingClearanceCertificate, label: 'شهادة البراءة', icon: 'fa-certificate' },
+                    { ref: nonBankruptcyCertificateRef, newFile: nonBankruptcyCertificate, setter: setNonBankruptcyCertificate, existing: existingNonBankruptcyCertificate, label: 'شهادة عدم الإفلاس', icon: 'fa-file-shield' },
+                    { ref: experienceCertificateRef, newFile: experienceCertificate, setter: setExperienceCertificate, existing: existingExperienceCertificate, label: 'شهادة خبرة', icon: 'fa-award' },
+                    { ref: nonEmploymentCertificateRef, newFile: nonEmploymentCertificate, setter: setNonEmploymentCertificate, existing: existingNonEmploymentCertificate, label: 'شهادة عدم عمل', icon: 'fa-file-circle-check' },
+                    { ref: tbHealthCertificateRef, newFile: tbHealthCertificate, setter: setTbHealthCertificate, existing: existingTbHealthCertificate, label: 'شهادة صحية الدرن', icon: 'fa-heart-pulse' },
+                    { ref: academicQualificationRef, newFile: academicQualification, setter: setAcademicQualification, existing: existingAcademicQualification, label: 'المؤهل العلمي', icon: 'fa-graduation-cap' },
+                    { ref: activityLicenseRef, newFile: activityLicense, setter: setActivityLicense, existing: existingActivityLicense, label: 'إذن مزاولة نشاط', icon: 'fa-stamp' },
+                  ].map((doc, idx) => (
+                    <div key={idx} style={{ 
+                      border: doc.newFile ? '2px solid #3b82f6' : doc.existing ? '2px solid #10b981' : '2px dashed #cbd5e1', 
+                      borderRadius: '14px', 
+                      padding: '16px', 
+                      background: doc.newFile ? '#eff6ff' : doc.existing ? '#f0fdf4' : 'var(--panel, #ffffff)',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                        <i className={`fa-solid ${(doc as any).icon}`} style={{ fontSize: '22px', color: doc.newFile ? '#3b82f6' : doc.existing ? '#10b981' : '#94a3b8' }}></i>
+                        <label style={{ margin: 0, fontWeight: 700, fontSize: '12px', color: 'var(--text)' }}>{doc.label}</label>
+                      </div>
+                      
+                      {doc.existing && !doc.newFile && (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                          {doc.existing.match(/\.(pdf|doc|docx)$/i) ? (
+                            <a
+                              href={`${BACKEND_URL}/storage/${doc.existing}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#2563eb', fontSize: '0.8rem', textDecoration: 'none', background: '#fff' }}
+                            >
+                              <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444', fontSize: '14px' }}></i>
+                              عرض الملف
+                            </a>
+                          ) : (
                             <img
                               src={`${BACKEND_URL}/storage/${doc.existing}`}
                               alt={doc.label}
-                              style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                              style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                             />
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      )}
+
+                      <input
+                        ref={doc.ref}
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={(e) => doc.setter(e.target.files?.[0] || null)}
+                        style={{ display: 'none' }}
+                      />
+                      
+                      <button
+                        type="button"
+                        onClick={() => doc.ref.current?.click()}
+                        style={{ 
+                          width: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: '6px', 
+                          padding: '8px',
+                          borderRadius: '8px',
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'nowrap',
+                          boxShadow: 'none',
+                          border: '1px solid',
+                          borderColor: doc.newFile ? '#3b82f6' : doc.existing ? '#10b981' : '#cbd5e1',
+                          background: doc.newFile ? '#3b82f6' : 'transparent',
+                          color: doc.newFile ? '#ffffff' : doc.existing ? '#10b981' : '#374151',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontFamily: 'inherit'
+                        }}
+                      >
+                        <i className={`fa-solid ${doc.newFile ? 'fa-circle-check' : doc.existing ? 'fa-arrows-rotate' : 'fa-upload'}`}></i>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {doc.newFile ? doc.newFile.name : doc.existing ? 'تغيير' : 'اختر ملف'}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ===== TAB 4: الوثائق المصرح بها والنسب ===== */}
+            {activeTab === 3 && (
+              <div className="edit-agent-panel" key="tab-3">
+                <div className="edit-agent-section-header">
+                  <div className="edit-agent-section-icon" style={{ background: '#eff6ff', color: '#0ea5e9' }}>
+                    <i className="fa-solid fa-shield-halved"></i>
+                  </div>
+                  <div>
+                    <h3 className="edit-agent-section-title">الوثائق المصرح بها والنسب</h3>
+                    <p className="edit-agent-section-subtitle">أنواع التأمين المصرح بها ونسب العمولة</p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                  {INSURANCE_TYPES.map((insuranceType) => {
+                    const isSelected = formData.authorized_documents.includes(insuranceType);
+
+                    return (
+                      <div key={insuranceType} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id={`doc-edit-${insuranceType}`}
+                          checked={isSelected}
+                          onChange={() => handleDocumentToggle(insuranceType)}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label
+                          htmlFor={`doc-edit-${insuranceType}`}
+                          style={{
+                            cursor: 'pointer',
+                            color: '#111827',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          {insuranceType}
+                          {formData.requested_documents.includes(insuranceType) && (
+                            <span style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>مطلوب</span>
+                          )}
+                        </label>
                       </div>
-                    )}
-
-                    <input
-                      ref={doc.ref}
-                      type="file"
-                      accept="image/*,.pdf,.doc,.docx"
-                      onChange={(e) => doc.setter(e.target.files?.[0] || null)}
-                      style={{ display: 'none' }}
-                    />
-                    
-                    <button
-                      type="button"
-                      onClick={() => doc.ref.current?.click()}
-                      className={doc.newFile ? 'btn-submit' : 'btn-cancel'}
-                      style={{ 
-                        width: '100%', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '8px', 
-                        padding: '10px',
-                        borderRadius: '8px',
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis', 
-                        whiteSpace: 'nowrap',
-                        boxShadow: 'none',
-                        border: '1px solid',
-                        borderColor: doc.newFile ? '#3b82f6' : doc.existing ? '#10b981' : '#cbd5e1',
-                        background: doc.newFile ? '#3b82f6' : doc.existing ? '#ffffff' : '#ffffff',
-                        color: doc.newFile ? '#ffffff' : doc.existing ? '#10b981' : '#374151',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <i className={`fa-solid ${doc.newFile ? 'fa-circle-check' : doc.existing ? 'fa-arrows-rotate' : 'fa-upload'}`}></i>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {doc.newFile ? doc.newFile.name : doc.existing ? `تغيير ${doc.label}` : `اختر ${doc.label}`}
-                      </span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. بيانات حساب الدخول للوحة التحكم */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-user-lock" style={{ color: '#f59e0b' }}></i>
-                بيانات حساب الدخول للوحة التحكم
-              </h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>اسم المستخدم *</label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder="اسم المستخدم"
-                    autoComplete="off"
-                  />
-                  {formErrors.username && <span className="error-message">{formErrors.username}</span>}
-                </div>
-                <div className="form-group">
-                  <label>كلمة المرور (اتركها فارغة إذا لم ترد التغيير)</label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="كلمة المرور"
-                      style={{ width: '100%', paddingLeft: '40px' }}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        left: '10px',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%',
-                        color: '#6b7280'
-                      }}
-                    >
-                      {showPassword ? '👁' : '👁‍🗨'}
-                    </button>
-                  </div>
-                  {formErrors.password && <span className="error-message">{formErrors.password}</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* 6. منظومة الهيئة (EIDC) */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-globe" style={{ color: '#6366f1' }}></i>
-                بيانات الدخول لمنظومة الهيئة (EIDC)
-              </h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>الايميل في الهيئة (EIDC Email)</label>
-                  <input
-                    type="text"
-                    value={formData.eidc_username}
-                    onChange={(e) => setFormData({ ...formData, eidc_username: e.target.value })}
-                    placeholder="الايميل المسجل في الهيئة"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>كلمة المرور في الهيئة</label>
-                  <input
-                    type="password"
-                    value={formData.eidc_password}
-                    onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
-                    placeholder="كلمة المرور في الهيئة"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 7. منظومة الاتحاد (LIFO) */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-network-wired" style={{ color: '#ec4899' }}></i>
-                بيانات الدخول لمنظومة الاتحاد (LIFO)
-              </h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>اسم المستخدم في الاتحاد (LIFO Username)</label>
-                  <input
-                    type="text"
-                    value={formData.lifo_username}
-                    onChange={(e) => setFormData({ ...formData, lifo_username: e.target.value })}
-                    placeholder="اسم المستخدم المسجل في الاتحاد"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>كلمة المرور في الاتحاد</label>
-                  <input
-                    type="password"
-                    value={formData.lifo_password}
-                    onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
-                    placeholder="كلمة المرور في الاتحاد"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>مكتب الاتحاد المرتبط (LIFO Office)</label>
-                  <SearchableSelect
-                    options={lifoOffices.map((office) => ({
-                      value: office.id,
-                      label: `${office.name} (معرف: ${office.id})`
-                    }))}
-                    placeholder="اختر مكتب الاتحاد..."
-                    value={formData.lifo_office_id}
-                    onChange={(val) => setFormData({ ...formData, lifo_office_id: val })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 8. شروط وحالة العقد */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-sliders" style={{ color: '#64748b' }}></i>
-                شروط وحالة العقد
-              </h3>
-              <div className="form-grid">
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label>شروط العقد</label>
-                  <textarea
-                    value={formData.contract_conditions}
-                    onChange={(e) => setFormData({ ...formData, contract_conditions: e.target.value })}
-                    placeholder="أدخل شروط العقد هنا..."
-                    rows={4}
-                  />
+                    );
+                  })}
                 </div>
 
-                <div className="form-group">
-                  <label>ملاحظات عن الوكيل</label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="ملاحظات"
-                    rows={3}
-                  />
+                <h3 className="edit-agent-subsection-title" style={{ marginTop: '24px' }}>
+                  <i className="fa-solid fa-key" style={{ color: '#f59e0b' }}></i>
+                  تقارير وصلاحيات إضافية
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                  {REPORT_PERMISSIONS.map((permission) => {
+                    const isSelected = formData.authorized_documents.includes(permission);
+
+                    return (
+                      <div key={permission} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id={`perm-edit-${permission}`}
+                          checked={isSelected}
+                          onChange={() => handleDocumentToggle(permission)}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label
+                          htmlFor={`perm-edit-${permission}`}
+                          style={{
+                            cursor: 'pointer',
+                            color: '#111827',
+                            fontSize: '14px'
+                          }}
+                        >
+                          {permission}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div className="form-group">
-                  <label>الحالة</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'نشط' | 'غير نشط' })}
-                  >
-                    <option value="نشط">نشط</option>
-                    <option value="غير نشط">غير نشط</option>
-                    {formData.status === 'قيد الانتظار' && <option value="قيد الانتظار">قيد الانتظار</option>}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* 9. الوثائق المصرح بها والنسب */}
-            <div className="profile-section-divider" style={{ padding: '24px', border: '1px solid var(--border, #e2e8f0)', borderRadius: '16px', background: 'var(--panel, #ffffff)', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h3 className="form-section-title" style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text, #1e293b)', margin: '0 0 20px 0' }}>
-                <i className="fa-solid fa-shield-halved" style={{ color: '#0ea5e9' }}></i>
-                الوثائق المصرح بها والنسب
-              </h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-                {INSURANCE_TYPES.map((insuranceType) => {
-                  const isSelected = formData.authorized_documents.includes(insuranceType);
-
-                  return (
-                    <div key={insuranceType} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        id={`doc-edit-${insuranceType}`}
-                        checked={isSelected}
-                        onChange={() => handleDocumentToggle(insuranceType)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label
-                        htmlFor={`doc-edit-${insuranceType}`}
-                        style={{
-                          cursor: 'pointer',
-                          color: '#111827',
-                          fontSize: '14px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        {insuranceType}
-                        {formData.requested_documents.includes(insuranceType) && (
-                          <span style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>مطلوب</span>
-                        )}
-                      </label>
+                {/* النسب الخاصة بالوثائق المصرح بها */}
+                {formData.authorized_documents.some(doc => INSURANCE_TYPES.includes(doc)) && (
+                  <div style={{ marginTop: '20px' }}>
+                    <h4 className="edit-agent-subsection-title">
+                      <i className="fa-solid fa-percent" style={{ color: '#10b981' }}></i>
+                      النسب الخاصة بالوكيل/الفرع (من القسط المقرر)
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* عرض "تأمين سيارات" إذا كان "تأمين سيارات إجباري" محدد */}
+                      {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <label style={{ minWidth: '200px', fontSize: '14px' }}>تأمين سيارات:</label>
+                          <select
+                            value={getDefaultPercentageValue('تأمين سيارات')}
+                            onChange={(e) => handlePercentageChange('تأمين سيارات', parseInt(e.target.value))}
+                            style={{
+                              padding: '8px 12px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              minWidth: '120px'
+                            }}
+                          >
+                            {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
+                              <option key={percent} value={percent}>
+                                {percent}%
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {/* عرض باقي الوثائق المصرح بها (عدا "تأمين سيارات إجباري") */}
+                      {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
+                        <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                          <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
+                          <select
+                            value={getDefaultPercentageValue(docType)}
+                            onChange={(e) => handlePercentageChange(docType, parseInt(e.target.value))}
+                            style={{
+                              padding: '8px 12px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              minWidth: '120px'
+                            }}
+                          >
+                            {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
+                              <option key={percent} value={percent}>
+                                {percent}%
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                )}
 
-              <h3 className="form-section-title" style={{ marginTop: '24px', marginBottom: '16px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid var(--border, #e2e8f0)', paddingBottom: '12px', margin: '24px 0 16px 0' }}>
-                تقارير وصلاحيات إضافية
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-                {REPORT_PERMISSIONS.map((permission) => {
-                  const isSelected = formData.authorized_documents.includes(permission);
-
-                  return (
-                    <div key={permission} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        id={`perm-edit-${permission}`}
-                        checked={isSelected}
-                        onChange={() => handleDocumentToggle(permission)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label
-                        htmlFor={`perm-edit-${permission}`}
-                        style={{
-                          cursor: 'pointer',
-                          color: '#111827',
-                          fontSize: '14px'
-                        }}
-                      >
-                        {permission}
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* النسب الخاصة بالوثائق المصرح بها */}
-              {formData.authorized_documents.some(doc => INSURANCE_TYPES.includes(doc)) && (
-                <div style={{ marginTop: '20px' }}>
-                  <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
-                    النسب الخاصة بالوكيل/الفرع (من القسط المقرر)
+                {/* النسب الاستثنائية الشهرية */}
+                <div style={{ marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                  <h4 className="edit-agent-subsection-title">
+                    <i className="fa-solid fa-calendar-days" style={{ color: '#6366f1' }}></i>
+                    النسب والعمولات الاستثنائية حسب الأشهر (اختياري)
                   </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* عرض "تأمين سيارات" إذا كان "تأمين سيارات إجباري" محدد */}
-                    {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <label style={{ minWidth: '200px', fontSize: '14px' }}>تأمين سيارات:</label>
-                        <select
-                          value={getDefaultPercentageValue('تأمين سيارات')}
-                          onChange={(e) => handlePercentageChange('تأمين سيارات', parseInt(e.target.value))}
-                          style={{
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            minWidth: '120px'
-                          }}
-                        >
-                          {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
-                            <option key={percent} value={percent}>
-                              {percent}%
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    {/* عرض باقي الوثائق المصرح بها (عدا "تأمين سيارات إجباري") */}
-                    {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
-                      <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
-                        <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
-                        <select
-                          value={getDefaultPercentageValue(docType)}
-                          onChange={(e) => handlePercentageChange(docType, parseInt(e.target.value))}
-                          style={{
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            minWidth: '120px'
-                          }}
-                        >
-                          {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
-                            <option key={percent} value={percent}>
-                              {percent}%
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* النسب الاستثنائية الشهرية */}
-              <div style={{ marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                <h4 style={{ marginBottom: '6px', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
-                  النسب والعمولات الاستثنائية حسب الأشهر (اختياري)
-                </h4>
-                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
-                  يمكنك تحديد نسبة عمولة استثنائية لوثيقة معينة لشهر محدد. إذا لم يتم تحديد نسبة لشهر معين، فسيقوم النظام باعتماد النسبة الافتراضية أعلاه.
-                </p>
-                
-                {/* نموذج إضافة النسبة الاستثنائية */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: '12px', 
-                  alignItems: 'flex-end', 
-                  padding: '16px', 
-                  background: '#f8fafc', 
-                  borderRadius: '8px', 
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '20px'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>السنة</label>
-                    <select 
-                      value={overrideYear} 
-                      onChange={(e) => setOverrideYear(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                    >
-                      {['2023', '2024', '2025', '2026', '2027', '2028', '2029', '2030'].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>الشهر</label>
-                    <select 
-                      value={overrideMonth} 
-                      onChange={(e) => setOverrideMonth(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>نوع التأمين المصرح به</label>
-                    <select 
-                      value={overrideDocType} 
-                      onChange={(e) => setOverrideDocType(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
-                    >
-                      <option value="">اختر نوع التأمين...</option>
-                      {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).map(docType => (
-                        <option key={docType} value={docType}>{docType}</option>
-                      ))}
-                      {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
-                        <option value="تأمين سيارات">تأمين سيارات (مظلة التأمين الإجباري)</option>
-                      )}
-                    </select>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>النسبة الاستثنائية</label>
-                    <select 
-                      value={overridePercentage} 
-                      onChange={(e) => setOverridePercentage(parseInt(e.target.value))}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', minWidth: '80px' }}
-                    >
-                      {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
-                        <option key={percent} value={percent}>{percent}%</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <button 
-                    type="button" 
-                    onClick={handleAddMonthlyOverride}
-                    style={{ 
-                      padding: '10px 20px', 
-                      background: '#1e293b', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '6px', 
-                      fontWeight: 'bold', 
-                      fontSize: '13px',
-                      cursor: 'pointer' 
-                    }}
-                  >
-                    إضافة النسبة الاستثنائية
-                  </button>
-                </div>
-                
-                {/* جدول عرض النسب الاستثنائية الشهرية المضافة */}
-                {getMonthlyOverridesList().length === 0 ? (
-                  <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
-                    لا توجد نسب استثنائية شهرية مضافة حالياً.
+                  <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
+                    يمكنك تحديد نسبة عمولة استثنائية لوثيقة معينة لشهر محدد. إذا لم يتم تحديد نسبة لشهر معين، فسيقوم النظام باعتماد النسبة الافتراضية أعلاه.
                   </p>
-                ) : (
-                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '25px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>الشهر / السنة</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>نوع التأمين</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>النسبة الاستثنائية</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold', width: '80px' }}>الإجراء</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getMonthlyOverridesList().map((item, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.monthKey}</td>
-                            <td style={{ padding: '10px 16px' }}>{item.docType}</td>
-                            <td style={{ padding: '10px 16px', color: '#10b981', fontWeight: 'bold' }}>{item.percentage}%</td>
-                            <td style={{ padding: '10px 16px' }}>
-                              <button 
-                                type="button" 
-                                onClick={() => handleRemoveMonthlyOverride(item.monthKey, item.docType)}
-                                style={{ 
-                                  background: 'none', 
-                                  border: 'none', 
-                                  color: '#ef4444', 
-                                  cursor: 'pointer', 
-                                  fontSize: '14px',
-                                  padding: 0 
-                                }}
-                                title="إزالة نسبة استثنائية"
-                              >
-                                <i className="fa-solid fa-trash-can"></i>
-                              </button>
-                            </td>
-                          </tr>
+                  
+                  {/* نموذج إضافة النسبة الاستثنائية */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: '12px', 
+                    alignItems: 'flex-end', 
+                    padding: '16px', 
+                    background: '#f8fafc', 
+                    borderRadius: '8px', 
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>السنة</label>
+                      <select 
+                        value={overrideYear} 
+                        onChange={(e) => setOverrideYear(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        {['2023', '2024', '2025', '2026', '2027', '2028', '2029', '2030'].map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>الشهر</label>
+                      <select 
+                        value={overrideMonth} 
+                        onChange={(e) => setOverrideMonth(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
+                          <option key={m} value={m}>{m}</option>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* النسب الاستثنائية حسب الفترة (من تاريخ إلى تاريخ) */}
-              <div style={{ marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                <h4 style={{ marginBottom: '6px', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
-                  النسب والعمولات الاستثنائية حسب الفترة المحددة (من تاريخ - إلى تاريخ)
-                </h4>
-                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
-                  يمكنك تحديد فترة زمنية محددة (مثل: من 01/01/2025 إلى 15/01/2025) بنسبة عمولة خاصة بالوكيل.
-                </p>
-                
-                {/* نموذج إضافة النسبة بالفترة */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: '12px', 
-                  alignItems: 'flex-end', 
-                  padding: '16px', 
-                  background: '#f8fafc', 
-                  borderRadius: '8px', 
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '20px'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>من تاريخ</label>
-                    <input 
-                      type="date"
-                      value={periodStartDate}
-                      onChange={(e) => setPeriodStartDate(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>إلى تاريخ</label>
-                    <input 
-                      type="date"
-                      value={periodEndDate}
-                      onChange={(e) => setPeriodEndDate(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                    />
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>نوع التأمين المصرح به</label>
-                    <select 
-                      value={periodDocType} 
-                      onChange={(e) => setPeriodDocType(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                      </select>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>نوع التأمين المصرح به</label>
+                      <select 
+                        value={overrideDocType} 
+                        onChange={(e) => setOverrideDocType(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                      >
+                        <option value="">اختر نوع التأمين...</option>
+                        {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).map(docType => (
+                          <option key={docType} value={docType}>{docType}</option>
+                        ))}
+                        {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
+                          <option value="تأمين سيارات">تأمين سيارات (مظلة التأمين الإجباري)</option>
+                        )}
+                      </select>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>النسبة الاستثنائية</label>
+                      <select 
+                        value={overridePercentage} 
+                        onChange={(e) => setOverridePercentage(parseInt(e.target.value))}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', minWidth: '80px' }}
+                      >
+                        {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
+                          <option key={percent} value={percent}>{percent}%</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <button 
+                      type="button" 
+                      onClick={handleAddMonthlyOverride}
+                      style={{ 
+                        padding: '10px 20px', 
+                        background: '#1e293b', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        fontWeight: 'bold', 
+                        fontSize: '13px',
+                        cursor: 'pointer' 
+                      }}
                     >
-                      <option value="">اختر نوع التأمين...</option>
-                      {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).map(docType => (
-                        <option key={docType} value={docType}>{docType}</option>
-                      ))}
-                      {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
-                        <option value="تأمين سيارات">تأمين سيارات (مظلة التأمين الإجباري)</option>
-                      )}
-                    </select>
+                      إضافة النسبة الاستثنائية
+                    </button>
                   </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>النسبة الاستثنائية</label>
-                    <select 
-                      value={periodPercentage} 
-                      onChange={(e) => setPeriodPercentage(parseInt(e.target.value))}
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', minWidth: '80px' }}
-                    >
-                      {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
-                        <option key={percent} value={percent}>{percent}%</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <button 
-                    type="button" 
-                    onClick={handleAddPeriodOverride}
-                    style={{ 
-                      padding: '10px 20px', 
-                      background: '#0284c7', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '6px', 
-                      fontWeight: 'bold', 
-                      fontSize: '13px',
-                      cursor: 'pointer' 
-                    }}
-                  >
-                    إضافة نسبة الفترة
-                  </button>
+                  {/* جدول عرض النسب الاستثنائية الشهرية المضافة */}
+                  {getMonthlyOverridesList().length === 0 ? (
+                    <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
+                      لا توجد نسب استثنائية شهرية مضافة حالياً.
+                    </p>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '25px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>الشهر / السنة</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>نوع التأمين</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>النسبة الاستثنائية</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold', width: '80px' }}>الإجراء</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getMonthlyOverridesList().map((item, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.monthKey}</td>
+                              <td style={{ padding: '10px 16px' }}>{item.docType}</td>
+                              <td style={{ padding: '10px 16px', color: '#10b981', fontWeight: 'bold' }}>{item.percentage}%</td>
+                              <td style={{ padding: '10px 16px' }}>
+                                <button 
+                                  type="button" 
+                                  onClick={() => handleRemoveMonthlyOverride(item.monthKey, item.docType)}
+                                  style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    color: '#ef4444', 
+                                    cursor: 'pointer', 
+                                    fontSize: '14px',
+                                    padding: 0 
+                                  }}
+                                  title="إزالة نسبة استثنائية"
+                                >
+                                  <i className="fa-solid fa-trash-can"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-                
-                {/* جدول عرض نسب الفترات الاستثنائية */}
-                {getPeriodOverridesList().length === 0 ? (
-                  <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
-                    لا توجد نسب فترات استثنائية مضافة حالياً.
-                  </p>
-                ) : (
-                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>من تاريخ</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>إلى تاريخ</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>نوع التأمين</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>النسبة الاستثنائية</th>
-                          <th style={{ padding: '10px 16px', fontWeight: 'bold', width: '80px' }}>الإجراء</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getPeriodOverridesList().map((item) => (
-                          <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.start_date}</td>
-                            <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.end_date}</td>
-                            <td style={{ padding: '10px 16px' }}>{item.doc_type}</td>
-                            <td style={{ padding: '10px 16px', color: '#0284c7', fontWeight: 'bold' }}>{item.percentage}%</td>
-                            <td style={{ padding: '10px 16px' }}>
-                              <button 
-                                type="button" 
-                                onClick={() => handleRemovePeriodOverride(item.id)}
-                                style={{ 
-                                  background: 'none', 
-                                  border: 'none', 
-                                  color: '#ef4444', 
-                                  cursor: 'pointer', 
-                                  fontSize: '14px',
-                                  padding: 0 
-                                }}
-                                title="إزالة نسبة الفترة"
-                              >
-                                <i className="fa-solid fa-trash-can"></i>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <div className="form-actions">
+                {/* النسب الاستثنائية حسب الفترة (من تاريخ إلى تاريخ) */}
+                <div style={{ marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                  <h4 className="edit-agent-subsection-title">
+                    <i className="fa-solid fa-calendar-week" style={{ color: '#0284c7' }}></i>
+                    النسب والعمولات الاستثنائية حسب الفترة المحددة (من تاريخ - إلى تاريخ)
+                  </h4>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
+                    يمكنك تحديد فترة زمنية محددة (مثل: من 01/01/2025 إلى 15/01/2025) بنسبة عمولة خاصة بالوكيل.
+                  </p>
+                  
+                  {/* نموذج إضافة النسبة بالفترة */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: '12px', 
+                    alignItems: 'flex-end', 
+                    padding: '16px', 
+                    background: '#f8fafc', 
+                    borderRadius: '8px', 
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>من تاريخ</label>
+                      <input 
+                        type="date"
+                        value={periodStartDate}
+                        onChange={(e) => setPeriodStartDate(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>إلى تاريخ</label>
+                      <input 
+                        type="date"
+                        value={periodEndDate}
+                        onChange={(e) => setPeriodEndDate(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>نوع التأمين المصرح به</label>
+                      <select 
+                        value={periodDocType} 
+                        onChange={(e) => setPeriodDocType(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                      >
+                        <option value="">اختر نوع التأمين...</option>
+                        {formData.authorized_documents.filter(doc => INSURANCE_TYPES.includes(doc)).map(docType => (
+                          <option key={docType} value={docType}>{docType}</option>
+                        ))}
+                        {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
+                          <option value="تأمين سيارات">تأمين سيارات (مظلة التأمين الإجباري)</option>
+                        )}
+                      </select>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold' }}>النسبة الاستثنائية</label>
+                      <select 
+                        value={periodPercentage} 
+                        onChange={(e) => setPeriodPercentage(parseInt(e.target.value))}
+                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', minWidth: '80px' }}
+                      >
+                        {Array.from({ length: 81 }, (_, i) => i).map((percent) => (
+                          <option key={percent} value={percent}>{percent}%</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <button 
+                      type="button" 
+                      onClick={handleAddPeriodOverride}
+                      style={{ 
+                        padding: '10px 20px', 
+                        background: '#0284c7', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        fontWeight: 'bold', 
+                        fontSize: '13px',
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      إضافة نسبة الفترة
+                    </button>
+                  </div>
+                  
+                  {/* جدول عرض نسب الفترات الاستثنائية */}
+                  {getPeriodOverridesList().length === 0 ? (
+                    <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>
+                      لا توجد نسب فترات استثنائية مضافة حالياً.
+                    </p>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>من تاريخ</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>إلى تاريخ</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>نوع التأمين</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold' }}>النسبة الاستثنائية</th>
+                            <th style={{ padding: '10px 16px', fontWeight: 'bold', width: '80px' }}>الإجراء</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getPeriodOverridesList().map((item) => (
+                            <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.start_date}</td>
+                              <td style={{ padding: '10px 16px', fontWeight: 'bold', direction: 'ltr', textAlign: 'right' }}>{item.end_date}</td>
+                              <td style={{ padding: '10px 16px' }}>{item.doc_type}</td>
+                              <td style={{ padding: '10px 16px', color: '#0284c7', fontWeight: 'bold' }}>{item.percentage}%</td>
+                              <td style={{ padding: '10px 16px' }}>
+                                <button 
+                                  type="button" 
+                                  onClick={() => handleRemovePeriodOverride(item.id)}
+                                  style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    color: '#ef4444', 
+                                    cursor: 'pointer', 
+                                    fontSize: '14px',
+                                    padding: 0 
+                                  }}
+                                  title="إزالة نسبة الفترة"
+                                >
+                                  <i className="fa-solid fa-trash-can"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ===== TAB 5: بيانات دخول المنظومة وصلاحيات الوكيل ===== */}
+            {activeTab === 4 && (
+              <div className="edit-agent-panel" key="tab-4">
+                <div className="edit-agent-section-header">
+                  <div className="edit-agent-section-icon" style={{ background: '#fef3c7', color: '#f59e0b' }}>
+                    <i className="fa-solid fa-user-lock"></i>
+                  </div>
+                  <div>
+                    <h3 className="edit-agent-section-title">بيانات دخول المنظومة وصلاحيات الوكيل</h3>
+                    <p className="edit-agent-section-subtitle">بيانات الدخول للمدار والهيئة والاتحاد</p>
+                  </div>
+                </div>
+
+                {/* تحذير مهم */}
+                <div className="agent-warning-box danger">
+                  <i className="fa-solid fa-triangle-exclamation"></i>
+                  <div>
+                    <strong>تنبيه مهم:</strong> الوكيل ليس لديه صلاحيات في المنظومة إلا <strong>كشف حسابه فقط</strong>.
+                    <br/>
+                    يرجى عدم منح الوكيل صلاحيات موظف عن طريق الخطأ.
+                  </div>
+                </div>
+
+                {/* بطاقات بيانات الدخول */}
+                <div className="agent-credentials-grid" style={{ marginTop: '24px' }}>
+                  
+                  {/* بطاقة المدار (لوحة التحكم) */}
+                  <div className="agent-credential-card">
+                    <div className="agent-credential-card-header">
+                      <div className="agent-credential-card-icon" style={{ background: '#fef3c7', color: '#f59e0b' }}>
+                        <i className="fa-solid fa-desktop"></i>
+                      </div>
+                      <span className="agent-credential-card-title">المدار (لوحة التحكم)</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>اسم المستخدم *</label>
+                        <input
+                          type="text"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          placeholder="اسم المستخدم"
+                          autoComplete="off"
+                        />
+                        {formErrors.username && <span className="error-message">{formErrors.username}</span>}
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>كلمة المرور (اتركها فارغة إذا لم ترد التغيير)</label>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            placeholder="كلمة المرور"
+                            style={{ width: '100%', paddingLeft: '40px' }}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                              position: 'absolute',
+                              left: '10px',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '18px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: '100%',
+                              color: '#6b7280'
+                            }}
+                          >
+                            {showPassword ? '👁' : '👁‍🗨'}
+                          </button>
+                        </div>
+                        {formErrors.password && <span className="error-message">{formErrors.password}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* بطاقة الهيئة (EIDC) */}
+                  <div className="agent-credential-card">
+                    <div className="agent-credential-card-header">
+                      <div className="agent-credential-card-icon" style={{ background: '#ede9fe', color: '#6366f1' }}>
+                        <i className="fa-solid fa-globe"></i>
+                      </div>
+                      <span className="agent-credential-card-title">الهيئة (EIDC)</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>الايميل في الهيئة</label>
+                        <input
+                          type="text"
+                          value={formData.eidc_username}
+                          onChange={(e) => setFormData({ ...formData, eidc_username: e.target.value })}
+                          placeholder="الايميل المسجل في الهيئة"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>كلمة المرور في الهيئة</label>
+                        <input
+                          type="password"
+                          value={formData.eidc_password}
+                          onChange={(e) => setFormData({ ...formData, eidc_password: e.target.value })}
+                          placeholder="كلمة المرور في الهيئة"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* بطاقة الاتحاد (LIFO) */}
+                  <div className="agent-credential-card">
+                    <div className="agent-credential-card-header">
+                      <div className="agent-credential-card-icon" style={{ background: '#fce7f3', color: '#ec4899' }}>
+                        <i className="fa-solid fa-network-wired"></i>
+                      </div>
+                      <span className="agent-credential-card-title">الاتحاد (LIFO)</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>اسم المستخدم في الاتحاد</label>
+                        <input
+                          type="text"
+                          value={formData.lifo_username}
+                          onChange={(e) => setFormData({ ...formData, lifo_username: e.target.value })}
+                          placeholder="اسم المستخدم المسجل في الاتحاد"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>كلمة المرور في الاتحاد</label>
+                        <input
+                          type="password"
+                          value={formData.lifo_password}
+                          onChange={(e) => setFormData({ ...formData, lifo_password: e.target.value })}
+                          placeholder="كلمة المرور في الاتحاد"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>مكتب الاتحاد المرتبط</label>
+                        <SearchableSelect
+                          options={lifoOffices.map((office) => ({
+                            value: office.id,
+                            label: `${office.name} (معرف: ${office.id})`
+                          }))}
+                          placeholder="اختر مكتب الاتحاد..."
+                          value={formData.lifo_office_id}
+                          onChange={(val) => setFormData({ ...formData, lifo_office_id: val })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ملاحظة الصلاحيات */}
+                <div className="agent-warning-box warning" style={{ marginTop: '20px' }}>
+                  <i className="fa-solid fa-info-circle"></i>
+                  <div>
+                    <strong>صلاحيات الوكيل:</strong> الوكيل لديه صلاحية <strong>كشف حسابه فقط</strong> في المنظومة.
+                    لا يحق للوكيل الوصول لأي صلاحيات أخرى.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== STICKY SAVE/CANCEL BUTTONS ===== */}
+            <div className="edit-agent-actions">
               <button type="button" onClick={() => navigate('/branches-agents')} className="btn-cancel">
+                <i className="fa-solid fa-xmark" style={{ marginLeft: '6px' }}></i>
                 إلغاء
               </button>
               <button type="submit" className="btn-submit" disabled={submitting}>
+                <i className="fa-solid fa-floppy-disk" style={{ marginLeft: '6px' }}></i>
                 {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
               </button>
             </div>
+
           </form>
         </div>
       </div>
