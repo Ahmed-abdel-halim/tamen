@@ -47,6 +47,8 @@ interface AgentInfo {
   agency_name: string;
   agent_name: string;
   contract_date: string | null;
+  first_doc_date?: string | null;
+  last_doc_date?: string | null;
   contract_end_date?: string | null;
   status?: string | null;
   notes?: string | null;
@@ -117,6 +119,7 @@ export default function AgentMonthlyLedger() {
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [excludeCanceled, setExcludeCanceled] = useState(false);
+  const [onlyActiveMonths, setOnlyActiveMonths] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('all');
   const [loading, setLoading] = useState(false);
   const [ledger, setLedger] = useState<LedgerData | null>(null);
@@ -950,9 +953,8 @@ export default function AgentMonthlyLedger() {
 
         {/* Toggle Switch Exclude Canceled */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
           <label style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", cursor: 'pointer' }}>
-            استبعاد الوثائق الملغاة من الإحصائيات:
+            استبعاد الملغاة:
           </label>
           <button
             onClick={handleExcludeToggle}
@@ -976,6 +978,40 @@ export default function AgentMonthlyLedger() {
                 position: 'absolute',
                 top: '3px',
                 left: excludeCanceled ? '26px' : '3px',
+                transition: 'left .3s',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              }}
+            />
+          </button>
+        </div>
+
+        {/* Toggle Switch Only Active Months */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <label style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", cursor: 'pointer' }}>
+            عرض أشهر العمل فقط:
+          </label>
+          <button
+            onClick={() => setOnlyActiveMonths(!onlyActiveMonths)}
+            style={{
+              width: '52px',
+              height: '28px',
+              borderRadius: '14px',
+              border: 'none',
+              background: onlyActiveMonths ? '#3b82f6' : '#cbd5e1',
+              position: 'relative',
+              cursor: 'pointer',
+              transition: 'background .3s',
+            }}
+          >
+            <div
+              style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                background: 'white',
+                position: 'absolute',
+                top: '3px',
+                left: onlyActiveMonths ? '26px' : '3px',
                 transition: 'left .3s',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               }}
@@ -1038,15 +1074,36 @@ export default function AgentMonthlyLedger() {
                   <h2 style={{ margin: '2px 0 6px 0', fontSize: '22px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
                     {ledger.agent.agency_name}
                   </h2>
-                  <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif", alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span>كود الوكيل: <strong style={{ color: '#38bdf8' }}>{ledger.agent.code}</strong></span>
-                    <span>المسؤول: <strong>{ledger.agent.agent_name}</strong></span>
+                  <div style={{ display: 'flex', gap: '14px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif", alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
+                    <span style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '8px' }}>
+                      <i className="fa-solid fa-hashtag" style={{ marginLeft: '5px', color: '#38bdf8' }} />
+                      كود الوكيل: <strong style={{ color: '#38bdf8' }}>{ledger.agent.code}</strong>
+                    </span>
+                    <span style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '8px' }}>
+                      <i className="fa-solid fa-user-tie" style={{ marginLeft: '5px', color: '#a78bfa' }} />
+                      المسؤول: <strong>{ledger.agent.agent_name}</strong>
+                    </span>
                     {ledger.agent.contract_date && (
-                      <span>تاريخ العقد: <strong>{ledger.agent.contract_date.substring(0, 10)}</strong></span>
+                      <span style={{ background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.4)', color: '#93c5fd', padding: '4px 12px', borderRadius: '8px', fontWeight: 800 }}>
+                        <i className="fa-solid fa-file-contract" style={{ marginLeft: '6px', color: '#60a5fa' }} />
+                        تاريخ التعاقد: <strong>{ledger.agent.contract_date.substring(0, 10)}</strong>
+                      </span>
+                    )}
+                    {ledger.agent.first_doc_date && (
+                      <span style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.4)', color: '#6ee7b7', padding: '4px 12px', borderRadius: '8px', fontWeight: 800 }}>
+                        <i className="fa-solid fa-play" style={{ marginLeft: '6px', color: '#34d399' }} />
+                        بدء النشاط (أول وثيقة): <strong>{ledger.agent.first_doc_date}</strong>
+                      </span>
+                    )}
+                    {ledger.agent.last_doc_date && (
+                      <span style={{ background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.4)', color: '#fde68a', padding: '4px 12px', borderRadius: '8px', fontWeight: 700 }}>
+                        <i className="fa-solid fa-clock-rotate-left" style={{ marginLeft: '6px', color: '#fbbf24' }} />
+                        آخر نشاط مسجل: <strong>{ledger.agent.last_doc_date}</strong>
+                      </span>
                     )}
                     {ledger.agent.contract_end_date && (
-                      <span style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#fca5a5', padding: '3px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <i className="fa-solid fa-user-slash" /> تاريخ إلغاء الوكالة: {ledger.agent.contract_end_date.substring(0, 10)}
+                      <span style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#fca5a5', padding: '4px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="fa-solid fa-user-slash" /> تاريخ التوقف / إلغاء الوكالة: <strong>{ledger.agent.contract_end_date.substring(0, 10)}</strong>
                       </span>
                     )}
                   </div>
@@ -1349,7 +1406,7 @@ export default function AgentMonthlyLedger() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ledger.months.map((row, idx) => {
+                  {(onlyActiveMonths ? ledger.months.filter(r => r.document_count > 0 || r.paid_amount > 0 || r.carried_balance > 0.01) : ledger.months).map((row, idx) => {
                     const isDebt = row.remaining > 0.01;
                     const isPaidFull = !isDebt && (row.document_count > 0 || row.carried_balance > 0.01);
                     const isEmpty = row.document_count === 0 && row.carried_balance < 0.01;
