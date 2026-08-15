@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel, generateGroupedDocsExcel } from '../utils/excelGenerator';
@@ -115,7 +114,6 @@ interface MonthDocsSummary {
 }
 
 export default function AgentMonthlyLedger() {
-  const navigate = useNavigate();
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [excludeCanceled, setExcludeCanceled] = useState(false);
