@@ -134,6 +134,7 @@ import PublicInsuranceRequestsList from './components/PublicInsuranceRequestsLis
 import LoaderOverlay from './components/LoaderOverlay';
 import LiveAgentsProduction from './components/LiveAgentsProduction';
 import AgentMonthlyLedger from './components/AgentMonthlyLedger';
+import SessionLockScreen from './components/SessionLockScreen';
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -1242,6 +1243,16 @@ export default function App() {
 
       try {
         const response = await originalFetch(...args);
+        if (response.status === 401 && !url.includes('/login') && !url.includes('/unlock-session')) {
+          if (localStorage.getItem('token')) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            localStorage.removeItem('is_session_locked');
+            localStorage.removeItem('last_active_time');
+            window.dispatchEvent(new Event('userLoggedOut'));
+            window.location.href = '/login';
+          }
+        }
         return response;
       } finally {
         if (!isBackground) {
@@ -1543,6 +1554,7 @@ export default function App() {
   return (
     <Router>
       <ToastContainer />
+      <SessionLockScreen />
       <Routes>
         {/* Public Website Routes */}
         <Route path="/" element={<HomePage />} />
