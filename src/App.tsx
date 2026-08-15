@@ -1378,11 +1378,20 @@ export default function App() {
       const handleUpdate = () => {
         fetchPendingDocsCount();
       };
+      const handleFocus = () => {
+        if (document.visibilityState === 'visible') {
+          fetchPendingDocsCount();
+        }
+      };
       window.addEventListener('documentRequestsUpdated', handleUpdate);
+      window.addEventListener('focus', handleFocus);
+      document.addEventListener('visibilitychange', handleFocus);
 
       return () => {
         clearInterval(interval);
         window.removeEventListener('documentRequestsUpdated', handleUpdate);
+        window.removeEventListener('focus', handleFocus);
+        document.removeEventListener('visibilitychange', handleFocus);
       };
     }
   }, [currentUserId]);

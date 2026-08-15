@@ -246,6 +246,11 @@ export default function ProfilePage() {
         if (!passwordRes.ok) {
           const errorData = await passwordRes.json().catch(() => ({}));
           throw new Error(errorData.message || 'فشل تحديث كلمة المرور');
+        } else {
+          const passData = await passwordRes.json().catch(() => ({}));
+          if (passData.token) {
+            localStorage.setItem('token', passData.token);
+          }
         }
       }
 
