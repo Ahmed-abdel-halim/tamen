@@ -1,8 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import CustomDateInput from './CustomDateInput';
+
+interface DocTypeSummary {
+  key: string;
+  label: string;
+  document_count: number;
+  total_sales: number;
+  agent_share: number;
+  company_share: number;
+}
 
 interface AgentProduction {
   id: number;
@@ -13,6 +22,7 @@ interface AgentProduction {
   total_sales: number;
   agent_share: number;
   company_share: number;
+  by_type?: DocTypeSummary[];
 }
 
 interface ProductionSummary {
@@ -26,20 +36,37 @@ interface ProductionSummary {
 interface ProductionData {
   success: boolean;
   summary: ProductionSummary;
+  types_summary?: DocTypeSummary[];
   agents: AgentProduction[];
 }
 
 type PresetType = 'today' | 'yesterday' | 'last7days' | 'thisMonth' | 'thisYear' | 'custom';
 
+const DOCUMENT_TYPE_OPTIONS = [
+  { key: 'all', label: 'جميع أنواع الوثائق', icon: 'fa-solid fa-layer-group', color: '#1e40af' },
+  { key: 'تأمين سيارات', label: 'تأمين سيارات', icon: 'fa-solid fa-car', color: '#3b82f6' },
+  { key: 'تأمين سيارات دولي', label: 'تأمين سيارات دولي', icon: 'fa-solid fa-globe', color: '#0284c7' },
+  { key: 'تأمين المسافرين', label: 'تأمين المسافرين', icon: 'fa-solid fa-plane-departure', color: '#0d9488' },
+  { key: 'تأمين الوافدين', label: 'تأمين الوافدين', icon: 'fa-solid fa-user-shield', color: '#059669' },
+  { key: 'تأمين الهياكل البحرية', label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', color: '#0369a1' },
+  { key: 'تأمين المسؤولية المهنية (الطبية)', label: 'تأمين المسؤولية المهنية', icon: 'fa-solid fa-user-doctor', color: '#7c3aed' },
+  { key: 'تأمين الحوادث الشخصية', label: 'تأمين الحوادث الشخصية', icon: 'fa-solid fa-person-falling-burst', color: '#d97706' },
+  { key: 'تأمين طلبة المدارس', label: 'تأمين طلبة المدارس', icon: 'fa-solid fa-graduation-cap', color: '#ea580c' },
+  { key: 'تأمين شحن البضائع', label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck-ramp-box', color: '#4f46e5' },
+  { key: 'تأمين نقل النقدية', label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', color: '#16a34a' },
+];
+
 export default function LiveAgentsProduction() {
   const [data, setData] = useState<ProductionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [preset, setPreset] = useState<PresetType>('thisMonth');
+  const [selectedDocType, setSelectedDocType] = useState<string>('all');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'total_sales' | 'document_count' | 'agent_share' | 'company_share'>('total_sales');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [expandedAgentId, setExpandedAgentId] = useState<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
   const getDateRange = (p: PresetType): { from: string; to: string } => {
@@ -76,7 +103,8 @@ export default function LiveAgentsProduction() {
         setLoading(false);
         return;
       }
-      const response = await fetch(`${API_BASE_URL}/financial-statistics/live-agents-production?from_date=${from}&to_date=${to}`);
+      const typeParam = selectedDocType && selectedDocType !== 'all' ? `&doc_type=${encodeURIComponent(selectedDocType)}` : '';
+      const response = await fetch(`${API_BASE_URL}/financial-statistics/live-agents-production?from_date=${from}&to_date=${to}${typeParam}`);
       if (response.ok) {
         const result: ProductionData = await response.json();
         setData(result);
@@ -95,13 +123,13 @@ export default function LiveAgentsProduction() {
     if (preset !== 'custom') {
       fetchData();
     }
-  }, [preset]);
+  }, [preset, selectedDocType]);
 
   useEffect(() => {
     if (preset === 'custom' && customFrom && customTo) {
       fetchData();
     }
-  }, [customFrom, customTo]);
+  }, [customFrom, customTo, selectedDocType]);
 
   const filteredAgents = (data?.agents || [])
     .filter(a =>
@@ -139,6 +167,11 @@ export default function LiveAgentsProduction() {
     }
   };
 
+  const selectedDocTypeLabel = (): string => {
+    const found = DOCUMENT_TYPE_OPTIONS.find(o => o.key === selectedDocType);
+    return found ? found.label : 'جميع أنواع الوثائق';
+  };
+
   const exportToExcel = async () => {
     if (!data || !data.agents.length) return;
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -166,12 +199,12 @@ export default function LiveAgentsProduction() {
       }));
 
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير إنتاجية الوكلاء',
-        subtitle: `الفترة: ${presetLabel()} | إجمالي المبيعات: ${formatNumber(data.summary.total_sales)} د.ل | عدد الوثائق: ${data.summary.total_documents} | حصة الوكلاء: ${formatNumber(data.summary.total_agent_share)} د.ل | حصة الشركة: ${formatNumber(data.summary.total_company_share)} د.ل`,
+        title: 'شركة المدار الليبي للتأمين - تقرير إنتاجية الوكلاء المباشر',
+        subtitle: `نوع الوثيقة: ${selectedDocTypeLabel()} | الفترة: ${presetLabel()} | إجمالي المبيعات: ${formatNumber(data.summary.total_sales)} د.ل | عدد الوثائق: ${data.summary.total_documents} | حصة الوكلاء: ${formatNumber(data.summary.total_agent_share)} د.ل | حصة الشركة: ${formatNumber(data.summary.total_company_share)} د.ل`,
         columns,
         data: excelData,
-        fileName: `تقرير_إنتاجية_الوكلاء_${presetLabel()}`,
-        qrData: `تقرير إنتاجية الوكلاء - شركة المدار الليبي\nالفترة: ${presetLabel()}\nإجمالي المبيعات: ${formatNumber(data.summary.total_sales)} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: `تقرير_إنتاجية_الوكلاء_${selectedDocType !== 'all' ? selectedDocType + '_' : ''}${presetLabel()}`,
+        qrData: `تقرير إنتاجية الوكلاء - شركة المدار الليبي\nنوع الوثيقة: ${selectedDocTypeLabel()}\nالفترة: ${presetLabel()}\nإجمالي المبيعات: ${formatNumber(data.summary.total_sales)} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
       showToast('تم تصدير التقرير بنجاح ✅', 'success');
     } catch (error) {
@@ -203,7 +236,7 @@ export default function LiveAgentsProduction() {
     printWindow.document.write(`
       <html dir="rtl">
       <head>
-        <title>تقرير إنتاجية الوكلاء</title>
+        <title>تقرير إنتاجية الوكلاء - ${selectedDocTypeLabel()}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
           @media print { 
@@ -241,7 +274,7 @@ export default function LiveAgentsProduction() {
           <img src="/img/logo.png" style="height: 60px;">
         </div>
         <div class="meta-info">
-          <div><strong>تاريخ التقرير:</strong> ${new Date().toLocaleString('ar-LY')}</div>
+          <div><strong>نوع الوثيقة:</strong> ${selectedDocTypeLabel()} &nbsp;|&nbsp; <strong>تاريخ التقرير:</strong> ${new Date().toLocaleString('ar-LY')}</div>
           <div><strong>الفترة:</strong> ${presetLabel()} &nbsp;|&nbsp; <strong>عدد الوكلاء:</strong> ${filteredAgents.length}</div>
         </div>
         <div class="summary-cards">
@@ -387,6 +420,23 @@ export default function LiveAgentsProduction() {
     boxShadow: active ? '0 4px 15px rgba(30,64,175,0.3)' : '0 1px 3px rgba(0,0,0,0.02)',
   });
 
+  const docTypeBadgeStyle = (active: boolean, color: string): React.CSSProperties => ({
+    padding: '7px 14px',
+    borderRadius: '10px',
+    border: active ? `2px solid ${color}` : '1.5px solid var(--border)',
+    cursor: 'pointer',
+    fontFamily: "'Cairo', sans-serif",
+    fontWeight: active ? 800 : 600,
+    fontSize: '12.5px',
+    color: active ? 'white' : 'var(--text)',
+    background: active ? color : 'var(--card-bg)',
+    transition: 'all 0.25s ease',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    boxShadow: active ? `0 4px 12px ${color}40` : 'none',
+  });
+
   const tableSectionStyle: React.CSSProperties = {
     background: 'var(--card-bg)',
     borderRadius: '18px',
@@ -438,7 +488,7 @@ export default function LiveAgentsProduction() {
 
   return (
     <div style={containerStyle}>
-      {/* Animations */}
+      {/* Animations & Custom Styles */}
       <style>{`
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
@@ -446,6 +496,7 @@ export default function LiveAgentsProduction() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .stat-card:hover { transform: translateY(-6px) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important; }
         .preset-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important; }
+        .type-chip:hover { transform: translateY(-2px); filter: brightness(1.08); }
         .prod-report-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .table-row:hover { background: var(--hover-bg) !important; }
         .sort-header:hover { cursor: pointer; background: rgba(255,255,255,0.15) !important; }
@@ -619,64 +670,212 @@ export default function LiveAgentsProduction() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* ────────────────── Filters Section ────────────────── */}
       <div style={filterSectionStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <i className="fa-solid fa-filter" style={{ color: '#1e40af', fontSize: '16px' }}></i>
-          <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>الفترة الزمنية</span>
-          {loading && (
-            <div style={{
-              width: '18px', height: '18px',
-              border: '2px solid var(--border)', borderTopColor: '#1e40af',
-              borderRadius: '50%', animation: 'spin 0.6s linear infinite',
-              marginRight: '8px',
-            }} />
+        {/* Row 1: Time Presets */}
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <i className="fa-solid fa-calendar-days" style={{ color: '#1e40af', fontSize: '16px' }}></i>
+            <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>الفترة الزمنية</span>
+            {loading && (
+              <div style={{
+                width: '16px', height: '16px',
+                border: '2px solid var(--border)', borderTopColor: '#1e40af',
+                borderRadius: '50%', animation: 'spin 0.6s linear infinite',
+                marginRight: '8px',
+              }} />
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {([
+              { key: 'today', label: 'اليوم', icon: 'fa-calendar-day' },
+              { key: 'yesterday', label: 'أمس', icon: 'fa-calendar-minus' },
+              { key: 'last7days', label: 'آخر 7 أيام', icon: 'fa-calendar-week' },
+              { key: 'thisMonth', label: 'هذا الشهر', icon: 'fa-calendar' },
+              { key: 'thisYear', label: 'هذه السنة', icon: 'fa-calendar-check' },
+              { key: 'custom', label: 'تحديد مخصص', icon: 'fa-calendar-alt' },
+            ] as { key: PresetType; label: string; icon: string }[]).map(p => (
+              <button
+                key={p.key}
+                className="preset-btn"
+                style={presetBtnStyle(preset === p.key)}
+                onClick={() => setPreset(p.key)}
+              >
+                <i className={`fa-solid ${p.icon}`} style={{ marginLeft: '6px' }}></i>
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {preset === 'custom' && (
+            <div style={{ display: 'flex', gap: '14px', marginTop: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>من:</label>
+                <CustomDateInput
+                  value={customFrom}
+                  onChange={setCustomFrom}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>إلى:</label>
+                <CustomDateInput
+                  value={customTo}
+                  onChange={setCustomTo}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {([
-            { key: 'today', label: 'اليوم', icon: 'fa-calendar-day' },
-            { key: 'yesterday', label: 'أمس', icon: 'fa-calendar-minus' },
-            { key: 'last7days', label: 'آخر 7 أيام', icon: 'fa-calendar-week' },
-            { key: 'thisMonth', label: 'هذا الشهر', icon: 'fa-calendar' },
-            { key: 'thisYear', label: 'هذه السنة', icon: 'fa-calendar-check' },
-            { key: 'custom', label: 'تحديد مخصص', icon: 'fa-calendar-alt' },
-          ] as { key: PresetType; label: string; icon: string }[]).map(p => (
-            <button
-              key={p.key}
-              className="preset-btn"
-              style={presetBtnStyle(preset === p.key)}
-              onClick={() => setPreset(p.key)}
-            >
-              <i className={`fa-solid ${p.icon}`} style={{ marginLeft: '6px' }}></i>
-              {p.label}
-            </button>
-          ))}
-        </div>
 
-        {preset === 'custom' && (
-          <div style={{ display: 'flex', gap: '14px', marginTop: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>من:</label>
-              <CustomDateInput
-                value={customFrom}
-                onChange={setCustomFrom}
-                style={inputStyle}
-              />
+        {/* Row 2: Document Types Selector */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fa-solid fa-file-shield" style={{ color: '#0284c7', fontSize: '16px' }}></i>
+              <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>
+                تصفية حسب نوع الوثيقة
+              </span>
+              <span style={{
+                background: 'rgba(2, 132, 199, 0.1)',
+                color: '#0284c7',
+                padding: '2px 10px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 700
+              }}>
+                {selectedDocTypeLabel()}
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontWeight: 700, fontSize: '13px', color: 'var(--muted)' }}>إلى:</label>
-              <CustomDateInput
-                value={customTo}
-                onChange={setCustomTo}
-                style={inputStyle}
-              />
-            </div>
+            {selectedDocType !== 'all' && (
+              <button
+                onClick={() => setSelectedDocType('all')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+                إلغاء التصفية (عرض الكل)
+              </button>
+            )}
           </div>
-        )}
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {DOCUMENT_TYPE_OPTIONS.map(docType => {
+              const isActive = selectedDocType === docType.key;
+              const typeCount = docType.key === 'all'
+                ? data?.summary?.total_documents
+                : data?.types_summary?.find(t => t.key === docType.key)?.document_count;
+
+              return (
+                <button
+                  key={docType.key}
+                  className="type-chip"
+                  style={docTypeBadgeStyle(isActive, docType.color)}
+                  onClick={() => setSelectedDocType(docType.key)}
+                >
+                  <i className={docType.icon}></i>
+                  <span>{docType.label}</span>
+                  {typeCount !== undefined && typeCount > 0 && (
+                    <span style={{
+                      background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--badge-bg, rgba(0,0,0,0.06))',
+                      color: isActive ? 'white' : docType.color,
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                    }}>
+                      {typeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Table */}
+      {/* ────────────────── Document Types Production Distribution Grid ────────────────── */}
+      {data?.types_summary && data.types_summary.length > 0 && (
+        <div style={{
+          background: 'var(--card-bg)',
+          borderRadius: '18px',
+          padding: '18px 24px',
+          marginBottom: '20px',
+          border: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <i className="fa-solid fa-chart-pie" style={{ color: '#7c3aed', fontSize: '16px' }}></i>
+            <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text)' }}>
+              توزيع الإنتاجية حسب نوع الوثيقة
+            </span>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+            gap: '12px',
+          }}>
+            {data.types_summary.map(t => {
+              const matchedOption = DOCUMENT_TYPE_OPTIONS.find(o => o.key === t.key);
+              const color = matchedOption?.color || '#3b82f6';
+              const isSelected = selectedDocType === t.key;
+
+              return (
+                <div
+                  key={t.key}
+                  onClick={() => setSelectedDocType(isSelected ? 'all' : t.key)}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: isSelected ? `${color}15` : 'var(--bg)',
+                    border: isSelected ? `2px solid ${color}` : '1px solid var(--border)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                      <i className={matchedOption?.icon || 'fa-solid fa-file'} style={{ color, fontSize: '14px' }}></i>
+                      <span>{t.label}</span>
+                    </div>
+                    <span style={{
+                      background: color,
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                    }}>
+                      {t.document_count}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '2px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>المبيعات:</span>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color }}>
+                      {formatNumber(t.total_sales)} <small style={{ fontSize: '10px' }}>د.ل</small>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────── Main Table Section ────────────────── */}
       <div style={tableSectionStyle} ref={tableRef}>
         {/* Table Header */}
         <div style={{
@@ -704,6 +903,18 @@ export default function LiveAgentsProduction() {
             }}>
               {filteredAgents.length} وكيل
             </span>
+            {selectedDocType !== 'all' && (
+              <span style={{
+                background: '#dbeafe',
+                color: '#1e40af',
+                padding: '3px 10px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 700,
+              }}>
+                مصفى بـ: {selectedDocTypeLabel()}
+              </span>
+            )}
           </div>
           <div style={{ position: 'relative' }}>
             <i className="fa-solid fa-search" style={{
@@ -734,109 +945,217 @@ export default function LiveAgentsProduction() {
           <table className="live-production-table" style={{ fontSize: '14px', width: '100%', margin: '0', padding: '0' }}>
             <thead>
               <tr style={{ background: 'var(--table-header)' }}>
-                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
-                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%' }}>الكود</th>
-                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '22%' }}>اسم الوكالة</th>
-                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '15%' }}>اسم الوكيل</th>
+                <th style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '5%' }}>#</th>
+                <th style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '9%' }}>الكود</th>
+                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '20%' }}>اسم الوكالة</th>
+                <th style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'right', width: '14%' }}>اسم الوكيل</th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('document_count')}
-                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '10%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   عدد الوثائق {sortField === 'document_count' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('total_sales')}
-                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '14%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '13%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   إجمالي المبيعات {sortField === 'total_sales' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('agent_share')}
-                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '11%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   حصة الوكيل {sortField === 'agent_share' && (sortDir === 'desc' ? '▼' : '▲')}
                 </th>
                 <th
                   className="sort-header"
                   onClick={() => handleSort('company_share')}
-                  style={{ padding: '14px 12px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '12%', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '11%', cursor: 'pointer', userSelect: 'none' }}
                 >
                   حصة الشركة {sortField === 'company_share' && (sortDir === 'desc' ? '▼' : '▲')}
+                </th>
+                <th style={{ padding: '14px 10px', color: 'var(--text)', background: 'var(--table-header)', fontWeight: 800, fontSize: '13px', textAlign: 'center', width: '7%' }}>
+                  تفصيل
                 </th>
               </tr>
             </thead>
             <tbody>
               {filteredAgents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '50px', textAlign: 'center', color: 'var(--muted)' }}>
+                  <td colSpan={9} style={{ padding: '50px', textAlign: 'center', color: 'var(--muted)' }}>
                     <i className="fa-solid fa-inbox" style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}></i>
                     <span style={{ fontSize: '16px', fontWeight: 700 }}>
-                      {searchTerm ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد بيانات للفترة المحددة'}
+                      {searchTerm ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد بيانات للفترة أو نوع الوثيقة المحدد'}
                     </span>
                   </td>
                 </tr>
               ) : (
-                filteredAgents.map((agent, idx) => (
-                  <tr
-                    key={agent.id}
-                    className="table-row"
-                    style={{
-                      borderBottom: '1px solid var(--border)',
-                      background: idx % 2 === 0 ? 'var(--card-bg)' : 'var(--bg)',
-                      transition: 'background 0.2s ease',
-                    }}
-                  >
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: 'var(--muted)', fontSize: '13px' }}>
-                      {idx + 1}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{
-                        background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
-                        color: '#1e40af',
-                        padding: '4px 12px',
-                        borderRadius: '8px',
-                        fontWeight: 800,
-                        fontSize: '12px',
-                        letterSpacing: '0.5px',
-                      }}>
-                        {agent.code}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>
-                      {agent.agency_name}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: 'var(--muted)', fontSize: '13px' }}>
-                      {agent.agent_name || '-'}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{
-                        background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
-                        color: '#065f46',
-                        padding: '4px 14px',
-                        borderRadius: '20px',
-                        fontWeight: 800,
-                        fontSize: '13px',
-                      }}>
-                        {agent.document_count}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800, color: '#3b82f6', fontSize: '14px' }}>
-                      {formatNumber(agent.total_sales)}
-                      <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#a78bfa', fontSize: '13px' }}>
-                      {formatNumber(agent.agent_share)}
-                      <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#2dd4bf', fontSize: '13px' }}>
-                      {formatNumber(agent.company_share)}
-                      <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
-                    </td>
-                  </tr>
-                ))
+                filteredAgents.map((agent, idx) => {
+                  const isExpanded = expandedAgentId === agent.id;
+
+                  return (
+                    <React.Fragment key={agent.id}>
+                      <tr
+                        className="table-row"
+                        style={{
+                          borderBottom: isExpanded ? 'none' : '1px solid var(--border)',
+                          background: idx % 2 === 0 ? 'var(--card-bg)' : 'var(--bg)',
+                          transition: 'background 0.2s ease',
+                        }}
+                      >
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: 'var(--muted)', fontSize: '13px' }}>
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
+                            color: '#1e40af',
+                            padding: '4px 12px',
+                            borderRadius: '8px',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            letterSpacing: '0.5px',
+                          }}>
+                            {agent.code}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>
+                          {agent.agency_name}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right', color: 'var(--muted)', fontSize: '13px' }}>
+                          {agent.agent_name || '-'}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
+                            color: '#065f46',
+                            padding: '4px 14px',
+                            borderRadius: '20px',
+                            fontWeight: 800,
+                            fontSize: '13px',
+                          }}>
+                            {agent.document_count}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800, color: '#3b82f6', fontSize: '14px' }}>
+                          {formatNumber(agent.total_sales)}
+                          <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#a78bfa', fontSize: '13px' }}>
+                          {formatNumber(agent.agent_share)}
+                          <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#2dd4bf', fontSize: '13px' }}>
+                          {formatNumber(agent.company_share)}
+                          <span style={{ fontSize: '11px', color: 'var(--muted)', marginRight: '4px' }}>د.ل</span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          {agent.by_type && agent.by_type.length > 0 ? (
+                            <button
+                              onClick={() => setExpandedAgentId(isExpanded ? null : agent.id)}
+                              style={{
+                                background: isExpanded ? '#3b82f6' : 'var(--badge-bg, #f1f5f9)',
+                                color: isExpanded ? 'white' : '#1e40af',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                padding: '5px 10px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                transition: 'all 0.2s ease',
+                              }}
+                              title="عرض تفصيل أنواع الوثائق"
+                            >
+                              <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+                              <span>{agent.by_type.length} أنواع</span>
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--muted)', fontSize: '12px' }}>-</span>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Expanded Row Breakdown */}
+                      {isExpanded && agent.by_type && (
+                        <tr style={{ background: 'var(--hover-bg, #f8fafc)', borderBottom: '2px solid #3b82f6' }}>
+                          <td colSpan={9} style={{ padding: '16px 24px' }}>
+                            <div style={{
+                              background: 'var(--card-bg)',
+                              borderRadius: '12px',
+                              padding: '14px 18px',
+                              border: '1px solid var(--border)',
+                              boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <i className="fa-solid fa-list-check" style={{ color: '#3b82f6' }}></i>
+                                <span style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text)' }}>
+                                  تفصيل أنواع الوثائق للوكالة: {agent.agency_name} ({agent.code})
+                                </span>
+                              </div>
+
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                                gap: '10px',
+                              }}>
+                                {agent.by_type.map(item => {
+                                  const opt = DOCUMENT_TYPE_OPTIONS.find(o => o.key === item.key);
+                                  const itemColor = opt?.color || '#3b82f6';
+
+                                  return (
+                                    <div
+                                      key={item.key}
+                                      style={{
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '10px',
+                                        padding: '10px 14px',
+                                        background: 'var(--bg)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '6px',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          <i className={opt?.icon || 'fa-solid fa-file'} style={{ color: itemColor }}></i>
+                                          {item.label}
+                                        </span>
+                                        <span style={{
+                                          background: itemColor,
+                                          color: 'white',
+                                          padding: '2px 8px',
+                                          borderRadius: '10px',
+                                          fontSize: '11px',
+                                          fontWeight: 800,
+                                        }}>
+                                          {item.document_count} وثيقة
+                                        </span>
+                                      </div>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '2px' }}>
+                                        <span style={{ color: 'var(--muted)' }}>المبيعات:</span>
+                                        <span style={{ fontWeight: 800, color: '#3b82f6' }}>{formatNumber(item.total_sales)} د.ل</span>
+                                      </div>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--muted)' }}>
+                                        <span>عمولة: <strong style={{ color: '#7c3aed' }}>{formatNumber(item.agent_share)}</strong></span>
+                                        <span>صافي: <strong style={{ color: '#0d9488' }}>{formatNumber(item.company_share)}</strong></span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
             {filteredAgents.length > 0 && data && (
@@ -847,7 +1166,7 @@ export default function LiveAgentsProduction() {
                 }}>
                   <td colSpan={4} style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 900, fontSize: '15px', color: 'var(--text)' }}>
                     <i className="fa-solid fa-sigma" style={{ marginLeft: '8px' }}></i>
-                    المجموع الكلي
+                    المجموع الكلي ({selectedDocTypeLabel()})
                   </td>
                   <td style={{ padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: '15px', color: 'var(--text)' }}>
                     {data.summary.total_documents.toLocaleString()}
@@ -864,6 +1183,7 @@ export default function LiveAgentsProduction() {
                     {formatNumber(data.summary.total_company_share)}
                     <span style={{ fontSize: '12px', marginRight: '4px' }}>د.ل</span>
                   </td>
+                  <td></td>
                 </tr>
               </tfoot>
             )}
