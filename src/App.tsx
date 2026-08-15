@@ -413,6 +413,7 @@ const menuSections: SidebarSection[] = [
           { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
           { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' },
           { label: 'الوثائق الملغية', icon: 'fa-solid fa-ban', to: '/canceled-documents' },
+          { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
         ]
       },
       { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
@@ -446,7 +447,6 @@ const menuSections: SidebarSection[] = [
           { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
         ]
       },
-      { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     ],
 
 
@@ -767,6 +767,8 @@ const createMenuSections = (
     '/cash-in-transit-insurance',
     '/cargo-insurance',
     '/old-documents',
+    '/canceled-documents',
+    '/archive',
     '/coming-soon',
   ];
 
@@ -809,8 +811,7 @@ const createMenuSections = (
     '/profile-update-requests?type=employee',
     '/external-entities',
     '/mail/incoming',
-    '/mail/outgoing',
-    '/archive'
+    '/mail/outgoing'
   ];
   const technicalOrder: string[] = ['/claims', '/reports/indemnities'];
   const settingsOrder: string[] = ['/cities', '/plates', '/colors', '/vehicle-types'];
@@ -1040,12 +1041,9 @@ const createMenuSections = (
       });
     }
 
-    // إضافة دليل الجهات الخارجية والأرشيف إذا كانا موجودين
+    // إضافة دليل الجهات الخارجية إذا كان موجوداً
     const extItem = adminItems.find(i => i.to === '/external-entities');
     if (extItem) finalAdmin.push(extItem);
-    
-    const archiveItem = adminItems.find(i => i.to === '/archive');
-    if (archiveItem) finalAdmin.push(archiveItem);
 
     sections.push({
       title: 'الشؤون الادارية',
