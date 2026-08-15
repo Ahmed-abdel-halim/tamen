@@ -148,11 +148,17 @@ function hasAccessToRoute(
   path: string,
   authorizedDocs: string[] | null,
   isAdmin: boolean,
-  branchAgentId?: number | null
+  branchAgentId?: number | null,
+  isAgentCancelled?: boolean
 ): boolean {
   // Admin لديه وصول لجميع الصفحات
   if (isAdmin) {
     return true;
+  }
+
+  // إذا كانت الوكالة ملغية أو مجمدة، يمنع تماماً من الوصول لمسارات إنشاء وإصدار وثائق جديدة
+  if (isAgentCancelled && (path.includes('/create') || path.endsWith('/create'))) {
+    return false;
   }
 
   // الفروع/الوكلاء لديهم وصول إلى صفحاتهم الخاصة وإعدادات أنواع السيارات وحوالات الوكلاء وطلبات الوثائق
@@ -335,9 +341,13 @@ function AuthorizedRoute({
         const isAdmin = user.is_admin || false;
         const authorizedDocs = user.authorized_documents || null;
         const branchAgentId = user.branch_agent_id ?? null;
+        const isAgentCancelled = user.branch_agent_status === 'غير نشط' || 
+                                 user.branch_agent?.status === 'غير نشط' || 
+                                 user.status === 'غير نشط' || 
+                                 user.is_cancelled === true;
 
         const pathToCheck = requiredPath || location.pathname;
-        setHasAccess(hasAccessToRoute(pathToCheck, authorizedDocs, isAdmin, branchAgentId));
+        setHasAccess(hasAccessToRoute(pathToCheck, authorizedDocs, isAdmin, branchAgentId, isAgentCancelled));
       } catch (error) {
         console.error('Error loading user permissions:', error);
         setHasAccess(false);

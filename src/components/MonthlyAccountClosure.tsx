@@ -146,7 +146,9 @@ export default function MonthlyAccountClosure() {
       });
       if (!res.ok) throw new Error('فشل في جلب الوكلاء');
       const data = await res.json();
-      setAgents(Array.isArray(data) ? data : []);
+      // Ensure cancelled agents (status !== 'نشط') are strictly excluded from monthly closures
+      const activeAgents = (Array.isArray(data) ? data : []).filter((a: any) => a.status === 'نشط');
+      setAgents(activeAgents);
     } catch (error: any) {
       showToast(`حدث خطأ: ${error.message}`, 'error');
     }

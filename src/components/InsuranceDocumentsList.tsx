@@ -61,6 +61,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const [syncing, setSyncing] = useState(false);
   const perPage = 15;
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAgentCancelled, setIsAgentCancelled] = useState(false);
   const [agents, setAgents] = useState<{id: number, agency_name: string}[]>([]);
   const [filters, setFilters] = useState({
     agentId: '',
@@ -117,9 +118,15 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
       if (userStr) {
         const user = JSON.parse(userStr);
         setIsAdmin(user.is_admin || false);
+        const cancelled = user.branch_agent_status === 'غير نشط' || 
+                          user.branch_agent?.status === 'غير نشط' || 
+                          user.status === 'غير نشط' || 
+                          user.is_cancelled === true;
+        setIsAgentCancelled(cancelled);
       }
     } catch (error) {
       setIsAdmin(false);
+      setIsAgentCancelled(false);
     }
   };
 
@@ -375,6 +382,29 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
       </div>
 
       <div className="users-card">
+        {/* Banner for Cancelled / Frozen Agents */}
+        {isAgentCancelled && (
+          <div style={{
+            padding: '14px 20px',
+            marginBottom: '20px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            color: '#991b1b'
+          }}>
+            <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '22px', color: '#ef4444', flexShrink: 0 }}></i>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', fontWeight: 800 }}>تنبيه: تم إلغاء هذه الوكالة وتجميد صلاحية إصدار وثائق جديدة</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d' }}>
+                حسابك حالياً في وضع الاطلاع فقط؛ يمكنك استعراض وثائقك السابقة، طباعة بدل فاقد، والاطلاع على كشف الحساب.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="users-header">
           <div className="users-search-bar">
             <input
@@ -388,13 +418,24 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
           </div>
-          {!isArchive && (
+          {!isArchive && !isAgentCancelled && (
             <button
               className="primary add-user-btn"
               onClick={() => navigate('/insurance-documents/create')}
             >
               <i className="fa-solid fa-plus"></i>
               إضافة وثيقة
+            </button>
+          )}
+          {!isArchive && isAgentCancelled && (
+            <button
+              className="primary add-user-btn"
+              disabled
+              style={{ background: '#94a3b8', cursor: 'not-allowed', opacity: 0.8 }}
+              title="تم إلغاء الوكالة - لا يمكن إصدار وثائق جديدة"
+            >
+              <i className="fa-solid fa-ban"></i>
+              الإصدار موقوف (وكالة ملغية)
             </button>
           )}
           {!isArchive && isAdmin && (

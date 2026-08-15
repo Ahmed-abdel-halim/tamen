@@ -59,6 +59,8 @@ export default function BranchesAgentsList() {
     const queryParams = new URLSearchParams(location.search);
     if (queryParams.get('status') === 'pending') {
       setFilterStatus('قيد الانتظار');
+    } else if (queryParams.get('status') === 'cancelled' || queryParams.get('status') === 'غير نشط') {
+      setFilterStatus('غير نشط');
     } else {
       setFilterStatus('نشط');
     }
@@ -1051,6 +1053,101 @@ export default function BranchesAgentsList() {
           </button>
         </div>
 
+        {/* Quick Status Tabs */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('نشط')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid',
+              borderColor: filterStatus === 'نشط' ? '#16a34a' : '#e2e8f0',
+              background: filterStatus === 'نشط' ? '#16a34a' : '#ffffff',
+              color: filterStatus === 'نشط' ? '#ffffff' : '#334155',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="fa-solid fa-circle-check"></i>
+            الوكالات النشطة ({branchesAgents.filter(b => b.status === 'نشط').length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('غير نشط')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid',
+              borderColor: filterStatus === 'غير نشط' ? '#dc2626' : '#e2e8f0',
+              background: filterStatus === 'غير نشط' ? '#dc2626' : '#ffffff',
+              color: filterStatus === 'غير نشط' ? '#ffffff' : '#334155',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="fa-solid fa-ban"></i>
+            الوكالات الملغية ({branchesAgents.filter(b => b.status === 'غير نشط').length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('قيد الانتظار')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid',
+              borderColor: filterStatus === 'قيد الانتظار' ? '#d97706' : '#e2e8f0',
+              background: filterStatus === 'قيد الانتظار' ? '#d97706' : '#ffffff',
+              color: filterStatus === 'قيد الانتظار' ? '#ffffff' : '#334155',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="fa-solid fa-clock"></i>
+            الوكلاء الجدد ({branchesAgents.filter(b => b.status === 'قيد الانتظار').length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('all')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid',
+              borderColor: filterStatus === 'all' ? '#2563eb' : '#e2e8f0',
+              background: filterStatus === 'all' ? '#2563eb' : '#ffffff',
+              color: filterStatus === 'all' ? '#ffffff' : '#334155',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="fa-solid fa-list"></i>
+            الكل ({branchesAgents.length})
+          </button>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
           <div className="filter-group">
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>بحث سريع</label>
@@ -1093,7 +1190,7 @@ export default function BranchesAgentsList() {
             >
               <option value="all">كل الحالات</option>
               <option value="نشط">نشط</option>
-              <option value="غير نشط">غير نشط</option>
+              <option value="غير نشط">وكالات ملغية (غير نشط)</option>
               <option value="قيد الانتظار">الوكلاء الجدد (قيد الانتظار)</option>
             </select>
           </div>
