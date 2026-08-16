@@ -432,26 +432,7 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
                       <div className="action-buttons">
                         <button
                           onClick={() => {
-                            const iframe = document.createElement('iframe');
-                            iframe.style.position = 'fixed';
-                            iframe.style.right = '-9999px';
-                            iframe.style.width = '0';
-                            iframe.style.height = '0';
-                            iframe.src = `${API_BASE_URL}/school-student-insurance/${doc.id}/print`;
-                            document.body.appendChild(iframe);
-                            iframe.onload = () => {
-                              setTimeout(() => {
-                                if (iframe.contentWindow) {
-                                  iframe.contentWindow.focus();
-                                  iframe.contentWindow.print();
-                                }
-                                setTimeout(() => {
-                                  if (document.body.contains(iframe)) {
-                                    document.body.removeChild(iframe);
-                                  }
-                                }, 300);
-                              }, 100);
-                            };
+                            window.open(`${API_BASE_URL}/school-student-insurance/${doc.id}/print?t=${Date.now()}`, '_blank');
                           }}
                           className="action-btn"
                           title="طباعة الوثيقة"

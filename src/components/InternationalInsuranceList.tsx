@@ -704,9 +704,8 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                             <button
                               onClick={() => {
                                 window.open(
-                                  `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${new Date().getTime()}`,
-                                  'print_popup',
-                                  'width=850,height=750,toolbar=0,scrollbars=1,resizable=1'
+                                  `${API_BASE_URL}/international-insurance-documents/${doc.id}/print?t=${Date.now()}`,
+                                  '_blank'
                                 );
                               }}
                               className="action-btn"

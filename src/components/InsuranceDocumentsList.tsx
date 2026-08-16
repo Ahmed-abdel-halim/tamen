@@ -715,19 +715,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                             {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id)) && (
                               <button
                                 onClick={() => {
-                                  const iframe = document.createElement('iframe');
-                                  iframe.style.position = 'fixed';
-                                  iframe.style.right = '-9999px';
-                                  iframe.style.width = '0';
-                                  iframe.style.height = '0';
-                                  iframe.src = `${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${new Date().getTime()}`;
-                                  document.body.appendChild(iframe);
-
-                                  setTimeout(() => {
-                                    if (document.body.contains(iframe)) {
-                                      document.body.removeChild(iframe);
-                                    }
-                                  }, 5000);
+                                  window.open(`${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${Date.now()}`, '_blank');
                                 }}
                                 className="action-btn"
                                 aria-label="طباعة الوثيقة"
