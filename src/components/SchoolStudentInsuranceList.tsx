@@ -4,6 +4,7 @@ import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
+import InsuranceTermsModal from "./InsuranceTermsModal";
 
 type SchoolStudentInsuranceDocument = {
   id: number;
@@ -26,6 +27,7 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
   const perPage = 10;
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; isOpen: boolean }>({ id: null, isOpen: false });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const [agents, setAgents] = useState<{id: number, agency_name: string}[]>([]);
   const [filters, setFilters] = useState({
@@ -231,6 +233,17 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
             >
               <i className="fa-solid fa-plus"></i>
               إصدار وثيقة جديدة
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className="primary add-user-btn"
+              onClick={() => setShowTermsModal(true)}
+              style={{ background: '#7c3aed', marginRight: '10px' }}
+              title="تعديل شروط وإقرارات الوثيقة"
+            >
+              <i className="fa-solid fa-file-contract"></i>
+              شروط الوثيقة
             </button>
           )}
           <button
@@ -521,6 +534,12 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
         </div>
       )}
 
+      <InsuranceTermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        insuranceTypeKey="school"
+        insuranceTypeName="تأمين حماية طلاب المدارس"
+      />
     </section>
   );
 }

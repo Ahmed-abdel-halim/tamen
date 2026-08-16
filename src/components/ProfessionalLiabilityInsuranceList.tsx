@@ -4,6 +4,7 @@ import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
+import InsuranceTermsModal from "./InsuranceTermsModal";
 
 type ProfessionalLiabilityInsuranceDocument = {
   id: number;
@@ -26,6 +27,7 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
   const [documents, setDocuments] = useState<ProfessionalLiabilityInsuranceDocument[]>([]);
   const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState<ProfessionalLiabilityInsuranceDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -269,6 +271,17 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
             <i className="fa-solid fa-file-excel"></i>
             تصدير إكسل
           </button>
+          {isAdmin && (
+            <button
+              className="primary add-user-btn"
+              onClick={() => setShowTermsModal(true)}
+              style={{ background: '#7c3aed', marginRight: '10px' }}
+              title="تعديل شروط وإقرارات الوثيقة"
+            >
+              <i className="fa-solid fa-file-contract"></i>
+              شروط الوثيقة
+            </button>
+          )}
         </div>
 
         {/* Advanced Filters Box */}
@@ -721,7 +734,12 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
         </div>
       )}
 
-
+      <InsuranceTermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        insuranceTypeKey="liability"
+        insuranceTypeName="تأمين المسؤولية المهنية"
+      />
     </section>
   );
 }

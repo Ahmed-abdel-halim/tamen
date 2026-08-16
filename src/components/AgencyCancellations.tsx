@@ -684,10 +684,12 @@ export default function AgencyCancellations() {
                       اختر الوكالة / الفرع المراد إلغاؤه <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <SearchableSelect 
-                      options={agents.map(a => ({
-                        value: a.id.toString(),
-                        label: `${a.agency_name} - ${a.agent_name} (رقم: ${a.agency_number || '—'})`
-                      }))}
+                      options={agents
+                        .filter(a => a.status === 'نشط' || a.id.toString() === selectedAgentId)
+                        .map(a => ({
+                          value: a.id.toString(),
+                          label: `${a.agency_name} - ${a.agent_name} (رقم: ${a.agency_number || '—'})`
+                        }))}
                       value={selectedAgentId}
                       onChange={(val) => {
                         setSelectedAgentId(val);
