@@ -125,6 +125,7 @@ export default function AgentMonthlyLedger() {
   const [payAmount, setPayAmount] = useState('');
   const [payNotes, setPayNotes] = useState('');
   const [payLoading, setPayLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   // Audit / Verification State
   const [togglingMonthKey, setTogglingMonthKey] = useState<string | null>(null);
@@ -351,6 +352,43 @@ export default function AgentMonthlyLedger() {
       showToast('حدث خطأ أثناء حفظ الدفعة', 'error');
     } finally {
       setPayLoading(false);
+    }
+  };
+
+  const handleResetPayment = async (row: MonthRow) => {
+    if (!selectedAgentId) return;
+    if (
+      !window.confirm(
+        `هل أنت تأكد من إلغاء وتصفير المبلغ المستلم لشهر (${row.month_label})؟\n\nسيتم حذف إيصالات القبض المسجلة وتصفير المبلغ المستلم وإعادة حساب المستحقات للشهر.`
+      )
+    ) {
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/reset-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          branch_agent_id: selectedAgentId,
+          year: row.year,
+          month: row.month,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data?.message || 'فشل إلغاء التسديد');
+      showToast(data.message || 'تم إلغاء وتصفير المبلغ المستلم لهذا الشهر بنجاح', 'success');
+      setPayModal(null);
+      fetchLedger(selectedAgentId);
+    } catch (err: any) {
+      showToast(err?.message || 'حدث خطأ أثناء إلغاء التسديد', 'error');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -1613,6 +1651,34 @@ export default function AgentMonthlyLedger() {
                               </button>
                             )}
 
+                            {row.paid_amount > 0 && (
+                              <button
+                                className="pay-btn"
+                                disabled={resetLoading}
+                                onClick={() => handleResetPayment(row)}
+                                title="إلغاء وتصفير المبلغ المستلم لهذا الشهر"
+                                style={{
+                                  padding: '3px 6px',
+                                  borderRadius: '7px',
+                                  border: 'none',
+                                  cursor: resetLoading ? 'wait' : 'pointer',
+                                  fontFamily: "'Cairo',sans-serif",
+                                  fontWeight: 700,
+                                  fontSize: '10px',
+                                  color: 'white',
+                                  background: 'linear-gradient(135deg,#dc2626,#ef4444)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  transition: 'all .2s',
+                                  boxShadow: '0 2px 5px rgba(220,38,38,0.2)',
+                                  opacity: resetLoading ? 0.7 : 1,
+                                }}
+                              >
+                                <i className={`fa-solid ${resetLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-left'}`} style={{ fontSize: '9px' }} />إلغاء المستلم
+                              </button>
+                            )}
+
 
                           </div>
                         </td>
@@ -2819,10 +2885,40 @@ export default function AgentMonthlyLedger() {
                   display: 'flex',
                   gap: '10px',
                   justifyContent: 'flex-end',
+                  alignItems: 'center',
                   paddingTop: '12px',
                   borderTop: '1px solid #f1f5f9',
                 }}
               >
+                {payModal.row.paid_amount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleResetPayment(payModal.row)}
+                    disabled={resetLoading || payLoading}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      cursor: resetLoading || payLoading ? 'wait' : 'pointer',
+                      fontFamily: "'Cairo', sans-serif",
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      color: '#ffffff',
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      marginRight: 'auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                      opacity: resetLoading || payLoading ? 0.7 : 1,
+                    }}
+                    title="إلغاء وتصفير جميع الدفعات المسجلة لهذا الشهر"
+                  >
+                    <i className={`fa-solid ${resetLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-left'}`} />
+                    إلغاء المستلم ({fmt(payModal.row.paid_amount)} د.ل)
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setPayModal(null)}
