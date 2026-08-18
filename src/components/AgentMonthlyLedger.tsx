@@ -514,11 +514,11 @@ export default function AgentMonthlyLedger() {
         fetchMonthDocsData(monthDocsModal.row.year, monthDocsModal.row.month, searchMonthDocs, filterDocType);
         fetchLedger(selectedAgentId);
       } else {
-        showToast(data.message || 'فشل في حفظ الوثيقة القديمة', 'error');
+        showToast(data.message || data.error || 'فشل في حفظ الوثيقة القديمة', 'error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error quick adding old doc:', err);
-      showToast('حدث خطأ أثناء حفظ الوثيقة القديمة', 'error');
+      showToast(err?.message || 'حدث خطأ أثناء حفظ الوثيقة القديمة', 'error');
     } finally {
       setQuickSubmitting(false);
     }
