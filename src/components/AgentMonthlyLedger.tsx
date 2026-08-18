@@ -344,12 +344,17 @@ export default function AgentMonthlyLedger() {
           notes: payNotes,
         }),
       });
-      if (!res.ok) throw new Error();
-      showToast('تم تسجيل الدفعة وإنشاء إيصال القبض في إدارة الإيرادات بنجاح', 'success');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        const errMsg = data?.message || data?.error || 'حدث خطأ أثناء حفظ الدفعة';
+        showToast(errMsg, 'error');
+        return;
+      }
+      showToast(data.message || 'تم تسجيل الدفعة وإنشاء إيصال القبض في إدارة الإيرادات بنجاح', 'success');
       setPayModal(null);
       fetchLedger(selectedAgentId);
-    } catch {
-      showToast('حدث خطأ أثناء حفظ الدفعة', 'error');
+    } catch (err: any) {
+      showToast(err?.message || 'حدث خطأ أثناء حفظ الدفعة', 'error');
     } finally {
       setPayLoading(false);
     }
