@@ -282,7 +282,7 @@ export default function AgentMonthlyLedger() {
 
   const openPay = (row: MonthRow) => {
     setPayModal({ row });
-    const due = row.agent_share + row.carried_balance - row.paid_amount;
+    const due = row.company_share + row.carried_balance - row.paid_amount;
     setPayAmount(due > 0 ? due.toFixed(2) : '0');
     setPayNotes(row.notes || '');
   };
@@ -326,7 +326,7 @@ export default function AgentMonthlyLedger() {
     setPayLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const dueTotal = payModal.row.agent_share + payModal.row.carried_balance;
+      const dueTotal = payModal.row.company_share + payModal.row.carried_balance;
       const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/payment`, {
         method: 'POST',
         headers: {
@@ -2627,9 +2627,9 @@ export default function AgentMonthlyLedger() {
                       flexDirection: 'column',
                     }}
                   >
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, fontFamily: "'Cairo', sans-serif" }}>حصة الشهر</span>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, fontFamily: "'Cairo', sans-serif" }}>حصة الشركة</span>
                     <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.agent_share)} <small style={{ fontSize: '10px' }}>د.ل</small>
+                      {fmt(payModal.row.company_share)} <small style={{ fontSize: '10px' }}>د.ل</small>
                     </span>
                   </div>
 
@@ -2659,9 +2659,9 @@ export default function AgentMonthlyLedger() {
                       flexDirection: 'column',
                     }}
                   >
-                    <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>الإجمالي المطلوب</span>
+                    <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>الإجمالي المطلوب (حصة الشركة)</span>
                     <span style={{ fontSize: '14px', fontWeight: 900, color: '#1e3a8a', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.agent_share + payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
+                      {fmt(payModal.row.company_share + payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
                     </span>
                   </div>
 
@@ -2705,7 +2705,7 @@ export default function AgentMonthlyLedger() {
 
                     {/* Quick Fill Button */}
                     {(() => {
-                      const due = Math.max(0, payModal.row.agent_share + payModal.row.carried_balance - payModal.row.paid_amount);
+                      const due = Math.max(0, payModal.row.company_share + payModal.row.carried_balance - payModal.row.paid_amount);
                       if (due > 0 && parseFloat(payAmount || '0') !== due) {
                         return (
                           <button
@@ -2786,7 +2786,7 @@ export default function AgentMonthlyLedger() {
 
                   {/* Dynamic Remaining Balance Badge */}
                   {payAmount !== '' && !isNaN(parseFloat(payAmount)) && (() => {
-                    const totalReq = payModal.row.agent_share + payModal.row.carried_balance;
+                    const totalReq = payModal.row.company_share + payModal.row.carried_balance;
                     const currentInput = parseFloat(payAmount || '0');
                     const totalAfterPay = payModal.row.paid_amount + currentInput;
                     const rem = totalReq - totalAfterPay;
