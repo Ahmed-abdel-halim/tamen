@@ -38,7 +38,15 @@ export default function OutstandingDebts() {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      const response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`, { headers });
+
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`, { headers });
+      } catch (primaryErr) {
+        console.warn('Primary API endpoint failed, trying fallback /api endpoint...', primaryErr);
+        response = await fetch('/api/reports/outstanding-debts', { headers });
+      }
+
       if (response.ok) {
         const data = await response.json();
         setDebts(data);
