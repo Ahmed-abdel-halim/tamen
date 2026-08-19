@@ -31,14 +31,24 @@ export default function OutstandingDebts() {
     setLoading(true);
     showGlobalLoader('جاري جلب بيانات المديونيات...');
     try {
-      const response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`);
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Accept': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`, { headers });
       if (response.ok) {
         const data = await response.json();
         setDebts(data);
       } else {
+        const errText = await response.text().catch(() => '');
+        console.error('Error response fetching debts:', response.status, errText);
         showToast('حدث خطأ أثناء جلب مديونيات الوكلاء', 'error');
       }
     } catch (error) {
+      console.error('Network error fetching debts:', error);
       showToast('تعذر الاتصال بالسيرفر للمديونيات', 'error');
     } finally {
       setLoading(false);
