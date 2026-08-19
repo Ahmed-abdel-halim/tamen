@@ -488,12 +488,12 @@ export function DashboardPanels({}: DashboardPanelsProps) {
             {/* المدفوع للشركة */}
             <div className="service-card" style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', cursor: 'default' }}>
               <div className="service-content">
-                <div className="service-label">{isAdmin ? 'إجمالي المقبوضات (حوالات معتمدة)' : 'المدفوع للشركة'}</div>
+                <div className="service-label">{isAdmin ? 'إجمالي المقبوضات (إيصالات الدفع)' : 'المدفوع للشركة'}</div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.paid_to_company?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00')} <span style={{ fontSize: '14px', fontWeight: '500' }}>د.ل</span>
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '4px' }}>
-                  إيداعات وحوالات معتمدة
+                  إيصالات ومقبوضات معتمدة
                 </div>
               </div>
               <div className="service-icon">

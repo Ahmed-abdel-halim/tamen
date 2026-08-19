@@ -7,6 +7,10 @@ interface DebtRecord {
   id: number;
   agent_id: number;
   agency_name: string;
+  total_sales?: number;
+  total_commissions?: number;
+  company_share?: number;
+  total_paid?: number;
   total_debt: number;
   last_payment_date: string;
   status: 'critical' | 'warning' | 'normal';
@@ -271,17 +275,18 @@ export default function OutstandingDebts() {
           <thead>
             <tr>
               <th>اسم الوكيل / الجهة</th>
-              <th>إجمالي المديونية</th>
+              <th>حصة الشركة المستحقة</th>
+              <th>إجمالي المدفوع (المقبوضات)</th>
+              <th>المديونية المستحقة القائمة</th>
               <th>تاريخ آخر دفعة</th>
               <th>الحالة المادية</th>
-              <th>ملاحظات</th>
               <th>الإجراء</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--accent-cyan)' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--accent-cyan)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                     <i className="fa-solid fa-spinner fa-spin fa-2x"></i>
                     <span style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>جاري جلب بيانات المديونيات...</span>
@@ -290,16 +295,24 @@ export default function OutstandingDebts() {
               </tr>
             ) : filteredDebts.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px' }}>
                   لا توجد مديونيات مطابقة للبحث أو الفلتر حالياً
                 </td>
               </tr>
             ) : filteredDebts.map(debt => {
               const badge = getStatusBadge(debt.status);
+              const companyShare = debt.company_share ?? debt.total_debt;
+              const totalPaid = debt.total_paid ?? 0;
               return (
                 <tr key={debt.id}>
                   <td style={{ fontWeight: 'bold' }}>{debt.agency_name}</td>
-                  <td style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '16px' }}>
+                  <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                    {companyShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+                  </td>
+                  <td style={{ color: '#059669', fontWeight: 'bold' }}>
+                    {totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+                  </td>
+                  <td style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '15px' }}>
                     {debt.total_debt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
                   </td>
                   <td>{debt.last_payment_date}</td>
@@ -313,11 +326,10 @@ export default function OutstandingDebts() {
                       {badge.text}
                     </span>
                   </td>
-                  <td style={{ fontSize: '13px', color: 'var(--muted)' }}>{debt.notes}</td>
                   <td>
                     <button 
                       style={{ background: '#014cb1', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
-                      onClick={() => window.location.href = `/reports/branch-agent-account?agent_id=${debt.agent_id}`}
+                      onClick={() => window.location.href = `/reports/monthly-account-closure?agent_id=${debt.agent_id}`}
                     >
                       عرض كشف الحساب
                     </button>
