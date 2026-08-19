@@ -31,12 +31,19 @@ export default function OutstandingDebts() {
     setLoading(true);
     showGlobalLoader('جاري جلب بيانات المديونيات...');
     try {
-      const response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/reports/outstanding-debts`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setDebts(data);
       } else {
-        showToast('حدث خطأ أثناء جلب مديونيات الوكلاء', 'error');
+        const errData = await response.json().catch(() => ({}));
+        showToast(errData.message || 'حدث خطأ أثناء جلب مديونيات الوكلاء', 'error');
       }
     } catch (error) {
       showToast('تعذر الاتصال بالسيرفر للمديونيات', 'error');
