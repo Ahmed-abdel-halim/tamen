@@ -180,8 +180,236 @@ export default function AgentMonthlyLedger() {
   const [agentSearchText, setAgentSearchText] = useState('');
   const agentDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Agent Quick Actions State
+  const [agentDetailsModal, setAgentDetailsModal] = useState<any | null>(null);
+  const [agentDetailsLoading, setAgentDetailsLoading] = useState(false);
+  const [agentEditModal, setAgentEditModal] = useState<any | null>(null);
+  const [agentEditLoading, setAgentEditLoading] = useState(false);
+  const [agentEditForm, setAgentEditForm] = useState<Record<string, any>>({});
+  const [agentBlockLoading, setAgentBlockLoading] = useState(false);
+
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // ===================== Agent Quick Action Helpers =====================
+  const resolveAgentPublicUrl = (path: string | null | undefined): string => {
+    if (!path) return '';
+    const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('/storage/')) return `${BACKEND_URL}${path}`;
+    if (path.startsWith('storage/')) return `${BACKEND_URL}/${path}`;
+    if (path.startsWith('/img/')) return `${window.location.origin}${path}`;
+    if (path.startsWith('img/')) return `${window.location.origin}/${path}`;
+    return `${BACKEND_URL}/storage/${path}`;
+  };
+
+  const fetchAgentFullData = async (agentId: number) => {
+    setAgentDetailsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${agentId}`, {
+        headers: { 'Accept': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      return data;
+    } catch {
+      showToast('حدث خطأ أثناء جلب بيانات الوكيل', 'error');
+      return null;
+    } finally {
+      setAgentDetailsLoading(false);
+    }
+  };
+
+  const handleOpenAgentDetails = async () => {
+    if (!selectedAgentId) return;
+    const data = await fetchAgentFullData(selectedAgentId);
+    if (data) setAgentDetailsModal(data);
+  };
+
+  const handleOpenAgentEdit = async () => {
+    if (!selectedAgentId) return;
+    setAgentDetailsLoading(true);
+    const data = await fetchAgentFullData(selectedAgentId);
+    if (data) {
+      setAgentEditModal(data);
+      setAgentEditForm({
+        agency_name: data.agency_name || '',
+        agent_name: data.agent_name || '',
+        phone: data.phone || '',
+        address: data.address || '',
+        city: data.city || '',
+        agency_number: data.agency_number || '',
+        notes: data.notes || '',
+        status: data.status || 'نشط',
+        contract_date: data.contract_date ? data.contract_date.substring(0,10) : '',
+        contract_end_date: data.contract_end_date ? data.contract_end_date.substring(0,10) : '',
+      });
+    }
+    setAgentDetailsLoading(false);
+  };
+
+  const handleSaveAgentEdit = async () => {
+    if (!agentEditModal) return;
+    setAgentEditLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${agentEditModal.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(agentEditForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'تم تحديث بيانات الوكيل بنجاح', 'success');
+        setAgentEditModal(null);
+        if (selectedAgentId) fetchLedger(selectedAgentId);
+      } else {
+        showToast(data.message || 'فشل في تحديث بيانات الوكيل', 'error');
+      }
+    } catch {
+      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+    } finally {
+      setAgentEditLoading(false);
+    }
+  };
+
+  const handleToggleAgentBlock = async () => {
+    if (!selectedAgentId || !ledger) return;
+    setAgentBlockLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}/toggle-block`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        fetchLedger(selectedAgentId);
+      } else {
+        showToast(data.message || 'فشل في تحديث حالة الحظر', 'error');
+      }
+    } catch {
+      showToast('حدث خطأ في الاتصال بالخادم', 'error');
+    } finally {
+      setAgentBlockLoading(false);
+    }
+  };
+
+  const ldgPrintAgentA4 = async (agentId: number) => {
+    const data = await fetchAgentFullData(agentId);
+    if (!data) return;
+    const ba = data;
+    const photoSrc = ba.personal_photo ? resolveAgentPublicUrl(ba.personal_photo) : '';
+    const logoSrc = resolveAgentPublicUrl('/img/logo3.png');
+    const printDate = new Date().toLocaleString('ar-LY');
+    const w = window.open('', '_blank', 'width=900,height=1200');
+    if (!w) return;
+    const permissionsHtml = (ba.authorized_documents || []).length > 0
+      ? (ba.authorized_documents || []).map((p: string) => `<li>${p}</li>`).join('')
+      : '<li>لا توجد صلاحيات محددة</li>';
+    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"/>
+      <title>بيانات وكيل - ${ba.agency_name}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}@page{size:A4;margin:8mm}body{font-family:'Cairo',system-ui,sans-serif!important;color:#0f172a;margin:0;padding:0;line-height:1.3;background:#fff}.page-container{border:1px solid #cbd5e1;padding:8mm;position:relative;height:280mm;max-height:280mm;display:flex;flex-direction:column;overflow:hidden}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:3px double #1e40af;padding-bottom:8px}.header-info h1{margin:0;color:#1e40af;font-size:1.5rem;font-weight:800}.header-info p{margin:1px 0 0;color:#64748b;font-size:.8rem;font-weight:600}.header-branding{display:flex;align-items:center;gap:6px}.brand-text{display:flex;flex-direction:column;align-items:center;line-height:1.2;white-space:nowrap}.brand-text div:first-child{font-size:13pt;font-weight:800;margin-bottom:2px;color:#139625;font-family:'Times New Roman',serif}.brand-text div:last-child{font-size:5.6pt;font-weight:800;font-family:'Times New Roman',serif;letter-spacing:0}.header-branding img{height:48px;width:auto}.content-body{display:flex;flex-direction:column;gap:6px}.profile-card{display:flex;gap:15px;background:#f8fafc!important;border:1px solid #cbd5e1;border-radius:12px;padding:12px;margin-bottom:8px;align-items:center}.photo-container{display:flex;flex-direction:column;align-items:center;gap:4px}.photo-box{width:110px;height:130px;border:3px solid #fff;border-radius:8px;overflow:hidden;background:#fff!important;box-shadow:0 4px 6px -1px rgba(0,0,0,.08)}.photo-box img{width:100%;height:100%;object-fit:cover}.photo-box .no-img{height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:.7rem}.photo-label{font-size:.68rem;font-weight:800;color:#64748b}.details-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}.detail-item{display:flex;flex-direction:column;background:#fff!important;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1}.detail-label{font-size:.75rem;color:#64748b;font-weight:700;margin-bottom:2px}.detail-value{font-size:.9rem;color:#0f172a;font-weight:800;text-align:right}.detail-value.highlighted{color:#1e40af}.permissions-section{margin-top:15px;background:#eff6ff!important;padding:12px;border-radius:12px;border:1px solid #bfdbfe}.permissions-section h3{margin:0 0 6px;font-size:.9rem;color:#1e40af;font-weight:800}.permissions-section ul{margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;list-style:none}.permissions-section li{font-size:.76rem;color:#1e3a8a;font-weight:600;background:#fff!important;padding:3px 8px;border-radius:6px;border:1px solid #dbeafe}.footer{margin-top:auto;display:flex;justify-content:space-between;border-top:1px dashed #cbd5e1;padding-top:10px}.sig-block{text-align:center;width:45%}.sig-line{border-top:1px solid #475569;margin-top:30px;padding-top:4px;font-weight:700;color:#334155;font-size:.82rem}.print-date{position:absolute;bottom:2mm;left:8mm;font-size:.65rem;color:#94a3b8;font-weight:600}</style></head>
+      <body>
+      <div class="page-container">
+        <div class="header">
+          <div class="header-info"><h1>بيانات الوكيل المعتمد</h1><p>قسم الفروع والوكلاء</p></div>
+          <div class="header-branding">
+            <div class="brand-text"><div>المدار الليبي <span style="color:#1e40af">للتأمين</span></div><div><span style="color:#1e40af">ALMADAR</span> <span style="color:#139625">LIBYAN INSURANCE</span></div></div>
+            <img src="${logoSrc}" alt="Logo" />
+          </div>
+        </div>
+        <div class="content-body">
+          <div class="profile-card">
+            <div class="photo-container">
+              <div class="photo-box">${photoSrc ? `<img src="${photoSrc}" alt="" />` : '<div class="no-img">لا توجد صورة</div>'}</div>
+              <div class="photo-label">صورة الوكيل</div>
+            </div>
+            <div class="details-grid">
+              <div class="detail-item"><span class="detail-label">اسم الوكالة</span><span class="detail-value highlighted">${ba.agency_name}</span></div>
+              <div class="detail-item"><span class="detail-label">اسم الوكيل المسؤول</span><span class="detail-value">${ba.agent_name}</span></div>
+              <div class="detail-item"><span class="detail-label">كود الوكيل</span><span class="detail-value">${ba.code}</span></div>
+              <div class="detail-item"><span class="detail-label">رقم الترخيص</span><span class="detail-value">${ba.agency_number || ba.code}</span></div>
+              <div class="detail-item"><span class="detail-label">المدينة</span><span class="detail-value">${ba.city || ba.address || '—'}</span></div>
+              <div class="detail-item"><span class="detail-label">رقم الهاتف</span><span class="detail-value">${ba.phone || '—'}</span></div>
+              <div class="detail-item"><span class="detail-label">الحالة</span><span class="detail-value" style="color:${ba.status === 'نشط' ? '#16a34a' : ba.status === 'غير نشط' ? '#dc2626' : '#ea580c'}">${ba.status}</span></div>
+              <div class="detail-item"><span class="detail-label">نوع المنشأة</span><span class="detail-value">${ba.type}</span></div>
+            </div>
+          </div>
+          <div class="permissions-section"><h3>الصلاحيات والأذونات الممنوحة:</h3><ul>${permissionsHtml}</ul></div>
+        </div>
+        <div class="footer">
+          <div class="sig-block"><div class="sig-line">توقيع الوكيل المعتمد</div></div>
+          <div class="sig-block"><div class="sig-line">مدير إدارة الفروع والوكلاء</div></div>
+        </div>
+        <div class="print-date">تاريخ الطباعة: ${printDate}</div>
+      </div>
+      <script>if(document.fonts){document.fonts.ready.then(function(){setTimeout(function(){window.print();},350);})}else{window.onload=function(){setTimeout(function(){window.print();},350);}}<\/script>
+      </body></html>`);
+    w.document.close();
+  };
+
+  const ldgPrintAgentIdCard = async (agentId: number) => {
+    const data = await fetchAgentFullData(agentId);
+    if (!data) return;
+    const ba = data;
+    const photoSrc = ba.personal_photo ? resolveAgentPublicUrl(ba.personal_photo) : '';
+    const logoSrc = resolveAgentPublicUrl('/img/logo.png');
+    const bgSvg = `data:image/svg+xml;utf8,<svg viewBox="0 0 830 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M428 0 C328 150 528 350 428 540 L408 540 C508 350 308 150 408 0 Z" fill="%23139625"/></svg>`;
+    const w = window.open('', '_blank', 'width=520,height=420');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>بطاقة وكيل معتمد</title>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');@page{margin:0;size:85.6mm 53.98mm;}html,body{height:100%;margin:0;padding:0;overflow:hidden;}body{font-family:Cairo,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;background:#e2e8f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@media print{body{background:#fff!important;}}.card{width:85.6mm;height:53.98mm;box-sizing:border-box;background-color:#fff;background-image:url('${bgSvg}');background-size:cover;background-position:center;border-radius:8px;border:3px solid #1e40af;overflow:hidden;position:relative;box-shadow:0 4px 10px rgba(0,0,0,.1);display:flex;}.right-section{width:55%;height:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:4mm 4mm 4mm 2mm;box-sizing:border-box;color:#1e293b;z-index:10;}.photo-circle{width:23mm;height:23mm;border-radius:50%;border:2px solid #139625;background:#fff;overflow:hidden;margin-bottom:4mm;box-shadow:0 4px 6px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;}.photo-circle img{width:100%;height:100%;object-fit:cover;}.id-data{width:100%;display:flex;flex-direction:column;gap:1.5mm;padding:0 2mm;box-sizing:border-box;}.id-row{display:flex;justify-content:flex-start;gap:3mm;font-size:7.5pt;font-weight:700;}.id-row span:first-child{color:#1e40af;}.left-section{width:45%;height:100%;display:flex;flex-direction:column;align-items:center;padding:4mm;box-sizing:border-box;color:#1e293b;z-index:10;}.header-box{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:6mm;width:100%;}.logo-wrapper{display:flex;align-items:center;justify-content:center;}.logo-wrapper img{height:18mm;width:auto;object-fit:contain;max-width:90%;}.employee-info{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;}.emp-name{font-size:11pt;font-weight:800;color:#1e40af;margin-bottom:1mm;line-height:1.2;}.emp-role{font-size:8pt;font-weight:700;color:#139625;}.footer-note{font-size:5pt;color:#64748b;text-align:center;width:100%;margin-top:auto;}.badge-type{position:absolute;top:3mm;left:3mm;background:#1e40af;color:#fff;padding:1mm 2mm;border-radius:4px;font-size:6.5pt;font-weight:800;}</style></head>
+    <body onload="window.print()">
+      <div class="card">
+        <div class="right-section">
+          <div class="photo-circle">${photoSrc ? `<img src="${photoSrc}" alt="" />` : '<span style="font-size:7pt;color:#94a3b8">بلا صورة</span>'}</div>
+          <div class="id-data">
+            <div class="id-row"><span>رقم الوكالة:</span><span>${ba.agency_number || '—'}</span></div>
+            <div class="id-row"><span>كود الوكيل:</span><span>${ba.code}</span></div>
+            <div class="id-row"><span>الإصدار:</span><span>${new Date().toLocaleDateString('en-GB')}</span></div>
+          </div>
+        </div>
+        <div class="left-section">
+          <div class="badge-type">بطاقة وكيل معتمد</div>
+          <div class="header-box"><div class="logo-wrapper"><img src="${logoSrc}" alt="Logo" /></div></div>
+          <div class="employee-info"><div class="emp-name">${ba.agent_name}</div><div class="emp-role">وكيل معتمد</div></div>
+          <div class="footer-note">إدارة الفروع والوكلاء - المدار الليبي للتأمين</div>
+        </div>
+      </div>
+    </body></html>`);
+    w.document.close();
+  };
+
+  const ldgPrintAgentContract = (agentId: number) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.src = `${API_BASE_URL}/branches-agents/${agentId}/print?t=${new Date().getTime()}`;
+    document.body.appendChild(iframe);
+    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
+  };
+
+  const ldgPrintAgentPermit = (agentId: number) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.src = `${API_BASE_URL}/branches-agents/${agentId}/print-permit?t=${new Date().getTime()}`;
+    document.body.appendChild(iframe);
+    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
+  };
+  // ===================== End Agent Quick Action Helpers =====================
 
   const statCardBase: React.CSSProperties = {
     borderRadius: '18px',
@@ -1090,7 +1318,7 @@ export default function AgentMonthlyLedger() {
               border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            {/* Top row: icon + info + note button */}
+            {/* Top row: icon + info + action buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div
@@ -1151,6 +1379,68 @@ export default function AgentMonthlyLedger() {
                 </div>
               </div>
 
+              {/* Agent Quick Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  onClick={handleOpenAgentDetails}
+                  disabled={agentDetailsLoading}
+                  title="عرض تفاصيل الوكيل"
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(16,185,129,0.35)', transition: 'all .2s' }}
+                >
+                  <i className={`fa-solid ${agentDetailsLoading ? 'fa-circle-notch fa-spin' : 'fa-eye'}`} />
+                  عرض
+                </button>
+                <button
+                  onClick={handleOpenAgentEdit}
+                  disabled={agentDetailsLoading}
+                  title="تعديل بيانات الوكيل"
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#f59e0b', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(245,158,11,0.35)', transition: 'all .2s' }}
+                >
+                  <i className="fa-solid fa-pencil" />
+                  تعديل
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentA4(selectedAgentId!)}
+                  title="طباعة بيانات الوكيل A4"
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(99,102,241,0.35)', transition: 'all .2s' }}
+                >
+                  <i className="fa-solid fa-file-lines" />
+                  طباعة بيانات
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentIdCard(selectedAgentId!)}
+                  title="طباعة بطاقة وكيل"
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#ec4899', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(236,72,153,0.35)', transition: 'all .2s' }}
+                >
+                  <i className="fa-solid fa-id-card" />
+                  بطاقة وكيل
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentContract(selectedAgentId!)}
+                  title="طباعة العقد"
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#3b82f6', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(59,130,246,0.35)', transition: 'all .2s' }}
+                >
+                  <i className="fa-solid fa-print" />
+                  طباعة العقد
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentPermit(selectedAgentId!)}
+                  title="طباعة إذن مباشرة العمل"
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#f97316', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(249,115,22,0.35)', transition: 'all .2s' }}
+                >
+                  <i className="fa-solid fa-file-invoice" />
+                  إذن مباشرة
+                </button>
+                <button
+                  onClick={handleToggleAgentBlock}
+                  disabled={agentBlockLoading}
+                  title={ledger.agent.status === 'غير نشط' ? 'إلغاء الحظر / تفعيل الوكيل' : 'حظر الوكيل'}
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: agentBlockLoading ? 'wait' : 'pointer', background: ledger.agent.status === 'غير نشط' ? '#10b981' : '#ef4444', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: `0 2px 8px rgba(${ledger.agent.status === 'غير نشط' ? '16,185,129' : '239,68,68'},0.35)`, transition: 'all .2s', opacity: agentBlockLoading ? 0.7 : 1 }}
+                >
+                  <i className={`fa-solid ${agentBlockLoading ? 'fa-circle-notch fa-spin' : ledger.agent.status === 'غير نشط' ? 'fa-user-check' : 'fa-user-slash'}`} />
+                  {ledger.agent.status === 'غير نشط' ? 'إلغاء الحظر' : 'حظر الوكيل'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -3424,6 +3714,194 @@ export default function AgentMonthlyLedger() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Agent Details Modal ====== */}
+      {agentDetailsModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setAgentDetailsModal(null); }}
+        >
+          <div style={{ background: 'var(--card-bg)', borderRadius: '20px', padding: '32px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.35)', border: '1px solid var(--border)' }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px' }}>
+                  <i className="fa-solid fa-building-user" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '18px', color: 'var(--text)' }}>تفاصيل الوكيل</h3>
+                  <p style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '13px', color: 'var(--muted)' }}>{agentDetailsModal.agency_name}</p>
+                </div>
+              </div>
+              <button onClick={() => setAgentDetailsModal(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'var(--bg)', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            {/* Photo + Basic Info */}
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'flex-start' }}>
+              <div style={{ flexShrink: 0 }}>
+                {agentDetailsModal.personal_photo ? (
+                  <img src={resolveAgentPublicUrl(agentDetailsModal.personal_photo)} alt="" style={{ width: '100px', height: '120px', borderRadius: '12px', objectFit: 'cover', border: '3px solid var(--border)' }} />
+                ) : (
+                  <div style={{ width: '100px', height: '120px', borderRadius: '12px', background: 'var(--bg)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '36px' }}>
+                    <i className="fa-solid fa-user" />
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  { label: 'اسم الوكالة', value: agentDetailsModal.agency_name },
+                  { label: 'اسم الوكيل', value: agentDetailsModal.agent_name },
+                  { label: 'كود الوكيل', value: agentDetailsModal.code },
+                  { label: 'رقم الترخيص', value: agentDetailsModal.agency_number || '—' },
+                  { label: 'المدينة', value: agentDetailsModal.city || '—' },
+                  { label: 'رقم الهاتف', value: agentDetailsModal.phone || '—' },
+                  { label: 'العنوان', value: agentDetailsModal.address || '—' },
+                  { label: 'الحالة', value: agentDetailsModal.status },
+                  { label: 'نوع المنشأة', value: agentDetailsModal.type },
+                  { label: 'تاريخ التعاقد', value: agentDetailsModal.contract_date ? agentDetailsModal.contract_date.substring(0,10) : '—' },
+                ].map((item) => (
+                  <div key={item.label} style={{ background: 'var(--bg)', borderRadius: '10px', padding: '10px 14px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '3px' }}>{item.label}</div>
+                    <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 800 }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Authorized Documents */}
+            {(agentDetailsModal.authorized_documents || []).length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-shield-check" style={{ color: '#1e40af' }} /> الصلاحيات والأذونات الممنوحة
+                </h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {(agentDetailsModal.authorized_documents || []).map((doc: string) => (
+                    <span key={doc} style={{ background: 'rgba(30,64,175,0.08)', color: '#1e40af', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, fontFamily: "'Cairo',sans-serif", border: '1px solid rgba(30,64,175,0.2)' }}>{doc}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {agentDetailsModal.notes && (
+              <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 16px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+                <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '12px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>ملاحظات</div>
+                <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 600 }}>{agentDetailsModal.notes}</div>
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+              <button
+                onClick={() => { setAgentDetailsModal(null); handleOpenAgentEdit(); }}
+                style={{ padding: '10px 20px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <i className="fa-solid fa-pencil" /> تعديل البيانات
+              </button>
+              <button
+                onClick={() => setAgentDetailsModal(null)}
+                style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, cursor: 'pointer' }}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Agent Edit Modal ====== */}
+      {agentEditModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setAgentEditModal(null); }}
+        >
+          <div style={{ background: 'var(--card-bg)', borderRadius: '20px', padding: '32px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.35)', border: '1px solid var(--border)' }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px' }}>
+                  <i className="fa-solid fa-pencil" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '18px', color: 'var(--text)' }}>تعديل بيانات الوكيل</h3>
+                  <p style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '13px', color: 'var(--muted)' }}>{agentEditModal.agency_name} — {agentEditModal.code}</p>
+                </div>
+              </div>
+              <button onClick={() => setAgentEditModal(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'var(--bg)', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            {/* Edit Form */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              {[
+                { key: 'agency_name', label: 'اسم الوكالة', type: 'text' },
+                { key: 'agent_name', label: 'اسم الوكيل المسؤول', type: 'text' },
+                { key: 'agency_number', label: 'رقم الترخيص', type: 'text' },
+                { key: 'phone', label: 'رقم الهاتف', type: 'text' },
+                { key: 'city', label: 'المدينة', type: 'text' },
+                { key: 'address', label: 'العنوان', type: 'text' },
+                { key: 'contract_date', label: 'تاريخ التعاقد', type: 'date' },
+                { key: 'contract_end_date', label: 'تاريخ إلغاء الوكالة', type: 'date' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>{field.label}</label>
+                  <input
+                    type={field.type}
+                    value={agentEditForm[field.key] || ''}
+                    onChange={(e) => setAgentEditForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+              ))}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>حالة الوكيل</label>
+                <select
+                  value={agentEditForm.status || 'نشط'}
+                  onChange={(e) => setAgentEditForm(prev => ({ ...prev, status: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                >
+                  <option value="نشط">نشط</option>
+                  <option value="غير نشط">غير نشط</option>
+                  <option value="قيد الانتظار">قيد الانتظار</option>
+                </select>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>ملاحظات</label>
+                <textarea
+                  value={agentEditForm.notes || ''}
+                  onChange={(e) => setAgentEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+              <button
+                onClick={() => setAgentEditModal(null)}
+                style={{ padding: '10px 22px', borderRadius: '12px', border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, cursor: 'pointer' }}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSaveAgentEdit}
+                disabled={agentEditLoading}
+                style={{ padding: '10px 26px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', cursor: agentEditLoading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', opacity: agentEditLoading ? 0.75 : 1, boxShadow: '0 4px 14px rgba(245,158,11,0.4)' }}
+              >
+                {agentEditLoading ? (
+                  <><i className="fa-solid fa-circle-notch fa-spin" /> جاري الحفظ...</>
+                ) : (
+                  <><i className="fa-solid fa-floppy-disk" /> حفظ التعديلات</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
