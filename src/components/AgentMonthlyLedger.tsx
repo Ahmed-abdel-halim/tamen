@@ -180,13 +180,79 @@ export default function AgentMonthlyLedger() {
   const [agentSearchText, setAgentSearchText] = useState('');
   const agentDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Agent Quick Actions State
+  // Agent Quick Actions State (Full Comprehensive Details & Edit)
   const [agentDetailsModal, setAgentDetailsModal] = useState<any | null>(null);
+  const [agentDetailsTab, setAgentDetailsTab] = useState<'agency' | 'contact' | 'permissions' | 'wallet' | 'custody' | 'stats'>('agency');
   const [agentDetailsLoading, setAgentDetailsLoading] = useState(false);
+
   const [agentEditModal, setAgentEditModal] = useState<any | null>(null);
+  const [agentEditTab, setAgentEditTab] = useState<number>(0);
   const [agentEditLoading, setAgentEditLoading] = useState(false);
   const [agentEditForm, setAgentEditForm] = useState<Record<string, any>>({});
+  const [agentEditFiles, setAgentEditFiles] = useState<Record<string, File | null>>({});
   const [agentBlockLoading, setAgentBlockLoading] = useState(false);
+
+  // Exceptional Percentages for Edit Modal
+  const [editOverrideYear, setEditOverrideYear] = useState<string>(new Date().getFullYear().toString());
+  const [editOverrideMonth, setEditOverrideMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
+  const [editOverrideDocType, setEditOverrideDocType] = useState<string>('');
+  const [editOverridePercentage, setEditOverridePercentage] = useState<number>(0);
+
+  const [editPeriodStartDate, setEditPeriodStartDate] = useState<string>('');
+  const [editPeriodEndDate, setEditPeriodEndDate] = useState<string>('');
+  const [editPeriodDocType, setEditPeriodDocType] = useState<string>('');
+  const [editPeriodPercentage, setEditPeriodPercentage] = useState<number>(0);
+
+  const AGENT_CITIES = [
+    'طرابلس', 'بنغازي', 'مصراتة', 'سبها', 'زليتن', 'البيضاء', 'أجدابيا', 'درنة', 'طبرق', 'صبراتة',
+    'زوارة', 'غريان', 'يفرن', 'الخمس', 'ترهونة', 'بني وليد', 'سرت', 'هون', 'وادي الشاطئ', 'غات',
+    'أوباري', 'مرزق', 'الكفرة', 'الجغبوب'
+  ];
+
+  const AGENT_ACTIVITIES_LIST = [
+    'تحرير العقود والخدمات القانونية',
+    'خدمات عامة ورجال الاعمال',
+    'خدمات حجز تذاكر سفر',
+    'خدمات تصوير وبيع قرطاسية',
+    'خدمات بيع وشراء العقارات',
+    'خدمات المحاماة',
+    'خدمات تامين السيارات الدولي تونس',
+  ];
+
+  const AGENT_INSURANCE_DOCS = [
+    'تأمين سيارات إجباري',
+    'تأمين سيارة جمرك',
+    'تأمين سيارات أجنبية',
+    'تأمين طرف ثالث سيارات',
+    'تأمين سيارات دولي',
+    'تأمين المسافرين',
+    'تأمين الهياكل البحرية',
+    'تأمين زائرين ليبيا',
+    'تأمين الوافدين',
+    'تأمين المسؤولية المهنية (الطبية)',
+    'تأمين الحوادث الشخصية',
+    'تأمين حماية طلاب المدارس',
+    'تأمين نقل النقدية',
+    'تأمين شحن البضائع',
+  ];
+
+  const AGENT_REPORT_PERMS = [
+    'كشف حساب الوكيل',
+    'إغلاق حساب شهري',
+    'كشف إغلاق الحساب الشهري',
+    'إيصالات القبض',
+    'إدارة المصروفات التشغيلية',
+    'التعويضات',
+    'رصيد الاتحاد (البطاقة البرتقالية)',
+    'التسويات والعمولات',
+    'الديون المستحقة',
+    'الأرشيف المالي',
+    'المخازن والعهدة',
+    'الإحصائيات المالية',
+    'مرتبات الموظفين',
+    'تقرير مصلحة الضرائب',
+    'تقرير الضمان الاجتماعي',
+  ];
 
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -224,7 +290,10 @@ export default function AgentMonthlyLedger() {
   const handleOpenAgentDetails = async () => {
     if (!selectedAgentId) return;
     const data = await fetchAgentFullData(selectedAgentId);
-    if (data) setAgentDetailsModal(data);
+    if (data) {
+      setAgentDetailsModal(data);
+      setAgentDetailsTab('agency');
+    }
   };
 
   const handleOpenAgentEdit = async () => {
@@ -233,35 +302,221 @@ export default function AgentMonthlyLedger() {
     const data = await fetchAgentFullData(selectedAgentId);
     if (data) {
       setAgentEditModal(data);
+      setAgentEditTab(0);
+      setAgentEditFiles({});
+
+      // Parse authorized documents and percentages
+      let authDocs = data.authorized_documents || [];
+      if (typeof authDocs === 'string') {
+        try { authDocs = JSON.parse(authDocs); } catch { authDocs = []; }
+      }
+      let docPct = data.document_percentages || {};
+      if (typeof docPct === 'string') {
+        try { docPct = JSON.parse(docPct); } catch { docPct = {}; }
+      }
+
       setAgentEditForm({
+        type: data.type || 'وكيل',
+        activity: data.activity || '',
         agency_name: data.agency_name || '',
         agent_name: data.agent_name || '',
-        phone: data.phone || '',
-        address: data.address || '',
-        city: data.city || '',
         agency_number: data.agency_number || '',
+        stamp_number: data.stamp_number || '',
+        contract_date: data.contract_date ? data.contract_date.substring(0, 10) : '',
+        renewal_date: data.renewal_date ? data.renewal_date.substring(0, 10) : '',
+        contract_end_date: data.contract_end_date ? data.contract_end_date.substring(0, 10) : '',
+        contract_duration: data.contract_duration || '',
+        city: data.city || '',
+        address: data.address || '',
+        phone: data.phone || '',
+        office_phone: data.office_phone || '',
+        office_location: data.office_location || '',
+        nationality: data.nationality || '',
+        national_id: data.national_id || '',
+        identity_number: data.identity_number || '',
+        username: data.user?.username || '',
+        password: '',
         notes: data.notes || '',
+        contract_conditions: data.contract_conditions || '',
         status: data.status || 'نشط',
-        contract_date: data.contract_date ? data.contract_date.substring(0,10) : '',
-        contract_end_date: data.contract_end_date ? data.contract_end_date.substring(0,10) : '',
+        authorized_documents: Array.isArray(authDocs) ? authDocs : [],
+        document_percentages: docPct,
+        eidc_username: data.user?.eidc_username || '',
+        eidc_password: '',
+        lifo_username: data.user?.lifo_username || '',
+        lifo_password: '',
+        lifo_office_id: data.user?.lifo_office_id || '',
       });
     }
     setAgentDetailsLoading(false);
   };
 
+  const handleToggleAuthDoc = (docType: string) => {
+    setAgentEditForm(prev => {
+      const currentDocs = prev.authorized_documents || [];
+      const exists = currentDocs.includes(docType);
+      const newDocs = exists ? currentDocs.filter((d: string) => d !== docType) : [...currentDocs, docType];
+      
+      const pct = { ...(prev.document_percentages || {}) };
+      const def = { ...(pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct)) };
+      if (!exists && def[docType] === undefined) {
+        def[docType] = 0;
+      }
+      return {
+        ...prev,
+        authorized_documents: newDocs,
+        document_percentages: {
+          ...pct,
+          default: def
+        }
+      };
+    });
+  };
+
+  const handleEditDocPercentageChange = (docType: string, val: number) => {
+    setAgentEditForm(prev => {
+      const pct = { ...(prev.document_percentages || {}) };
+      const def = { ...(pct.default || (pct.monthly_overrides || pct.period_overrides ? {} : pct)) };
+      def[docType] = val;
+      return {
+        ...prev,
+        document_percentages: {
+          ...pct,
+          default: def
+        }
+      };
+    });
+  };
+
+  const handleAddEditMonthlyOverride = () => {
+    if (!editOverrideDocType) {
+      showToast('يرجى اختيار نوع التأمين', 'error');
+      return;
+    }
+    const monthKey = `${editOverrideYear}-${editOverrideMonth}`;
+    setAgentEditForm(prev => {
+      const pct = { ...(prev.document_percentages || {}) };
+      const monthlyPct = { ...(pct.monthly_overrides || {}) };
+      if (!monthlyPct[monthKey]) monthlyPct[monthKey] = {};
+      monthlyPct[monthKey][editOverrideDocType] = editOverridePercentage;
+      return {
+        ...prev,
+        document_percentages: {
+          ...pct,
+          monthly_overrides: monthlyPct
+        }
+      };
+    });
+    setEditOverrideDocType('');
+    setEditOverridePercentage(0);
+    showToast(`تمت إضافة النسبة الاستثنائية لشهر ${monthKey}`, 'success');
+  };
+
+  const handleRemoveEditMonthlyOverride = (monthKey: string, docType: string) => {
+    setAgentEditForm(prev => {
+      const pct = { ...(prev.document_percentages || {}) };
+      const monthlyPct = { ...(pct.monthly_overrides || {}) };
+      if (monthlyPct[monthKey]) {
+        const copy = { ...monthlyPct[monthKey] };
+        delete copy[docType];
+        if (Object.keys(copy).length === 0) {
+          delete monthlyPct[monthKey];
+        } else {
+          monthlyPct[monthKey] = copy;
+        }
+      }
+      return {
+        ...prev,
+        document_percentages: {
+          ...pct,
+          monthly_overrides: monthlyPct
+        }
+      };
+    });
+  };
+
+  const handleAddEditPeriodOverride = () => {
+    if (!editPeriodStartDate || !editPeriodEndDate || !editPeriodDocType) {
+      showToast('يرجى إكمال بيانات الفترة ونوع التأمين', 'error');
+      return;
+    }
+    setAgentEditForm(prev => {
+      const pct = { ...(prev.document_percentages || {}) };
+      const periods = Array.isArray(pct.period_overrides) ? [...pct.period_overrides] : [];
+      periods.push({
+        id: Date.now().toString(),
+        start_date: editPeriodStartDate,
+        end_date: editPeriodEndDate,
+        doc_type: editPeriodDocType,
+        percentage: editPeriodPercentage
+      });
+      return {
+        ...prev,
+        document_percentages: {
+          ...pct,
+          period_overrides: periods
+        }
+      };
+    });
+    setEditPeriodStartDate('');
+    setEditPeriodEndDate('');
+    setEditPeriodDocType('');
+    setEditPeriodPercentage(0);
+    showToast('تمت إضافة النسبة الاستثنائية للفترة', 'success');
+  };
+
+  const handleRemoveEditPeriodOverride = (id: string) => {
+    setAgentEditForm(prev => {
+      const pct = { ...(prev.document_percentages || {}) };
+      const periods = (Array.isArray(pct.period_overrides) ? pct.period_overrides : []).filter((item: any) => item.id !== id);
+      return {
+        ...prev,
+        document_percentages: {
+          ...pct,
+          period_overrides: periods
+        }
+      };
+    });
+  };
+
   const handleSaveAgentEdit = async () => {
     if (!agentEditModal) return;
+    if (!agentEditForm.agency_name?.trim()) {
+      showToast('اسم الوكالة مطلوب', 'error');
+      return;
+    }
+    if (!agentEditForm.agent_name?.trim()) {
+      showToast('اسم الوكيل مطلوب', 'error');
+      return;
+    }
+
     setAgentEditLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const formDataToSend = new FormData();
+
+      Object.entries(agentEditForm).forEach(([key, val]) => {
+        if (key === 'authorized_documents' || key === 'document_percentages') {
+          formDataToSend.append(key, JSON.stringify(val));
+        } else if (val !== null && val !== undefined && val !== '') {
+          formDataToSend.append(key, val);
+        }
+      });
+
+      // Append files if selected
+      Object.entries(agentEditFiles).forEach(([key, file]) => {
+        if (file) formDataToSend.append(key, file);
+      });
+
+      formDataToSend.append('_method', 'PUT');
+
       const res = await fetch(`${API_BASE_URL}/branches-agents/${agentEditModal.id}`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(agentEditForm)
+        body: formDataToSend
       });
       const data = await res.json();
       if (res.ok) {
@@ -3718,187 +3973,1021 @@ export default function AgentMonthlyLedger() {
         </div>
       )}
 
-      {/* ====== Agent Details Modal ====== */}
+      {/* ====== Full Comprehensive Agent Details Modal ====== */}
       {agentDetailsModal && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(6px)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setAgentDetailsModal(null); }}
         >
-          <div style={{ background: 'var(--card-bg)', borderRadius: '20px', padding: '32px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.35)', border: '1px solid var(--border)' }}>
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px' }}>
-                  <i className="fa-solid fa-building-user" />
+          <div style={{ background: 'var(--card-bg)', borderRadius: '24px', maxWidth: '1180px', width: '95vw', height: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', border: '1px solid var(--border)' }}>
+            {/* Modal Top Header Banner */}
+            <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '20px 28px', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '16px', overflow: 'hidden', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '2px solid rgba(255,255,255,0.2)' }}>
+                  {agentDetailsModal.personal_photo ? (
+                    <img src={resolveAgentPublicUrl(agentDetailsModal.personal_photo)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <i className="fa-solid fa-building" style={{ fontSize: '26px', color: '#fff' }} />
+                  )}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '18px', color: 'var(--text)' }}>تفاصيل الوكيل</h3>
-                  <p style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '13px', color: 'var(--muted)' }}>{agentDetailsModal.agency_name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <h2 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '20px', fontWeight: 900, color: '#fff' }}>
+                      {agentDetailsModal.agency_name}
+                    </h2>
+                    <span style={{ background: agentDetailsModal.status === 'نشط' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)', color: agentDetailsModal.status === 'نشط' ? '#34d399' : '#f87171', border: `1px solid ${agentDetailsModal.status === 'نشط' ? '#10b981' : '#ef4444'}`, padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                      ● {agentDetailsModal.status}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '12px', color: '#cbd5e1', flexWrap: 'wrap', fontFamily: "'Cairo',sans-serif" }}>
+                    <span><i className="fa-solid fa-user-tie" style={{ marginLeft: '4px', color: '#a78bfa' }} />{agentDetailsModal.agent_name} ({agentDetailsModal.type})</span>
+                    <span><i className="fa-solid fa-hashtag" style={{ marginLeft: '4px', color: '#38bdf8' }} />كود: <strong>{agentDetailsModal.code}</strong></span>
+                    <span><i className="fa-solid fa-map-pin" style={{ marginLeft: '4px', color: '#fbbf24' }} />{agentDetailsModal.city}</span>
+                    {agentDetailsModal.contract_date && (
+                      <span><i className="fa-solid fa-calendar-check" style={{ marginLeft: '4px', color: '#6ee7b7' }} />تعاقد: {agentDetailsModal.contract_date.substring(0, 10)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setAgentDetailsModal(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'var(--bg)', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="fa-solid fa-xmark" />
-              </button>
+
+              {/* Action Buttons in Modal Header */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => { setAgentDetailsModal(null); handleOpenAgentEdit(); }}
+                  style={{ padding: '7px 14px', borderRadius: '10px', border: 'none', background: '#f59e0b', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}
+                >
+                  <i className="fa-solid fa-pencil" /> تعديل البيانات
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentA4(agentDetailsModal.id)}
+                  style={{ padding: '7px 14px', borderRadius: '10px', border: 'none', background: '#6366f1', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <i className="fa-solid fa-file-lines" /> طباعة A4
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentIdCard(agentDetailsModal.id)}
+                  style={{ padding: '7px 14px', borderRadius: '10px', border: 'none', background: '#ec4899', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <i className="fa-solid fa-id-card" /> بطاقة وكيل
+                </button>
+                <button
+                  onClick={() => ldgPrintAgentContract(agentDetailsModal.id)}
+                  style={{ padding: '7px 14px', borderRadius: '10px', border: 'none', background: '#3b82f6', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <i className="fa-solid fa-print" /> طباعة العقد
+                </button>
+                <button
+                  onClick={() => setAgentDetailsModal(null)}
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
             </div>
 
-            {/* Photo + Basic Info */}
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'flex-start' }}>
-              <div style={{ flexShrink: 0 }}>
-                {agentDetailsModal.personal_photo ? (
-                  <img src={resolveAgentPublicUrl(agentDetailsModal.personal_photo)} alt="" style={{ width: '100px', height: '120px', borderRadius: '12px', objectFit: 'cover', border: '3px solid var(--border)' }} />
-                ) : (
-                  <div style={{ width: '100px', height: '120px', borderRadius: '12px', background: 'var(--bg)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '36px' }}>
-                    <i className="fa-solid fa-user" />
-                  </div>
-                )}
-              </div>
-              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {[
-                  { label: 'اسم الوكالة', value: agentDetailsModal.agency_name },
-                  { label: 'اسم الوكيل', value: agentDetailsModal.agent_name },
-                  { label: 'كود الوكيل', value: agentDetailsModal.code },
-                  { label: 'رقم الترخيص', value: agentDetailsModal.agency_number || '—' },
-                  { label: 'المدينة', value: agentDetailsModal.city || '—' },
-                  { label: 'رقم الهاتف', value: agentDetailsModal.phone || '—' },
-                  { label: 'العنوان', value: agentDetailsModal.address || '—' },
-                  { label: 'الحالة', value: agentDetailsModal.status },
-                  { label: 'نوع المنشأة', value: agentDetailsModal.type },
-                  { label: 'تاريخ التعاقد', value: agentDetailsModal.contract_date ? agentDetailsModal.contract_date.substring(0,10) : '—' },
-                ].map((item) => (
-                  <div key={item.label} style={{ background: 'var(--bg)', borderRadius: '10px', padding: '10px 14px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '3px' }}>{item.label}</div>
-                    <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 800 }}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
+            {/* Navigation Tabs Bar */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg)', padding: '0 20px', gap: '6px', overflowX: 'auto', flexShrink: 0 }}>
+              {[
+                { key: 'agency', label: 'بيانات الوكالة', icon: 'fa-building' },
+                { key: 'contact', label: 'الاتصال والمستندات', icon: 'fa-address-card' },
+                { key: 'permissions', label: 'الصلاحيات والحساب', icon: 'fa-shield-halved' },
+                { key: 'wallet', label: 'المحفظة والنقاط', icon: 'fa-wallet' },
+                { key: 'custody', label: 'سجل العهد', icon: 'fa-boxes-stacked' },
+                { key: 'stats', label: 'الإحصائيات المالية', icon: 'fa-chart-pie' },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setAgentDetailsTab(t.key as any)}
+                  style={{
+                    padding: '14px 18px',
+                    border: 'none',
+                    borderBottom: agentDetailsTab === t.key ? '3px solid #3b82f6' : '3px solid transparent',
+                    background: 'none',
+                    color: agentDetailsTab === t.key ? '#3b82f6' : 'var(--muted)',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all .2s'
+                  }}
+                >
+                  <i className={`fa-solid ${t.icon}`} />
+                  {t.label}
+                </button>
+              ))}
             </div>
 
-            {/* Authorized Documents */}
-            {(agentDetailsModal.authorized_documents || []).length > 0 && (
-              <div style={{ marginBottom: '16px' }}>
-                <h4 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <i className="fa-solid fa-shield-check" style={{ color: '#1e40af' }} /> الصلاحيات والأذونات الممنوحة
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {(agentDetailsModal.authorized_documents || []).map((doc: string) => (
-                    <span key={doc} style={{ background: 'rgba(30,64,175,0.08)', color: '#1e40af', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, fontFamily: "'Cairo',sans-serif", border: '1px solid rgba(30,64,175,0.2)' }}>{doc}</span>
-                  ))}
+            {/* Modal Body Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '28px' }}>
+              {/* Tab 1: Agency Data */}
+              {agentDetailsTab === 'agency' && (
+                <div>
+                  <h3 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '16px', color: 'var(--text)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-building" style={{ color: '#3b82f6' }} /> المعلومات الأساسية للوكالة
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
+                    {[
+                      { label: 'اسم الوكالة', value: agentDetailsModal.agency_name, icon: 'fa-building' },
+                      { label: 'اسم الوكيل المسؤول', value: agentDetailsModal.agent_name, icon: 'fa-user-tie' },
+                      { label: 'كود الوكالة', value: agentDetailsModal.code, icon: 'fa-hashtag' },
+                      { label: 'نوع النشاط', value: agentDetailsModal.activity || '—', icon: 'fa-briefcase' },
+                      { label: 'رقم الوكالة / الترخيص', value: agentDetailsModal.agency_number || '—', icon: 'fa-id-card' },
+                      { label: 'رقم الختم', value: agentDetailsModal.stamp_number || '—', icon: 'fa-stamp' },
+                      { label: 'نوع المنشأة', value: agentDetailsModal.type || 'وكيل', icon: 'fa-sitemap' },
+                      { label: 'حالة الوكالة', value: agentDetailsModal.status || 'نشط', icon: 'fa-signal' },
+                      { label: 'تاريخ التعاقد', value: agentDetailsModal.contract_date ? agentDetailsModal.contract_date.substring(0, 10) : '—', icon: 'fa-calendar-day' },
+                      { label: 'تاريخ التجديد', value: agentDetailsModal.renewal_date ? agentDetailsModal.renewal_date.substring(0, 10) : '—', icon: 'fa-calendar-plus' },
+                      { label: 'تاريخ انتهاء العقد / التوقف', value: agentDetailsModal.contract_end_date ? agentDetailsModal.contract_end_date.substring(0, 10) : '—', icon: 'fa-calendar-xmark' },
+                      { label: 'مدة العقد', value: agentDetailsModal.contract_duration || '—', icon: 'fa-hourglass-half' },
+                    ].map(item => (
+                      <div key={item.label} style={{ background: 'var(--bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)' }}>
+                        <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '11px', color: 'var(--muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <i className={`fa-solid ${item.icon}`} style={{ color: '#3b82f6' }} /> {item.label}
+                        </div>
+                        <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 800 }}>{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {agentDetailsModal.notes && (
+                    <div style={{ marginTop: '20px', background: 'var(--bg)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)' }}>
+                      <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '12px', color: 'var(--muted)', fontWeight: 700, marginBottom: '6px' }}>ملاحظات إضافية</div>
+                      <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 600 }}>{agentDetailsModal.notes}</div>
+                    </div>
+                  )}
+
+                  {agentDetailsModal.contract_conditions && (
+                    <div style={{ marginTop: '20px', background: 'var(--bg)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)' }}>
+                      <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '12px', color: 'var(--muted)', fontWeight: 700, marginBottom: '6px' }}>شروط وأحكام العقد الخاصة</div>
+                      <pre style={{ fontFamily: "'Cairo',sans-serif", fontSize: '13px', color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0 }}>{agentDetailsModal.contract_conditions}</pre>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Notes */}
-            {agentDetailsModal.notes && (
-              <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 16px', border: '1px solid var(--border)', marginBottom: '16px' }}>
-                <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '12px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>ملاحظات</div>
-                <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 600 }}>{agentDetailsModal.notes}</div>
-              </div>
-            )}
+              {/* Tab 2: Contact & Documents */}
+              {agentDetailsTab === 'contact' && (
+                <div>
+                  <h3 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '16px', color: 'var(--text)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-address-card" style={{ color: '#10b981' }} /> معلومات الاتصال والهوية الشخصية
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px', marginBottom: '28px' }}>
+                    {[
+                      { label: 'المدينة', value: agentDetailsModal.city || '—', icon: 'fa-city' },
+                      { label: 'رقم الهاتف', value: agentDetailsModal.phone || '—', icon: 'fa-phone' },
+                      { label: 'هاتف المكتب', value: agentDetailsModal.office_phone || '—', icon: 'fa-phone-flip' },
+                      { label: 'لوكيشن / موقع المكتب', value: agentDetailsModal.office_location || '—', icon: 'fa-location-crosshairs' },
+                      { label: 'الجنسية', value: agentDetailsModal.nationality || '—', icon: 'fa-flag' },
+                      { label: 'الرقم الوطني', value: agentDetailsModal.national_id || '—', icon: 'fa-id-card' },
+                      { label: 'رقم إثبات الشخصية', value: agentDetailsModal.identity_number || '—', icon: 'fa-passport' },
+                      { label: 'العنوان التفصيلي', value: agentDetailsModal.address || '—', icon: 'fa-location-dot' },
+                    ].map(item => (
+                      <div key={item.label} style={{ background: 'var(--bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)' }}>
+                        <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '11px', color: 'var(--muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <i className={`fa-solid ${item.icon}`} style={{ color: '#10b981' }} /> {item.label}
+                        </div>
+                        <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: '14px', color: 'var(--text)', fontWeight: 800 }}>{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
 
-            {/* Footer Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-              <button
-                onClick={() => { setAgentDetailsModal(null); handleOpenAgentEdit(); }}
-                style={{ padding: '10px 20px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <i className="fa-solid fa-pencil" /> تعديل البيانات
-              </button>
-              <button
-                onClick={() => setAgentDetailsModal(null)}
-                style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, cursor: 'pointer' }}
-              >
-                إغلاق
-              </button>
+                  {/* Attached Documents Cards */}
+                  <h3 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '16px', color: 'var(--text)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-images" style={{ color: '#8b5cf6' }} /> المستندات والصور المرفقة
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                    {[
+                      { label: 'الصورة الشخصية', path: agentDetailsModal.personal_photo },
+                      { label: 'صورة واجهة المكتب', path: agentDetailsModal.office_facade_photo },
+                      { label: 'الرقم القومي (صورة)', path: agentDetailsModal.national_id_photo },
+                      { label: 'إثبات الهوية', path: agentDetailsModal.identity_photo },
+                      { label: 'صورة العقد', path: agentDetailsModal.contract_photo },
+                      { label: 'جواز السفر', path: agentDetailsModal.passport_photo },
+                      { label: 'شهادة البراءة', path: agentDetailsModal.clearance_certificate },
+                      { label: 'شهادة عدم إفلاس', path: agentDetailsModal.non_bankruptcy_certificate },
+                      { label: 'شهادة خبرة', path: agentDetailsModal.experience_certificate },
+                      { label: 'شهادة عدم ارتباط بعمل', path: agentDetailsModal.non_employment_certificate },
+                      { label: 'شهادة صحية (خلو درن)', path: agentDetailsModal.tb_health_certificate },
+                      { label: 'المؤهل العلمي', path: agentDetailsModal.academic_qualification },
+                      { label: 'رخصة المزاولة', path: agentDetailsModal.activity_license },
+                    ].map(doc => {
+                      const url = resolveAgentPublicUrl(doc.path);
+                      return (
+                        <div key={doc.label} style={{ background: 'var(--bg)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                          <div style={{ width: '100%', height: '140px', borderRadius: '10px', overflow: 'hidden', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', border: '1px solid var(--border)' }}>
+                            {doc.path ? (
+                              <img src={url} alt={doc.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as any).style.display = 'none'; }} />
+                            ) : (
+                              <div style={{ color: 'var(--muted)', fontSize: '12px', fontFamily: "'Cairo',sans-serif" }}>
+                                <i className="fa-solid fa-file-excel" style={{ fontSize: '28px', display: 'block', marginBottom: '6px', opacity: 0.4 }} />
+                                غير متوفر
+                              </div>
+                            )}
+                          </div>
+                          <span style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--text)', marginBottom: '8px' }}>{doc.label}</span>
+                          {doc.path && (
+                            <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#3b82f6', textDecoration: 'none', fontWeight: 700, fontFamily: "'Cairo',sans-serif", display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <i className="fa-solid fa-up-right-from-square" /> عرض بالحجم الكامل
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Permissions & Account */}
+              {agentDetailsTab === 'permissions' && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                    {/* Authorized Insurance Docs */}
+                    <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)' }}>
+                      <h4 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '15px', color: '#1e40af', margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-file-contract" /> وثائق التأمين المصرح بإصدارها
+                      </h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {(agentDetailsModal.authorized_documents || []).length > 0 ? (
+                          agentDetailsModal.authorized_documents.map((doc: string) => (
+                            <span key={doc} style={{ background: '#dbeafe', color: '#1e40af', padding: '6px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, fontFamily: "'Cairo',sans-serif", border: '1px solid #bfdbfe' }}>
+                              <i className="fa-solid fa-shield-check" style={{ marginLeft: '6px' }} />
+                              {doc}
+                            </span>
+                          ))
+                        ) : (
+                          <div style={{ color: 'var(--muted)', fontSize: '13px' }}>لا توجد وثائق محددة</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Linked User Account */}
+                    <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)' }}>
+                      <h4 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '15px', color: '#047857', margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-user-lock" /> بيانات الحساب المرتبط في المنظومة
+                      </h4>
+                      {agentDetailsModal.user ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                            <span style={{ color: 'var(--muted)', fontSize: '12px', fontWeight: 700 }}>اسم المستخدم:</span>
+                            <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '13px' }}>{agentDetailsModal.user.username}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                            <span style={{ color: 'var(--muted)', fontSize: '12px', fontWeight: 700 }}>الاسم الكامل:</span>
+                            <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '13px' }}>{agentDetailsModal.user.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                            <span style={{ color: 'var(--muted)', fontSize: '12px', fontWeight: 700 }}>حساب الهيئة (EIDC):</span>
+                            <span style={{ fontWeight: 800, color: '#3b82f6', fontSize: '13px' }}>{agentDetailsModal.user.eidc_username || '—'}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--muted)', fontSize: '12px', fontWeight: 700 }}>حساب الاتحاد (LIFO):</span>
+                            <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: '13px' }}>{agentDetailsModal.user.lifo_username || '—'}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--muted)', fontSize: '13px' }}>لا يوجد حساب مستخدم مسجل</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 4: Wallet & Points */}
+              {agentDetailsTab === 'wallet' && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderRadius: '16px', padding: '20px', color: '#fff' }}>
+                      <div style={{ fontSize: '12px', opacity: 0.9, fontWeight: 700, marginBottom: '6px' }}>رصيد المحفظة المالي</div>
+                      <div style={{ fontSize: '28px', fontWeight: 900 }}>{agentDetailsModal.wallet?.wallet_balance || '0.00'} <span style={{ fontSize: '14px' }}>د.ل</span></div>
+                    </div>
+                    <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', borderRadius: '16px', padding: '20px', color: '#fff' }}>
+                      <div style={{ fontSize: '12px', opacity: 0.9, fontWeight: 700, marginBottom: '6px' }}>نقاط الولاء والتحفيز</div>
+                      <div style={{ fontSize: '28px', fontWeight: 900 }}>{agentDetailsModal.wallet?.points_balance || '0'} <span style={{ fontSize: '14px' }}>نقطة</span></div>
+                    </div>
+                    <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', padding: '20px', color: '#fff' }}>
+                      <div style={{ fontSize: '12px', opacity: 0.9, fontWeight: 700, marginBottom: '6px' }}>الوكلاء المسجلين عبر الإحالة</div>
+                      <div style={{ fontSize: '28px', fontWeight: 900 }}>{agentDetailsModal.wallet?.referrals_count || '0'} <span style={{ fontSize: '14px' }}>وكيل</span></div>
+                    </div>
+                  </div>
+
+                  {agentDetailsModal.wallet?.referral_code && (
+                    <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)' }}>
+                      <h4 style={{ margin: '0 0 10px 0', fontFamily: "'Cairo',sans-serif", fontSize: '14px', fontWeight: 800, color: 'var(--text)' }}>
+                        رابط الإحالة الخاص بالوكيل
+                      </h4>
+                      <div style={{ background: 'var(--card-bg)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--border)', fontFamily: 'monospace', fontSize: '13px', color: 'var(--text)' }}>
+                        {`${window.location.origin}/website/branches-agents?ref=${agentDetailsModal.wallet.referral_code}`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 5: Custody */}
+              {agentDetailsTab === 'custody' && (
+                <div>
+                  <h3 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '16px', color: 'var(--text)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-boxes-stacked" style={{ color: '#f59e0b' }} /> سجل العهد والمستندات المسلمة
+                  </h3>
+                  <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--muted)' }}>
+                    <i className="fa-solid fa-box-open" style={{ fontSize: '36px', marginBottom: '10px', display: 'block', opacity: 0.5 }} />
+                    لا توجد عهد نشطة مسجلة حالياً
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 6: Financial Stats */}
+              {agentDetailsTab === 'stats' && ledger && (
+                <div>
+                  <h3 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '16px', color: 'var(--text)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-chart-pie" style={{ color: '#6366f1' }} /> ملخص الإنتاجية والإحصائيات المالية
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                    {[
+                      { label: 'إجمالي المبيعات', value: fmt(ledger.summary.total_sales) + ' د.ل', bg: '#1e40af' },
+                      { label: 'عمولة الوكيل', value: fmt(ledger.summary.total_agent_share) + ' د.ل', bg: '#7c3aed' },
+                      { label: 'حصة الشركة', value: fmt(ledger.summary.total_company_share) + ' د.ل', bg: '#0d9488' },
+                      { label: 'المستلم حتى الآن', value: fmt(ledger.summary.total_paid) + ' د.ل', bg: '#059669' },
+                      { label: 'المتبقي / الدين', value: fmt(ledger.summary.total_remaining) + ' د.ل', bg: ledger.summary.total_remaining > 0 ? '#b91c1c' : '#059669' },
+                      { label: 'إجمالي الوثائق', value: ledger.summary.total_documents + ' وثيقة', bg: '#0284c7' },
+                    ].map(s => (
+                      <div key={s.label} style={{ background: s.bg, borderRadius: '14px', padding: '16px', color: '#fff' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.9 }}>{s.label}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 900, marginTop: '4px' }}>{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 28px', borderTop: '1px solid var(--border)', background: 'var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif" }}>
+                كود الوكيل: <strong style={{ color: '#38bdf8' }}>{agentDetailsModal.code}</strong> — {agentDetailsModal.agency_name}
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => { setAgentDetailsModal(null); handleOpenAgentEdit(); }}
+                  style={{ padding: '10px 22px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <i className="fa-solid fa-pencil" /> تعديل البيانات
+                </button>
+                <button
+                  onClick={() => setAgentDetailsModal(null)}
+                  style={{ padding: '10px 22px', borderRadius: '12px', border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, cursor: 'pointer' }}
+                >
+                  إغلاق
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ====== Agent Edit Modal ====== */}
+      {/* ====== Full Comprehensive Agent Edit Modal ====== */}
       {agentEditModal && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(6px)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setAgentEditModal(null); }}
         >
-          <div style={{ background: 'var(--card-bg)', borderRadius: '20px', padding: '32px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.35)', border: '1px solid var(--border)' }}>
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px' }}>
+          <div style={{ background: 'var(--card-bg)', borderRadius: '24px', maxWidth: '1180px', width: '95vw', height: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', border: '1px solid var(--border)' }}>
+            {/* Modal Top Header */}
+            <div style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', padding: '18px 28px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
                   <i className="fa-solid fa-pencil" />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontWeight: 900, fontSize: '18px', color: 'var(--text)' }}>تعديل بيانات الوكيل</h3>
-                  <p style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '13px', color: 'var(--muted)' }}>{agentEditModal.agency_name} — {agentEditModal.code}</p>
+                  <h2 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '18px', fontWeight: 900 }}>
+                    تعديل بيانات الوكيل / الفرع بالكامل
+                  </h2>
+                  <p style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '12px', opacity: 0.9 }}>
+                    {agentEditModal.agency_name} — كود: {agentEditModal.code}
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setAgentEditModal(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'var(--bg)', color: 'var(--muted)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setAgentEditModal(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <i className="fa-solid fa-xmark" />
               </button>
             </div>
 
-            {/* Edit Form */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            {/* Edit Tabs Navigation */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg)', padding: '0 20px', gap: '6px', overflowX: 'auto', flexShrink: 0 }}>
               {[
-                { key: 'agency_name', label: 'اسم الوكالة', type: 'text' },
-                { key: 'agent_name', label: 'اسم الوكيل المسؤول', type: 'text' },
-                { key: 'agency_number', label: 'رقم الترخيص', type: 'text' },
-                { key: 'phone', label: 'رقم الهاتف', type: 'text' },
-                { key: 'city', label: 'المدينة', type: 'text' },
-                { key: 'address', label: 'العنوان', type: 'text' },
-                { key: 'contract_date', label: 'تاريخ التعاقد', type: 'date' },
-                { key: 'contract_end_date', label: 'تاريخ إلغاء الوكالة', type: 'date' },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>{field.label}</label>
-                  <input
-                    type={field.type}
-                    value={agentEditForm[field.key] || ''}
-                    onChange={(e) => setAgentEditForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
-                  />
-                </div>
-              ))}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>حالة الوكيل</label>
-                <select
-                  value={agentEditForm.status || 'نشط'}
-                  onChange={(e) => setAgentEditForm(prev => ({ ...prev, status: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                { idx: 0, label: 'البيانات الأساسية', icon: 'fa-building' },
+                { idx: 1, label: 'التعاقد والعقد', icon: 'fa-file-signature' },
+                { idx: 2, label: 'المستندات والصور', icon: 'fa-folder-open' },
+                { idx: 3, label: 'الوثائق والنسب والصلاحيات', icon: 'fa-shield-halved' },
+                { idx: 4, label: 'دخول المنظومة (الحساب)', icon: 'fa-user-lock' },
+              ].map(t => (
+                <button
+                  key={t.idx}
+                  onClick={() => setAgentEditTab(t.idx)}
+                  style={{
+                    padding: '14px 18px',
+                    border: 'none',
+                    borderBottom: agentEditTab === t.idx ? '3px solid #f59e0b' : '3px solid transparent',
+                    background: 'none',
+                    color: agentEditTab === t.idx ? '#d97706' : 'var(--muted)',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all .2s'
+                  }}
                 >
-                  <option value="نشط">نشط</option>
-                  <option value="غير نشط">غير نشط</option>
-                  <option value="قيد الانتظار">قيد الانتظار</option>
-                </select>
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>ملاحظات</label>
-                <textarea
-                  value={agentEditForm.notes || ''}
-                  onChange={(e) => setAgentEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
-                />
-              </div>
+                  <i className={`fa-solid ${t.icon}`} />
+                  {t.label}
+                </button>
+              ))}
             </div>
 
-            {/* Footer Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+            {/* Edit Form Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '28px' }}>
+              {/* Tab 0: Basic Data */}
+              {agentEditTab === 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>نوع المنشأة *</label>
+                    <select
+                      value={agentEditForm.type || 'وكيل'}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, type: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    >
+                      <option value="وكيل">وكيل</option>
+                      <option value="فرع من شركة">فرع من شركة</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>نشاط الوكيل</label>
+                    <select
+                      value={agentEditForm.activity || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, activity: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    >
+                      <option value="">اختر النشاط...</option>
+                      {AGENT_ACTIVITIES_LIST.map(act => <option key={act} value={act}>{act}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>اسم الوكالة / الفرع *</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.agency_name || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, agency_name: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>اسم الوكيل المسؤول *</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.agent_name || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, agent_name: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>المدينة *</label>
+                    <select
+                      value={agentEditForm.city || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, city: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    >
+                      <option value="">اختر المدينة...</option>
+                      {AGENT_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>العنوان التفصيلي</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.address || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, address: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>رقم الهاتف الشخصي</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.phone || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, phone: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>هاتف المكتب</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.office_phone || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, office_phone: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>موقع / لوكيشن المكتب</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.office_location || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, office_location: e.target.value }))}
+                      placeholder="رابط خرائط جوجل أو إحداثيات"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>الجنسية</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.nationality || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, nationality: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>الرقم الوطني</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.national_id || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, national_id: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>رقم إثبات الشخصية (جواز / بطاقة)</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.identity_number || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, identity_number: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>رقم الترخيص / الوكالة</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.agency_number || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, agency_number: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>رقم الختم</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.stamp_number || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, stamp_number: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>حالة الوكيل</label>
+                    <select
+                      value={agentEditForm.status || 'نشط'}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, status: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    >
+                      <option value="نشط">نشط</option>
+                      <option value="غير نشط">غير نشط</option>
+                      <option value="قيد الانتظار">قيد الانتظار</option>
+                    </select>
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>ملاحظات عامة</label>
+                    <textarea
+                      value={agentEditForm.notes || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, notes: e.target.value }))}
+                      rows={3}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box', resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 1: Contract & Terms */}
+              {agentEditTab === 1 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>تاريخ التعاقد *</label>
+                    <input
+                      type="date"
+                      value={agentEditForm.contract_date || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, contract_date: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>تاريخ التجديد</label>
+                    <input
+                      type="date"
+                      value={agentEditForm.renewal_date || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, renewal_date: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>تاريخ انتهاء العقد / إلغاء الوكالة</label>
+                    <input
+                      type="date"
+                      value={agentEditForm.contract_end_date || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, contract_end_date: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>مدة العقد</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.contract_duration || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, contract_duration: e.target.value }))}
+                      placeholder="مثال: سنة واحدة"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>شروط وأحكام العقد</label>
+                    <textarea
+                      value={agentEditForm.contract_conditions || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, contract_conditions: e.target.value }))}
+                      rows={8}
+                      style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 600, fontSize: '13px', boxSizing: 'border-box', resize: 'vertical', lineHeight: '1.6' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Photos & Files Uploads */}
+              {agentEditTab === 2 && (
+                <div>
+                  <h4 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', color: 'var(--text)', marginBottom: '16px' }}>
+                    تحميل وتحديث المستندات والصور المرفقة:
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                    {[
+                      { key: 'personal_photo', label: 'الصورة الشخصية', current: agentEditModal.personal_photo },
+                      { key: 'office_facade_photo', label: 'صورة واجهة المكتب', current: agentEditModal.office_facade_photo },
+                      { key: 'national_id_photo', label: 'صورة الرقم القومي', current: agentEditModal.national_id_photo },
+                      { key: 'identity_photo', label: 'إثبات الهوية', current: agentEditModal.identity_photo },
+                      { key: 'contract_photo', label: 'صورة العقد المبرم', current: agentEditModal.contract_photo },
+                      { key: 'passport_photo', label: 'جواز السفر', current: agentEditModal.passport_photo },
+                      { key: 'clearance_certificate', label: 'شهادة البراءة', current: agentEditModal.clearance_certificate },
+                      { key: 'non_bankruptcy_certificate', label: 'شهادة عدم إفلاس', current: agentEditModal.non_bankruptcy_certificate },
+                      { key: 'experience_certificate', label: 'شهادة خبرة', current: agentEditModal.experience_certificate },
+                      { key: 'non_employment_certificate', label: 'شهادة عدم ارتباط بعمل', current: agentEditModal.non_employment_certificate },
+                      { key: 'tb_health_certificate', label: 'شهادة خلو من الدرن', current: agentEditModal.tb_health_certificate },
+                      { key: 'academic_qualification', label: 'المؤهل العلمي', current: agentEditModal.academic_qualification },
+                      { key: 'activity_license', label: 'رخصة المزاولة', current: agentEditModal.activity_license },
+                    ].map(f => (
+                      <div key={f.key} style={{ background: 'var(--bg)', borderRadius: '12px', padding: '14px', border: '1px solid var(--border)' }}>
+                        <div style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--text)', marginBottom: '8px' }}>
+                          {f.label}
+                        </div>
+                        {f.current && (
+                          <div style={{ marginBottom: '8px', fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-circle-check" /> يوجد ملف حالي مرفوع
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setAgentEditFiles(p => ({ ...p, [f.key]: file }));
+                          }}
+                          style={{ width: '100%', fontSize: '12px', fontFamily: "'Cairo',sans-serif" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Permissions, Docs & Percentages */}
+              {agentEditTab === 3 && (
+                <div>
+                  <h4 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', color: 'var(--text)', marginBottom: '12px' }}>
+                    وثائق التأمين المصرح بها ونسب العمولات الافتراضية (%):
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px', marginBottom: '28px' }}>
+                    {AGENT_INSURANCE_DOCS.map(doc => {
+                      const isAuth = (agentEditForm.authorized_documents || []).includes(doc);
+                      const defPct = agentEditForm.document_percentages?.default?.[doc] ?? 0;
+                      return (
+                        <div key={doc} style={{ background: isAuth ? 'rgba(59,130,246,0.06)' : 'var(--bg)', border: `1.5px solid ${isAuth ? '#3b82f6' : 'var(--border)'}`, borderRadius: '12px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '13px', color: isAuth ? '#1e40af' : 'var(--text)' }}>
+                            <input
+                              type="checkbox"
+                              checked={isAuth}
+                              onChange={() => handleToggleAuthDoc(doc)}
+                              style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
+                            />
+                            {doc}
+                          </label>
+                          {isAuth && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.5"
+                                value={defPct}
+                                onChange={(e) => handleEditDocPercentageChange(doc, parseFloat(e.target.value) || 0)}
+                                style={{ width: '60px', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800, textAlign: 'center', fontSize: '12px' }}
+                              />
+                              <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)' }}>%</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Monthly Exceptional Overrides */}
+                  <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                    <h4 style={{ margin: '0 0 14px 0', fontFamily: "'Cairo',sans-serif", fontSize: '14px', fontWeight: 800, color: '#d97706', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-calendar-days" /> النسب الاستثنائية الشهرية (حسب الشهر المحدد)
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>السنة</label>
+                        <input
+                          type="number"
+                          value={editOverrideYear}
+                          onChange={(e) => setEditOverrideYear(e.target.value)}
+                          style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>الشهر</label>
+                        <select
+                          value={editOverrideMonth}
+                          onChange={(e) => setEditOverrideMonth(e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: 1, minWidth: '180px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>نوع التأمين</label>
+                        <select
+                          value={editOverrideDocType}
+                          onChange={(e) => setEditOverrideDocType(e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        >
+                          <option value="">اختر نوع التأمين...</option>
+                          {AGENT_INSURANCE_DOCS.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>النسبة %</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={editOverridePercentage}
+                          onChange={(e) => setEditOverridePercentage(parseFloat(e.target.value) || 0)}
+                          style={{ width: '70px', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddEditMonthlyOverride}
+                        style={{ padding: '9px 18px', borderRadius: '8px', border: 'none', background: '#d97706', color: '#fff', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: "'Cairo',sans-serif" }}
+                      >
+                        <i className="fa-solid fa-plus" /> إضافة
+                      </button>
+                    </div>
+
+                    {/* Overrides Table */}
+                    {Object.entries(agentEditForm.document_percentages?.monthly_overrides || {}).length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {Object.entries(agentEditForm.document_percentages?.monthly_overrides || {}).flatMap(([mKey, docs]: [string, any]) =>
+                          Object.entries(docs || {}).map(([doc, pct]: [string, any]) => (
+                            <span key={`${mKey}-${doc}`} style={{ background: 'rgba(217,119,6,0.15)', color: '#d97706', border: '1px solid #d97706', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                              <span>{mKey} — {doc}: <strong>{pct}%</strong></span>
+                              <i onClick={() => handleRemoveEditMonthlyOverride(mKey, doc)} className="fa-solid fa-xmark" style={{ cursor: 'pointer', color: '#ef4444' }} />
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--muted)', fontSize: '12px' }}>لا توجد نسب استثنائية شهرية مضافة</div>
+                    )}
+                  </div>
+
+                  {/* Period Overrides */}
+                  <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                    <h4 style={{ margin: '0 0 14px 0', fontFamily: "'Cairo',sans-serif", fontSize: '14px', fontWeight: 800, color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-calendar-range" /> النسب الاستثنائية حسب الفترة (من تاريخ إلى تاريخ)
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>من تاريخ</label>
+                        <input
+                          type="date"
+                          value={editPeriodStartDate}
+                          onChange={(e) => setEditPeriodStartDate(e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>إلى تاريخ</label>
+                        <input
+                          type="date"
+                          value={editPeriodEndDate}
+                          onChange={(e) => setEditPeriodEndDate(e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        />
+                      </div>
+                      <div style={{ flex: 1, minWidth: '180px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>نوع التأمين</label>
+                        <select
+                          value={editPeriodDocType}
+                          onChange={(e) => setEditPeriodDocType(e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        >
+                          <option value="">اختر نوع التأمين...</option>
+                          {AGENT_INSURANCE_DOCS.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '4px' }}>النسبة %</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={editPeriodPercentage}
+                          onChange={(e) => setEditPeriodPercentage(parseFloat(e.target.value) || 0)}
+                          style={{ width: '70px', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddEditPeriodOverride}
+                        style={{ padding: '9px 18px', borderRadius: '8px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: "'Cairo',sans-serif" }}
+                      >
+                        <i className="fa-solid fa-plus" /> إضافة فترة
+                      </button>
+                    </div>
+
+                    {/* Period Overrides List */}
+                    {Array.isArray(agentEditForm.document_percentages?.period_overrides) && agentEditForm.document_percentages.period_overrides.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {agentEditForm.document_percentages.period_overrides.map((item: any) => (
+                          <span key={item.id} style={{ background: 'rgba(124,58,237,0.15)', color: '#7c3aed', border: '1px solid #7c3aed', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <span>من {item.start_date} إلى {item.end_date} — {item.doc_type}: <strong>{item.percentage}%</strong></span>
+                            <i onClick={() => handleRemoveEditPeriodOverride(item.id)} className="fa-solid fa-xmark" style={{ cursor: 'pointer', color: '#ef4444' }} />
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--muted)', fontSize: '12px' }}>لا توجد نسب استثنائية لفترات مضافة</div>
+                    )}
+                  </div>
+
+                  {/* Administrative Permissions */}
+                  <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)' }}>
+                    <h4 style={{ margin: '0 0 14px 0', fontFamily: "'Cairo',sans-serif", fontSize: '14px', fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-user-gear" /> الصلاحيات الإدارية والمالية الممنوحة للوكيل
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                      {AGENT_REPORT_PERMS.map(perm => {
+                        const isAuth = (agentEditForm.authorized_documents || []).includes(perm);
+                        return (
+                          <label key={perm} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '12px', color: isAuth ? '#047857' : 'var(--text)' }}>
+                            <input
+                              type="checkbox"
+                              checked={isAuth}
+                              onChange={() => handleToggleAuthDoc(perm)}
+                              style={{ width: '16px', height: '16px', accentColor: '#047857' }}
+                            />
+                            {perm}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 4: System User Account */}
+              {agentEditTab === 4 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>اسم المستخدم للدخول (Username)</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.username || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, username: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>كلمة المرور الجديدة (اتركها فارغة إذا لا تريد التغيير)</label>
+                    <input
+                      type="password"
+                      value={agentEditForm.password || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, password: e.target.value }))}
+                      placeholder="••••••••"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>اسم المستخدم في هيئة التأمين (EIDC Username)</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.eidc_username || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, eidc_username: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>كلمة مرور هيئة التأمين (EIDC Password)</label>
+                    <input
+                      type="password"
+                      value={agentEditForm.eidc_password || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, eidc_password: e.target.value }))}
+                      placeholder="اتركها فارغة لعدم التغيير"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>اسم المستخدم في الاتحاد (LIFO Username)</label>
+                    <input
+                      type="text"
+                      value={agentEditForm.lifo_username || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, lifo_username: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '12px', color: 'var(--muted)' }}>كلمة مرور الاتحاد (LIFO Password)</label>
+                    <input
+                      type="password"
+                      value={agentEditForm.lifo_password || ''}
+                      onChange={(e) => setAgentEditForm(p => ({ ...p, lifo_password: e.target.value }))}
+                      placeholder="اتركها فارغة لعدم التغيير"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 28px', borderTop: '1px solid var(--border)', background: 'var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <button
+                type="button"
                 onClick={() => setAgentEditModal(null)}
-                style={{ padding: '10px 22px', borderRadius: '12px', border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '10px 24px', borderRadius: '12px', border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif", fontWeight: 700, cursor: 'pointer' }}
               >
                 إلغاء
               </button>
               <button
+                type="button"
                 onClick={handleSaveAgentEdit}
                 disabled={agentEditLoading}
-                style={{ padding: '10px 26px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', cursor: agentEditLoading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', opacity: agentEditLoading ? 0.75 : 1, boxShadow: '0 4px 14px rgba(245,158,11,0.4)' }}
+                style={{ padding: '10px 32px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '14px', cursor: agentEditLoading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', opacity: agentEditLoading ? 0.75 : 1, boxShadow: '0 4px 14px rgba(245,158,11,0.4)' }}
               >
                 {agentEditLoading ? (
-                  <><i className="fa-solid fa-circle-notch fa-spin" /> جاري الحفظ...</>
+                  <><i className="fa-solid fa-circle-notch fa-spin" /> جاري حفظ التعديلات...</>
                 ) : (
-                  <><i className="fa-solid fa-floppy-disk" /> حفظ التعديلات</>
+                  <><i className="fa-solid fa-floppy-disk" /> حفظ وتحديث بيانات الوكيل</>
                 )}
               </button>
             </div>
