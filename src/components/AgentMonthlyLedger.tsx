@@ -1561,141 +1561,197 @@ export default function AgentMonthlyLedger() {
 
       {!loading && ledger && (
         <>
-          {/* Agent Info Banner */}
+          {/* Agent Info Banner (Redesigned & Modernized) */}
           <div
             style={{
-              background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
               borderRadius: '20px',
-              padding: '20px 28px',
+              padding: '22px 26px',
               color: 'white',
-              marginBottom: '20px',
-              boxShadow: '0 10px 25px rgba(15,23,42,0.15)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              marginBottom: '22px',
+              boxShadow: '0 12px 30px rgba(15,23,42,0.25)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            {/* Top row: icon + info + action buttons */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            {/* Background ambient lighting accents */}
+            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(59,130,246,0.12)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(16,185,129,0.08)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+
+            {/* Top Row: Agency Title & Details on Right, Action Toolbar on Left */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 }}>
+              {/* Agency Title & Icon */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div
                   style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '16px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '22px',
-                    boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
+                    fontSize: '24px',
+                    color: '#fff',
+                    boxShadow: '0 6px 18px rgba(59,130,246,0.4)',
+                    flexShrink: 0,
+                    border: '1px solid rgba(255,255,255,0.2)',
                   }}
                 >
                   <i className="fa-solid fa-building-user" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 700, fontFamily: "'Cairo',sans-serif" }}>
-                    الوكيل / الفرع المحدد
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 800, fontFamily: "'Cairo',sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      الوكيل / الفرع المحدد
+                    </span>
+                    <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: ledger.agent.status === 'غير نشط' ? '#ef4444' : '#10b981' }} />
                   </div>
-                  <h2 style={{ margin: '2px 0 6px 0', fontSize: '22px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
+                  <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 900, fontFamily: "'Cairo',sans-serif", color: '#ffffff', letterSpacing: '-0.3px' }}>
                     {ledger.agent.agency_name}
                   </h2>
-                  <div style={{ display: 'flex', gap: '14px', fontSize: '13px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif", alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '8px' }}>
-                      <i className="fa-solid fa-hashtag" style={{ marginLeft: '5px', color: '#38bdf8' }} />
-                      كود الوكيل: <strong style={{ color: '#38bdf8' }}>{ledger.agent.code}</strong>
-                    </span>
-                    <span style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '8px' }}>
-                      <i className="fa-solid fa-user-tie" style={{ marginLeft: '5px', color: '#a78bfa' }} />
-                      المسؤول: <strong>{ledger.agent.agent_name}</strong>
-                    </span>
-                    {ledger.agent.contract_date && (
-                      <span style={{ background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.4)', color: '#93c5fd', padding: '4px 12px', borderRadius: '8px', fontWeight: 800 }}>
-                        <i className="fa-solid fa-file-contract" style={{ marginLeft: '6px', color: '#60a5fa' }} />
-                        تاريخ التعاقد: <strong>{ledger.agent.contract_date.substring(0, 10)}</strong>
-                      </span>
-                    )}
-                    {ledger.agent.first_doc_date && (
-                      <span style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.4)', color: '#6ee7b7', padding: '4px 12px', borderRadius: '8px', fontWeight: 800 }}>
-                        <i className="fa-solid fa-play" style={{ marginLeft: '6px', color: '#34d399' }} />
-                        بدء النشاط (أول وثيقة): <strong>{ledger.agent.first_doc_date}</strong>
-                      </span>
-                    )}
-                    {ledger.agent.last_doc_date && (
-                      <span style={{ background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.4)', color: '#fde68a', padding: '4px 12px', borderRadius: '8px', fontWeight: 700 }}>
-                        <i className="fa-solid fa-clock-rotate-left" style={{ marginLeft: '6px', color: '#fbbf24' }} />
-                        آخر نشاط مسجل: <strong>{ledger.agent.last_doc_date}</strong>
-                      </span>
-                    )}
-                    {ledger.agent.contract_end_date && (
-                      <span style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#fca5a5', padding: '4px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <i className="fa-solid fa-user-slash" /> تاريخ التوقف / إلغاء الوكالة: <strong>{ledger.agent.contract_end_date.substring(0, 10)}</strong>
-                      </span>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* Agent Quick Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Action Toolbar (Compact, Modern, Pill-shaped) */}
+              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', alignItems: 'center', background: 'rgba(255,255,255,0.04)', padding: '6px 8px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <button
                   onClick={handleOpenAgentDetails}
                   disabled={agentDetailsLoading}
-                  title="عرض تفاصيل الوكيل"
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(16,185,129,0.35)', transition: 'all .2s' }}
+                  title="عرض تفاصيل الوكيل بالكامل"
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(16,185,129,0.3)', transition: 'transform .15s, opacity .15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className={`fa-solid ${agentDetailsLoading ? 'fa-circle-notch fa-spin' : 'fa-eye'}`} />
-                  عرض
+                  <span>عرض</span>
                 </button>
+
                 <button
                   onClick={handleOpenAgentEdit}
                   disabled={agentDetailsLoading}
                   title="تعديل بيانات الوكيل"
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#f59e0b', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(245,158,11,0.35)', transition: 'all .2s' }}
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(245,158,11,0.3)', transition: 'transform .15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className="fa-solid fa-pencil" />
-                  تعديل
+                  <span>تعديل</span>
                 </button>
+
                 <button
                   onClick={() => ldgPrintAgentA4(selectedAgentId!)}
                   title="طباعة بيانات الوكيل A4"
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(99,102,241,0.35)', transition: 'all .2s' }}
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(99,102,241,0.3)', transition: 'transform .15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className="fa-solid fa-file-lines" />
-                  طباعة بيانات
+                  <span>طباعة بيانات</span>
                 </button>
+
                 <button
                   onClick={() => ldgPrintAgentIdCard(selectedAgentId!)}
                   title="طباعة بطاقة وكيل"
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#ec4899', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(236,72,153,0.35)', transition: 'all .2s' }}
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #ec4899, #db2777)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(236,72,153,0.3)', transition: 'transform .15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className="fa-solid fa-id-card" />
-                  بطاقة وكيل
+                  <span>بطاقة وكيل</span>
                 </button>
+
                 <button
                   onClick={() => ldgPrintAgentContract(selectedAgentId!)}
                   title="طباعة العقد"
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#3b82f6', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(59,130,246,0.35)', transition: 'all .2s' }}
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(59,130,246,0.3)', transition: 'transform .15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className="fa-solid fa-print" />
-                  طباعة العقد
+                  <span>طباعة العقد</span>
                 </button>
+
                 <button
                   onClick={() => ldgPrintAgentPermit(selectedAgentId!)}
                   title="طباعة إذن مباشرة العمل"
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#f97316', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(249,115,22,0.35)', transition: 'all .2s' }}
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 8px rgba(249,115,22,0.3)', transition: 'transform .15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className="fa-solid fa-file-invoice" />
-                  إذن مباشرة
+                  <span>إذن مباشرة</span>
                 </button>
+
                 <button
                   onClick={handleToggleAgentBlock}
                   disabled={agentBlockLoading}
                   title={ledger.agent.status === 'غير نشط' ? 'إلغاء الحظر / تفعيل الوكيل' : 'حظر الوكيل'}
-                  style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: agentBlockLoading ? 'wait' : 'pointer', background: ledger.agent.status === 'غير نشط' ? '#10b981' : '#ef4444', color: '#fff', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: `0 2px 8px rgba(${ledger.agent.status === 'غير نشط' ? '16,185,129' : '239,68,68'},0.35)`, transition: 'all .2s', opacity: agentBlockLoading ? 0.7 : 1 }}
+                  style={{ padding: '7px 13px', borderRadius: '9px', border: 'none', cursor: agentBlockLoading ? 'wait' : 'pointer', background: ledger.agent.status === 'غير نشط' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: `0 2px 8px rgba(${ledger.agent.status === 'غير نشط' ? '16,185,129' : '239,68,68'},0.35)`, transition: 'transform .15s, opacity .15s', opacity: agentBlockLoading ? 0.7 : 1 }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
                   <i className={`fa-solid ${agentBlockLoading ? 'fa-circle-notch fa-spin' : ledger.agent.status === 'غير نشط' ? 'fa-user-check' : 'fa-user-slash'}`} />
-                  {ledger.agent.status === 'غير نشط' ? 'إلغاء الحظر' : 'حظر الوكيل'}
+                  <span>{ledger.agent.status === 'غير نشط' ? 'إلغاء الحظر' : 'حظر الوكيل'}</span>
                 </button>
               </div>
+            </div>
+
+            {/* Subtle Divider */}
+            <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%)', margin: '16px 0 14px 0' }} />
+
+            {/* Bottom Row: Organized Info Badges */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', fontFamily: "'Cairo',sans-serif", fontSize: '12px', position: 'relative', zIndex: 1 }}>
+              {/* Code */}
+              <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.28)', padding: '5px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#e0f2fe' }}>
+                <i className="fa-solid fa-hashtag" style={{ color: '#38bdf8' }} />
+                <span>كود الوكيل:</span>
+                <strong style={{ color: '#38bdf8', fontWeight: 900 }}>{ledger.agent.code}</strong>
+              </div>
+
+              {/* Agent Name */}
+              <div style={{ background: 'rgba(167, 139, 250, 0.12)', border: '1px solid rgba(167, 139, 250, 0.28)', padding: '5px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#f3e8ff' }}>
+                <i className="fa-solid fa-user-tie" style={{ color: '#a78bfa' }} />
+                <span>المسؤول:</span>
+                <strong style={{ color: '#fff', fontWeight: 800 }}>{ledger.agent.agent_name}</strong>
+              </div>
+
+              {/* Contract Date */}
+              {ledger.agent.contract_date && (
+                <div style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.28)', padding: '5px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#dbeafe' }}>
+                  <i className="fa-solid fa-file-contract" style={{ color: '#60a5fa' }} />
+                  <span>تاريخ التعاقد:</span>
+                  <strong style={{ color: '#93c5fd', fontWeight: 800 }}>{ledger.agent.contract_date.substring(0, 10)}</strong>
+                </div>
+              )}
+
+              {/* First Doc Date */}
+              {ledger.agent.first_doc_date && (
+                <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.28)', padding: '5px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#d1fae5' }}>
+                  <i className="fa-solid fa-play" style={{ color: '#34d399' }} />
+                  <span>بدء النشاط (أول وثيقة):</span>
+                  <strong style={{ color: '#6ee7b7', fontWeight: 800 }}>{ledger.agent.first_doc_date}</strong>
+                </div>
+              )}
+
+              {/* Last Doc Date */}
+              {ledger.agent.last_doc_date && (
+                <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.28)', padding: '5px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#fef3c7' }}>
+                  <i className="fa-solid fa-clock-rotate-left" style={{ color: '#fbbf24' }} />
+                  <span>آخر نشاط مسجل:</span>
+                  <strong style={{ color: '#fde68a', fontWeight: 800 }}>{ledger.agent.last_doc_date}</strong>
+                </div>
+              )}
+
+              {/* Contract End Date / Inactive notice */}
+              {ledger.agent.contract_end_date && (
+                <div style={{ background: 'rgba(239, 68, 68, 0.18)', border: '1px solid rgba(239, 68, 68, 0.45)', padding: '5px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#fee2e2' }}>
+                  <i className="fa-solid fa-user-slash" style={{ color: '#f87171' }} />
+                  <span>تاريخ التوقف / إلغاء الوكالة:</span>
+                  <strong style={{ color: '#fca5a5', fontWeight: 900 }}>{ledger.agent.contract_end_date.substring(0, 10)}</strong>
+                </div>
+              )}
             </div>
           </div>
 
