@@ -217,7 +217,7 @@ export default function CreateInternationalInsurance() {
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   });
-  const [, setExternalPrices] = useState<ExternalPrices | null>(() => {
+  const [externalPrices, setExternalPrices] = useState<ExternalPrices | null>(() => {
     try {
       const stored = localStorage.getItem('cache_external_prices');
       return stored ? JSON.parse(stored) : null;
@@ -900,35 +900,36 @@ export default function CreateInternationalInsurance() {
     }
   }, [formData.start_date, formData.number_of_days]);
 
-  // حساب daily_premium و tax و supervision_fees و premium عند تغيير item_type أو number_of_days
+  // حساب daily_premium و premium عند تغيير item_type أو number_of_days
+  // يستخدم القسط اليومي من API الاتحاد إذا كان متاحاً، وإلا يستخدم القيم الافتراضية
+  // لا يُعيد تعيين tax و supervision_fees لأنها تأتي من API الاتحاد
   useEffect(() => {
     if (formData.item_type) {
       let dailyPremium = 0;
-      let tax = 0;
-      let supervisionFees = 0;
 
       if (LOW_VALUE_ITEMS.includes(formData.item_type)) {
-        dailyPremium = 7;
-        tax = 0.5;
-        supervisionFees = 0.245;
+        // استخدام installment_daily_1 من API الاتحاد إن وجد، وإلا القيمة الافتراضية 7
+        dailyPremium = externalPrices?.installment_daily_1
+          ? parseFloat(String(externalPrices.installment_daily_1))
+          : 7;
       } else if (HIGH_VALUE_ITEMS.includes(formData.item_type)) {
-        dailyPremium = 8;
-        tax = 1.0;
-        supervisionFees = 0.280;
+        // استخدام installment_daily_2 من API الاتحاد إن وجد، وإلا القيمة الافتراضية 8
+        dailyPremium = externalPrices?.installment_daily_2
+          ? parseFloat(String(externalPrices.installment_daily_2))
+          : 8;
       }
 
       const days = parseInt(formData.number_of_days) || 0;
       const premium = dailyPremium * days;
 
+      // نحدث فقط daily_premium و premium — لا نلمس tax و supervision_fees
       setFormData(prev => ({
         ...prev,
         daily_premium: dailyPremium,
-        tax: tax,
-        supervision_fees: supervisionFees,
         premium: premium
       }));
     }
-  }, [formData.item_type, formData.number_of_days]);
+  }, [formData.item_type, formData.number_of_days, externalPrices]);
 
   // حساب total عند تغيير أي من القيم المالية
   useEffect(() => {
