@@ -675,6 +675,24 @@ export default function AgentMonthlyLedger() {
     document.body.appendChild(iframe);
     setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
   };
+
+  const ldgPrintProductionReport = (agentId: number) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    let url = `${API_BASE_URL}/branches-agents/${agentId}/production-portfolio-report-print?t=${new Date().getTime()}`;
+    if (selectedDocType && selectedDocType !== 'all') {
+      url += `&document_type=${selectedDocType}`;
+    }
+    if (excludeCanceled) {
+      url += `&exclude_canceled=1`;
+    }
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
+  };
   // ===================== End Agent Quick Action Helpers =====================
 
   const statCardBase: React.CSSProperties = {
@@ -1282,6 +1300,28 @@ export default function AgentMonthlyLedger() {
 
         {ledger && (
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => ldgPrintProductionReport(ledger.agent.id)}
+              title="طباعة تقرير الحوافظ الإنتاجية بصيغة A4 لجميع التأمينات"
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '13px',
+                color: 'white',
+                background: 'linear-gradient(135deg, #1e40af, #3b82f6)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: "'Cairo',sans-serif",
+                boxShadow: '0 4px 12px rgba(30,64,175,0.3)',
+              }}
+            >
+              <i className="fa-solid fa-print" /> طباعة تقرير الحوافظ (A4)
+            </button>
+
             <button
               onClick={handleExportExcel}
               title="تصدير جدول ملخص كشف الحساب الشهري"
