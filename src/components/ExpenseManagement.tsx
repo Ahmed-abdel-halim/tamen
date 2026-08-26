@@ -121,6 +121,7 @@ export default function ExpenseManagement({
   const [dbSubCategories, setDbSubCategories] = useState<{ id: number; name: string; category_name: string }[]>([]);
   const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
   const [newSubCategoryName, setNewSubCategoryName] = useState('');
+  const [editingSubCategory, setEditingSubCategory] = useState<{ id: number; name: string; category_name: string } | null>(null);
 
   // Custom Confirmation Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void } | null>(null);
@@ -2192,43 +2193,74 @@ export default function ExpenseManagement({
       {showSubCategoryModal && (
         <div className="modal-overlay no-print" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, padding: '20px'
-        }} onClick={() => setShowSubCategoryModal(false)}>
+        }} onClick={() => { setShowSubCategoryModal(false); setEditingSubCategory(null); setNewSubCategoryName(''); }}>
           <div style={{ background: 'var(--card-bg)', width: '100%', maxWidth: '800px', borderRadius: '15px', padding: '30px', position: 'relative', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
               <h3 style={{ margin: 0, fontSize: '1.25rem' }}><i className="fa-solid fa-list-check text-primary me-2"></i> إدارة البنود الفرعية لـ ({category})</h3>
-              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--muted)' }} onClick={() => setShowSubCategoryModal(false)}>
+              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--muted)' }} onClick={() => { setShowSubCategoryModal(false); setEditingSubCategory(null); setNewSubCategoryName(''); }}>
                 &times;
               </button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px', overflowX: 'hidden' }}>
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
                   type="text"
                   value={newSubCategoryName}
                   onChange={e => setNewSubCategoryName(e.target.value)}
-                  placeholder="اسم البند الفرعي الجديد..."
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
+                  placeholder={editingSubCategory ? `تعديل اسم البند الفرعي...` : "اسم البند الفرعي الجديد..."}
+                  style={{ flex: 1, minWidth: '220px', padding: '12px', borderRadius: '10px', border: editingSubCategory ? '2px solid #10b981' : '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      // Trigger save
+                      const btn = document.getElementById('subCategorySubmitBtn');
+                      if (btn) btn.click();
+                    }
+                  }}
                 />
                 <button
+                  id="subCategorySubmitBtn"
                   type="button"
-                  style={{ whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: '10px', border: 'none', background: '#38bdf8', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                  style={{
+                    whiteSpace: 'nowrap',
+                    padding: '10px 20px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: editingSubCategory ? '#10b981' : '#38bdf8',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
                   onClick={async () => {
-                    if (!newSubCategoryName) return;
+                    if (!newSubCategoryName.trim()) return;
                     try {
                       setLoading(true);
-                      const response = await fetch(`${API_BASE_URL}/expense-subcategories`, {
-                        method: 'POST',
+                      const isEdit = !!editingSubCategory;
+                      const url = isEdit
+                        ? `${API_BASE_URL}/expense-subcategories/${editingSubCategory.id}`
+                        : `${API_BASE_URL}/expense-subcategories`;
+                      const method = isEdit ? 'PUT' : 'POST';
+                      const bodyData = isEdit
+                        ? { name: newSubCategoryName.trim() }
+                        : { category_name: category, name: newSubCategoryName.trim() };
+
+                      const response = await fetch(url, {
+                        method,
                         headers: {
                           'Content-Type': 'application/json',
                           'Accept': 'application/json',
                           'Authorization': `Bearer ${localStorage.getItem('token')}`
                         },
-                        body: JSON.stringify({ category_name: category, name: newSubCategoryName })
+                        body: JSON.stringify(bodyData)
                       });
 
                       if (response.ok) {
-                        showToast('تم إضافة البند الفرعي بنجاح', 'success');
+                        showToast(isEdit ? 'تم تعديل البند الفرعي بنجاح' : 'تم إضافة البند الفرعي بنجاح', 'success');
                         setNewSubCategoryName('');
+                        setEditingSubCategory(null);
                         fetchSubCategories();
                       } else {
                         const err = await response.json();
@@ -2242,24 +2274,53 @@ export default function ExpenseManagement({
                   }}
                   disabled={loading}
                 >
-                  {loading ? 'جاري الحفظ...' : 'إضافة'}
+                  <i className={`fa-solid ${editingSubCategory ? 'fa-check' : 'fa-plus'}`}></i>
+                  {loading ? 'جاري الحفظ...' : (editingSubCategory ? 'تحديث' : 'إضافة')}
                 </button>
+
+                {editingSubCategory && (
+                  <button
+                    type="button"
+                    style={{ whiteSpace: 'nowrap', padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#64748b', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                    onClick={() => {
+                      setEditingSubCategory(null);
+                      setNewSubCategoryName('');
+                    }}
+                  >
+                    إلغاء التعديل
+                  </button>
+                )}
               </div>
 
               <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
                 <table className="users-table" style={{ width: '100%', tableLayout: 'fixed', wordWrap: 'break-word' }}>
                   <thead>
                     <tr>
+                      <th style={{ width: '55px', padding: '10px', textAlign: 'center' }}>#</th>
                       <th style={{ padding: '10px' }}>اسم البند الفرعي</th>
-                      <th style={{ width: '120px', padding: '10px', textAlign: 'center' }}>إجراءات</th>
+                      <th style={{ width: '130px', padding: '10px', textAlign: 'center' }}>إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dbSubCategories.filter(sub => sub.category_name === category).map(sub => (
-                      <tr key={sub.id}>
-                        <td style={{ padding: '10px', whiteSpace: 'normal', lineHeight: '1.5' }}>{sub.name}</td>
+                    {dbSubCategories.filter(sub => sub.category_name === category).map((sub, index) => (
+                      <tr key={sub.id} style={{ background: editingSubCategory?.id === sub.id ? 'rgba(56, 189, 248, 0.1)' : undefined }}>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: 'var(--muted)' }}>
+                          {index + 1}
+                        </td>
+                        <td style={{ padding: '10px', whiteSpace: 'normal', lineHeight: '1.5', fontWeight: 600 }}>{sub.name}</td>
                         <td style={{ padding: '10px' }}>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}
+                              title="تعديل"
+                              onClick={() => {
+                                setEditingSubCategory(sub);
+                                setNewSubCategoryName(sub.name);
+                              }}
+                            >
+                              <i className="fa-solid fa-pencil"></i>
+                            </button>
                             <button
                               type="button"
                               style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}
@@ -2280,6 +2341,10 @@ export default function ExpenseManagement({
                                       });
                                       if (response.ok) {
                                         showToast('تم حذف البند الفرعي بنجاح', 'success');
+                                        if (editingSubCategory?.id === sub.id) {
+                                          setEditingSubCategory(null);
+                                          setNewSubCategoryName('');
+                                        }
                                         fetchSubCategories();
                                       } else {
                                         showToast('لا يمكن حذف هذا البند الفرعي', 'error');
@@ -2298,14 +2363,14 @@ export default function ExpenseManagement({
                       </tr>
                     ))}
                     {dbSubCategories.filter(sub => sub.category_name === category).length === 0 && (
-                      <tr><td colSpan={2} style={{ textAlign: 'center', padding: '20px' }}>لا توجد بنود فرعية مضافة بعد...</td></tr>
+                      <tr><td colSpan={3} style={{ textAlign: 'center', padding: '20px' }}>لا توجد بنود فرعية مضافة بعد...</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
             <div className="premium-modal-footer">
-              <button type="button" className="btn btn-link text-muted fw-bold text-decoration-none px-4" onClick={() => setShowSubCategoryModal(false)}>
+              <button type="button" className="btn btn-link text-muted fw-bold text-decoration-none px-4" onClick={() => { setShowSubCategoryModal(false); setEditingSubCategory(null); setNewSubCategoryName(''); }}>
                 إغلاق
               </button>
             </div>
