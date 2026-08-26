@@ -677,11 +677,6 @@ export default function AgentMonthlyLedger() {
   };
 
   const ldgPrintProductionReport = (agentId: number) => {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
     let url = `${API_BASE_URL}/branches-agents/${agentId}/production-portfolio-report-print?t=${new Date().getTime()}`;
     if (selectedDocType && selectedDocType !== 'all') {
       url += `&document_type=${selectedDocType}`;
@@ -689,9 +684,7 @@ export default function AgentMonthlyLedger() {
     if (excludeCanceled) {
       url += `&exclude_canceled=1`;
     }
-    iframe.src = url;
-    document.body.appendChild(iframe);
-    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
+    window.open(url, '_blank');
   };
   // ===================== End Agent Quick Action Helpers =====================
 
