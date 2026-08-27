@@ -605,9 +605,7 @@ export default function ExpenseManagement({
   }, [filteredUnion]);
 
   const dynamicCategories = useMemo(() => {
-    const list = Array.isArray(dbCategories) ? dbCategories.map(c => c?.name).filter(Boolean) : [];
-    const defaults = ['مصاريف تشغيلية', 'مصاريف فنية', 'مصاريف إدارية'];
-    return Array.from(new Set([...defaults, ...list]));
+    return Array.isArray(dbCategories) ? dbCategories.map(c => c?.name).filter(Boolean) : [];
   }, [dbCategories]);
 
   const filteredSubCategories = useMemo(() => {
@@ -759,9 +757,38 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
-      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      let list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+
+      // Ensure standard default categories exist in DB so user can manage/edit all of them
+      const standardDefaults = ['مصاريف تشغيلية', 'مصاريف فنية', 'مصاريف إدارية'];
+      const missingDefaults = standardDefaults.filter(d => !list.some((c: any) => c?.name === d));
+
+      if (missingDefaults.length > 0 && token) {
+        for (const defName of missingDefaults) {
+          try {
+            const postRes = await fetch(`${API_BASE_URL}/expense-categories`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ name: defName })
+            });
+            if (postRes.ok) {
+              const resData = await postRes.json();
+              if (resData.data) {
+                list.push(resData.data);
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+
       setDbCategories(list);
-      if (list.length > 0 && category === 'قرطاسية') {
+      if (list.length > 0 && (!category || category === 'قرطاسية')) {
         setCategory(list[0].name);
       }
     } catch (e) {
@@ -2175,9 +2202,8 @@ export default function ExpenseManagement({
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             <button
                               type="button"
-                              style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
+                              style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}
                               onClick={() => { setEditingCategory(cat); setNewCategoryName(cat.name); }}
-                              disabled={cat.name === 'التعويضات'}
                               title="تعديل"
                             >
                               <i className="fa-solid fa-pencil"></i>
@@ -2186,7 +2212,7 @@ export default function ExpenseManagement({
                               type="button"
                               style={{ background: cat.name === 'التعويضات' ? '#cbd5e1' : '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: cat.name === 'التعويضات' ? 'not-allowed' : 'pointer' }}
                               disabled={cat.name === 'التعويضات'}
-                              title="حذف"
+                              title={cat.name === 'التعويضات' ? 'فئة نظام أساسية' : 'حذف'}
                               onClick={async () => {
                                 setConfirmDialog({
                                   isOpen: true,
