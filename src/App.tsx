@@ -87,6 +87,7 @@ import CargoInsuranceList from './components/CargoInsuranceList';
 import CreateCargoInsurance from './components/CreateCargoInsurance';
 import ViewCargoInsurance from './components/ViewCargoInsurance';
 import EditCargoInsurance from './components/EditCargoInsurance';
+import ComprehensiveProductionReport from './components/ComprehensiveProductionReport';
 
 import ArchiveDashboard from './components/archive/ArchiveDashboard';
 import HomePage from './components/HomePage';
@@ -289,6 +290,7 @@ function hasAccessToRoute(
     'التحصيلات البنكية': ['/reports/bank-reconciliation'],
     'تقرير الإنتاجية المباشر': ['/reports/live-agents-production'],
     'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/old-documents'],
+    'تقرير الحوافظ والإنتاجية الشامل': ['/reports/comprehensive-production'],
 
     'اجور ومرتبات ضرائب': ['/reports/tax'],
     'اجور ومرتبات ضمان': ['/reports/social-security'],
@@ -473,6 +475,7 @@ const menuSections: SidebarSection[] = [
           { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
           { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
           { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+          { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
           { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
           { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
           { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' },
@@ -698,6 +701,7 @@ const createMenuSections = (
       { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
       { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
       { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+      { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
       { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
@@ -736,6 +740,7 @@ const createMenuSections = (
     'تسديد التعويضات': { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     'تقرير الإنتاجية المباشر': { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
     'كشف الحساب الشهري للوكيل': { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+    'تقرير الحوافظ والإنتاجية الشامل': { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
 
     'الشؤون الفنية': [
       { label: 'المطالبات', icon: 'fa-solid fa-scale-balanced', to: '/claims' },
@@ -1732,6 +1737,7 @@ export default function App() {
                   <Route path="/reports/revenue" element={<AuthorizedRoute requiredPath="/reports/revenue"><RevenueManagement /></AuthorizedRoute>} />
                   <Route path="/reports/live-agents-production" element={<AuthorizedRoute requiredPath="/reports/live-agents-production"><LiveAgentsProduction /></AuthorizedRoute>} />
                   <Route path="/reports/agent-monthly-ledger" element={<AuthorizedRoute requiredPath="/reports/agent-monthly-ledger"><AgentMonthlyLedger /></AuthorizedRoute>} />
+                  <Route path="/reports/comprehensive-production" element={<AuthorizedRoute requiredPath="/reports/agent-monthly-ledger"><ComprehensiveProductionReport /></AuthorizedRoute>} />
                   <Route path="/reports/branch-agent-account" element={<AuthorizedRoute requiredPath="/reports/branch-agent-account"><BranchAgentAccountReport /></AuthorizedRoute>} />
                   <Route path="/reports/agent-transfers" element={<AuthorizedRoute requiredPath="/reports/agent-transfers"><AgentTransfers /></AuthorizedRoute>} />
                   <Route path="/agent-transfers" element={<AuthorizedRoute requiredPath="/agent-transfers"><AgentTransfers /></AuthorizedRoute>} />
