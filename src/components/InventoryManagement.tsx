@@ -34,6 +34,7 @@ interface StoreItem {
 
 interface Custody {
   id: number;
+  item_id?: number;
   batch_ref?: string | null;
   item: StoreItem;
   quantity: number;
