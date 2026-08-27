@@ -186,12 +186,14 @@ export const ComprehensiveProductionReport: React.FC = () => {
         },
       });
 
-      if (!res.ok) {
-        throw new Error(`خطأ في استجابة الخادم: ${res.status}`);
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json || !json.success) {
+        showToast(json?.message || `خطأ في استجابة الخادم (${res.status})`, 'error');
+        return;
       }
 
-      const json = await res.json();
-      if (json.success && json.data) {
+      if (json.data) {
         setSections(json.data.sections || []);
         setGrandTotals(json.data.grand_totals || {
           documents_count: 0,
@@ -204,8 +206,6 @@ export const ComprehensiveProductionReport: React.FC = () => {
         });
         setAgentLabel(json.data.agent_label || 'جميع الوكلاء والفروع (الكل)');
         setPeriodLabel(json.data.period_label || '');
-      } else {
-        showToast(json.message || 'فشل جلب بيانات التقرير', 'error');
       }
     } catch (error: any) {
       console.error('Error fetching comprehensive report:', error);
