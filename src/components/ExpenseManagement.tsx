@@ -555,16 +555,32 @@ export default function ExpenseManagement({
   const totalCompanyDeposit = useMemo(() => cardsCount * (parseFloat(companyDepositPerCard) || 0), [cardsCount, companyDepositPerCard]);
 
   const filteredUnion = useMemo(() => {
+    if (!Array.isArray(unionPurchases)) return [];
     return unionPurchases.filter(u => {
-      const matchesSearch = !unionSearchFilter || u.request_number?.toLowerCase().includes(unionSearchFilter.toLowerCase());
+      if (!u) return false;
+      const matchesSearch = !unionSearchFilter || (u.request_number || '').toLowerCase().includes(unionSearchFilter.toLowerCase());
 
-      const purchaseDate = new Date(u.purchase_date);
-      const matchesYear = unionYearFilter === 'الكل' || purchaseDate.getFullYear().toString() === unionYearFilter;
-      const matchesMonth = unionMonthFilter === 'الكل' || (purchaseDate.getMonth() + 1).toString() === unionMonthFilter;
+      let matchesYear = true;
+      let matchesMonth = true;
+      let matchesFrom = true;
+      let matchesTo = true;
 
-      const pDateClean = new Date(purchaseDate.toISOString().split('T')[0]);
-      const matchesFrom = !unionFromDate || pDateClean >= new Date(unionFromDate);
-      const matchesTo = !unionToDate || pDateClean <= new Date(unionToDate);
+      if (u.purchase_date) {
+        const purchaseDate = new Date(u.purchase_date);
+        if (!isNaN(purchaseDate.getTime())) {
+          matchesYear = unionYearFilter === 'الكل' || purchaseDate.getFullYear().toString() === unionYearFilter;
+          matchesMonth = unionMonthFilter === 'الكل' || (purchaseDate.getMonth() + 1).toString() === unionMonthFilter;
+
+          try {
+            const pDateClean = new Date(purchaseDate.toISOString().split('T')[0]);
+            matchesFrom = !unionFromDate || pDateClean >= new Date(unionFromDate);
+            matchesTo = !unionToDate || pDateClean <= new Date(unionToDate);
+          } catch {
+            matchesFrom = true;
+            matchesTo = true;
+          }
+        }
+      }
 
       return matchesSearch && matchesYear && matchesMonth && matchesFrom && matchesTo;
     });
@@ -575,30 +591,35 @@ export default function ExpenseManagement({
     let totalFee = 0;
     let totalDeposit = 0;
     let totalCards = 0;
-    filteredUnion.forEach(u => {
-      totalPaid += parseFloat(u.amount_paid.toString()) || 0;
-      const cards = (parseFloat(u.cards_count.toString()) || 0);
-      totalCards += cards;
-      totalFee += cards * (parseFloat(u.union_fee_per_card.toString()) || 0);
-      totalDeposit += cards * (parseFloat(u.company_deposit_per_card.toString()) || 0);
-    });
+    if (Array.isArray(filteredUnion)) {
+      filteredUnion.forEach(u => {
+        if (!u) return;
+        totalPaid += parseFloat(u.amount_paid?.toString() || '0') || 0;
+        const cards = parseFloat(u.cards_count?.toString() || '0') || 0;
+        totalCards += cards;
+        totalFee += cards * (parseFloat(u.union_fee_per_card?.toString() || '0') || 0);
+        totalDeposit += cards * (parseFloat(u.company_deposit_per_card?.toString() || '0') || 0);
+      });
+    }
     return { totalPaid, totalFee, totalDeposit, totalCards };
   }, [filteredUnion]);
 
   const dynamicCategories = useMemo(() => {
-    const list = dbCategories.map(c => c.name);
+    const list = Array.isArray(dbCategories) ? dbCategories.map(c => c?.name).filter(Boolean) : [];
     const defaults = ['مصاريف تشغيلية', 'مصاريف فنية', 'مصاريف إدارية'];
     return Array.from(new Set([...defaults, ...list]));
   }, [dbCategories]);
 
   const filteredSubCategories = useMemo(() => {
-    return dbSubCategories.filter(sub => sub.category_name === category).map(sub => sub.name);
+    if (!Array.isArray(dbSubCategories)) return [];
+    return dbSubCategories.filter(sub => sub && sub.category_name === category).map(sub => sub.name);
   }, [dbSubCategories, category]);
 
   useEffect(() => {
-    const list = dbSubCategories.filter(sub => sub.category_name === category);
+    if (!Array.isArray(dbSubCategories)) return;
+    const list = dbSubCategories.filter(sub => sub && sub.category_name === category);
     if (list.length > 0) {
-      if (!list.some(s => s.name === subCategory)) {
+      if (!list.some(s => s && s.name === subCategory)) {
         setSubCategory(list[0].name);
       }
     } else {
@@ -607,36 +628,53 @@ export default function ExpenseManagement({
   }, [category, dbSubCategories]);
 
   const filteredExpenses = useMemo(() => {
+    if (!Array.isArray(expenses)) return [];
     return expenses.filter(e => {
+      if (!e) return false;
       const isIndemnity = e.is_indemnity === true || (e.is_indemnity as any) === 1 || (e.is_indemnity as any) === '1';
       if (activeTab === 'indemnities' && !isIndemnity) return false;
       if (activeTab === 'expenses' && isIndemnity) return false;
 
-      const matchesSearch = e.name.toLowerCase().includes(searchFilter.toLowerCase());
+      const term = (searchFilter || '').toLowerCase();
+      const matchesSearch = !term ||
+        (e.name || '').toLowerCase().includes(term) ||
+        (e.recipient || '').toLowerCase().includes(term) ||
+        (e.voucher_number || '').toLowerCase().includes(term);
+
       const matchesCategory = categoryFilter === 'الكل' || e.category === categoryFilter;
       const matchesStatus = statusFilter === 'الكل' || e.status === statusFilter;
 
-      const expenseDate = new Date(e.expense_date);
-      const matchesFrom = !fromDate || expenseDate >= new Date(fromDate);
-      const matchesTo = !toDate || expenseDate <= new Date(toDate);
+      let matchesFrom = true;
+      let matchesTo = true;
+      if (e.expense_date) {
+        const expenseDate = new Date(e.expense_date);
+        if (!isNaN(expenseDate.getTime())) {
+          matchesFrom = !fromDate || expenseDate >= new Date(fromDate);
+          matchesTo = !toDate || expenseDate <= new Date(toDate);
+        }
+      } else if (fromDate || toDate) {
+        matchesFrom = false;
+      }
 
       return matchesSearch && matchesCategory && matchesStatus && matchesFrom && matchesTo;
     });
   }, [expenses, searchFilter, categoryFilter, statusFilter, fromDate, toDate, activeTab]);
 
   const paginatedExpenses = useMemo(() => {
+    if (!Array.isArray(filteredExpenses)) return [];
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredExpenses.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredExpenses, currentPage]);
 
-  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  const totalPages = Math.ceil((filteredExpenses?.length || 0) / itemsPerPage);
 
   const paginatedUnion = useMemo(() => {
+    if (!Array.isArray(filteredUnion)) return [];
     const startIndex = (currentUnionPage - 1) * unionItemsPerPage;
     return filteredUnion.slice(startIndex, startIndex + unionItemsPerPage);
   }, [filteredUnion, currentUnionPage]);
 
-  const totalUnionPages = Math.ceil(filteredUnion.length / unionItemsPerPage);
+  const totalUnionPages = Math.ceil((filteredUnion?.length || 0) / unionItemsPerPage);
 
   const getPaginationRange = (current: number, total: number) => {
     const delta = 1;
@@ -663,7 +701,8 @@ export default function ExpenseManagement({
   };
 
   const filteredStats = useMemo(() => {
-    const total = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    if (!Array.isArray(filteredExpenses)) return { total: 0, count: 0, average: 0 };
+    const total = filteredExpenses.reduce((sum, e) => sum + (parseFloat(e?.amount?.toString() || '0') || 0), 0);
     return {
       total,
       count: filteredExpenses.length,
@@ -720,11 +759,10 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
-      if (data.success) {
-        setDbCategories(data.data);
-        if (data.data.length > 0 && category === 'قرطاسية') {
-          setCategory(data.data[0].name);
-        }
+      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      setDbCategories(list);
+      if (list.length > 0 && category === 'قرطاسية') {
+        setCategory(list[0].name);
       }
     } catch (e) {
       console.error('Error fetching categories:', e);
@@ -741,9 +779,8 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
-      if (Array.isArray(data)) {
-        setBanks(data);
-      }
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      setBanks(list);
     } catch (e) {
       console.error('Error fetching banks:', e);
     }
@@ -759,7 +796,8 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
-      setEmployees(data);
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      setEmployees(list);
     } catch (e) {
       console.error('Error fetching employees:', e);
     }
@@ -775,10 +813,9 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
-      if (Array.isArray(data)) {
-        const activeAgents = data.filter((a: any) => a.status === 'نشط');
-        setAgents(activeAgents.length > 0 ? activeAgents : data);
-      }
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      const activeAgents = list.filter((a: any) => a?.status === 'نشط');
+      setAgents(activeAgents.length > 0 ? activeAgents : list);
     } catch (e) {
       console.error('Error fetching agents:', e);
     }
@@ -794,9 +831,8 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
-      if (data.success) {
-        setDbSubCategories(data.data);
-      }
+      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      setDbSubCategories(list);
     } catch (e) {
       console.error('Error fetching subcategories:', e);
     }
@@ -813,23 +849,35 @@ export default function ExpenseManagement({
 
   const fetchUnionBalances = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/union-balances`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/union-balances`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       const data = await response.json();
-      if (data.success) {
-        setUnionPurchases(data.data);
-      }
+      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      setUnionPurchases(list);
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching union balances:', e);
     }
   };
 
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/expenses`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/expenses`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       const data = await response.json();
-      if (data.success) {
-        setExpenses(data.data);
+      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      setExpenses(list);
+      if (data.statistics) {
         setStatistics(data.statistics);
       }
     } catch (error) {
@@ -843,11 +891,11 @@ export default function ExpenseManagement({
   const handleOpenModal = (expense: Expense | null = null) => {
     if (expense) {
       setEditingExpense(expense);
-      setName(expense.name);
+      setName(expense.name || '');
       setRecipient(expense.recipient || '');
-      setCategory(expense.category);
+      setCategory(expense.category || 'مصاريف تشغيلية');
       setSubCategory((expense as any).sub_category || '');
-      setAmount(expense.amount.toString());
+      setAmount((expense.amount ?? '').toString());
       setDate(expense.expense_date);
       setStatus(expense.status);
       setNotes(expense.notes || '');
@@ -1365,8 +1413,8 @@ export default function ExpenseManagement({
                         </div>
                       </td>
                       <td style={{ verticalAlign: 'middle' }}>{e.expense_type || '—'}</td>
-                      <td style={{ fontWeight: '900', color: '#ef4444', verticalAlign: 'middle' }}>{e.amount.toLocaleString()} {e.currency === 'USD' ? '$' : 'د.ل'}</td>
-                      <td style={{ fontSize: '0.9rem', verticalAlign: 'middle' }}>{e.expense_date}</td>
+                      <td style={{ fontWeight: '900', color: '#ef4444', verticalAlign: 'middle' }}>{(parseFloat(e.amount?.toString() || '0') || 0).toLocaleString()} {e.currency === 'USD' ? '$' : 'د.ل'}</td>
+                      <td style={{ fontSize: '0.9rem', verticalAlign: 'middle' }}>{e.expense_date || '-'}</td>
                       <td style={{ fontWeight: 600, verticalAlign: 'middle' }}>{e.voucher_number || '-'}</td>
                       <td style={{ verticalAlign: 'middle' }}>
                         {e.receipt_image ? (
@@ -1513,10 +1561,10 @@ export default function ExpenseManagement({
                   paginatedUnion.map(u => (
                     <tr key={u.id}>
                       <td style={{ fontWeight: 'bold', verticalAlign: 'middle' }}>{u.request_number || '-'}</td>
-                      <td style={{ color: '#ef4444', fontWeight: 800, verticalAlign: 'middle' }}>{parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#065f46', fontWeight: 'bold', verticalAlign: 'middle' }}>{u.cards_count}</td>
-                      <td style={{ verticalAlign: 'middle' }}>{(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#92400e', fontWeight: 700, verticalAlign: 'middle' }}>{(u.cards_count * u.company_deposit_per_card).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#ef4444', fontWeight: 800, verticalAlign: 'middle' }}>{(parseFloat(u.amount_paid?.toString() || '0') || 0).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#065f46', fontWeight: 'bold', verticalAlign: 'middle' }}>{u.cards_count || 0}</td>
+                      <td style={{ verticalAlign: 'middle' }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.union_fee_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#92400e', fontWeight: 700, verticalAlign: 'middle' }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.company_deposit_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
                       <td style={{ verticalAlign: 'middle' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
                       <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
