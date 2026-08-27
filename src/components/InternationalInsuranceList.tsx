@@ -270,6 +270,7 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
     
     try {
       showToast('جاري استخراج وتحضير تقرير Excel بالكامل...', 'success');
+      let allDocs: InternationalInsuranceDocument[] = [...documents];
       try {
         const userStr = localStorage.getItem('user');
         const userId = userStr ? JSON.parse(userStr).id : null;
