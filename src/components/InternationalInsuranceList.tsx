@@ -258,41 +258,96 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
   };
 
 
+  const [exportingExcel, setExportingExcel] = useState(false);
+
   const handleExportExcel = async () => {
-    if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+    if (totalDocuments === 0 && documents.length === 0) {
+      showToast('لا توجد بيانات لتصديرها', 'error');
+      return;
+    }
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    setExportingExcel(true);
     
     try {
+      showToast('جاري استخراج وتحضير تقرير Excel بالكامل...', 'success');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
+
+      const headers: HeadersInit = { 'Accept': 'application/json' };
+      if (userId) headers['X-User-Id'] = userId.toString();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const params = new URLSearchParams();
+      if (isArchive) {
+        params.append('archived', 'true');
+      } else if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+      if (searchQuery) params.append('search', searchQuery);
+      if (filters.agentId) params.append('branch_agent_id', filters.agentId);
+      if (filters.year) params.append('year', filters.year);
+      if (filters.month) params.append('month', filters.month);
+      if (filters.day) params.append('day', filters.day);
+      params.append('per_page', '10000');
+
+      const url = `${API_BASE_URL}/international-insurance-documents?${params.toString()}`;
+      const res = await fetch(url, { headers });
+      let allDocs: InternationalInsuranceDocument[] = documents;
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data) && json.data.length > 0) {
+          allDocs = json.data;
+        }
+      }
+
+      if (allDocs.length === 0) {
+        showToast('لا توجد بيانات لتصديرها', 'error');
+        setExportingExcel(false);
+        return;
+      }
+
       const columns = [
         { header: 'رقم التأمين', key: 'document_number', width: 25 },
+        { header: 'رقم الاتحاد (LIFO)', key: 'external_policy_number', width: 25 },
         { header: 'تاريخ الإصدار', key: 'issue_date', width: 25 },
         { header: 'اسم المؤمن', key: 'insured_name', width: 35 },
-        { header: 'رقم الهاتف', key: 'phone', width: 15 },
-        { header: 'القسط الكلي', key: 'total', width: 15 },
-        { header: 'الوكالة', key: 'agency_name', width: 25 },
+        { header: 'رقم الهاتف', key: 'phone', width: 18 },
+        { header: 'نوع المركبة', key: 'vehicle_type', width: 20 },
+        { header: 'نوع التأمين', key: 'insurance_type', width: 20 },
+        { header: 'القسط الكلي', key: 'total', width: 18 },
+        { header: 'الوكالة / المستخدم', key: 'agency_name', width: 25 },
       ];
 
-      const data = documents.map(doc => ({
-        document_number: doc.document_number,
+      const data = allDocs.map(doc => ({
+        document_number: doc.document_number || '-',
+        external_policy_number: doc.external_policy_number || '-',
         issue_date: doc.issue_date ? new Date(doc.issue_date).toLocaleString('ar-LY') : '-',
-        insured_name: doc.insured_name,
+        insured_name: doc.insured_name || '-',
         phone: doc.phone || '-',
+        vehicle_type: doc.vehicle_type?.brand || doc.vehicle_type?.category || '-',
+        insurance_type: doc.insurance_type || '-',
         total: (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(3) + ' د.ل',
-        agency_name: doc.agency_name || '-',
+        agency_name: doc.agency_name || doc.user?.name || doc.user_name || '-',
       }));
 
+      const exportCount = allDocs.length;
+      const yearLabel = filters.year ? ` لعام ${filters.year}` : '';
+
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير تأمين السيارات الدولي (البطاقة البرتقالية)',
-        subtitle: `عدد الوثائق: ${totalDocuments} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        title: `شركة المدار الليبي للتأمين - تقرير وثائق التأمين الدولي (البطاقة البرتقالية)${yearLabel}`,
+        subtitle: `إجمالي الوثائق المستخرجة: ${exportCount} وثيقة - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
-        fileName: 'تقرير_التأمين_الدولي',
-        qrData: `تأمين سيارات دولي - شركة المدار الليبي\nعدد الوثائق: ${totalDocuments}\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: filters.year ? `تقرير_التأمين_الدولي_عام_${filters.year}` : 'تقرير_التأمين_الدولي',
+        qrData: `تقرير التأمين الدولي - شركة المدار الليبي\nعدد الوثائق: ${exportCount}\nالفترة: ${filters.year || 'الكل'}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
-      showToast('تم تصدير التقرير بنجاح', 'success');
+      showToast(`تم تصدير ${exportCount} وثيقة بنجاح`, 'success');
     } catch (error) {
       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -449,10 +504,11 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
           <button
             className="primary add-user-btn"
             onClick={handleExportExcel}
+            disabled={exportingExcel}
             style={{ background: '#166534', marginRight: '10px' }}
           >
-            <i className="fa-solid fa-file-excel"></i>
-            تصدير إكسل
+            <i className={`fa-solid ${exportingExcel ? 'fa-spinner fa-spin' : 'fa-file-excel'}`}></i>
+            {exportingExcel ? 'جاري التصدير...' : 'تصدير إكسل'}
           </button>
           <button
             className="primary add-user-btn"
