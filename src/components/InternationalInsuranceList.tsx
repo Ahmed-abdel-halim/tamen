@@ -270,38 +270,41 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
     
     try {
       showToast('جاري استخراج وتحضير تقرير Excel بالكامل...', 'success');
-      const userStr = localStorage.getItem('user');
-      const userId = userStr ? JSON.parse(userStr).id : null;
-      const token = localStorage.getItem('token');
+      try {
+        const userStr = localStorage.getItem('user');
+        const userId = userStr ? JSON.parse(userStr).id : null;
+        const token = localStorage.getItem('token');
 
-      const headers: HeadersInit = { 'Accept': 'application/json' };
-      if (userId) headers['X-User-Id'] = userId.toString();
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+        const headers: HeadersInit = { 'Accept': 'application/json' };
+        if (userId) headers['X-User-Id'] = userId.toString();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const params = new URLSearchParams();
-      if (isArchive) {
-        params.append('archived', 'true');
-      } else if (statusFilter) {
-        params.append('status', statusFilter);
-      }
-      if (searchQuery) params.append('search', searchQuery);
-      if (filters.agentId) params.append('branch_agent_id', filters.agentId);
-      if (filters.year) params.append('year', filters.year);
-      if (filters.month) params.append('month', filters.month);
-      if (filters.day) params.append('day', filters.day);
-      params.append('per_page', '10000');
-
-      const url = `${API_BASE_URL}/international-insurance-documents?${params.toString()}`;
-      const res = await fetch(url, { headers });
-      let allDocs: InternationalInsuranceDocument[] = documents;
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json.data) && json.data.length > 0) {
-          allDocs = json.data;
+        const params = new URLSearchParams();
+        if (isArchive) {
+          params.append('archived', 'true');
+        } else if (statusFilter) {
+          params.append('status', statusFilter);
         }
+        if (searchQuery) params.append('search', searchQuery);
+        if (filters.agentId) params.append('branch_agent_id', filters.agentId);
+        if (filters.year) params.append('year', filters.year);
+        if (filters.month) params.append('month', filters.month);
+        if (filters.day) params.append('day', filters.day);
+        params.append('per_page', '10000');
+
+        const url = `${API_BASE_URL}/international-insurance-documents?${params.toString()}`;
+        const res = await fetch(url, { headers });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            allDocs = json.data;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch all records, falling back to loaded records:', fetchErr);
       }
 
-      if (allDocs.length === 0) {
+      if (!allDocs || allDocs.length === 0) {
         showToast('لا توجد بيانات لتصديرها', 'error');
         setExportingExcel(false);
         return;
@@ -344,8 +347,9 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
       });
 
       showToast(`تم تصدير ${exportCount} وثيقة بنجاح`, 'success');
-    } catch (error) {
-      showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    } catch (error: any) {
+      console.error('Excel Export Error:', error);
+      showToast(`حدث خطأ أثناء تصدير التقرير: ${error?.message || ''}`, 'error');
     } finally {
       setExportingExcel(false);
     }

@@ -35,18 +35,22 @@ export const generatePremiumExcel = async ({
     // Add Company Logo
     try {
       const response = await fetch('/img/logo.png');
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      const logoImage = workbook.addImage({
-        buffer: arrayBuffer,
-        extension: 'png',
-      });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.type.includes('image') || blob.size > 100) {
+          const arrayBuffer = await blob.arrayBuffer();
+          const logoImage = workbook.addImage({
+            buffer: arrayBuffer,
+            extension: 'png',
+          });
 
-      // Position logo at the top right
-      worksheet.addImage(logoImage, {
-        tl: { col: 0, row: 0 },
-        ext: { width: 80, height: 80 }
-      });
+          // Position logo at the top right
+          worksheet.addImage(logoImage, {
+            tl: { col: 0, row: 0 },
+            ext: { width: 80, height: 80 }
+          });
+        }
+      }
     } catch (err) {
       console.warn('Could not load logo for excel:', err);
     }
@@ -55,19 +59,23 @@ export const generatePremiumExcel = async ({
     try {
       const qrContent = qrData || `${title}\nالتاريخ: ${new Date().toLocaleString('ar-LY')}`;
       const qrResponse = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrContent)}`);
-      const qrBlob = await qrResponse.blob();
-      const qrArrayBuffer = await qrBlob.arrayBuffer();
-      const qrImage = workbook.addImage({
-        buffer: qrArrayBuffer,
-        extension: 'png',
-      });
+      if (qrResponse.ok) {
+        const qrBlob = await qrResponse.blob();
+        if (qrBlob.type.includes('image') || qrBlob.size > 100) {
+          const qrArrayBuffer = await qrBlob.arrayBuffer();
+          const qrImage = workbook.addImage({
+            buffer: qrArrayBuffer,
+            extension: 'png',
+          });
 
-      // Position QR code at the top left (Column index depends on column count)
-      const qrColIndex = columns.length - 1;
-      worksheet.addImage(qrImage, {
-        tl: { col: qrColIndex, row: 0 },
-        ext: { width: 80, height: 80 }
-      });
+          // Position QR code at the top left (Column index depends on column count)
+          const qrColIndex = columns.length - 1;
+          worksheet.addImage(qrImage, {
+            tl: { col: qrColIndex, row: 0 },
+            ext: { width: 80, height: 80 }
+          });
+        }
+      }
     } catch (err) {
       console.warn('Could not load QR code for excel:', err);
     }
@@ -168,7 +176,26 @@ export const generatePremiumExcel = async ({
     // Generate Buffer and Save
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `${fileName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const fullFileName = `${fileName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    try {
+      if (typeof saveAs === 'function') {
+        saveAs(blob, fullFileName);
+      } else {
+        throw new Error('saveAs unavailable');
+      }
+    } catch {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fullFileName;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 200);
+    }
 
     return true;
   } catch (error) {
