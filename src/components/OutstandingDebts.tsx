@@ -12,6 +12,8 @@ interface DebtRecord {
   company_share?: number;
   total_paid?: number;
   total_debt: number;
+  past_overdue_debt?: number;
+  current_month_debt?: number;
   last_payment_date: string;
   status: 'critical' | 'warning' | 'normal';
   notes: string;
@@ -52,8 +54,58 @@ export default function OutstandingDebts() {
       }
 
       if (response.ok) {
-        const data = await response.json();
-        setDebts(data);
+        const rawData: any[] = await response.json();
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        // Fetch monthly ledger breakdown for each agent to accurately separate past overdue debt from current active month
+        const enhancedDebts: DebtRecord[] = await Promise.all(
+          rawData.map(async (d) => {
+            let pastOverdue = 0;
+            let currentMonthBalance = 0;
+
+            try {
+              const ledgerRes = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${d.agent_id || d.id}`, { headers });
+              if (ledgerRes.ok) {
+                const ledgerData = await ledgerRes.json();
+                if (ledgerData && Array.isArray(ledgerData.months)) {
+                  ledgerData.months.forEach((m: any) => {
+                    const isCurrentMonth = m.year === currentYear && m.month === currentMonth;
+                    const rem = m.remaining ?? Math.max(0, (m.company_share || 0) + (m.carried_balance || 0) - (m.paid_amount || 0));
+                    if (isCurrentMonth) {
+                      currentMonthBalance += rem;
+                    } else if (m.year < currentYear || (m.year === currentYear && m.month < currentMonth)) {
+                      if (rem > 0.01) pastOverdue += rem;
+                    }
+                  });
+                }
+              }
+            } catch (err) {
+              // Fallback to raw total_debt if ledger fetch fails
+              pastOverdue = d.total_debt;
+            }
+
+            // Determine status based STRICTLY on past ended months overdue
+            let computedStatus: 'critical' | 'warning' | 'normal' = 'normal';
+            if (pastOverdue > 10000) {
+              computedStatus = 'critical';
+            } else if (pastOverdue > 0.01) {
+              computedStatus = 'warning';
+            } else {
+              computedStatus = 'normal';
+            }
+
+            return {
+              ...d,
+              past_overdue_debt: pastOverdue,
+              current_month_debt: currentMonthBalance,
+              status: computedStatus,
+            };
+          })
+        );
+
+        setDebts(enhancedDebts);
       } else {
         const errText = await response.text().catch(() => '');
         console.error('Error response fetching debts:', response.status, errText);
@@ -68,12 +120,17 @@ export default function OutstandingDebts() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'critical': return { bg: '#fee2e2', color: '#991b1b', text: 'خطير (متجاوز)' };
-      case 'warning': return { bg: '#fef3c7', color: '#92400e', text: 'تنبيه' };
-      default: return { bg: '#dcfce7', color: '#166534', text: 'طبيعي' };
+  const getStatusBadge = (debt: DebtRecord) => {
+    if (debt.status === 'critical') {
+      return { bg: '#fee2e2', color: '#991b1b', text: `خطير (متأخرات سابقة: ${debt.past_overdue_debt?.toLocaleString()} د.ل)` };
     }
+    if (debt.status === 'warning') {
+      return { bg: '#fef3c7', color: '#92400e', text: `تنبيه (متأخرات سابقة: ${debt.past_overdue_debt?.toLocaleString()} د.ل)` };
+    }
+    if ((debt.current_month_debt ?? 0) > 0) {
+      return { bg: '#e0f2fe', color: '#0369a1', text: 'طبيعي (إنتاج جاري الشهر الحالي)' };
+    }
+    return { bg: '#dcfce7', color: '#166534', text: 'طبيعي (خالص الحساب)' };
   };
 
   // Dynamic summary calculations
@@ -299,8 +356,9 @@ export default function OutstandingDebts() {
                   لا توجد مديونيات مطابقة للبحث أو الفلتر حالياً
                 </td>
               </tr>
-            ) : filteredDebts.map(debt => {
-              const badge = getStatusBadge(debt.status);
+            ) : (
+              filteredDebts.map(debt => {
+                const badge = getStatusBadge(debt);
               const companyShare = debt.company_share ?? debt.total_debt;
               const totalPaid = debt.total_paid ?? 0;
               return (
@@ -312,8 +370,8 @@ export default function OutstandingDebts() {
                   <td style={{ color: '#059669', fontWeight: 'bold' }}>
                     {totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
                   </td>
-                  <td style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '15px' }}>
-                    {debt.total_debt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+                  <td style={{ color: (debt.past_overdue_debt ?? 0) > 0 ? '#ef4444' : '#059669', fontWeight: 'bold', fontSize: '15px' }}>
+                    {(debt.past_overdue_debt ?? debt.total_debt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
                   </td>
                   <td>{debt.last_payment_date}</td>
                   <td>
@@ -321,22 +379,24 @@ export default function OutstandingDebts() {
                       padding: '4px 10px', borderRadius: '20px', fontSize: '11px',
                       background: badge.bg,
                       color: badge.color,
-                      fontWeight: '800'
+                      fontWeight: '800',
+                      display: 'inline-block'
                     }}>
                       {badge.text}
                     </span>
                   </td>
                   <td>
                     <button 
-                      style={{ background: '#014cb1', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
-                      onClick={() => window.location.href = `/reports/monthly-account-closure?agent_id=${debt.agent_id}`}
+                      style={{ background: '#014cb1', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => window.location.href = `/reports/agent-monthly-ledger?agent_id=${debt.agent_id}`}
                     >
-                      عرض كشف الحساب
+                      <i className="fa-solid fa-file-invoice-dollar" />
+                      إدارة الوكيل
                     </button>
                   </td>
                 </tr>
               );
-            })}
+            }))}
           </tbody>
         </table>
       </div>

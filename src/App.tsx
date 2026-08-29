@@ -289,6 +289,7 @@ function hasAccessToRoute(
     'تسديد التعويضات': ['/reports/finance-claims'],
     'التحصيلات البنكية': ['/reports/bank-reconciliation'],
     'تقرير الإنتاجية المباشر': ['/reports/live-agents-production'],
+    'إدارة الوكيل': ['/reports/agent-monthly-ledger', '/old-documents'],
     'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/old-documents'],
     'تقرير الحوافظ والإنتاجية الشامل': ['/reports/comprehensive-production'],
 
@@ -474,7 +475,7 @@ const menuSections: SidebarSection[] = [
         label: 'المحاسب المالي', icon: 'fa-solid fa-file-contract', children: [
           { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
           { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
-          { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+          { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
           { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
           { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
           { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
@@ -700,7 +701,7 @@ const createMenuSections = (
       { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
       { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
       { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
-      { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
       { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
       { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
@@ -739,7 +740,8 @@ const createMenuSections = (
     'المطابقة والتحصيلات المالية': { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
     'تسديد التعويضات': { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     'تقرير الإنتاجية المباشر': { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
-    'كشف الحساب الشهري للوكيل': { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+    'إدارة الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+    'كشف الحساب الشهري للوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
     'تقرير الحوافظ والإنتاجية الشامل': { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
 
     'الشؤون الفنية': [

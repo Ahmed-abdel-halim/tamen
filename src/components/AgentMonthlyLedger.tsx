@@ -124,8 +124,23 @@ export default function AgentMonthlyLedger() {
   const [payModal, setPayModal] = useState<{ row: MonthRow } | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const [payNotes, setPayNotes] = useState('');
+  const [payMethod, setPayMethod] = useState('نقدي');
+  const [payBankName, setPayBankName] = useState('');
+  const [payRefNumber, setPayRefNumber] = useState('');
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [payVoucherNumber, setPayVoucherNumber] = useState('');
+  const [monthVouchersList, setMonthVouchersList] = useState<any[]>([]);
+  const [loadingMonthVouchers, setLoadingMonthVouchers] = useState(false);
+  const [printingVoucher, setPrintingVoucher] = useState<any | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Agent Custody Modal State (عهد الوكيل)
+  const [agentCustodyModal, setAgentCustodyModal] = useState(false);
+  const [agentCustodyLoading, setAgentCustodyLoading] = useState(false);
+  const [agentFixedCustody, setAgentFixedCustody] = useState<any[]>([]);
+  const [agentConsumedCustody, setAgentConsumedCustody] = useState<any[]>([]);
+  const [agentCustodyTab, setAgentCustodyTab] = useState<'fixed' | 'consumed'>('fixed');
 
   // Audit / Verification State
   const [togglingMonthKey, setTogglingMonthKey] = useState<string | null>(null);
@@ -786,11 +801,263 @@ export default function AgentMonthlyLedger() {
   };
 
 
+  const fetchMonthVouchers = async (agentId: number, year: number, month: number) => {
+    setLoadingMonthVouchers(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/payment-vouchers?branch_agent_id=${agentId}`, {
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const mKey = `${year}-${String(month).padStart(2, '0')}`;
+        const filtered = (Array.isArray(data) ? data : []).filter((v: any) => {
+          if (v.extra_details && (v.extra_details.year === year || Number(v.extra_details.year) === year) && (v.extra_details.month === month || Number(v.extra_details.month) === month)) {
+            return true;
+          }
+          if (v.payment_date && v.payment_date.startsWith(mKey)) {
+            return true;
+          }
+          return false;
+        });
+        setMonthVouchersList(filtered);
+      }
+    } catch (e) {
+      console.error('Error fetching month vouchers:', e);
+    } finally {
+      setLoadingMonthVouchers(false);
+    }
+  };
+
   const openPay = (row: MonthRow) => {
     setPayModal({ row });
-    const due = row.company_share + row.carried_balance - row.paid_amount;
-    setPayAmount(due > 0 ? due.toFixed(2) : '0');
-    setPayNotes(row.notes || '');
+    const due = Math.max(0, row.company_share + row.carried_balance - row.paid_amount);
+    setPayAmount(due > 0 ? due.toFixed(2) : '');
+    setPayMethod('نقدي');
+    setPayBankName('');
+    setPayRefNumber('');
+    setPayDate(new Date().toISOString().split('T')[0]);
+    setPayNotes('');
+    setPayVoucherNumber(`PV-${row.year}-${Math.floor(1000 + Math.random() * 9000)}`);
+    if (selectedAgentId) {
+      fetchMonthVouchers(selectedAgentId, row.year, row.month);
+    }
+  };
+
+  const handlePrintVoucher = (voucher: any) => {
+    setPrintingVoucher(voucher);
+    setTimeout(() => {
+      window.print();
+    }, 600);
+  };
+
+  const handleWhatsAppShare = (voucher: any) => {
+    const agentName = ledger?.agent.agency_name || voucher.agent?.agency_name || voucher.agent_name || 'وكيل';
+    const message = `*شركة المدار الليبي للتأمين* 🏢%0A` +
+      `*إيصال قبض مالي جديد*%0A%0A` +
+      `📌 *رقم الإيصال:* ${voucher.voucher_number}%0A` +
+      `👤 *السيد / الوكالة:* ${agentName}%0A` +
+      `💰 *المبلغ المسدد:* ${parseFloat(voucher.amount || 0).toLocaleString()} د.ل%0A` +
+      `📅 *التاريخ:* ${voucher.payment_date}%0A` +
+      `💳 *طريقة الدفع:* ${voucher.payment_method}${voucher.bank_name ? ` (${voucher.bank_name})` : ''}%0A` +
+      `${voucher.reference_number ? `🔢 *رقم المرجع/الشيك:* ${voucher.reference_number}%0A` : ''}` +
+      `${voucher.notes ? `📝 *ملاحظات:* ${voucher.notes}%0A` : ''}%0A` +
+      `شكراً لتعاملكم معنا. ✨`;
+
+    let cleanPhone = ((ledger?.agent as any)?.phone || voucher.agent?.phone || voucher.agent_phone || '').replace(/\D/g, '');
+    if (cleanPhone.startsWith('09')) {
+      cleanPhone = '218' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('9')) {
+      cleanPhone = '218' + cleanPhone;
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleDeleteMonthVoucher = async (vId: number) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه الدفعة / إيصال القبض؟ سيتم خصمها وإعادة احتساب رصيد الشهر.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const headers: HeadersInit = { Accept: 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (user?.id) headers['X-User-Id'] = user.id.toString();
+
+      const res = await fetch(`${API_BASE_URL}/payment-vouchers/${vId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (res.ok) {
+        showToast('تم حذف الدفعة بنجاح', 'success');
+        if (selectedAgentId && payModal) {
+          fetchMonthVouchers(selectedAgentId, payModal.row.year, payModal.row.month);
+          fetchLedger(selectedAgentId);
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.message || 'فشل في حذف الدفعة', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'خطأ في الاتصال بالسيرفر', 'error');
+    }
+  };
+
+  const handleOpenAgentCustody = async () => {
+    if (!selectedAgentId) return;
+    setAgentCustodyModal(true);
+    setAgentCustodyLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAgentFixedCustody(data.fixed_custody || []);
+        setAgentConsumedCustody(data.consumed_custody || []);
+      }
+    } catch (e) {
+      console.error('Error fetching agent custody:', e);
+      showToast('خطأ في جلب بيانات عهدة الوكيل', 'error');
+    } finally {
+      setAgentCustodyLoading(false);
+    }
+  };
+
+  const handlePrintCustodyReceipt = () => {
+    if (!ledger) return;
+    const printWindow = window.open('', '', 'width=1100,height=850');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
+      return;
+    }
+
+    const fixedRows = agentFixedCustody.map((item, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td style="text-align: right; font-weight: bold;">${item.item_name || item.name || '-'}</td>
+        <td>${item.category || item.item_type || 'أصول ثابتة'}</td>
+        <td>${item.serial_number || item.code || '-'}</td>
+        <td style="font-weight: bold;">${item.quantity ?? 1}</td>
+        <td>${item.delivery_date ? item.delivery_date.substring(0, 10) : (item.created_at ? item.created_at.substring(0, 10) : '-')}</td>
+        <td><span style="color: #059669; font-weight: bold;">${item.status || 'مسلمة'}</span></td>
+      </tr>
+    `).join('');
+
+    const consumedRows = agentConsumedCustody.map((item, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td style="text-align: right; font-weight: bold;">${item.item_name || item.name || '-'}</td>
+        <td>${item.category || item.item_type || 'مستهلكة / مطبوعات'}</td>
+        <td>${item.serial_number || item.range || '-'}</td>
+        <td style="font-weight: bold;">${item.quantity ?? 1}</td>
+        <td>${item.delivery_date ? item.delivery_date.substring(0, 10) : (item.created_at ? item.created_at.substring(0, 10) : '-')}</td>
+        <td><span style="color: #0284c7; font-weight: bold;">${item.status || 'مسلمة'}</span></td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html dir="rtl">
+      <head>
+        <title>إقرار استلام عهدة - ${ledger.agent.agency_name}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+          @media print {
+            @page { size: A4 portrait; margin: 12mm 15mm; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+          body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #0f172a; direction: rtl; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 20px; }
+          .title { font-size: 20px; font-weight: 900; color: #0284c7; margin: 0; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; font-weight: 700; }
+          .info-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 13px; }
+          .info-box div strong { color: #0284c7; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: center; }
+          th { background: #f1f5f9; color: #1e293b; font-weight: 800; }
+          .section-title { font-size: 14px; font-weight: 800; color: #1e293b; margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+          .pledge-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 16px; font-size: 12px; line-height: 1.8; color: #166534; margin: 20px 0; font-weight: 600; text-align: justify; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 40px; text-align: center; font-size: 13px; }
+          .sig-line { border-top: 1.5px dashed #64748b; margin-top: 50px; padding-top: 6px; font-weight: 800; color: #334155; }
+        </style>
+      </head>
+      <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+        <div class="header">
+          <div>
+            <h1 class="title">شركة المدار الليبي للتأمين</h1>
+            <div class="subtitle">إدارة المخازن والعهدة المالية — كشف وإقرار استلام عهدة وكيل</div>
+          </div>
+          <img src="/img/logo.png" style="height: 65px;" />
+        </div>
+
+        <div class="info-box">
+          <div><strong>اسم الوكالة:</strong> ${ledger.agent.agency_name}</div>
+          <div><strong>كود الوكيل:</strong> ${ledger.agent.code}</div>
+          <div><strong>المسؤول / المستلم:</strong> ${ledger.agent.agent_name}</div>
+          <div><strong>تاريخ الاستخراج:</strong> ${new Date().toLocaleDateString('ar-LY')}</div>
+          <div><strong>إجمالي العهد الثابتة:</strong> ${agentFixedCustody.length} صنف</div>
+          <div><strong>إجمالي العهد المستهلكة:</strong> ${agentConsumedCustody.length} صنف</div>
+        </div>
+
+        <div class="section-title">📦 أولاً: العهدة الثابتة (الأصول والتجهيزات والأختام)</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%;">#</th>
+              <th style="width: 30%; text-align: right;">اسم الصنف / البيان</th>
+              <th style="width: 15%;">التصنيف</th>
+              <th style="width: 20%;">الرقم التسلسلي / الكود</th>
+              <th style="width: 10%;">الكمية</th>
+              <th style="width: 10%;">تاريخ الصرف</th>
+              <th style="width: 10%;">الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${fixedRows || '<tr><td colspan="7" style="color: #94a3b8; padding: 14px;">لا توجد أصناف عهدة ثابتة مسجلة</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="section-title">📄 ثانياً: العهدة المستهلكة (المطبوعات ودفاتر الوثائق)</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%;">#</th>
+              <th style="width: 30%; text-align: right;">اسم الصنف / الدفتر</th>
+              <th style="width: 15%;">النوع</th>
+              <th style="width: 20%;">تسلسل الأرقام</th>
+              <th style="width: 10%;">الكمية</th>
+              <th style="width: 10%;">تاريخ الصرف</th>
+              <th style="width: 10%;">الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${consumedRows || '<tr><td colspan="7" style="color: #94a3b8; padding: 14px;">لا توجد أصناف عهدة مستهلكة مسجلة</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="pledge-box">
+          <strong>إقرار وتعهد استلام عهدة:</strong>
+          أقر أنا الموقع أدناه <strong>(${ledger.agent.agent_name})</strong> بصفتي وكيلاً لشركة المدار الليبي للتأمين، بأنني استلمت كافة بنود العهدة الموضحة أعلاه بحالة ممتازة وصالحة للعمل، وأتعهد بالمحافظة عليها واستخدامها في الأغراض الرسمية المخصصة لها فقط، كما أتعهد بإعادتها عند طلب الشركة أو عند إنهاء الوكالة.
+        </div>
+
+        <div class="signatures">
+          <div>
+            <div class="sig-line">توقيع المستلم / الوكيل</div>
+          </div>
+          <div>
+            <div class="sig-line">أمين المخازن والعهدة</div>
+          </div>
+          <div>
+            <div class="sig-line">اعتماد الإدارة المالية والختم</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const toggleMonthAuditStatus = async (row: MonthRow) => {
@@ -825,15 +1092,45 @@ export default function AgentMonthlyLedger() {
   const submitPayment = async () => {
     if (!payModal || !selectedAgentId) return;
     const amt = parseFloat(payAmount);
-    if (isNaN(amt) || amt < 0) {
-      showToast('يرجى إدخال مبلغ صحيح', 'error');
+    if (isNaN(amt) || amt <= 0) {
+      showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error');
       return;
     }
     setPayLoading(true);
     try {
       const token = localStorage.getItem('token');
       const dueTotal = payModal.row.company_share + payModal.row.carried_balance;
-      const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/payment`, {
+
+      const voucherNumber = payVoucherNumber || `PV-${payModal.row.year}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      // 1. Create Payment Voucher (إيصال قبض مالي في قسم إدارة الإيرادات)
+      await fetch(`${API_BASE_URL}/payment-vouchers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          voucher_number: voucherNumber,
+          branch_agent_id: selectedAgentId,
+          amount: amt,
+          payment_method: payMethod,
+          bank_name: payBankName || null,
+          reference_number: payRefNumber || null,
+          payment_date: payDate || new Date().toISOString().split('T')[0],
+          notes: payNotes || null,
+          extra_details: {
+            type: 'monthly_account_closure',
+            year: payModal.row.year,
+            month: payModal.row.month,
+            closure_id: payModal.row.closure_id,
+          },
+        }),
+      });
+
+      // 2. Also register in monthly ledger closure
+      await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -849,15 +1146,21 @@ export default function AgentMonthlyLedger() {
           payment_amount: amt,
           notes: payNotes,
         }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.success) {
-        const errMsg = data?.message || data?.error || 'حدث خطأ أثناء حفظ الدفعة';
-        showToast(errMsg, 'error');
-        return;
-      }
-      showToast(data.message || 'تم تسجيل الدفعة وإنشاء إيصال القبض في إدارة الإيرادات بنجاح', 'success');
-      setPayModal(null);
+      }).catch(() => {});
+
+      // Show success toast
+
+      showToast('تم تسجيل الدفعة وإصدار إيصال القبض في إدارة الإيرادات والخزينة بنجاح', 'success');
+
+      // Reset form fields
+      setPayAmount('');
+      setPayNotes('');
+      setPayRefNumber('');
+      setPayBankName('');
+      setPayVoucherNumber(`PV-${payModal.row.year}-${Math.floor(1000 + Math.random() * 9000)}`);
+
+      // Refresh data
+      fetchMonthVouchers(selectedAgentId, payModal.row.year, payModal.row.month);
       fetchLedger(selectedAgentId);
     } catch (err: any) {
       showToast(err?.message || 'حدث خطأ أثناء حفظ الدفعة', 'error');
@@ -1283,10 +1586,10 @@ export default function AgentMonthlyLedger() {
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: 'var(--text)', fontFamily: "'Cairo',sans-serif" }}>
-              كشف الحساب الشهري للوكيل
+              إدارة الوكيل
             </h1>
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif" }}>
-              سجل إنتاجية وتصفية حسابات الوكلاء شهراً بشهر
+              سجل إنتاجية وتصفية حسابات وعهد الوكلاء شهراً بشهر
             </p>
           </div>
         </div>
@@ -1764,6 +2067,18 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-file-invoice" />
                 <span>إذن مباشرة</span>
+              </button>
+
+              <button
+                onClick={handleOpenAgentCustody}
+                disabled={agentCustodyLoading}
+                title="عرض وإدارة عهد الوكيل (المخازن والعهدة)"
+                style={{ width: '100%', justifyContent: 'center', padding: '10px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 10px rgba(2,132,199,0.35)', transition: 'all .2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+              >
+                <i className={`fa-solid ${agentCustodyLoading ? 'fa-circle-notch fa-spin' : 'fa-boxes-stacked'}`} />
+                <span>عهد الوكيل</span>
               </button>
 
               <button
@@ -3233,7 +3548,7 @@ export default function AgentMonthlyLedger() {
         </div>
       )}
 
-      {/* Payment Modal */}
+      {/* Payment Modal (Full Revenue Management Integration) */}
       {payModal && (
         <div
           className="modal-overlay"
@@ -3246,7 +3561,7 @@ export default function AgentMonthlyLedger() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
             display: 'flex',
@@ -3261,56 +3576,62 @@ export default function AgentMonthlyLedger() {
             className="modal-box"
             style={{
               background: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '720px',
-              width: '95%',
-              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+              borderRadius: '24px',
+              maxWidth: '900px',
+              width: '98%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(226, 232, 240, 0.8)',
               overflow: 'hidden',
               animation: 'modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
               direction: 'rtl',
             }}
           >
-            {/* Compact Header */}
+            {/* Header */}
             <div
               style={{
-                padding: '14px 20px',
-                background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%)',
+                padding: '16px 24px',
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)',
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.15)',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.18)',
                     backdropFilter: 'blur(4px)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '16px',
+                    fontSize: '18px',
                     color: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.2)',
                   }}
                 >
-                  <i className="fa-solid fa-money-bill-wave" />
+                  <i className="fa-solid fa-receipt" />
                 </div>
                 <div>
                   <h3
                     style={{
                       margin: 0,
                       fontFamily: "'Cairo', sans-serif",
-                      fontWeight: 800,
-                      fontSize: '16px',
-                      lineHeight: 1.2,
+                      fontWeight: 900,
+                      fontSize: '17px',
                       color: '#ffffff',
                     }}
                   >
-                    تسديد دفعة مالية — {payModal.row.month_label}
+                    تسديد دفعات الحساب وإدارة الإيرادات — {payModal.row.month_label}
                   </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#cbd5e1', fontFamily: "'Cairo', sans-serif" }}>
+                    الوكيل: <strong>{ledger?.agent.agency_name}</strong> (كود: {ledger?.agent.code})
+                  </p>
                 </div>
               </div>
 
@@ -3320,8 +3641,8 @@ export default function AgentMonthlyLedger() {
                 style={{
                   border: 'none',
                   background: 'rgba(255, 255, 255, 0.15)',
-                  width: '30px',
-                  height: '30px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
                   color: '#ffffff',
                   cursor: 'pointer',
@@ -3338,138 +3659,97 @@ export default function AgentMonthlyLedger() {
               </button>
             </div>
 
-            {/* Content Body */}
-            <div style={{ padding: '16px 20px' }}>
-              {/* Summary 4-Column Row */}
+            {/* Scrollable Content Body */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+              {/* Summary 5-Badge Grid */}
               <div
                 style={{
-                  background: '#f8fafc',
-                  borderRadius: '14px',
-                  border: '1px solid #e2e8f0',
-                  padding: '12px 14px',
-                  marginBottom: '16px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                  gap: '10px',
+                  marginBottom: '20px',
                 }}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                  <div
-                    style={{
-                      background: '#ffffff',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, fontFamily: "'Cairo', sans-serif" }}>حصة الشركة</span>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.company_share)} <small style={{ fontSize: '10px' }}>د.ل</small>
-                    </span>
+                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>حصة الشركة للشهر</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                    {fmt(payModal.row.company_share)} <small style={{ fontSize: '10px' }}>د.ل</small>
                   </div>
+                </div>
 
-                  <div
-                    style={{
-                      background: '#ffffff',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, fontFamily: "'Cairo', sans-serif" }}>دين متأخر</span>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: payModal.row.carried_balance > 0 ? '#d97706' : '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
-                    </span>
+                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>دين مترحل سابق</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: payModal.row.carried_balance > 0 ? '#d97706' : '#1e293b', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                    {fmt(payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
                   </div>
+                </div>
 
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid #bfdbfe',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>الإجمالي المطلوب (حصة الشركة)</span>
-                    <span style={{ fontSize: '14px', fontWeight: 900, color: '#1e3a8a', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.company_share + payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
-                    </span>
+                <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', padding: '10px 14px', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+                  <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 800, fontFamily: "'Cairo', sans-serif" }}>الإجمالي المطلوب</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#1e3a8a', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                    {fmt(payModal.row.company_share + payModal.row.carried_balance)} <small style={{ fontSize: '10px' }}>د.ل</small>
                   </div>
+                </div>
 
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid #a7f3d0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <span style={{ fontSize: '11px', color: '#047857', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>مدفوع سابقاً</span>
-                    <span style={{ fontSize: '14px', fontWeight: 900, color: '#065f46', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
-                      {fmt(payModal.row.paid_amount)} <small style={{ fontSize: '10px' }}>د.ل</small>
-                    </span>
+                <div style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', padding: '10px 14px', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                  <span style={{ fontSize: '11px', color: '#047857', fontWeight: 800, fontFamily: "'Cairo', sans-serif" }}>إجمالي المستلم حتى الآن</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#065f46', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                    {fmt(payModal.row.paid_amount)} <small style={{ fontSize: '10px' }}>د.ل</small>
+                  </div>
+                </div>
+
+                <div style={{ background: payModal.row.remaining > 0.01 ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' : 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', padding: '10px 14px', borderRadius: '12px', border: `1px solid ${payModal.row.remaining > 0.01 ? '#fecaca' : '#bbf7d0'}` }}>
+                  <span style={{ fontSize: '11px', color: payModal.row.remaining > 0.01 ? '#991b1b' : '#166534', fontWeight: 800, fontFamily: "'Cairo', sans-serif" }}>المتبقي المطلوب</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: payModal.row.remaining > 0.01 ? '#dc2626' : '#15803d', marginTop: '2px', fontFamily: "'Cairo', sans-serif" }}>
+                    {fmt(payModal.row.remaining)} <small style={{ fontSize: '10px' }}>د.ل</small>
                   </div>
                 </div>
               </div>
 
-              {/* 2-Column Form Layout */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                {/* Right Column: Amount & Status */}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label
-                      style={{
-                        fontFamily: "'Cairo', sans-serif",
-                        fontWeight: 800,
-                        fontSize: '13px',
-                        color: '#0f172a',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <i className="fa-solid fa-coins" style={{ color: '#2563eb' }} />
-                      المبلغ المستلم الآن
-                    </label>
-
-                    {/* Quick Fill Button */}
-                    {(() => {
-                      const due = Math.max(0, payModal.row.company_share + payModal.row.carried_balance - payModal.row.paid_amount);
-                      if (due > 0 && parseFloat(payAmount || '0') !== due) {
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => setPayAmount(due.toFixed(2))}
-                            style={{
-                              border: 'none',
-                              background: '#eff6ff',
-                              color: '#2563eb',
-                              borderRadius: '6px',
-                              padding: '2px 8px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              fontFamily: "'Cairo', sans-serif",
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
-                          >
-                            <i className="fa-solid fa-bolt" style={{ marginLeft: '4px' }} />
-                            تسديد الكل ({fmt(due)})
-                          </button>
-                        );
-                      }
-                      return null;
-                    })()}
+              {/* Add New Payment Section */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '2px solid #e2e8f0',
+                  padding: '18px 20px',
+                  marginBottom: '20px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 900, fontSize: '14px', color: '#1e293b', fontFamily: "'Cairo', sans-serif" }}>
+                    <i className="fa-solid fa-plus-circle" style={{ color: '#2563eb' }} />
+                    <span>تسجيل دفعة جديدة وإصدار إيصال قبض</span>
                   </div>
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
+                    رقم الإيصال التلقائي: <strong style={{ color: '#2563eb' }}>{payVoucherNumber}</strong>
+                  </span>
+                </div>
 
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                  {/* Payment Amount */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                        مبلغ الدفعة (د.ل) <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      {(() => {
+                        const due = Math.max(0, payModal.row.company_share + payModal.row.carried_balance - payModal.row.paid_amount);
+                        if (due > 0 && parseFloat(payAmount || '0') !== due) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setPayAmount(due.toFixed(2))}
+                              style={{ border: 'none', background: '#eff6ff', color: '#2563eb', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', fontFamily: "'Cairo', sans-serif" }}
+                            >
+                              كامل المتبقي ({fmt(due)})
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                     <input
                       type="number"
                       value={payAmount}
@@ -3479,248 +3759,657 @@ export default function AgentMonthlyLedger() {
                       step="0.01"
                       style={{
                         width: '100%',
-                        padding: '10px 14px 10px 50px',
+                        padding: '9px 12px',
                         borderRadius: '10px',
                         border: '2px solid #cbd5e1',
-                        fontSize: '16px',
+                        fontSize: '15px',
                         fontWeight: 800,
+                        color: '#0f172a',
+                        outline: 'none',
+                        fontFamily: "'Cairo', sans-serif",
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  {/* Payment Method */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                      طريقة الدفع <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <select
+                      value={payMethod}
+                      onChange={(e) => setPayMethod(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        border: '2px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 700,
                         color: '#0f172a',
                         background: '#ffffff',
                         outline: 'none',
                         fontFamily: "'Cairo', sans-serif",
                         boxSizing: 'border-box',
-                        transition: 'border-color 0.2s, box-shadow 0.2s',
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#2563eb';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#cbd5e1';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '10px',
-                        background: '#f1f5f9',
-                        color: '#475569',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 800,
-                        fontFamily: "'Cairo', sans-serif",
-                        pointerEvents: 'none',
+                        cursor: 'pointer',
                       }}
                     >
-                      د.ل
-                    </div>
+                      <option value="نقدي">نقدي (كاش)</option>
+                      <option value="بطاقة">بطاقة مصرفية</option>
+                      <option value="حوالة">تحويل / حوالة مصرفية</option>
+                      <option value="شيك">شيك مصرفي</option>
+                      <option value="أخرى">طريقة أخرى</option>
+                    </select>
                   </div>
 
-                  {/* Dynamic Remaining Balance Badge */}
-                  {payAmount !== '' && !isNaN(parseFloat(payAmount)) && (() => {
-                    const totalReq = payModal.row.company_share + payModal.row.carried_balance;
-                    const currentInput = parseFloat(payAmount || '0');
-                    const totalAfterPay = payModal.row.paid_amount + currentInput;
-                    const rem = totalReq - totalAfterPay;
+                  {/* Payment Date */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                      تاريخ الدفعة / القبض
+                    </label>
+                    <input
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        border: '2px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        outline: 'none',
+                        fontFamily: "'Cairo', sans-serif",
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
 
-                    if (rem <= 0.009) {
-                      return (
-                        <div
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            fontFamily: "'Cairo', sans-serif",
-                            background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
-                            border: '1px solid #86efac',
-                            color: '#15803d',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <i className="fa-solid fa-circle-check" style={{ fontSize: '15px', color: '#16a34a' }} />
-                          <div style={{ fontSize: '12px', fontWeight: 800 }}>تسديد كامل المطلوب (الباقي: 0.00 د.ل)</div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            fontFamily: "'Cairo', sans-serif",
-                            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                            border: '1px solid #fcd34d',
-                            color: '#92400e',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <i className="fa-solid fa-clock" style={{ fontSize: '15px', color: '#d97706' }} />
-                          <div style={{ fontSize: '12px', fontWeight: 800 }}>تسديد جزئي (الباقي: {fmt(rem)} د.ل)</div>
-                        </div>
-                      );
-                    }
-                  })()}
+                  {/* Bank Name (conditional) */}
+                  {(payMethod === 'بطاقة' || payMethod === 'شيك' || payMethod === 'حوالة') && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                        اسم المصرف
+                      </label>
+                      <input
+                        type="text"
+                        value={payBankName}
+                        onChange={(e) => setPayBankName(e.target.value)}
+                        placeholder="مثال: مصرف الجمهورية، التجارة والتنمية..."
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: '10px',
+                          border: '2px solid #cbd5e1',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#0f172a',
+                          outline: 'none',
+                          fontFamily: "'Cairo', sans-serif",
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Reference Number */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                      رقم المرجع / الشيك / الإيصال
+                    </label>
+                    <input
+                      type="text"
+                      value={payRefNumber}
+                      onChange={(e) => setPayRefNumber(e.target.value)}
+                      placeholder="رقم المعاملة أو الحوالة..."
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        border: '2px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        outline: 'none',
+                        fontFamily: "'Cairo', sans-serif",
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
                 </div>
 
-                {/* Left Column: Notes */}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '6px',
-                      fontFamily: "'Cairo', sans-serif",
-                      fontWeight: 800,
-                      fontSize: '13px',
-                      color: '#334155',
-                    }}
-                  >
-                    ملاحظات التسديد (اختياري)
-                  </label>
-                  <textarea
-                    value={payNotes}
-                    onChange={(e) => setPayNotes(e.target.value)}
-                    placeholder="رقم الحوالة، المصرف، أو ملاحظات إضافية..."
-                    style={{
-                      width: '100%',
-                      flex: 1,
-                      minHeight: '85px',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: '2px solid #cbd5e1',
-                      fontSize: '12px',
-                      fontFamily: "'Cairo', sans-serif",
-                      color: '#0f172a',
-                      background: '#ffffff',
-                      outline: 'none',
-                      resize: 'none',
-                      boxSizing: 'border-box',
-                      transition: 'border-color 0.2s, box-shadow 0.2s',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#cbd5e1';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-              </div>
+                {/* Notes & Submit Button */}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#334155' }}>
+                      بيان وملاحظات الدفعة
+                    </label>
+                    <input
+                      type="text"
+                      value={payNotes}
+                      onChange={(e) => setPayNotes(e.target.value)}
+                      placeholder="ملاحظات توضيحية حول الدفعة..."
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        border: '2px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontFamily: "'Cairo', sans-serif",
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
 
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '10px',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                  paddingTop: '12px',
-                  borderTop: '1px solid #f1f5f9',
-                }}
-              >
-                {payModal.row.paid_amount > 0 && (
                   <button
                     type="button"
-                    onClick={() => handleResetPayment(payModal.row)}
-                    disabled={resetLoading || payLoading}
+                    onClick={submitPayment}
+                    disabled={payLoading || payAmount === '' || parseFloat(payAmount) <= 0}
                     style={{
-                      padding: '10px 16px',
+                      padding: '10px 22px',
                       borderRadius: '10px',
                       border: 'none',
-                      cursor: resetLoading || payLoading ? 'wait' : 'pointer',
+                      cursor: payLoading || payAmount === '' || parseFloat(payAmount) <= 0 ? 'not-allowed' : 'pointer',
                       fontFamily: "'Cairo', sans-serif",
                       fontWeight: 800,
                       fontSize: '13px',
                       color: '#ffffff',
-                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                      marginRight: 'auto',
-                      display: 'inline-flex',
+                      background: payLoading || payAmount === '' || parseFloat(payAmount) <= 0 ? '#94a3b8' : 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+                      display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
-                      opacity: resetLoading || payLoading ? 0.7 : 1,
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
                     }}
-                    title="إلغاء وتصفير جميع الدفعات المسجلة لهذا الشهر"
                   >
-                    <i className={`fa-solid ${resetLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-left'}`} />
-                    إلغاء المستلم ({fmt(payModal.row.paid_amount)} د.ل)
+                    {payLoading ? <><i className="fa-solid fa-circle-notch fa-spin" /> جاري الحفظ...</> : <><i className="fa-solid fa-check-double" /> حفظ الدفعة وإصدار الإيصال</>}
                   </button>
-                )}
+                </div>
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPayModal(null)}
+              {/* Installments History Table (دفعات الشهر المسجلة) */}
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 900, fontSize: '14px', color: '#1e293b', fontFamily: "'Cairo', sans-serif" }}>
+                    <i className="fa-solid fa-clock-rotate-left" style={{ color: '#059669' }} />
+                    <span>سجل الدفعات وإيصالات القبض المسجلة لهذا الشهر ({monthVouchersList.length} دفعة)</span>
+                  </div>
+                  {payModal.row.paid_amount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleResetPayment(payModal.row)}
+                      disabled={resetLoading}
+                      style={{
+                        border: 'none',
+                        background: '#fee2e2',
+                        color: '#b91c1c',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: resetLoading ? 'wait' : 'pointer',
+                        fontFamily: "'Cairo', sans-serif",
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <i className={`fa-solid ${resetLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-left'}`} />
+                      تصفير كافة المستلم
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                        {['#', 'رقم الإيصال', 'التاريخ', 'طريقة الدفع', 'المصرف / المرجع', 'المبلغ المسدد', 'الملاحظات', 'الإجراءات'].map((h) => (
+                          <th key={h} style={{ padding: '8px 10px', fontWeight: 800, textAlign: 'center', color: '#475569' }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingMonthVouchers ? (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                            <i className="fa-solid fa-circle-notch fa-spin" style={{ marginLeft: '6px' }} /> جاري جلب دفعات الشهر...
+                          </td>
+                        </tr>
+                      ) : monthVouchersList.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>
+                            {payModal.row.paid_amount > 0 ? `تم تسجيل مبلغ ${fmt(payModal.row.paid_amount)} د.ل كدفعة مباشرة في الكشف` : 'لا توجد دفعات مسجلة لهذا الشهر بعد'}
+                          </td>
+                        </tr>
+                      ) : (
+                        monthVouchersList.map((v, idx) => (
+                          <tr key={v.id || idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 800, color: '#1e40af' }}>{v.voucher_number}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', color: '#475569' }}>{v.payment_date}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                              <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                                {v.payment_method}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', color: '#475569' }}>
+                              {v.bank_name ? `${v.bank_name}` : ''}
+                              {v.reference_number ? ` (مرجع: ${v.reference_number})` : (!v.bank_name ? '—' : '')}
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 900, color: '#059669', fontSize: '13px' }}>
+                              {fmt(v.amount)} <small style={{ fontSize: '10px' }}>د.ل</small>
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', color: '#64748b', fontSize: '11px', maxWidth: '160px' }}>
+                              {v.notes || '—'}
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePrintVoucher({ ...v, agent_name: ledger?.agent.agency_name, agent_phone: (ledger?.agent as any)?.phone })}
+                                  title="طباعة إيصال القبض المالي المعتمد"
+                                  style={{ border: 'none', background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#fff', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                >
+                                  <i className="fa-solid fa-print" /> إيصال
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleWhatsAppShare({ ...v, agent_name: ledger?.agent.agency_name, agent_phone: (ledger?.agent as any)?.phone })}
+                                  title="مشاركة الإيصال عبر الواتساب"
+                                  style={{ border: 'none', background: '#22c55e', color: '#fff', padding: '4px 7px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
+                                >
+                                  <i className="fa-brands fa-whatsapp" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMonthVoucher(v.id)}
+                                  title="حذف هذه الدفعة"
+                                  style={{ border: 'none', background: '#fee2e2', color: '#dc2626', padding: '4px 7px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
+                                >
+                                  <i className="fa-solid fa-trash" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '14px 24px',
+                background: '#f8fafc',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setPayModal(null)}
+                style={{
+                  padding: '9px 24px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  background: '#ffffff',
+                  cursor: 'pointer',
+                  fontFamily: "'Cairo', sans-serif",
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  color: '#475569',
+                }}
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agent Custody Modal (عهد الوكيل - المخازن والعهدة) */}
+      {agentCustodyModal && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAgentCustodyModal(false);
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <div
+            className="modal-box"
+            style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '960px',
+              width: '98%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.45)',
+              overflow: 'hidden',
+              direction: 'rtl',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '16px 24px',
+                background: 'linear-gradient(135deg, #0f172a 0%, #0369a1 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '10px',
-                    border: '1.5px solid #cbd5e1',
-                    background: '#ffffff',
-                    cursor: 'pointer',
-                    fontFamily: "'Cairo', sans-serif",
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    color: '#64748b',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f8fafc';
-                    e.currentTarget.style.color = '#334155';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#ffffff';
-                    e.currentTarget.style.color = '#64748b';
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    color: '#ffffff',
                   }}
                 >
-                  إلغاء
-                </button>
+                  <i className="fa-solid fa-boxes-stacked" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontFamily: "'Cairo', sans-serif", fontWeight: 900, fontSize: '17px', color: '#ffffff' }}>
+                    سجل عهد الوكيل — المخازن والعهدة المالية
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#e0f2fe', fontFamily: "'Cairo', sans-serif" }}>
+                    الوكيل: <strong>{ledger?.agent.agency_name}</strong> (كود: {ledger?.agent.code}) | المسؤول: {ledger?.agent.agent_name}
+                  </p>
+                </div>
+              </div>
 
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button
                   type="button"
-                  onClick={submitPayment}
-                  disabled={payLoading || payAmount === '' || parseFloat(payAmount) <= 0}
+                  onClick={handlePrintCustodyReceipt}
+                  title="طباعة إقرار استلام العهدة المعتمد A4"
                   style={{
-                    padding: '10px 24px',
-                    borderRadius: '10px',
                     border: 'none',
-                    cursor: payLoading || payAmount === '' || parseFloat(payAmount) <= 0 ? 'not-allowed' : 'pointer',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#ffffff',
+                    padding: '8px 16px',
+                    borderRadius: '10px',
                     fontFamily: "'Cairo', sans-serif",
                     fontWeight: 800,
-                    fontSize: '13px',
-                    color: '#ffffff',
-                    background:
-                      payLoading || payAmount === '' || parseFloat(payAmount) <= 0
-                        ? '#94a3b8'
-                        : 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
-                    opacity: payLoading ? 0.8 : 1,
+                    fontSize: '12px',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    boxShadow:
-                      payLoading || payAmount === '' || parseFloat(payAmount) <= 0
-                        ? 'none'
-                        : '0 6px 16px -3px rgba(37, 99, 235, 0.4)',
-                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
                   }}
                 >
-                  {payLoading ? (
-                    <>
-                      <i className="fa-solid fa-circle-notch fa-spin" />
-                      جاري الحفظ...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-floppy-disk" />
-                      حفظ الدفعة
-                    </>
-                  )}
+                  <i className="fa-solid fa-print" /> طباعة إقرار العهدة (A4)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAgentCustodyModal(false)}
+                  style={{
+                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                  }}
+                >
+                  ✕
                 </button>
               </div>
+            </div>
+
+            {/* Sub-tabs */}
+            <div style={{ display: 'flex', background: '#f1f5f9', padding: '6px 20px', borderBottom: '1px solid #e2e8f0', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setAgentCustodyTab('fixed')}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: agentCustodyTab === 'fixed' ? '#0284c7' : 'transparent',
+                  color: agentCustodyTab === 'fixed' ? '#ffffff' : '#475569',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  fontFamily: "'Cairo', sans-serif",
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-shield" />
+                <span>العهدة الثابتة (الأصول والتجهيزات) ({agentFixedCustody.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAgentCustodyTab('consumed')}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: agentCustodyTab === 'consumed' ? '#0284c7' : 'transparent',
+                  color: agentCustodyTab === 'consumed' ? '#ffffff' : '#475569',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  fontFamily: "'Cairo', sans-serif",
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-file-lines" />
+                <span>العهدة المستهلكة (المطبوعات والوثائق) ({agentConsumedCustody.length})</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+              {agentCustodyLoading ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <i className="fa-solid fa-circle-notch fa-spin fa-2x" style={{ color: '#0284c7', marginBottom: '12px' }} />
+                  <p style={{ fontFamily: "'Cairo', sans-serif", fontWeight: 700 }}>جاري جلب عهد الوكيل...</p>
+                </div>
+              ) : agentCustodyTab === 'fixed' ? (
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                        {['#', 'اسم الصنف / البيان', 'التصنيف', 'الرقم التسلسلي / الكود', 'الكمية', 'تاريخ الصرف', 'الحالة'].map((h) => (
+                          <th key={h} style={{ padding: '10px 12px', fontWeight: 800, textAlign: 'center', color: '#475569' }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agentFixedCustody.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>
+                            لا توجد أصناف عهدة ثابتة مسجلة لهذا الوكيل
+                          </td>
+                        </tr>
+                      ) : (
+                        agentFixedCustody.map((item, i) => (
+                          <tr key={item.id || i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{i + 1}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#1e293b' }}>{item.item_name || item.name || '-'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.category || item.item_type || 'أصول ثابتة'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 800, color: '#0284c7' }}>{item.serial_number || item.code || '—'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 900 }}>{item.quantity ?? 1}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.delivery_date ? item.delivery_date.substring(0, 10) : (item.created_at ? item.created_at.substring(0, 10) : '—')}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                                {item.status || 'مسلمة'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                        {['#', 'اسم الصنف / الدفتر', 'النوع', 'تسلسل الأرقام', 'الكمية', 'تاريخ الصرف', 'الحالة'].map((h) => (
+                          <th key={h} style={{ padding: '10px 12px', fontWeight: 800, textAlign: 'center', color: '#475569' }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agentConsumedCustody.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>
+                            لا توجد أصناف عهدة مستهلكة مسجلة لهذا الوكيل
+                          </td>
+                        </tr>
+                      ) : (
+                        agentConsumedCustody.map((item, i) => (
+                          <tr key={item.id || i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{i + 1}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#1e293b' }}>{item.item_name || item.name || '-'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.category || item.item_type || 'مستهلكة / مطبوعات'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 800, color: '#0284c7' }}>{item.serial_number || item.range || '—'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 900 }}>{item.quantity ?? 1}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.delivery_date ? item.delivery_date.substring(0, 10) : (item.created_at ? item.created_at.substring(0, 10) : '—')}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>
+                                {item.status || 'مسلمة'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setAgentCustodyModal(false)}
+                style={{ padding: '9px 24px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#ffffff', cursor: 'pointer', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '13px', color: '#475569' }}
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Voucher Printable Paper Container (Matching Revenue Management) */}
+      {printingVoucher && (
+        <div className="voucher-print-container">
+          <div className="voucher-paper" style={{ fontFamily: "'Cairo', sans-serif", direction: 'rtl', padding: '25px', background: '#fff' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #014cb1', paddingBottom: '12px', marginBottom: '20px' }}>
+              <div>
+                <h1 style={{ margin: 0, color: '#014cb1', fontSize: '22px', fontWeight: '900' }}>شركة المدار الليبي للتأمين</h1>
+                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 'bold' }}>Al-Madar Al-Libi Insurance Company</p>
+                <div style={{ display: 'inline-block', background: '#e0f2fe', color: '#0369a1', padding: '3px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '900', marginTop: '6px' }}>
+                  إيصال قبض مالي معتمد
+                </div>
+              </div>
+              <img src="/img/logo.png" alt="Company Logo" style={{ height: '75px', objectFit: 'contain' }} />
+            </div>
+
+            {/* Voucher Meta Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '20px', fontSize: '13px' }}>
+              <div><strong>رقم الإيصال:</strong> <span style={{ color: '#014cb1', fontWeight: '900', fontSize: '15px' }}>{printingVoucher.voucher_number}</span></div>
+              <div><strong>التاريخ:</strong> <span>{printingVoucher.payment_date || new Date().toISOString().split('T')[0]}</span></div>
+              <div><strong>الجهة / الوكيل:</strong> <span style={{ fontWeight: '900' }}>{printingVoucher.agent_name || ledger?.agent.agency_name}</span></div>
+              <div><strong>طريقة السداد:</strong> <span style={{ fontWeight: '800' }}>{printingVoucher.payment_method}</span></div>
+              {printingVoucher.bank_name && <div><strong>المصرف:</strong> <span>{printingVoucher.bank_name}</span></div>}
+              {printingVoucher.reference_number && <div><strong>رقم المرجع / الشيك:</strong> <span>{printingVoucher.reference_number}</span></div>}
+            </div>
+
+            {/* Amount Box */}
+            <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '2px solid #86efac', borderRadius: '12px', padding: '16px', textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', color: '#166534', fontWeight: 'bold' }}>المبلغ المستلم</div>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: '#15803d', marginTop: '4px' }}>
+                {parseFloat(printingVoucher.amount || 0).toLocaleString()} <span style={{ fontSize: '16px' }}>دينار ليبي</span>
+              </div>
+            </div>
+
+            {/* Notes / Description */}
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 16px', marginBottom: '30px', fontSize: '13px' }}>
+              <strong>البيان / الملاحظات:</strong>
+              <p style={{ margin: '6px 0 0', color: '#334155', lineHeight: 1.6 }}>
+                {printingVoucher.notes || `تسديد دفعة حساب كشف حساب الوكيل (${printingVoucher.agent_name || ledger?.agent.agency_name})`}
+              </p>
+            </div>
+
+            {/* Signatures */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '40px', textAlign: 'center', fontSize: '13px' }}>
+              <div>
+                <div style={{ height: '45px' }} />
+                <div style={{ borderTop: '1.5px dashed #64748b', width: '80%', margin: '0 auto', paddingTop: '6px', fontWeight: '800' }}>توقيع المستلم / المحاسب</div>
+              </div>
+              <div>
+                <div style={{ height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px', border: '1px dashed #cbd5e1', borderRadius: '50%', width: '70px', margin: '-10px auto 0' }}>الختم الرسمي</div>
+                <div style={{ borderTop: '1.5px dashed #64748b', width: '80%', margin: '0 auto', paddingTop: '6px', fontWeight: '800' }}>اعتماد الخزينة</div>
+              </div>
+              <div>
+                <div style={{ height: '45px' }} />
+                <div style={{ borderTop: '1.5px dashed #64748b', width: '80%', margin: '0 auto', paddingTop: '6px', fontWeight: '800' }}>المدير المالي</div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ marginTop: '35px', paddingTop: '10px', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>
+              <span>شركة المدار الليبي للتأمين — الإدارة المالية</span>
+              <span>تم استخراج هذا الإيصال آلياً من النظام بتاريخ {new Date().toLocaleString('ar-LY')}</span>
             </div>
           </div>
         </div>
