@@ -1100,37 +1100,10 @@ export default function AgentMonthlyLedger() {
     try {
       const token = localStorage.getItem('token');
       const dueTotal = payModal.row.company_share + payModal.row.carried_balance;
-
       const voucherNumber = payVoucherNumber || `PV-${payModal.row.year}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // 1. Create Payment Voucher (إيصال قبض مالي في قسم إدارة الإيرادات)
-      await fetch(`${API_BASE_URL}/payment-vouchers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          voucher_number: voucherNumber,
-          branch_agent_id: selectedAgentId,
-          amount: amt,
-          payment_method: payMethod,
-          bank_name: payBankName || null,
-          reference_number: payRefNumber || null,
-          payment_date: payDate || new Date().toISOString().split('T')[0],
-          notes: payNotes || null,
-          extra_details: {
-            type: 'monthly_account_closure',
-            year: payModal.row.year,
-            month: payModal.row.month,
-            closure_id: payModal.row.closure_id,
-          },
-        }),
-      });
-
-      // 2. Also register in monthly ledger closure
-      await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/payment`, {
+      // Register payment in monthly ledger closure & auto-create single payment voucher and treasury transaction
+      const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1144,11 +1117,19 @@ export default function AgentMonthlyLedger() {
           paid_amount: payModal.row.paid_amount + amt,
           due_amount: dueTotal,
           payment_amount: amt,
-          notes: payNotes,
+          payment_method: payMethod,
+          bank_name: payBankName || null,
+          reference_number: payRefNumber || null,
+          payment_date: payDate || new Date().toISOString().split('T')[0],
+          voucher_number: voucherNumber,
+          notes: payNotes || null,
         }),
-      }).catch(() => {});
+      });
 
-      // Show success toast
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.message || 'فشل في حفظ الدفعة');
+      }
 
       showToast('تم تسجيل الدفعة وإصدار إيصال القبض في إدارة الإيرادات والخزينة بنجاح', 'success');
 
