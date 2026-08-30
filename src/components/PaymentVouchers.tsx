@@ -1347,198 +1347,148 @@ export default function PaymentVouchers() {
       {printingVoucher && (
         <div className="voucher-print-container">
           <div className="voucher-paper">
+
             {/* Watermark */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%) rotate(-30deg)',
-              fontSize: '120px',
-              color: 'rgba(1, 76, 177, 0.03)',
-              fontWeight: '900',
-              pointerEvents: 'none',
-              zIndex: 0,
-              whiteSpace: 'nowrap'
-            }}>المدار الليبي للتأمين</div>
+            <div className="vp-watermark">المدار الليبي للتأمين</div>
 
-            {/* Header */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderBottom: '2px solid #014cb1',
-              paddingBottom: '15px',
-              marginBottom: '20px',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <div style={{ textAlign: 'right', flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                  <img src={resolveImageUrl('/img/logo.png')} alt="Logo" style={{ height: '70px', width: 'auto' }} />
-                </div>
-                <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0' }}>شركة مساهمة ليبية للتأمين وإعادة التأمين</p>
-              </div>
+            {/* ===== TOP STRIPE ===== */}
+            <div className="vp-top-stripe"></div>
 
-              <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{
-                  display: 'inline-block',
-                  padding: '10px 40px',
-                  border: '2px solid #014cb1',
-                  borderRadius: '50px',
-                  background: '#f8faff',
-                  whiteSpace: 'nowrap'
-                }}>
-                  <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#014cb1', margin: 0, letterSpacing: '0.5px' }}>إيصال قبض مالي</h2>
+            {/* ===== HEADER ===== */}
+            <div className="vp-header">
+              {/* Logo + Company */}
+              <div className="vp-header-company">
+                <img
+                  src={resolveImageUrl('/img/logo.png')}
+                  alt="شعار الشركة"
+                  className="vp-logo"
+                  onError={(e: any) => { e.target.src = resolveImageUrl('/img/official_logo.PNG'); }}
+                />
+                <div>
+                  <div className="vp-company-name">شركة المدار الليبي للتأمين</div>
+                  <div className="vp-company-sub">شركة مساهمة ليبية للتأمين وإعادة التأمين</div>
+                  <div className="vp-company-contact">
+                    <span>📞 218+920003366</span>
+                    <span>✉ info@mli.ly</span>
+                    <span>📍 طرابلس - حي الأندلس</span>
+                  </div>
                 </div>
               </div>
-
-              <div style={{ textAlign: 'left', flex: 1 }}></div>
-            </div>
-
-            {/* Elegant Coordinated Content Area */}
-            <div style={{ padding: '0 10px', position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'grid', gap: '12px' }}>
-                
-                {/* Row 1: Header-style Info (Horizontal) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '12px 20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '800', color: '#1e3a8a', fontSize: '13px' }}>رقم الإيصال:</span>
-                    <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '16px' }}>{printingVoucher.voucher_number}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '800', color: '#1e3a8a', fontSize: '13px' }}>التاريخ:</span>
-                    <span style={{ fontWeight: '900', color: '#0f172a' }}>{printingVoucher.payment_date}</span>
-                  </div>
-                </div>
-
-                {/* Row 2: Agent Name (Bar Style) */}
-                <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', padding: '12px 20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ minWidth: '130px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1e3a8a', fontWeight: '800' }}>
-                    <i className="fa-solid fa-user-tie" style={{ fontSize: '14px', opacity: 0.7 }}></i>
-                    <span>وصلنا من السيد:</span>
-                  </div>
-                  <div style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a', flex: 1 }}>{printingVoucher.agent_name}</div>
-                </div>
-
-                {/* Row 3: Amount (Bar Style) */}
-                <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', padding: '12px 20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ minWidth: '130px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1e3a8a', fontWeight: '800' }}>
-                    <i className="fa-solid fa-money-bill-wave" style={{ fontSize: '14px', opacity: 0.7 }}></i>
-                    <span>مبلغا وقدره:</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
-                    <span style={{ fontSize: '20px', fontWeight: '950', color: '#139625' }}>{printingVoucher.amount.toLocaleString()} د.ل</span>
-                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 'bold', border: '1px dashed #cbd5e1', padding: '2px 10px', borderRadius: '4px' }}>فقط لا غير</span>
-                  </div>
-                </div>
-
-                {/* Row 4: Notes (Bar Style) */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', background: '#f8fafc', padding: '12px 20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ minWidth: '130px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1e3a8a', fontWeight: '800', marginTop: '2px' }}>
-                    <i className="fa-solid fa-file-invoice" style={{ fontSize: '14px', opacity: 0.7 }}></i>
-                    <span>وذلك مقابل:</span>
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#334155', flex: 1, lineHeight: '1.5', fontWeight: '800' }}>{printingVoucher.notes || 'تسديد رصيد تأمينات صادرة'}</div>
-                </div>
-
-                {/* Row 5: Payment Details (Bar Style) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f8fafc', padding: '15px 20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ color: '#64748b', fontWeight: 'bold', fontSize: '12px' }}>طريقة الدفع:</span>
-                    <span style={{ fontWeight: '900', color: '#014cb1', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
-                      <i className="fa-solid fa-credit-card" style={{ fontSize: '11px' }}></i>
-                      {printingVoucher.payment_method}
-                    </span>
-                  </div>
-                  {printingVoucher.bank_name && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ color: '#64748b', fontWeight: 'bold', fontSize: '12px' }}>المصرف:</span>
-                      <span style={{ fontWeight: '800', color: '#334155', fontSize: '13px' }}>{printingVoucher.bank_name}</span>
-                    </div>
-                  )}
-                  {printingVoucher.reference_number && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', gridColumn: 'span 2', marginTop: '5px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                      <span style={{ color: '#64748b', fontWeight: 'bold', fontSize: '12px' }}>رقم المرجع / الشيك:</span>
-                      <span style={{ fontWeight: '900', color: '#ef4444', letterSpacing: '1px', fontSize: '13px' }}>{printingVoucher.reference_number}</span>
-                    </div>
-                  )}
-                </div>
+              {/* Receipt Title */}
+              <div className="vp-header-title">
+                <div className="vp-title-ar">إيـصال قبـض مالي</div>
+                <div className="vp-title-en">PAYMENT RECEIPT</div>
+                <div className="vp-num-badge">رقم: {printingVoucher.voucher_number}</div>
               </div>
             </div>
 
-            {/* Footer Signatures */}
-            <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '30px', padding: '0 10px', position: 'relative', zIndex: 1 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ height: '50px' }}></div>
-                <div style={{ borderTop: '1.5px solid #014cb1', width: '85%', margin: '0 auto' }}></div>
-                <p style={{ fontWeight: '900', fontSize: '13px', marginTop: '8px', color: '#1e3a8a' }}>توقيع المستلم</p>
+            {/* ===== GRADIENT DIVIDER ===== */}
+            <div className="vp-divider"></div>
+
+            {/* ===== INFO GRID ===== */}
+            <div className="vp-info-grid">
+              <div className="vp-info-cell">
+                <div className="vp-info-label">📅 تاريخ القبض</div>
+                <div className="vp-info-value">{printingVoucher.payment_date}</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  border: '2px dashed #cbd5e1',
-                  width: '90px',
-                  height: '90px',
-                  borderRadius: '50%',
-                  margin: '-15px auto 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#94a3b8',
-                  fontSize: '10px'
-                }}>الختم الرسمي</div>
-                <p style={{ fontWeight: '900', fontSize: '13px', marginTop: '8px', color: '#1e3a8a' }}>اعتماد الخزينة</p>
+              <div className="vp-info-cell">
+                <div className="vp-info-label">💳 طريقة الدفع</div>
+                <div className="vp-info-value">{printingVoucher.payment_method}</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ height: '50px' }}></div>
-                <div style={{ borderTop: '1.5px solid #014cb1', width: '85%', margin: '0 auto' }}></div>
-                <p style={{ fontWeight: '900', fontSize: '13px', marginTop: '8px', color: '#1e3a8a' }}>المحاسب المسؤول</p>
+              {printingVoucher.bank_name && (
+                <div className="vp-info-cell">
+                  <div className="vp-info-label">🏦 المصرف</div>
+                  <div className="vp-info-value">{printingVoucher.bank_name}</div>
+                </div>
+              )}
+              {printingVoucher.reference_number && (
+                <div className="vp-info-cell">
+                  <div className="vp-info-label">🔖 رقم المرجع</div>
+                  <div className="vp-info-value vp-ref-num">{printingVoucher.reference_number}</div>
+                </div>
+              )}
+            </div>
+
+            {/* ===== RECEIVED FROM ===== */}
+            <div className="vp-row-full">
+              <div className="vp-row-label">وصلنا من السيد / المكتب</div>
+              <div className="vp-row-value vp-agent-name">{printingVoucher.agent_name}</div>
+            </div>
+
+            {/* ===== AMOUNT BOX ===== */}
+            <div className="vp-amount-box">
+              <div className="vp-amount-label-col">
+                <div className="vp-amount-label">مبلغاً وقدره</div>
+                <div className="vp-amount-sublabel">Amount Received</div>
+              </div>
+              <div className="vp-amount-center">
+                <div className="vp-amount-number">{printingVoucher.amount.toLocaleString('ar-LY')}</div>
+              </div>
+              <div className="vp-amount-right-col">
+                <div className="vp-amount-currency">دينار ليبي</div>
+                <div className="vp-amount-only">فقط لا غير ✓</div>
               </div>
             </div>
 
-            {/* Contact Info Footer */}
-            <div style={{
-              marginTop: '40px',
-              paddingTop: '12px',
-              borderTop: '1.5px solid #014cb1',
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '11px',
-              color: '#475569',
-              fontWeight: 'bold'
-            }}>
-              <span>طرابلس - ليبيا | حي الأندلس</span>
-              <span>هاتف: 920003366 218+</span>
-              <span>البريد الإلكتروني: info@mli.ly</span>
+            {/* ===== NOTES ===== */}
+            <div className="vp-row-full">
+              <div className="vp-row-label">وذلك مقابل</div>
+              <div className="vp-row-value">{printingVoucher.notes || 'تسديد رصيد تأمينات صادرة'}</div>
             </div>
+
+            {/* ===== SIGNATURES ===== */}
+            <div className="vp-signatures">
+              <div className="vp-sig-col">
+                <div className="vp-sig-space"></div>
+                <div className="vp-sig-line"></div>
+                <div className="vp-sig-label">توقيع المستلم</div>
+              </div>
+              <div className="vp-sig-col vp-sig-center">
+                <div className="vp-stamp-circle">الختم<br/>الرسمي</div>
+                <div className="vp-sig-label">اعتماد الخزينة</div>
+              </div>
+              <div className="vp-sig-col">
+                <div className="vp-sig-space"></div>
+                <div className="vp-sig-line"></div>
+                <div className="vp-sig-label">المحاسب المسؤول</div>
+              </div>
+            </div>
+
+            {/* ===== FOOTER ===== */}
+            <div className="vp-footer">
+              <span>📍 طرابلس - ليبيا / حي الأندلس</span>
+              <span>📞 218+ 920003366</span>
+              <span>✉ info@mli.ly</span>
+              <span>🌐 www.mli.ly</span>
+            </div>
+            <div className="vp-bottom-stripe"></div>
+
           </div>
         </div>
       )}
 
       <style>{`
-        .voucher-print-container {
-          display: none;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 
+        /* ===== HIDE ON SCREEN ===== */
+        .voucher-print-container { display: none; }
+
+        /* ===== PRINT MEDIA ===== */
         @media print {
-          /* Reset Styles */
+          @page { size: A4 portrait; margin: 0; }
+
           html, body {
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
             visibility: hidden;
-            height: 100vh !important;
-            max-height: 100vh !important;
-            overflow: hidden !important;
           }
 
-          /* Hide ALL other components surgically */
           #root > *:not(.app-shell),
           .app-shell > *:not(.main-area),
           .main-area > *:not(.users-management),
           .users-management > *:not(.voucher-print-container),
-          .no-print {
-            display: none !important;
-          }
+          .no-print { display: none !important; }
 
           .voucher-print-container {
             display: flex !important;
@@ -1546,50 +1496,374 @@ export default function PaymentVouchers() {
             align-items: flex-start !important;
             visibility: visible !important;
             position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            margin: 0 !important;
-            padding: 5mm 0 !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
             background: #fff !important;
             z-index: 999999 !important;
-            overflow: hidden !important;
           }
-
-          .voucher-print-container * {
-            visibility: visible !important;
-          }
-
-          @page {
-            size: A4 portrait;
-            margin: 0 !important;
-          }
+          .voucher-print-container * { visibility: visible !important; }
 
           .voucher-paper {
-            width: 190mm !important;
-            height: 275mm !important;
-            max-height: 275mm !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
             margin: 0 auto !important;
-            padding: 10mm 15mm !important;
-            box-sizing: border-box !important;
-            border: 2px solid #014cb1 !important;
-            background: #fff !important;
-            position: relative !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
-            page-break-after: avoid !important;
-            page-break-before: avoid !important;
-            transform: scale(1);
-            transform-origin: top center;
           }
+        }
 
-          .watermark {
-            font-size: 80px !important;
-            opacity: 0.03 !important;
-            width: 100% !important;
-            text-align: center !important;
-          }
+        /* ===== PAPER BASE ===== */
+        .voucher-paper {
+          font-family: 'Cairo', 'Tahoma', sans-serif;
+          direction: rtl;
+          background: #ffffff;
+          position: relative;
+          padding: 0;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        /* Watermark */
+        .vp-watermark {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-35deg);
+          font-size: 85px;
+          font-weight: 900;
+          color: rgba(1, 76, 177, 0.045);
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 0;
+          user-select: none;
+        }
+
+        /* Top stripe */
+        .vp-top-stripe {
+          height: 8px;
+          background: linear-gradient(90deg, #014cb1 0%, #0ea5e9 50%, #014cb1 100%);
+          position: relative;
+          z-index: 1;
+        }
+
+        /* Bottom stripe */
+        .vp-bottom-stripe {
+          height: 6px;
+          background: linear-gradient(90deg, #014cb1 0%, #0ea5e9 50%, #014cb1 100%);
+          margin-top: 16px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* ===== HEADER ===== */
+        .vp-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 16px 20px 12px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .vp-header-company {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .vp-logo {
+          height: 75px;
+          width: auto;
+          object-fit: contain;
+        }
+
+        .vp-company-name {
+          font-size: 17px;
+          font-weight: 900;
+          color: #014cb1;
+        }
+
+        .vp-company-sub {
+          font-size: 10.5px;
+          color: #64748b;
+          font-weight: 600;
+          margin-top: 2px;
+        }
+
+        .vp-company-contact {
+          display: flex;
+          gap: 10px;
+          font-size: 9.5px;
+          color: #94a3b8;
+          font-weight: 600;
+          margin-top: 5px;
+          flex-wrap: wrap;
+        }
+
+        .vp-header-title {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .vp-title-ar {
+          font-size: 28px;
+          font-weight: 900;
+          color: #0f172a;
+          letter-spacing: 1px;
+        }
+
+        .vp-title-en {
+          font-size: 11px;
+          font-weight: 700;
+          color: #94a3b8;
+          letter-spacing: 3px;
+        }
+
+        .vp-num-badge {
+          margin-top: 6px;
+          background: #014cb1;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 900;
+          padding: 5px 22px;
+          border-radius: 20px;
+        }
+
+        /* ===== DIVIDER ===== */
+        .vp-divider {
+          height: 3px;
+          background: linear-gradient(90deg, transparent, #014cb1 20%, #22d3ee 50%, #014cb1 80%, transparent);
+          margin: 0 20px 14px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* ===== INFO GRID ===== */
+        .vp-info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 10px;
+          padding: 0 20px 10px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .vp-info-cell {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px 14px;
+        }
+
+        .vp-info-label {
+          font-size: 10.5px;
+          font-weight: 700;
+          color: #64748b;
+          margin-bottom: 4px;
+        }
+
+        .vp-info-value {
+          font-size: 14px;
+          font-weight: 900;
+          color: #0f172a;
+        }
+
+        .vp-ref-num {
+          color: #dc2626;
+          letter-spacing: 1px;
+        }
+
+        /* ===== FULL ROW ===== */
+        .vp-row-full {
+          display: flex;
+          align-items: center;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px 14px;
+          gap: 14px;
+          margin: 0 20px 10px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .vp-row-label {
+          font-size: 12px;
+          font-weight: 800;
+          color: #1e3a8a;
+          white-space: nowrap;
+          min-width: 150px;
+          border-left: 2.5px solid #014cb1;
+          padding-left: 12px;
+        }
+
+        .vp-row-value {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0f172a;
+          flex: 1;
+        }
+
+        .vp-agent-name {
+          font-size: 18px !important;
+          font-weight: 900 !important;
+        }
+
+        /* ===== AMOUNT BOX ===== */
+        .vp-amount-box {
+          display: flex;
+          align-items: center;
+          background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+          border: 2.5px solid #014cb1;
+          border-radius: 12px;
+          padding: 18px 20px;
+          margin: 0 20px 10px;
+          gap: 16px;
+          position: relative;
+          z-index: 1;
+          overflow: hidden;
+        }
+
+        .vp-amount-box::after {
+          content: '';
+          position: absolute;
+          left: -20px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 120px;
+          height: 120px;
+          border-radius: 50%;
+          background: rgba(1, 76, 177, 0.05);
+        }
+
+        .vp-amount-label-col {
+          min-width: 130px;
+          border-left: 2.5px solid #014cb1;
+          padding-left: 12px;
+        }
+
+        .vp-amount-label {
+          font-size: 13px;
+          font-weight: 800;
+          color: #1e3a8a;
+        }
+
+        .vp-amount-sublabel {
+          font-size: 9px;
+          color: #94a3b8;
+          font-weight: 600;
+          letter-spacing: 1px;
+          margin-top: 2px;
+        }
+
+        .vp-amount-center {
+          flex: 1;
+          text-align: center;
+        }
+
+        .vp-amount-number {
+          font-size: 38px;
+          font-weight: 900;
+          color: #15803d;
+          font-variant-numeric: tabular-nums;
+          line-height: 1;
+        }
+
+        .vp-amount-right-col {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          align-items: flex-end;
+        }
+
+        .vp-amount-currency {
+          font-size: 13px;
+          font-weight: 800;
+          color: #334155;
+          background: #fff;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 4px 12px;
+        }
+
+        .vp-amount-only {
+          font-size: 10px;
+          font-weight: 700;
+          color: #94a3b8;
+          border: 1px dashed #cbd5e1;
+          border-radius: 4px;
+          padding: 2px 8px;
+        }
+
+        /* ===== SIGNATURES ===== */
+        .vp-signatures {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 20px;
+          padding: 20px 20px 0;
+          position: relative;
+          z-index: 1;
+        }
+
+        .vp-sig-col {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .vp-sig-space {
+          height: 55px;
+        }
+
+        .vp-sig-line {
+          width: 90%;
+          height: 1.5px;
+          background: #014cb1;
+        }
+
+        .vp-sig-label {
+          font-size: 12px;
+          font-weight: 900;
+          color: #1e3a8a;
+          text-align: center;
+        }
+
+        .vp-sig-center {
+          margin-top: -5px;
+        }
+
+        .vp-stamp-circle {
+          width: 80px;
+          height: 80px;
+          border: 2.5px dashed #94a3b8;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          color: #94a3b8;
+          font-weight: 700;
+          text-align: center;
+          line-height: 1.4;
+        }
+
+        /* ===== FOOTER ===== */
+        .vp-footer {
+          display: flex;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 10px 20px 0;
+          font-size: 9.5px;
+          color: #64748b;
+          font-weight: 600;
+          border-top: 1px solid #e2e8f0;
+          margin: 14px 20px 0;
+          position: relative;
+          z-index: 1;
         }
       `}</style>
     </section>
