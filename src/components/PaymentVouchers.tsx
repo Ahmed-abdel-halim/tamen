@@ -33,7 +33,7 @@ export default function PaymentVouchers() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [printingVoucher, setPrintingVoucher] = useState<Voucher | null>(null);
+  const [printingVoucher, _setPrintingVoucher] = useState<Voucher | null>(null);
 
   // Form State
   const [selectedAgent, setSelectedAgent] = useState('');
