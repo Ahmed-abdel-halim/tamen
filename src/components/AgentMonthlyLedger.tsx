@@ -131,7 +131,6 @@ export default function AgentMonthlyLedger() {
   const [payVoucherNumber, setPayVoucherNumber] = useState('');
   const [monthVouchersList, setMonthVouchersList] = useState<any[]>([]);
   const [loadingMonthVouchers, setLoadingMonthVouchers] = useState(false);
-  const [printingVoucher, setPrintingVoucher] = useState<any | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
@@ -4466,72 +4465,7 @@ export default function AgentMonthlyLedger() {
         </div>
       )}
 
-      {/* Official Voucher Printable Paper Container (Matching Revenue Management) */}
-      {printingVoucher && (
-        <div className="voucher-print-container">
-          <div className="voucher-paper" style={{ fontFamily: "'Cairo', sans-serif", direction: 'rtl', padding: '25px', background: '#fff' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #014cb1', paddingBottom: '12px', marginBottom: '20px' }}>
-              <div>
-                <h1 style={{ margin: 0, color: '#014cb1', fontSize: '22px', fontWeight: '900' }}>شركة المدار الليبي للتأمين</h1>
-                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 'bold' }}>Al-Madar Al-Libi Insurance Company</p>
-                <div style={{ display: 'inline-block', background: '#e0f2fe', color: '#0369a1', padding: '3px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '900', marginTop: '6px' }}>
-                  إيصال قبض مالي معتمد
-                </div>
-              </div>
-              <img src="/img/logo.png" alt="Company Logo" style={{ height: '75px', objectFit: 'contain' }} />
-            </div>
 
-            {/* Voucher Meta Info */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '20px', fontSize: '13px' }}>
-              <div><strong>رقم الإيصال:</strong> <span style={{ color: '#014cb1', fontWeight: '900', fontSize: '15px' }}>{printingVoucher.voucher_number}</span></div>
-              <div><strong>التاريخ:</strong> <span>{printingVoucher.payment_date || new Date().toISOString().split('T')[0]}</span></div>
-              <div><strong>الجهة / الوكيل:</strong> <span style={{ fontWeight: '900' }}>{printingVoucher.agent_name || ledger?.agent.agency_name}</span></div>
-              <div><strong>طريقة السداد:</strong> <span style={{ fontWeight: '800' }}>{printingVoucher.payment_method}</span></div>
-              {printingVoucher.bank_name && <div><strong>المصرف:</strong> <span>{printingVoucher.bank_name}</span></div>}
-              {printingVoucher.reference_number && <div><strong>رقم المرجع / الشيك:</strong> <span>{printingVoucher.reference_number}</span></div>}
-            </div>
-
-            {/* Amount Box */}
-            <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '2px solid #86efac', borderRadius: '12px', padding: '16px', textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '12px', color: '#166534', fontWeight: 'bold' }}>المبلغ المستلم</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#15803d', marginTop: '4px' }}>
-                {parseFloat(printingVoucher.amount || 0).toLocaleString()} <span style={{ fontSize: '16px' }}>دينار ليبي</span>
-              </div>
-            </div>
-
-            {/* Notes / Description */}
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 16px', marginBottom: '30px', fontSize: '13px' }}>
-              <strong>البيان / الملاحظات:</strong>
-              <p style={{ margin: '6px 0 0', color: '#334155', lineHeight: 1.6 }}>
-                {printingVoucher.notes || `تسديد دفعة حساب كشف حساب الوكيل (${printingVoucher.agent_name || ledger?.agent.agency_name})`}
-              </p>
-            </div>
-
-            {/* Signatures */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '40px', textAlign: 'center', fontSize: '13px' }}>
-              <div>
-                <div style={{ height: '45px' }} />
-                <div style={{ borderTop: '1.5px dashed #64748b', width: '80%', margin: '0 auto', paddingTop: '6px', fontWeight: '800' }}>توقيع المستلم / المحاسب</div>
-              </div>
-              <div>
-                <div style={{ height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px', border: '1px dashed #cbd5e1', borderRadius: '50%', width: '70px', margin: '-10px auto 0' }}>الختم الرسمي</div>
-                <div style={{ borderTop: '1.5px dashed #64748b', width: '80%', margin: '0 auto', paddingTop: '6px', fontWeight: '800' }}>اعتماد الخزينة</div>
-              </div>
-              <div>
-                <div style={{ height: '45px' }} />
-                <div style={{ borderTop: '1.5px dashed #64748b', width: '80%', margin: '0 auto', paddingTop: '6px', fontWeight: '800' }}>المدير المالي</div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{ marginTop: '35px', paddingTop: '10px', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>
-              <span>شركة المدار الليبي للتأمين — الإدارة المالية</span>
-              <span>تم استخراج هذا الإيصال آلياً من النظام بتاريخ {new Date().toLocaleString('ar-LY')}</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Quick Add Old Document Modal Overlay */}
       {quickAddModal && monthDocsModal && (
