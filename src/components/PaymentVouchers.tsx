@@ -63,12 +63,6 @@ export default function PaymentVouchers() {
   const filterAgentDropdownRef = useRef<HTMLDivElement>(null);
 
 
-  const resolveImageUrl = (path: string) => {
-    if (path.startsWith('http')) return path;
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return `${window.location.origin}/${cleanPath}`;
-  };
-
   const filteredVouchers = React.useMemo(() => {
     return vouchers.filter(v => {
       // Date From
