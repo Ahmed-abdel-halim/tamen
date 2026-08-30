@@ -296,10 +296,345 @@ export default function PaymentVouchers() {
   };
 
   const handlePrintVoucher = (voucher: Voucher) => {
-    setPrintingVoucher(voucher);
-    setTimeout(() => {
-      window.print();
-    }, 1000); // Increased delay to ensure rendering
+    const printWindow = window.open('', '_blank', 'width=850,height=1100');
+    if (!printWindow) {
+      alert('يرجى السماح بالنوافذ المنبثقة للطباعة');
+      return;
+    }
+
+    const logoUrl = `${window.location.origin}/img/logo.png`;
+    const fallbackLogo = `${window.location.origin}/img/official_logo.PNG`;
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>إيصال قبض - ${voucher.voucher_number}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body {
+      font-family: 'Cairo', 'Tahoma', sans-serif;
+      direction: rtl;
+      background: #fff;
+      color: #0f172a;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    /* ── Watermark ── */
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 90px;
+      font-weight: 900;
+      color: rgba(1,76,177,0.04);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 0;
+      user-select: none;
+    }
+
+    /* ── Stripes ── */
+    .top-stripe, .bottom-stripe {
+      height: 8px;
+      background: linear-gradient(90deg, #014cb1 0%, #0ea5e9 50%, #014cb1 100%);
+    }
+    .bottom-stripe { height: 6px; margin-top: 14px; }
+
+    /* ── Content wrapper ── */
+    .content { padding: 16px 22px; position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .company-side { display: flex; align-items: center; gap: 12px; }
+    .logo { height: 75px; width: auto; object-fit: contain; }
+    .company-name { font-size: 17px; font-weight: 900; color: #014cb1; }
+    .company-sub { font-size: 10px; color: #64748b; font-weight: 600; margin-top: 3px; }
+    .company-contact { display: flex; gap: 10px; font-size: 9.5px; color: #94a3b8; font-weight: 600; margin-top: 5px; flex-wrap: wrap; }
+    .title-side { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .title-ar { font-size: 26px; font-weight: 900; color: #0f172a; letter-spacing: 1px; }
+    .title-en { font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 3px; text-transform: uppercase; }
+    .num-badge {
+      margin-top: 6px;
+      background: #014cb1;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 5px 22px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #014cb1 20%, #22d3ee 50%, #014cb1 80%, transparent);
+      border-radius: 4px;
+      margin: 12px 0;
+    }
+
+    /* ── Info Grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .info-cell {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .info-label { font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 4px; }
+    .info-value { font-size: 14px; font-weight: 900; color: #0f172a; }
+    .ref-val { color: #dc2626; letter-spacing: 1px; }
+
+    /* ── Full rows ── */
+    .row-full {
+      display: flex;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .row-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #1e3a8a;
+      white-space: nowrap;
+      min-width: 150px;
+      border-left: 2.5px solid #014cb1;
+      padding-left: 12px;
+    }
+    .row-value { font-size: 15px; font-weight: 800; color: #0f172a; flex: 1; }
+    .agent-name { font-size: 18px !important; font-weight: 900 !important; }
+
+    /* ── Amount Box ── */
+    .amount-box {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+      border: 2.5px solid #014cb1;
+      border-radius: 12px;
+      padding: 18px 20px;
+      gap: 16px;
+      margin-bottom: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .amount-box::after {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: rgba(1,76,177,0.05);
+    }
+    .amount-label-col { min-width: 130px; border-left: 2.5px solid #014cb1; padding-left: 12px; }
+    .amount-label { font-size: 13px; font-weight: 800; color: #1e3a8a; }
+    .amount-sublabel { font-size: 9px; color: #94a3b8; font-weight: 600; letter-spacing: 1px; margin-top: 2px; }
+    .amount-center { flex: 1; text-align: center; }
+    .amount-number { font-size: 38px; font-weight: 900; color: #15803d; line-height: 1; }
+    .amount-right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .amount-currency {
+      font-size: 13px; font-weight: 800; color: #334155;
+      background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 6px; padding: 4px 12px;
+    }
+    .amount-only {
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+      border: 1px dashed #cbd5e1; border-radius: 4px; padding: 2px 8px;
+    }
+
+    /* ── Signatures ── */
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .sig-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .sig-space { height: 55px; }
+    .sig-line { width: 90%; height: 1.5px; background: #014cb1; }
+    .sig-label { font-size: 12px; font-weight: 900; color: #1e3a8a; text-align: center; }
+    .stamp-circle {
+      width: 80px; height: 80px;
+      border: 2.5px dashed #94a3b8;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #94a3b8; font-weight: 700;
+      text-align: center; line-height: 1.4;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 0 0;
+      font-size: 9.5px;
+      color: #64748b;
+      font-weight: 600;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 14px;
+    }
+
+    /* ── Print button (screen only) ── */
+    .print-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 40px;
+      background: #014cb1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    @media print { .print-btn { display: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="watermark">المدار الليبي للتأمين</div>
+
+  <div class="top-stripe"></div>
+
+  <div class="content">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="company-side">
+        <img class="logo" src="${logoUrl}" alt="Logo" onerror="this.src='${fallbackLogo}'" />
+        <div>
+          <div class="company-name">شركة المدار الليبي للتأمين</div>
+          <div class="company-sub">شركة مساهمة ليبية للتأمين وإعادة التأمين</div>
+          <div class="company-contact">
+            <span>📞 218+920003366</span>
+            <span>✉ info@mli.ly</span>
+            <span>📍 طرابلس - حي الأندلس</span>
+          </div>
+        </div>
+      </div>
+      <div class="title-side">
+        <div class="title-ar">إيـصال قبـض مالي</div>
+        <div class="title-en">PAYMENT RECEIPT</div>
+        <div class="num-badge">رقم: ${voucher.voucher_number}</div>
+      </div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="divider"></div>
+
+    <!-- INFO GRID -->
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">📅 تاريخ القبض</div>
+        <div class="info-value">${voucher.payment_date}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">💳 طريقة الدفع</div>
+        <div class="info-value">${voucher.payment_method}</div>
+      </div>
+      ${voucher.bank_name ? `<div class="info-cell"><div class="info-label">🏦 المصرف</div><div class="info-value">${voucher.bank_name}</div></div>` : ''}
+      ${voucher.reference_number ? `<div class="info-cell"><div class="info-label">🔖 رقم المرجع</div><div class="info-value ref-val">${voucher.reference_number}</div></div>` : ''}
+    </div>
+
+    <!-- RECEIVED FROM -->
+    <div class="row-full">
+      <div class="row-label">وصلنا من السيد / المكتب</div>
+      <div class="row-value agent-name">${voucher.agent_name}</div>
+    </div>
+
+    <!-- AMOUNT -->
+    <div class="amount-box">
+      <div class="amount-label-col">
+        <div class="amount-label">مبلغاً وقدره</div>
+        <div class="amount-sublabel">Amount Received</div>
+      </div>
+      <div class="amount-center">
+        <div class="amount-number">${voucher.amount.toLocaleString('ar-LY')}</div>
+      </div>
+      <div class="amount-right">
+        <div class="amount-currency">دينار ليبي</div>
+        <div class="amount-only">فقط لا غير ✓</div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="row-full">
+      <div class="row-label">وذلك مقابل</div>
+      <div class="row-value">${voucher.notes || 'تسديد رصيد تأمينات صادرة'}</div>
+    </div>
+
+    <!-- SIGNATURES -->
+    <div class="signatures">
+      <div class="sig-col">
+        <div class="sig-space"></div>
+        <div class="sig-line"></div>
+        <div class="sig-label">توقيع المستلم</div>
+      </div>
+      <div class="sig-col">
+        <div class="stamp-circle">الختم<br/>الرسمي</div>
+        <div class="sig-label">اعتماد الخزينة</div>
+      </div>
+      <div class="sig-col">
+        <div class="sig-space"></div>
+        <div class="sig-line"></div>
+        <div class="sig-label">المحاسب المسؤول</div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <span>📍 طرابلس - ليبيا / حي الأندلس</span>
+      <span>📞 218+ 920003366</span>
+      <span>✉ info@mli.ly</span>
+      <span>🌐 www.mli.ly</span>
+    </div>
+
+  </div>
+
+  <div class="bottom-stripe"></div>
+
+  <button class="print-btn" onclick="window.print(); window.onafterprint = () => window.close();">
+    🖨️ طباعة الإيصال
+  </button>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+        window.onafterprint = function() { window.close(); };
+      }, 600);
+    };
+  </script>
+</body>
+</html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const handleWhatsAppShare = (voucher: Voucher) => {
