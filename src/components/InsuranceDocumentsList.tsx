@@ -47,7 +47,12 @@ type InsuranceDocument = {
   is_canceled?: boolean;
   canceled_at?: string | null;
   cancel_reason?: string | null;
-  status?: string | null; // 'active' | 'expired' | 'cancelled'
+  status?: string | null; // 'active' | 'expired' | 'cancelled' 
+export const isCanceledDocument = (doc: any): boolean => {
+  if (!doc) return false;
+  if (doc.is_canceled === true || doc.is_canceled === 1 || doc.is_canceled === '1') return true;
+  if (doc.status === 'cancelled' || doc.status === 'ملغية' || doc.status === 'ملغيه') return true;
+  return false;
 };
 
 export default function InsuranceDocumentsList({ isArchive = false }: { isArchive?: boolean } = {}) {
@@ -216,7 +221,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         
         const rawDocs: InsuranceDocument[] = data.data || [];
         // Strictly exclude cancelled documents from all, active, and expired lists
-        const cleanDocs = rawDocs.filter((d: any) => !d.is_canceled && d.status !== 'cancelled' && d.status !== 'ملغية' && d.status !== 'ملغيه');
+        const cleanDocs = rawDocs.filter((d: any) => !isCanceledDocument(d));
         setDocuments(cleanDocs);
         setTotalDocuments(data.total || 0);
       }
