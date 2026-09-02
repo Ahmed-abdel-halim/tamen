@@ -202,10 +202,10 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
           params.append('status', statusFilter);
         }
         if (searchQuery) params.append('search', searchQuery);
-        if (filters.agentId) params.append('branch_agent_id', filters.agentId);
-        if (filters.year) params.append('year', filters.year);
-        if (filters.month) params.append('month', filters.month);
-        if (filters.day) params.append('day', filters.day);
+        if (filters.agentId && filters.agentId.trim() !== '') params.append('branch_agent_id', filters.agentId.trim());
+        if (filters.year && filters.year.trim() !== '') params.append('year', filters.year.trim());
+        if (filters.month && filters.month.trim() !== '') params.append('month', filters.month.trim());
+        if (filters.day && filters.day.trim() !== '') params.append('day', filters.day.trim());
         params.append('page', currentPage.toString());
         params.append('per_page', perPage.toString());
 
