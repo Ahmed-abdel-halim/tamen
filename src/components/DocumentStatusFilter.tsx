@@ -1,4 +1,4 @@
-export type DocumentStatusType = 'all' | 'active' | 'expired';
+export type DocumentStatusType = 'all' | 'active' | 'expired' | 'cancelled';
 
 interface DocumentStatusFilterProps {
   status: DocumentStatusType;
@@ -7,14 +7,16 @@ interface DocumentStatusFilterProps {
     all?: number;
     active?: number;
     expired?: number;
+    cancelled?: number;
   };
 }
 
 export default function DocumentStatusFilter({ status, onChange, counts }: DocumentStatusFilterProps) {
-  const options: { id: DocumentStatusType; label: string; icon: string; badgeColor?: string }[] = [
+  const options: { id: DocumentStatusType; label: string; icon: string; badgeColor?: string; activeColor?: string }[] = [
     { id: 'all', label: 'كل الوثائق', icon: 'fa-layer-group' },
     { id: 'active', label: 'الوثائق النشطة', icon: 'fa-circle-check', badgeColor: '#10b981' },
     { id: 'expired', label: 'الوثائق المنتهية', icon: 'fa-clock-rotate-left', badgeColor: '#f59e0b' },
+    { id: 'cancelled', label: 'الوثائق الملغية', icon: 'fa-ban', badgeColor: '#ef4444', activeColor: '#dc2626' },
   ];
 
   return (
@@ -47,14 +49,20 @@ export default function DocumentStatusFilter({ status, onChange, counts }: Docum
               gap: '8px',
               padding: '8px 16px',
               borderRadius: '10px',
-              border: isActive ? '1px solid var(--accent-cyan)' : '1px solid transparent',
-              backgroundColor: isActive ? 'var(--accent-cyan)' : 'transparent',
+              border: isActive
+                ? `1px solid ${opt.activeColor || 'var(--accent-cyan)'}`
+                : '1px solid transparent',
+              backgroundColor: isActive
+                ? (opt.activeColor || 'var(--accent-cyan)')
+                : 'transparent',
               color: isActive ? '#ffffff' : 'var(--text)',
               fontWeight: isActive ? '700' : '500',
               fontSize: '13px',
               cursor: 'pointer',
               transition: 'all 0.2s ease-in-out',
-              boxShadow: isActive ? '0 4px 14px var(--accent-shadow)' : 'none',
+              boxShadow: isActive
+                ? `0 4px 14px ${opt.activeColor ? opt.activeColor + '55' : 'var(--accent-shadow)'}`
+                : 'none',
               outline: 'none',
             }}
           >

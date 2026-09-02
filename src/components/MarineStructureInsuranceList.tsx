@@ -526,16 +526,6 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
                                 <i className="fa-solid fa-pencil"></i>
                               </button>
                             )}
-                            {isAdmin && (
-                              <button
-                                onClick={() => setShowDeleteModal(doc)}
-                                className="action-btn delete"
-                                aria-label="حذف"
-                                title="حذف"
-                              >
-                                <i className="fa-solid fa-trash"></i>
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -657,16 +647,6 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
                               title="تعديل"
                             >
                               <i className="fa-solid fa-pencil"></i>
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              onClick={() => setShowDeleteModal(doc)}
-                              className="action-btn delete"
-                              aria-label="حذف"
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
                             </button>
                           )}
                         </div>

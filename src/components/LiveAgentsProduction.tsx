@@ -86,8 +86,10 @@ export default function LiveAgentsProduction() {
         d.setDate(d.getDate() - 6);
         return { from: fmt(d), to: fmt(now) };
       }
-      case 'thisMonth':
-        return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, to: fmt(now) };
+      case 'thisMonth': {
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, to: fmt(lastDay) };
+      }
       case 'thisYear':
         return { from: `${now.getFullYear()}-01-01`, to: fmt(now) };
       case 'custom':
@@ -104,7 +106,7 @@ export default function LiveAgentsProduction() {
         return;
       }
       const typeParam = selectedDocType && selectedDocType !== 'all' ? `&doc_type=${encodeURIComponent(selectedDocType)}` : '';
-      const response = await fetch(`${API_BASE_URL}/financial-statistics/live-agents-production?from_date=${from}&to_date=${to}${typeParam}`);
+      const response = await fetch(`${API_BASE_URL}/financial-statistics/live-agents-production?from_date=${from}&to_date=${to}${typeParam}&exclude_canceled=1`);
       if (response.ok) {
         const result: ProductionData = await response.json();
         setData(result);

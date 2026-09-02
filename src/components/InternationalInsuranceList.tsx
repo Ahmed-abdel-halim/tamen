@@ -79,6 +79,9 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const agentDropdownRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<DocumentStatusType>('all');
+  const [showCancelModal, setShowCancelModal] = useState<InternationalInsuranceDocument | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -224,6 +227,43 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
       showToast(`حدث خطأ أثناء حذف الوثيقة: ${error.message || ''}`, 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!showCancelModal) return;
+    if (!cancelReason.trim()) {
+      showToast('يرجى إدخال سبب الإلغاء', 'error');
+      return;
+    }
+    setCanceling(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+      if (userId) headers['X-User-Id'] = userId.toString();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/international-insurance-documents/${showCancelModal.id}/cancel`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ cancel_reason: cancelReason.trim(), user_id: userId, cancellation_fee: 30 }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'حدث خطأ أثناء إلغاء الوثيقة');
+      }
+
+      showToast('تم إلغاء الوثيقة بنجاح — تم تطبيق رسوم الإلغاء 30 د.ل واستبعادها من الحسابات', 'success');
+      setShowCancelModal(null);
+      setCancelReason('');
+      fetchDocuments();
+    } catch (error: any) {
+      showToast(`خطأ: ${error.message || ''}`, 'error');
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -809,16 +849,15 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                                 <i className="fa-solid fa-pencil"></i>
                               </button>
                             )}
-                            {isAdmin && (
-                              <button
-                                onClick={() => setShowDeleteModal(doc)}
-                                className="action-btn delete"
-                                aria-label="حذف"
-                                title="حذف"
-                              >
-                                <i className="fa-solid fa-trash"></i>
-                              </button>
-                            )}
+                            <button
+                              onClick={() => setShowCancelModal(doc)}
+                              className="action-btn"
+                              aria-label="إلغاء الوثيقة"
+                              title="إلغاء الوثيقة (رسوم الإلغاء 30 د.ل)"
+                              style={{ background: '#ef4444', color: '#fff' }}
+                            >
+                              <i className="fa-solid fa-ban"></i>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -964,16 +1003,15 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                               <i className="fa-solid fa-pencil"></i>
                             </button>
                           )}
-                          {isAdmin && (
-                            <button
-                              onClick={() => setShowDeleteModal(doc)}
-                              className="action-btn delete"
-                              aria-label="حذف"
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setShowCancelModal(doc)}
+                            className="action-btn"
+                            aria-label="إلغاء الوثيقة"
+                            title="إلغاء الوثيقة (رسوم الإلغاء 30 د.ل)"
+                            style={{ background: '#ef4444', color: '#fff' }}
+                          >
+                            <i className="fa-solid fa-ban"></i>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1071,6 +1109,66 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
                 disabled={deleting}
               >
                 {deleting ? 'جاري الحذف...' : 'حذف'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="modal-overlay" onClick={() => !canceling && setShowCancelModal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ background: '#1e1e38', border: '1px solid rgba(231,76,60,0.4)', borderRadius: '16px', padding: '24px', maxWidth: '480px', width: '90%', direction: 'rtl', color: '#fff', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(231,76,60,0.2)', color: '#e74c3c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 12px' }}>
+                🚫
+              </div>
+              <h3 style={{ margin: 0, fontSize: '20px', color: '#e74c3c', fontFamily: "'Cairo', sans-serif", fontWeight: 800 }}>إلغاء وثيقة التأمين الدولي</h3>
+              <p style={{ margin: '8px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontFamily: "'Cairo', sans-serif" }}>
+                الوثيقة رقم: <strong style={{ color: '#fff' }}>{showCancelModal.document_number}</strong>
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '14px', fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.5', fontFamily: "'Cairo', sans-serif" }}>
+              💡 <strong>تنويه هام:</strong> سيتم إلغاء هذه الوثيقة واستبعادها تماماً من كشف حساب الوكيل والتقارير المالية، وتظهر في قسم "الوثائق الملغية".
+            </div>
+
+            <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: "'Cairo', sans-serif" }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#fbbf24' }}>
+                <i className="fa-solid fa-receipt" style={{ marginLeft: '6px' }} />
+                رسوم إلغاء التأمين الدولي (LIFO):
+              </span>
+              <span style={{ fontSize: '14px', fontWeight: 900, color: '#fbbf24' }}>
+                30.000 د.ل <span style={{ fontSize: '11px', fontWeight: 700 }}>(قيمة ثابتة)</span>
+              </span>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'rgba(255,255,255,0.8)', fontFamily: "'Cairo', sans-serif", fontWeight: 700 }}>
+                سبب الإلغاء <span style={{ color: '#e74c3c' }}>*</span>
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="اكتب سبب إلغاء الوثيقة هنا..."
+                rows={4}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: "'Cairo', sans-serif" }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCancelModal(null)}
+                disabled={canceling}
+                style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '13px', fontFamily: "'Cairo', sans-serif" }}
+              >
+                تراجع
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={canceling}
+                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #e74c3c, #c0392b)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '13px', fontFamily: "'Cairo', sans-serif" }}
+              >
+                {canceling ? 'جاري الإلغاء...' : 'تأكيد الإلغاء'}
               </button>
             </div>
           </div>

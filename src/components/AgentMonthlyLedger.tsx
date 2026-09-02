@@ -116,7 +116,7 @@ interface MonthDocsSummary {
 export default function AgentMonthlyLedger() {
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [excludeCanceled, setExcludeCanceled] = useState(false);
+  const [excludeCanceled, setExcludeCanceled] = useState(true);
   const [onlyActiveMonths, setOnlyActiveMonths] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -139,7 +139,25 @@ export default function AgentMonthlyLedger() {
   const [agentCustodyLoading, setAgentCustodyLoading] = useState(false);
   const [agentFixedCustody, setAgentFixedCustody] = useState<any[]>([]);
   const [agentConsumedCustody, setAgentConsumedCustody] = useState<any[]>([]);
-  const [agentCustodyTab, setAgentCustodyTab] = useState<'fixed' | 'consumed'>('fixed');
+  const [agentCustodyTab, setAgentCustodyTab] = useState<'fixed' | 'consumed' | 'all'>('fixed');
+
+  // Assign New Custody Modal State (صرف عهدة جديدة للوكيل)
+  const [assignCustodyModal, setAssignCustodyModal] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [loadingInventoryItems, setLoadingInventoryItems] = useState(false);
+  const [assigningCustody, setAssigningCustody] = useState(false);
+  const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [assignmentRows, setAssignmentRows] = useState<Array<{
+    inventory_type: string;
+    item_id: string;
+    quantity: number;
+    serial_start: string;
+    serial_end: string;
+    condition: string;
+    notes: string;
+  }>>([
+    { inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }
+  ]);
 
   // Audit / Verification State
   const [togglingMonthKey, setTogglingMonthKey] = useState<string | null>(null);
@@ -771,7 +789,7 @@ export default function AgentMonthlyLedger() {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${agentId}&exclude_canceled=${ex}&document_type=${dt}`,
+        `${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${agentId}&exclude_canceled=${ex ? '1' : '0'}&document_type=${dt}`,
         { headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
       );
       if (!res.ok) throw new Error();
@@ -1047,19 +1065,180 @@ export default function AgentMonthlyLedger() {
     setAgentCustodyLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
-        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAgentFixedCustody(data.fixed_custody || []);
-        setAgentConsumedCustody(data.consumed_custody || []);
+      const [agentRes, custodyRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
+          headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+        }),
+        fetch(`${API_BASE_URL}/inventory/custody`, {
+          headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+        }).catch(() => null)
+      ]);
+
+      let fixed: any[] = [];
+      let consumed: any[] = [];
+
+      if (agentRes.ok) {
+        const data = await agentRes.json();
+        fixed = data.fixed_custody || [];
+        consumed = data.consumed_custody || [];
       }
+
+      if (custodyRes && custodyRes.ok) {
+        const allCustody = await custodyRes.json();
+        if (Array.isArray(allCustody)) {
+          const agentCustodies = allCustody.filter((c: any) => 
+            (c.recipient_type === 'agent' && (String(c.recipient_id) === String(selectedAgentId) || String(c.recipient?.id) === String(selectedAgentId))) ||
+            (c.recipient?.agency_name && ledger?.agent?.agency_name && c.recipient?.agency_name === ledger.agent.agency_name)
+          );
+
+          agentCustodies.forEach((c: any) => {
+            const itemObj = {
+              id: c.id,
+              item_name: c.item?.name || c.item_name || 'صنف عهدة',
+              category: c.item?.category || c.category || (c.item?.inventory_type === 'fixed' ? 'أصول ثابتة' : 'مستهلكة / مطبوعات'),
+              serial_number: c.serial_start ? (c.serial_end ? `${c.serial_start} - ${c.serial_end}` : c.serial_start) : (c.serial_number || c.code || '—'),
+              quantity: c.quantity || 1,
+              delivery_date: c.assigned_at || c.created_at || c.delivery_date,
+              status: c.status === 'active' ? 'مسلمة' : c.status === 'returned' ? 'مسترجعة' : c.status === 'lost' ? 'مفقودة' : c.status === 'damaged' ? 'تالفة' : (c.status || 'مسلمة'),
+              raw_status: c.status,
+              condition: c.condition === 'new' ? 'جديد' : 'مستعمل',
+              notes: c.notes || '—',
+              raw_item: c
+            };
+
+            const isFixed = c.item?.inventory_type === 'fixed' || (c.category && c.category.includes('ثابت'));
+            if (isFixed) {
+              if (!fixed.some((f: any) => f.id === c.id)) fixed.push(itemObj);
+            } else {
+              if (!consumed.some((cn: any) => cn.id === c.id)) consumed.push(itemObj);
+            }
+          });
+        }
+      }
+
+      setAgentFixedCustody(fixed);
+      setAgentConsumedCustody(consumed);
     } catch (e) {
       console.error('Error fetching agent custody:', e);
       showToast('خطأ في جلب بيانات عهدة الوكيل', 'error');
     } finally {
       setAgentCustodyLoading(false);
+    }
+  };
+
+  const handleOpenAssignCustody = async () => {
+    setAssignCustodyModal(true);
+    setLoadingInventoryItems(true);
+    setAssignmentRows([
+      { inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }
+    ]);
+    setAssignmentNotes('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, {
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInventoryItems(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (e) {
+      console.error('Error fetching inventory items for assignment:', e);
+      showToast('تعذر جلب أصناف المخزن', 'error');
+    } finally {
+      setLoadingInventoryItems(false);
+    }
+  };
+
+  const addAssignmentItemRow = () => {
+    setAssignmentRows(prev => [...prev, { inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }]);
+  };
+
+  const removeAssignmentItemRow = (index: number) => {
+    setAssignmentRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateAssignmentItemRow = (index: number, key: string, value: string | number) => {
+    setAssignmentRows(prev => prev.map((row, i) => {
+      if (i !== index) return row;
+      const updated = { ...row, [key]: value };
+      if (key === 'item_id') {
+        const selItem = inventoryItems.find(it => String(it.id) === String(value));
+        if (selItem && selItem.inventory_type) {
+          updated.inventory_type = selItem.inventory_type;
+        }
+      }
+      return updated;
+    }));
+  };
+
+  const handleSubmitAssignCustody = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAgentId) return;
+    if (assignmentRows.length === 0 || assignmentRows.some(r => !r.item_id)) {
+      showToast('يرجى اختيار صنف واحد على الأقل', 'error');
+      return;
+    }
+
+    setAssigningCustody(true);
+    try {
+      const token = localStorage.getItem('token');
+      const batchRef = `BATCH-${Date.now()}`;
+      for (const row of assignmentRows) {
+        const itm = inventoryItems.find(i => String(i.id) === String(row.item_id));
+        const res = await fetch(`${API_BASE_URL}/inventory/assign-custody`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            recipient_id: String(selectedAgentId),
+            recipient_type: 'agent',
+            inventory_type: itm?.inventory_type || row.inventory_type || 'consumable',
+            batch_ref: batchRef,
+            item_id: row.item_id,
+            quantity: row.quantity,
+            serial_start: row.serial_start,
+            serial_end: row.serial_end,
+            condition: row.condition || 'new',
+            notes: row.notes || assignmentNotes,
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || 'حدث خطأ أثناء صرف العهدة');
+        }
+      }
+
+      showToast('تم صرف وإسناد العهدة للوكيل بنجاح', 'success');
+      setAssignCustodyModal(false);
+      handleOpenAgentCustody();
+    } catch (err: any) {
+      showToast(err.message || 'فشل في صرف العهدة', 'error');
+    } finally {
+      setAssigningCustody(false);
+    }
+  };
+
+  const handleReturnSingleCustody = async (custodyId: number) => {
+    if (!window.confirm('هل أنت متأكد من استرجاع هذا الصنف من عهدة الوكيل؟')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inventory/return-custody/${custodyId}`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        showToast('تم استرجاع الصنف بنجاح', 'success');
+        handleOpenAgentCustody();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || 'فشل استرجاع الصنف', 'error');
+      }
+    } catch {
+      showToast('خطأ في الاتصال بالخادم', 'error');
     }
   };
 
@@ -1338,7 +1517,7 @@ export default function AgentMonthlyLedger() {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `${API_BASE_URL}/financial-statistics/agent-month-documents?agent_id=${selectedAgentId}&year=${year}&month=${month}&search=${encodeURIComponent(search)}&document_type=${docType}`,
+        `${API_BASE_URL}/financial-statistics/agent-month-documents?agent_id=${selectedAgentId}&year=${year}&month=${month}&search=${encodeURIComponent(search)}&document_type=${docType}&exclude_canceled=1`,
         { headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
       );
       if (res.ok) {
@@ -5916,6 +6095,963 @@ export default function AgentMonthlyLedger() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Modal: Agent Custody View & Management (عرض وإدارة عهد الوكيل) ====== */}
+      {agentCustodyModal && ledger && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backdropFilter: 'blur(6px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAgentCustodyModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg)',
+              borderRadius: '24px',
+              maxWidth: '1200px',
+              width: '95vw',
+              height: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                padding: '20px 28px',
+                color: '#fff',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '16px',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '16px',
+                    background: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                  }}
+                >
+                  <i className="fa-solid fa-boxes-stacked" />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '20px', fontWeight: 900 }}>
+                    إدارة وسجل عهد الوكيل
+                  </h2>
+                  <p style={{ margin: '4px 0 0', fontFamily: "'Cairo',sans-serif", fontSize: '13px', opacity: 0.9 }}>
+                    {ledger.agent.agency_name} — كود الوكيل: <strong>{ledger.agent.code}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons in Header */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleOpenAssignCustody}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#fff',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.4)',
+                    transition: 'all .2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <i className="fa-solid fa-plus" />
+                  <span>صرف وإسناد عهدة جديدة</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintCustodyReceipt}
+                  disabled={agentFixedCustody.length === 0 && agentConsumedCustody.length === 0}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: (agentFixedCustody.length === 0 && agentConsumedCustody.length === 0) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: (agentFixedCustody.length === 0 && agentConsumedCustody.length === 0) ? 0.6 : 1,
+                  }}
+                >
+                  <i className="fa-solid fa-print" />
+                  <span>طباعة إقرار العهدة</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAgentCustodyModal(false)}
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs Bar */}
+            <div
+              style={{
+                display: 'flex',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--bg)',
+                padding: '0 20px',
+                gap: '8px',
+                flexShrink: 0,
+              }}
+            >
+              {[
+                { key: 'fixed', label: 'العهدة الثابتة (أصول وتجهيزات)', icon: 'fa-cube', count: agentFixedCustody.length },
+                { key: 'consumed', label: 'العهدة المستهلكة (مطبوعات ودفاتر)', icon: 'fa-scroll', count: agentConsumedCustody.length },
+                { key: 'all', label: 'جميع العهد المسجلة', icon: 'fa-list-check', count: agentFixedCustody.length + agentConsumedCustody.length },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setAgentCustodyTab(tab.key as any)}
+                  style={{
+                    padding: '14px 20px',
+                    border: 'none',
+                    borderBottom: agentCustodyTab === tab.key ? '3px solid #0284c7' : '3px solid transparent',
+                    background: 'none',
+                    color: agentCustodyTab === tab.key ? '#0284c7' : 'var(--muted)',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <i className={`fa-solid ${tab.icon}`} />
+                  <span>{tab.label}</span>
+                  <span
+                    style={{
+                      background: agentCustodyTab === tab.key ? '#0284c7' : 'var(--border)',
+                      color: agentCustodyTab === tab.key ? '#fff' : 'var(--text)',
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+              {agentCustodyLoading ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
+                  <i className="fa-solid fa-circle-notch fa-spin fa-2x" style={{ color: '#0284c7', marginBottom: '14px' }} />
+                  <p style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 700, fontSize: '14px' }}>جاري تحميل بيانات العهد...</p>
+                </div>
+              ) : (() => {
+                const list =
+                  agentCustodyTab === 'fixed'
+                    ? agentFixedCustody
+                    : agentCustodyTab === 'consumed'
+                    ? agentConsumedCustody
+                    : [...agentFixedCustody, ...agentConsumedCustody];
+
+                if (list.length === 0) {
+                  return (
+                    <div
+                      style={{
+                        background: 'var(--bg)',
+                        borderRadius: '20px',
+                        padding: '60px 24px',
+                        textAlign: 'center',
+                        border: '2px dashed var(--border)',
+                      }}
+                    >
+                      <i className="fa-solid fa-box-open" style={{ fontSize: '48px', color: 'var(--muted)', opacity: 0.4, marginBottom: '16px', display: 'block' }} />
+                      <h3 style={{ fontFamily: "'Cairo',sans-serif", fontWeight: 800, fontSize: '16px', color: 'var(--text)', margin: '0 0 8px 0' }}>
+                        لا توجد أصناف عهدة مسجلة في هذا القسم
+                      </h3>
+                      <p style={{ fontFamily: "'Cairo',sans-serif", fontSize: '13px', color: 'var(--muted)', margin: '0 0 20px 0' }}>
+                        يمكنك صرف وإسناد عهدة جديدة (أجهزة، طابعات، دفاتر، أو أوراق) للوكيل الآن
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleOpenAssignCustody}
+                        style={{
+                          padding: '10px 24px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                          color: '#fff',
+                          fontFamily: "'Cairo',sans-serif",
+                          fontWeight: 800,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 14px rgba(2,132,199,0.3)',
+                        }}
+                      >
+                        <i className="fa-solid fa-plus" />
+                        <span>صرف عهدة جديدة للوكيل الآن</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', fontFamily: "'Cairo',sans-serif" }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)', color: 'var(--muted)' }}>
+                          <th style={{ padding: '12px 14px', textAlign: 'center', width: '50px' }}>#</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'right' }}>الصنف / البيان</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>النوع / الفئة</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>السيريال / المدى</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>الكمية</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>الحالة</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>تاريخ الصرف</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'right' }}>ملاحظات</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center', width: '90px' }}>الإجراء</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map((item, idx) => {
+                          const isReturned = item.raw_status === 'returned' || item.status === 'مسترجعة';
+                          return (
+                            <tr
+                              key={item.id || idx}
+                              style={{
+                                borderBottom: '1px solid var(--border)',
+                                background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
+                              }}
+                            >
+                              <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--muted)' }}>
+                                {idx + 1}
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: 800, color: 'var(--text)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <i
+                                    className={`fa-solid ${
+                                      item.category?.includes('ثابت') || item.raw_item?.inventory_type === 'fixed'
+                                        ? 'fa-cube'
+                                        : 'fa-scroll'
+                                    }`}
+                                    style={{ color: '#0284c7' }}
+                                  />
+                                  <span>{item.item_name || item.name || '-'}</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', color: 'var(--muted)', fontWeight: 700 }}>
+                                <span style={{ background: 'var(--bg)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '11px' }}>
+                                  {item.category || (item.raw_item?.inventory_type === 'fixed' ? 'أصول ثابتة' : 'مستهلكة')}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: '#38bdf8' }}>
+                                {item.serial_number || item.code || item.range || '—'}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 900, color: 'var(--text)' }}>
+                                {item.quantity ?? 1}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '3px 10px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    background: isReturned ? 'rgba(100,116,139,0.15)' : 'rgba(16,185,129,0.15)',
+                                    color: isReturned ? '#94a3b8' : '#10b981',
+                                    border: `1px solid ${isReturned ? '#64748b' : '#10b981'}`,
+                                  }}
+                                >
+                                  ● {item.status || 'مسلمة'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', color: 'var(--muted)', fontSize: '12px', fontWeight: 700 }}>
+                                {item.delivery_date ? String(item.delivery_date).substring(0, 10) : '—'}
+                              </td>
+                              <td style={{ padding: '12px 14px', color: 'var(--muted)', fontSize: '12px' }}>
+                                {item.notes || '—'}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                {item.id && !isReturned ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReturnSingleCustody(item.id)}
+                                    title="استرجاع الصنف إلى المخزن"
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #f59e0b',
+                                      background: 'rgba(245,158,11,0.1)',
+                                      color: '#f59e0b',
+                                      fontWeight: 800,
+                                      fontSize: '11px',
+                                      cursor: 'pointer',
+                                      fontFamily: "'Cairo',sans-serif",
+                                    }}
+                                  >
+                                    <i className="fa-solid fa-arrow-rotate-left" /> استرجاع
+                                  </button>
+                                ) : (
+                                  <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '16px 28px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--bg)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: '12px', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif" }}>
+                إجمالي الأصناف: <strong>{agentFixedCustody.length + agentConsumedCustody.length}</strong> صنف
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleOpenAssignCustody}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#fff',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <i className="fa-solid fa-plus" />
+                  <span>صرف عهدة جديدة</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAgentCustodyModal(false)}
+                  style={{
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)',
+                    background: 'none',
+                    color: 'var(--muted)',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Modal: Assign New Custody Form (صرف وإسناد عهدة جديدة للوكيل) ====== */}
+      {assignCustodyModal && ledger && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.8)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backdropFilter: 'blur(8px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !assigningCustody) setAssignCustodyModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg)',
+              borderRadius: '24px',
+              maxWidth: '1150px',
+              width: '95vw',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.45)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #1e40af, #1d4ed8)',
+                padding: '20px 28px',
+                color: '#fff',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '14px',
+                    background: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '22px',
+                  }}
+                >
+                  <i className="fa-solid fa-file-signature" />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '18px', fontWeight: 900 }}>
+                    إصدار وإسناد نموذج صرف عهدة جديدة
+                  </h2>
+                  <p style={{ margin: '3px 0 0', fontFamily: "'Cairo',sans-serif", fontSize: '12px', opacity: 0.9 }}>
+                    لصالح: <strong>{ledger.agent.agency_name}</strong> ({ledger.agent.agent_name}) — كود: {ledger.agent.code}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span
+                  style={{
+                    background: 'rgba(255,255,255,0.18)',
+                    padding: '4px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    fontWeight: 800,
+                  }}
+                >
+                  رقم الحركة: #{Math.floor(100000 + (selectedAgentId || 1) * 37 + Date.now() % 10000)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAssignCustodyModal(false)}
+                  disabled={assigningCustody}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    cursor: assigningCustody ? 'not-allowed' : 'pointer',
+                    fontSize: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSubmitAssignCustody} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                {/* Recipient Details (Pre-filled for this Agent) */}
+                <div
+                  style={{
+                    background: 'var(--bg)',
+                    borderRadius: '16px',
+                    padding: '18px 20px',
+                    border: '1px solid var(--border)',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '16px',
+                    marginBottom: '24px',
+                  }}
+                >
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '6px' }}>
+                      <i className="fa-solid fa-users" style={{ marginLeft: '6px', color: '#3b82f6' }} />
+                      تصنيف الجهة المستلمة *
+                    </label>
+                    <div
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        background: 'rgba(59,130,246,0.1)',
+                        border: '1.5px solid #3b82f6',
+                        color: '#1d4ed8',
+                        fontWeight: 800,
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <i className="fa-solid fa-circle-check" />
+                      <span>وكيل / فرع</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '6px' }}>
+                      <i className="fa-solid fa-building" style={{ marginLeft: '6px', color: '#10b981' }} />
+                      المستلم الفعلي (الوكيل) *
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${ledger.agent.agency_name} — (${ledger.agent.code})`}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid var(--border)',
+                        background: 'var(--card-bg)',
+                        color: 'var(--text)',
+                        fontWeight: 800,
+                        fontSize: '13px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '6px' }}>
+                      <i className="fa-solid fa-comment-dots" style={{ marginLeft: '6px', color: '#f59e0b' }} />
+                      ملاحظات الصرف العامة (على الإيصال)
+                    </label>
+                    <input
+                      type="text"
+                      value={assignmentNotes}
+                      onChange={(e) => setAssignmentNotes(e.target.value)}
+                      placeholder="ملاحظات عامة متعلقة بالتسليم والإقرار..."
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid var(--border)',
+                        background: 'var(--card-bg)',
+                        color: 'var(--text)',
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Assignment Items Section Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h4 style={{ margin: 0, fontFamily: "'Cairo',sans-serif", fontSize: '15px', fontWeight: 900, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-boxes-packing" style={{ color: '#3b82f6' }} />
+                    الأصناف والكميات المراد صرفها في هذه العهدة:
+                  </h4>
+                  {loadingInventoryItems && (
+                    <span style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fa-solid fa-circle-notch fa-spin" style={{ color: '#3b82f6' }} /> جاري جلب المخزون...
+                    </span>
+                  )}
+                </div>
+
+                {/* Items Dynamic Rows */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+                  {assignmentRows.map((row, idx) => {
+                    const filteredItems = inventoryItems.filter(
+                      (it) => !row.inventory_type || it.inventory_type === row.inventory_type
+                    );
+
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          background: 'var(--bg)',
+                          borderRadius: '14px',
+                          padding: '14px',
+                          border: '1px solid var(--border)',
+                          display: 'grid',
+                          gridTemplateColumns: '160px 1.5fr 90px 110px 120px 120px 1fr 40px',
+                          gap: '10px',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {/* 1. Inventory Type */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            نوع المخزون
+                          </label>
+                          <select
+                            value={row.inventory_type}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'inventory_type', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontWeight: 700,
+                              fontSize: '12px',
+                            }}
+                          >
+                            <option value="">اختر النوع...</option>
+                            <option value="fixed">أصول ثابتة</option>
+                            <option value="consumable">مستهلكات ومطبوعات</option>
+                          </select>
+                        </div>
+
+                        {/* 2. Item Select */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            الصنف المصروف *
+                          </label>
+                          <select
+                            required
+                            value={row.item_id}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'item_id', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1.5px solid #3b82f6',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontWeight: 800,
+                              fontSize: '12px',
+                            }}
+                          >
+                            <option value="">اختر صنفاً من المخزن...</option>
+                            {filteredItems.map((it) => {
+                              const qty = it.stocks?.[0]?.quantity ?? it.quantity ?? 0;
+                              return (
+                                <option key={it.id} value={it.id}>
+                                  {it.name} ({it.category || (it.inventory_type === 'fixed' ? 'أصول ثابتة' : 'مستهلكات')} - متوفر: {qty})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        {/* 3. Quantity */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            الكمية *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={row.quantity}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'quantity', parseInt(e.target.value) || 1)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontWeight: 800,
+                              textAlign: 'center',
+                              fontSize: '12px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 4. Condition */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            حالة الصنف
+                          </label>
+                          <select
+                            value={row.condition}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'condition', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontWeight: 700,
+                              fontSize: '12px',
+                            }}
+                          >
+                            <option value="new">جديد</option>
+                            <option value="used">مستعمل</option>
+                          </select>
+                        </div>
+
+                        {/* 5. Serial Start */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            السيريال (من)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="اختياري"
+                            value={row.serial_start}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'serial_start', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontSize: '12px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 6. Serial End */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            السيريال (إلى)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="اختياري"
+                            value={row.serial_end}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'serial_end', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontSize: '12px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 7. Row Notes */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
+                            ملاحظات الصنف
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="موديل / تفاصيل..."
+                            value={row.notes}
+                            onChange={(e) => updateAssignmentItemRow(idx, 'notes', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card-bg)',
+                              color: 'var(--text)',
+                              fontSize: '12px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 8. Delete Row */}
+                        <div style={{ paddingTop: '18px', textAlign: 'center' }}>
+                          {assignmentRows.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => removeAssignmentItemRow(idx)}
+                              title="حذف هذا الصف"
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                border: '1px solid #ef4444',
+                                background: 'rgba(239,68,68,0.1)',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <i className="fa-solid fa-trash" />
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--muted)', fontSize: '12px' }}>—</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add Row Button */}
+                <button
+                  type="button"
+                  onClick={addAssignmentItemRow}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: '2px dashed #3b82f6',
+                    background: 'rgba(59,130,246,0.06)',
+                    color: '#3b82f6',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all .2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(59,130,246,0.12)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(59,130,246,0.06)')}
+                >
+                  <i className="fa-solid fa-plus" />
+                  <span>إضافة صنف إضافي لنموذج الصرف الحالي</span>
+                </button>
+              </div>
+
+              {/* Form Footer */}
+              <div
+                style={{
+                  padding: '16px 28px',
+                  borderTop: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={assigningCustody}
+                  onClick={() => setAssignCustodyModal(false)}
+                  style={{
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)',
+                    background: 'none',
+                    color: 'var(--muted)',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 700,
+                    cursor: assigningCustody ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  إلغاء والعودة للعهد
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={assigningCustody || assignmentRows.some((r) => !r.item_id)}
+                  style={{
+                    padding: '10px 32px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #1e40af, #1d4ed8)',
+                    color: '#fff',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '14px',
+                    cursor: (assigningCustody || assignmentRows.some((r) => !r.item_id)) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(30,64,175,0.4)',
+                    opacity: (assigningCustody || assignmentRows.some((r) => !r.item_id)) ? 0.6 : 1,
+                  }}
+                >
+                  {assigningCustody ? (
+                    <>
+                      <i className="fa-solid fa-circle-notch fa-spin" />
+                      <span>جاري اعتماد وصرف العهدة...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-check" />
+                      <span>اعتماد وصرف العهدة وإصدار الإيصال</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

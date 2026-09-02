@@ -519,16 +519,6 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
                                 <i className="fa-solid fa-pencil"></i>
                               </button>
                             )}
-                            {isAdmin && (
-                              <button
-                                onClick={() => setShowDeleteModal(doc)}
-                                className="action-btn delete"
-                                aria-label="حذف"
-                                title="حذف"
-                              >
-                                <i className="fa-solid fa-trash"></i>
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -648,16 +638,6 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
                               title="تعديل"
                             >
                               <i className="fa-solid fa-pencil"></i>
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              onClick={() => setShowDeleteModal(doc)}
-                              className="action-btn delete"
-                              aria-label="حذف"
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
                             </button>
                           )}
                         </div>

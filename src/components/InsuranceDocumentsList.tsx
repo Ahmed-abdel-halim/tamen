@@ -44,6 +44,10 @@ type InsuranceDocument = {
   eidc_sync_status?: 'pending' | 'synced' | 'failed' | null;
   eidc_policy_id?: string | null;
   eidc_pdf_url?: string | null;
+  is_canceled?: boolean;
+  canceled_at?: string | null;
+  cancel_reason?: string | null;
+  status?: string | null; // 'active' | 'expired' | 'cancelled'
 };
 
 export default function InsuranceDocumentsList({ isArchive = false }: { isArchive?: boolean } = {}) {
@@ -74,7 +78,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const [agentSearch, setAgentSearch] = useState("");
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const agentDropdownRef = useRef<HTMLDivElement>(null);
-  const [statusFilter, setStatusFilter] = useState<DocumentStatusType>('all');
+  const [statusFilter, setStatusFilter] = useState<DocumentStatusType>('active');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -144,34 +148,78 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
     try {
       const userStr = localStorage.getItem('user');
       const userId = userStr ? JSON.parse(userStr).id : null;
+      const token = localStorage.getItem('token');
 
       const headers: HeadersInit = { 'Accept': 'application/json' };
       if (userId) {
         headers['X-User-Id'] = userId.toString();
       }
-
-      const params = new URLSearchParams();
-      if (isArchive) {
-        params.append('archived', 'true');
-      } else if (statusFilter) {
-        params.append('status', statusFilter);
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-      if (searchQuery) params.append('search', searchQuery);
-      if (filters.agentId) params.append('branch_agent_id', filters.agentId);
-      if (filters.year) params.append('year', filters.year);
-      if (filters.month) params.append('month', filters.month);
-      if (filters.day) params.append('day', filters.day);
-      params.append('page', currentPage.toString());
-      params.append('per_page', perPage.toString());
 
-      const url = `${API_BASE_URL}/insurance-documents?${params.toString()}`;
-      const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      
-      // Laravel pagination structure: { data: [], total: 100, ... }
-      setDocuments(data.data || []);
-      setTotalDocuments(data.total || 0);
+      if (statusFilter === 'cancelled') {
+        const cancelParams = new URLSearchParams();
+        cancelParams.append('type', 'insurance_documents');
+        if (searchQuery) cancelParams.append('search', searchQuery);
+        if (filters.agentId) cancelParams.append('branch_agent_id', filters.agentId);
+        if (filters.year) cancelParams.append('year', filters.year);
+        if (filters.month) cancelParams.append('month', filters.month);
+        if (filters.day) cancelParams.append('day', filters.day);
+        if (userId) cancelParams.append('user_id', userId.toString());
+        cancelParams.append('page', currentPage.toString());
+        cancelParams.append('per_page', perPage.toString());
+
+        const cancelUrl = `${API_BASE_URL}/canceled-documents?${cancelParams.toString()}`;
+        const res = await fetch(cancelUrl, { headers });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+
+        const mappedDocs: InsuranceDocument[] = (data.data || []).map((doc: any) => ({
+          id: doc.id,
+          insurance_number: doc.insurance_number,
+          insurance_type: doc.insurance_type || 'تأمين إجباري سيارات',
+          issue_date: doc.issue_date || doc.start_date || doc.canceled_at,
+          insured_name: doc.insured_name,
+          phone: doc.phone || '-',
+          premium: doc.premium || 0,
+          total: doc.total || 0,
+          agency_name: doc.agency_name,
+          branch_agent_id: doc.branch_agent_id,
+          is_canceled: true,
+          canceled_at: doc.canceled_at,
+          cancel_reason: doc.cancel_reason,
+          status: 'cancelled',
+        }));
+
+        setDocuments(mappedDocs);
+        setTotalDocuments(data.total || mappedDocs.length);
+      } else {
+        const params = new URLSearchParams();
+        if (isArchive) {
+          params.append('archived', 'true');
+        } else if (statusFilter) {
+          params.append('status', statusFilter);
+        }
+        if (searchQuery) params.append('search', searchQuery);
+        if (filters.agentId) params.append('branch_agent_id', filters.agentId);
+        if (filters.year) params.append('year', filters.year);
+        if (filters.month) params.append('month', filters.month);
+        if (filters.day) params.append('day', filters.day);
+        params.append('page', currentPage.toString());
+        params.append('per_page', perPage.toString());
+
+        const url = `${API_BASE_URL}/insurance-documents?${params.toString()}`;
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        
+        const rawDocs: InsuranceDocument[] = data.data || [];
+        // Strictly exclude cancelled documents from all, active, and expired lists
+        const cleanDocs = rawDocs.filter((d: any) => !d.is_canceled && d.status !== 'cancelled' && d.status !== 'ملغية' && d.status !== 'ملغيه');
+        setDocuments(cleanDocs);
+        setTotalDocuments(data.total || 0);
+      }
     } catch (error: any) {
       showToast(`حدث خطأ أثناء جلب الوثائق: ${error.message || ''}`, 'error');
     } finally {
@@ -240,7 +288,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
       const res = await fetch(`${API_BASE_URL}/insurance-documents/${showCancelModal.id}/cancel`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ cancel_reason: cancelReason.trim(), user_id: userId }),
+        body: JSON.stringify({ cancel_reason: cancelReason.trim(), user_id: userId, cancellation_fee: 10 }),
       });
 
       if (!res.ok) {
@@ -339,19 +387,27 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         { header: 'اسم المؤمن له', key: 'insured_name', width: 35 },
         { header: 'رقم الهاتف', key: 'phone', width: 15 },
         { header: 'نوع التأمين', key: 'insurance_type', width: 20 },
+        { header: 'الحالة', key: 'status_label', width: 15 },
         { header: 'القسط الكلي', key: 'total', width: 15 },
         { header: 'الوكالة', key: 'agency_name', width: 25 },
       ];
 
-      const data = documents.map(doc => ({
-        insurance_number: doc.insurance_number,
-        issue_date: doc.issue_date ? new Date(doc.issue_date).toLocaleString('ar-LY') : '-',
-        insured_name: doc.insured_name || '-',
-        phone: doc.phone || '-',
-        insurance_type: doc.insurance_type,
-        total: (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(2) + ' د.ل',
-        agency_name: doc.agency_name || '-',
-      }));
+      const data = documents.map(doc => {
+        const isCanceled = doc.is_canceled || doc.status === 'cancelled';
+        const isExpired = doc.status === 'expired' || doc.status === 'archived';
+        const statusLabel = isCanceled ? 'ملغية' : isExpired ? 'منتهية' : 'نشطة';
+
+        return {
+          insurance_number: doc.insurance_number,
+          issue_date: doc.issue_date ? new Date(doc.issue_date).toLocaleString('ar-LY') : '-',
+          insured_name: doc.insured_name || '-',
+          phone: doc.phone || '-',
+          insurance_type: doc.insurance_type,
+          status_label: statusLabel,
+          total: (typeof doc.total === 'number' ? doc.total : parseFloat(String(doc.total)) || 0).toFixed(2) + ' د.ل',
+          agency_name: doc.agency_name || '-',
+        };
+      });
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير وثائق تأمين السيارات',
@@ -622,6 +678,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                     <th>رقم الهاتف</th>
                     <th>القسط </th>
                     <th>نوع التأمين</th>
+                    <th>الحالة</th>
                     {isAdmin && <th>اسم الوكالة</th>}
                     <th>الإجراء</th>
                   </tr>
@@ -641,7 +698,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                       : '-';
 
                     return (
-                      <tr key={doc.id}>
+                      <tr key={doc.id} style={(doc.is_canceled || doc.status === 'cancelled') ? { background: 'rgba(239,68,68,0.05)' } : undefined}>
                         <td>{doc.insurance_number}</td>
                         <td>{issueDate}</td>
                         <td>{doc.insured_name || '-'}</td>
@@ -695,6 +752,24 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               </span>
                             )}
                           </div>
+                        </td>
+                        <td>
+                          {(doc.is_canceled || doc.status === 'cancelled') ? (
+                            <span title={doc.cancel_reason || 'ملغية'} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '20px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                              <i className="fa-solid fa-ban" style={{ fontSize: '11px' }} />
+                              ملغية
+                            </span>
+                          ) : doc.status === 'expired' || doc.status === 'archived' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', borderRadius: '20px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                              <i className="fa-solid fa-clock" style={{ fontSize: '11px' }} />
+                              منتهية
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '20px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                              <i className="fa-solid fa-circle-check" style={{ fontSize: '11px' }} />
+                              نشطة
+                            </span>
+                          )}
                         </td>
                         {isAdmin && (
                           <td>
@@ -787,7 +862,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                                 <i className="fa-solid fa-pencil"></i>
                               </button>
                             )}
-                            {isAdmin && (
+                            {isAdmin && !doc.is_canceled && doc.status !== 'cancelled' && (
                               <button
                                 onClick={() => { setShowCancelModal(doc); setCancelReason(''); }}
                                 className="action-btn cancel-btn"
@@ -796,16 +871,6 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                                 title="إلغاء الوثيقة (تستثنى من الحسابات)"
                               >
                                 <i className="fa-solid fa-ban"></i> إلغاء
-                              </button>
-                            )}
-                            {isAdmin && (
-                              <button
-                                onClick={() => setShowDeleteModal(doc)}
-                                className="action-btn delete"
-                                aria-label="حذف"
-                                title="حذف"
-                              >
-                                <i className="fa-solid fa-trash"></i>
                               </button>
                             )}
                           </div>
@@ -835,11 +900,26 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                     : '-';
 
                   return (
-                    <div key={doc.id} className="user-mobile-card">
+                    <div key={doc.id} className="user-mobile-card" style={(doc.is_canceled || doc.status === 'cancelled') ? { borderColor: '#fecaca', background: 'rgba(239,68,68,0.03)' } : undefined}>
                       <div className="user-mobile-header">
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <h4 className="user-mobile-title">{doc.insurance_number}</h4>
                           <span className="user-mobile-number">{doc.insurance_type}</span>
+                        </div>
+                        <div style={{ flexShrink: 0 }}>
+                          {(doc.is_canceled || doc.status === 'cancelled') ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 700 }}>
+                              <i className="fa-solid fa-ban" style={{ fontSize: '10px' }} /> ملغية
+                            </span>
+                          ) : doc.status === 'expired' || doc.status === 'archived' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 700 }}>
+                              <i className="fa-solid fa-clock" style={{ fontSize: '10px' }} /> منتهية
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 700 }}>
+                              <i className="fa-solid fa-circle-check" style={{ fontSize: '10px' }} /> نشطة
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="user-mobile-body">
@@ -979,16 +1059,6 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               <i className="fa-solid fa-pencil"></i>
                             </button>
                           )}
-                          {isAdmin && (
-                            <button
-                              onClick={() => setShowDeleteModal(doc)}
-                              className="action-btn delete"
-                              aria-label="حذف"
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1103,8 +1173,18 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
               </p>
             </div>
 
-            <div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px', fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.5' }}>
-              💡 <strong>تنويه هام:</strong> سيتم إلغاء هذه الوثيقة واستبعادها تماماً من كشف حساب الوكيل والتقارير المالية، لكن يمكن استعراضها دائماً في قسم "الوثائق الملغية".
+            <div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '14px', fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.5' }}>
+              💡 <strong>تنويه هام:</strong> سيتم إلغاء هذه الوثيقة واستبعادها تماماً من كشف حساب الوكيل والتقارير المالية، وتظهر فقط في قسم "الوثائق الملغية".
+            </div>
+
+            <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#fbbf24' }}>
+                <i className="fa-solid fa-receipt" style={{ marginLeft: '6px' }} />
+                رسوم إلغاء التأمين الإجباري:
+              </span>
+              <span style={{ fontSize: '14px', fontWeight: 900, color: '#fbbf24' }}>
+                10.000 د.ل <span style={{ fontSize: '11px', fontWeight: 700 }}>(قيمة ثابتة)</span>
+              </span>
             </div>
 
             <div style={{ marginBottom: '20px' }}>

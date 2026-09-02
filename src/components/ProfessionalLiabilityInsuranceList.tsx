@@ -515,15 +515,6 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
                               <i className="fa-solid fa-pen"></i>
                             </button>
                           )}
-                          {isAdmin && (
-                            <button
-                              className="action-btn delete"
-                              onClick={() => setShowDeleteModal(doc)}
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -638,15 +629,6 @@ export default function ProfessionalLiabilityInsuranceList({ isArchive = false }
                               title="تعديل"
                             >
                               <i className="fa-solid fa-pen"></i>
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              className="action-btn delete"
-                              onClick={() => setShowDeleteModal(doc)}
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
                             </button>
                           )}
                         </div>

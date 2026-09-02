@@ -66,7 +66,7 @@ export default function OutstandingDebts() {
             let currentMonthBalance = 0;
 
             try {
-              const ledgerRes = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${d.agent_id || d.id}`, { headers });
+              const ledgerRes = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${d.agent_id || d.id}&exclude_canceled=1`, { headers });
               if (ledgerRes.ok) {
                 const ledgerData = await ledgerRes.json();
                 if (ledgerData && Array.isArray(ledgerData.months)) {

@@ -446,11 +446,6 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
                         <button className="action-btn edit" title="تعديل" onClick={() => navigate(`/school-student-insurance/edit/${doc.id}`)} style={{ background: '#f59e0b', color: '#fff' }}>
                           <i className="fa-solid fa-pen-to-square"></i>
                         </button>
-                        {isAdmin && (
-                          <button className="action-btn delete" title="حذف" onClick={() => setDeleteConfirm({ id: doc.id, isOpen: true })}>
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

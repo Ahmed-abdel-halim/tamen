@@ -70,6 +70,7 @@ const getPresetRange = (preset: DatePreset) => {
       break;
     case 'thisMonth':
       start.setDate(1);
+      end.setMonth(end.getMonth() + 1, 0);
       break;
     case 'lastMonth':
       start.setMonth(start.getMonth() - 1, 1);
@@ -152,6 +153,7 @@ export default function MonthlyAccountClosuresReport() {
         if (dateFrom) params.append('from_date', dateFrom);
         if (dateTo) params.append('to_date', dateTo);
       }
+      params.append('exclude_canceled', '1');
 
       const res = await fetch(`${API_BASE_URL}/branches-agents/monthly-account-closures-report?${params}`, {
         headers: { 

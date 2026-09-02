@@ -510,15 +510,6 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
                               <i className="fa-solid fa-pen"></i>
                             </button>
                           )}
-                          {isAdmin && (
-                            <button
-                              className="action-btn delete"
-                              onClick={() => setShowDeleteModal(doc)}
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          )}
                         </div>
                       </td>
                         </tr>
@@ -634,15 +625,6 @@ export default function PersonalAccidentInsuranceList({ isArchive = false }: { i
                               title="تعديل"
                             >
                               <i className="fa-solid fa-pen"></i>
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              className="action-btn delete"
-                              onClick={() => setShowDeleteModal(doc)}
-                              title="حذف"
-                            >
-                              <i className="fa-solid fa-trash"></i>
                             </button>
                           )}
                         </div>

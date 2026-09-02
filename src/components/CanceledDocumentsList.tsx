@@ -54,6 +54,18 @@ const fmtDate = (d: string | null) => {
   try { return new Date(d).toLocaleDateString('ar-LY'); } catch { return d; }
 };
 
+export const getCancellationFee = (doc: { table?: string; doc_type_label?: string; insurance_type?: string }) => {
+  const table = doc.table || '';
+  const label = doc.doc_type_label || doc.insurance_type || '';
+  if (table.includes('international') || label.includes('دولي') || label.includes('LIFO')) {
+    return 30;
+  }
+  if (table.includes('insurance_documents') || label.includes('سيارات') || label.includes('إجباري') || label.includes('سيارة')) {
+    return 10;
+  }
+  return 0;
+};
+
 export default function CanceledDocumentsList() {
   const [docs, setDocs] = useState<CanceledDoc[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -179,6 +191,7 @@ export default function CanceledDocumentsList() {
         { header: 'اسم المؤمن', key: 'insured_name', width: 25 },
         { header: 'الوكيل', key: 'agency_name', width: 25 },
         { header: 'الإجمالي (د.ل)', key: 'total_str', width: 18 },
+        { header: 'رسوم الإلغاء (د.ل)', key: 'fee_str', width: 18 },
         { header: 'تاريخ الإصدار', key: 'issue_date_str', width: 18 },
         { header: 'تاريخ الإلغاء', key: 'canceled_at_str', width: 18 },
         { header: 'سبب الإلغاء', key: 'cancel_reason', width: 35 },
@@ -190,6 +203,7 @@ export default function CanceledDocumentsList() {
         insured_name: d.insured_name || '-',
         agency_name: d.agency_name || '-',
         total_str: fmt(d.total),
+        fee_str: fmt(getCancellationFee(d)),
         issue_date_str: fmtDate(d.issue_date),
         canceled_at_str: fmtDate(d.canceled_at),
         cancel_reason: d.cancel_reason || '-',
@@ -220,6 +234,7 @@ export default function CanceledDocumentsList() {
           <td>${d.insured_name}</td>
           <td>${d.agency_name}</td>
           <td style="color: #dc2626; font-weight: bold;">${fmt(d.total)} د.ل</td>
+          <td style="color: #d97706; font-weight: bold;">${fmt(getCancellationFee(d))} د.ل</td>
           <td>${fmtDate(d.issue_date)}</td>
           <td>${fmtDate(d.canceled_at)}</td>
           <td>${d.cancel_reason}</td>
@@ -253,6 +268,7 @@ export default function CanceledDocumentsList() {
                 <th>اسم المؤمن</th>
                 <th>الوكيل</th>
                 <th>الإجمالي</th>
+                <th>رسوم الإلغاء</th>
                 <th>تاريخ الإصدار</th>
                 <th>تاريخ الإلغاء</th>
                 <th>سبب الإلغاء</th>
@@ -503,14 +519,42 @@ export default function CanceledDocumentsList() {
           </div>
         </div>
 
-        {/* Card 3 - Notice & Exclusion Info Card */}
+        {/* Card 3 - Fixed Cancellation Fees Card */}
+        <div
+          className="canceled-stat-card"
+          style={{
+            ...statCardBase,
+            background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%)',
+            color: '#ffffff',
+            animation: 'fadeInUp 0.7s ease forwards',
+          }}
+        >
+          <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)' }} />
+          <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '110px', height: '110px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 800, opacity: 0.95 }}>رسوم الإلغاء الثابتة المحتسبة</span>
+              <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fa-solid fa-receipt" style={{ fontSize: '22px', color: '#ffffff' }} />
+              </div>
+            </div>
+            <div style={{ fontSize: '30px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+              {fmt(docs.reduce((s, d) => s + getCancellationFee(d), 0))}
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 800, opacity: 0.95, marginTop: '6px' }}>
+              10 د.ل إجباري | 30 د.ل دولي (ثابتة)
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4 - Notice & Exclusion Info Card */}
         <div
           className="canceled-stat-card"
           style={{
             ...statCardBase,
             background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%)',
             color: '#ffffff',
-            animation: 'fadeInUp 0.7s ease forwards',
+            animation: 'fadeInUp 0.8s ease forwards',
           }}
         >
           <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)' }} />
@@ -522,8 +566,8 @@ export default function CanceledDocumentsList() {
                 <i className="fa-solid fa-shield-halved" style={{ fontSize: '22px', color: '#ffffff' }} />
               </div>
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, lineHeight: '1.6', opacity: 0.95, marginTop: '4px' }}>
-              ملاحظة: الوثائق الملغية تستثنى تلقائياً بالكامل من كشوفات حساب الوكلاء والتقارير المالية والإنتاجية.
+            <div style={{ fontSize: '12px', fontWeight: 700, lineHeight: '1.6', opacity: 0.95, marginTop: '4px' }}>
+              الوثائق الملغية مستبعدة تماماً من كشوفات الحساب والإنتاجية مع تطبيق رسوم الإلغاء الثابتة.
             </div>
           </div>
         </div>
@@ -725,66 +769,80 @@ export default function CanceledDocumentsList() {
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)', borderBottom: '2px solid var(--border, #e2e8f0)' }}>
-                    {['#', 'رقم الوثيقة', 'نوع التأمين', 'اسم المؤمن', 'الوكيل / المكتب', 'الإجمالي', 'تاريخ الإصدار', 'تاريخ الإلغاء', 'سبب الإلغاء'].map((h, i) => (
-                      <th key={h} style={{ padding: '16px 14px', textAlign: i === 5 ? 'center' : 'right', fontSize: '13px', color: '#dc2626', fontWeight: 900, whiteSpace: 'nowrap' }}>{h}</th>
+                    {['#', 'رقم الوثيقة', 'نوع التأمين', 'اسم المؤمن', 'الوكيل / المكتب', 'الإجمالي', 'رسوم الإلغاء', 'تاريخ الإصدار', 'تاريخ الإلغاء', 'سبب الإلغاء'].map((h, i) => (
+                      <th key={h} style={{ padding: '16px 14px', textAlign: (i === 5 || i === 6) ? 'center' : 'right', fontSize: '13px', color: '#dc2626', fontWeight: 900, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {docs.map((doc, idx) => (
-                    <tr
-                      key={`${doc.table}-${doc.id}`}
-                      className="canceled-table-row"
-                      style={{ borderBottom: '1px solid var(--border, #e2e8f0)', transition: 'all 0.2s ease' }}
-                    >
-                      <td style={{ padding: '14px', fontSize: '13px', color: 'var(--muted)', fontWeight: 700 }}>{((page - 1) * perPage) + idx + 1}</td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontWeight: 800,
-                          fontSize: '13px',
-                          color: '#0f172a',
-                          background: 'var(--panel, #f1f5f9)',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border, #cbd5e1)'
-                        }}>
-                          {doc.insurance_number}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{
-                          background: 'rgba(2, 132, 199, 0.08)',
-                          border: '1px solid rgba(2, 132, 199, 0.2)',
-                          borderRadius: '10px',
-                          padding: '5px 12px',
-                          fontSize: '12px',
-                          color: '#0284c7',
-                          fontWeight: 800,
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {doc.doc_type_label}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px', fontSize: '13px', color: 'var(--text, #0f172a)', fontWeight: 700 }}>{doc.insured_name}</td>
-                      <td style={{ padding: '14px', fontSize: '13px', color: 'var(--text, #334155)', fontWeight: 700 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <i className="fa-solid fa-building-user" style={{ color: '#64748b', fontSize: '12px' }} />
-                          {doc.agency_name || '-'}
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px', fontSize: '14px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        {fmt(doc.total)} <span style={{ fontSize: '11px' }}>د.ل</span>
-                      </td>
-                      <td style={{ padding: '14px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(doc.issue_date)}</td>
-                      <td style={{ padding: '14px', fontSize: '13px', color: '#dc2626', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtDate(doc.canceled_at)}</td>
-                      <td style={{ padding: '14px', fontSize: '12px', color: 'var(--muted)', maxWidth: '240px' }}>
-                        <div style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }} title={doc.cancel_reason}>
-                          {doc.cancel_reason}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {docs.map((doc, idx) => {
+                    const cancelFee = getCancellationFee(doc);
+                    return (
+                      <tr
+                        key={`${doc.table}-${doc.id}`}
+                        className="canceled-table-row"
+                        style={{ borderBottom: '1px solid var(--border, #e2e8f0)', transition: 'all 0.2s ease' }}
+                      >
+                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--muted)', fontWeight: 700 }}>{((page - 1) * perPage) + idx + 1}</td>
+                        <td style={{ padding: '14px' }}>
+                          <span style={{
+                            fontFamily: 'monospace',
+                            fontWeight: 800,
+                            fontSize: '13px',
+                            color: '#0f172a',
+                            background: 'var(--panel, #f1f5f9)',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border, #cbd5e1)'
+                          }}>
+                            {doc.insurance_number}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <span style={{
+                            background: 'rgba(2, 132, 199, 0.08)',
+                            border: '1px solid rgba(2, 132, 199, 0.2)',
+                            borderRadius: '10px',
+                            padding: '5px 12px',
+                            fontSize: '12px',
+                            color: '#0284c7',
+                            fontWeight: 800,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {doc.doc_type_label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--text, #0f172a)', fontWeight: 700 }}>{doc.insured_name}</td>
+                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--text, #334155)', fontWeight: 700 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-building-user" style={{ color: '#64748b', fontSize: '12px' }} />
+                            {doc.agency_name || '-'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px', fontSize: '14px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          {fmt(doc.total)} <span style={{ fontSize: '11px' }}>د.ل</span>
+                        </td>
+                        <td style={{ padding: '14px', fontSize: '13px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            background: cancelFee > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(100, 116, 139, 0.1)',
+                            border: `1px solid ${cancelFee > 0 ? '#f59e0b' : '#cbd5e1'}`,
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            display: 'inline-block'
+                          }}>
+                            {fmt(cancelFee)} د.ل
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(doc.issue_date)}</td>
+                        <td style={{ padding: '14px', fontSize: '13px', color: '#dc2626', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtDate(doc.canceled_at)}</td>
+                        <td style={{ padding: '14px', fontSize: '12px', color: 'var(--muted)', maxWidth: '240px' }}>
+                          <div style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }} title={doc.cancel_reason}>
+                            {doc.cancel_reason}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.03) 100%)', borderTop: '2px solid var(--border, #e2e8f0)' }}>
@@ -793,6 +851,9 @@ export default function CanceledDocumentsList() {
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '15px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
                       {fmt(docs.reduce((s, d) => s + d.total, 0))} د.ل
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      {fmt(docs.reduce((s, d) => s + getCancellationFee(d), 0))} د.ل
                     </td>
                     <td colSpan={3}></td>
                   </tr>

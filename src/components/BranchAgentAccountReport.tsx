@@ -38,6 +38,7 @@ const getPresetRange = (preset: DatePreset) => {
       break;
     case 'thisMonth':
       start.setDate(1);
+      end.setMonth(end.getMonth() + 1, 0);
       break;
     case 'lastMonth':
       start.setMonth(start.getMonth() - 1, 1);
@@ -196,6 +197,7 @@ export default function BranchAgentAccountReport() {
       } else {
         params.append('type', 'full');
       }
+      params.append('exclude_canceled', '1');
       
       url += `?${params.toString()}`;
 
