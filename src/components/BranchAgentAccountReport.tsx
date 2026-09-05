@@ -59,18 +59,35 @@ export default function BranchAgentAccountReport() {
   const [dateFrom, setDateFrom] = useState<string>(initialRange.from);
   const [dateTo, setDateTo] = useState<string>(initialRange.to);
   
-  const [agents, setAgents] = useState<BranchAgent[]>([]);
+  const [agents, setAgents] = useState<BranchAgent[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_agents_light');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
   const [agentSearch, setAgentSearch] = useState("");
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const agentDropdownRef = useRef<HTMLDivElement>(null);
   
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [currentAgentId, setCurrentAgentId] = useState<number | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [loadingAgents, setLoadingAgents] = useState<boolean>(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_agents_light');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadUserPermissions();
+    fetchAgents();
   }, []);
 
   useEffect(() => {
@@ -80,13 +97,6 @@ export default function BranchAgentAccountReport() {
       setDateTo(range.to);
     }
   }, [datePreset]);
-
-  useEffect(() => {
-    // جلب الوكلاء لكل المستخدمين المصرح لهم بمجرد تحميل معلومات المستخدم
-    if (!isLoadingUser) {
-      fetchAgents();
-    }
-  }, [isLoadingUser]);
 
 
 
@@ -106,26 +116,24 @@ export default function BranchAgentAccountReport() {
       if (!userStr) {
         setIsAdmin(false);
         setCurrentAgentId(null);
-        setIsLoadingUser(false);
         return;
       }
       
       const user = JSON.parse(userStr);
       setIsAdmin(user.is_admin || false);
       setCurrentAgentId(user.branch_agent_id || null);
-      setIsLoadingUser(false);
     } catch (error) {
       console.error('Error loading user permissions:', error);
       setIsAdmin(false);
       setCurrentAgentId(null);
-      setIsLoadingUser(false);
     }
   };
 
   const fetchAgents = async () => {
     try {
+      setLoadingAgents(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/branches-agents`, {
+      const response = await fetch(`${API_BASE_URL}/branches-agents?light=1`, {
         headers: {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -133,10 +141,16 @@ export default function BranchAgentAccountReport() {
       });
       if (!response.ok) throw new Error('فشل جلب قائمة الوكلاء');
       const data = await response.json();
-      setAgents(Array.isArray(data) ? data : (data.data || []));
+      const list = Array.isArray(data) ? data : (data.data || []);
+      setAgents(list);
+      try {
+        sessionStorage.setItem('cached_agents_light', JSON.stringify(list));
+      } catch (e) {}
     } catch (error) {
       console.error('Error fetching agents:', error);
       showToast('حدث خطأ أثناء جلب الوكلاء', 'error');
+    } finally {
+      setLoadingAgents(false);
     }
   };
 
@@ -450,9 +464,16 @@ export default function BranchAgentAccountReport() {
                   minHeight: 42,
                 }}
               >
-                <span style={{ color: selectedAgent ? '#111827' : '#9ca3af' }}>
-                  {selectedAgent ? `${selectedAgent.agency_name} - ${selectedAgent.agent_name}` : 'اختر وكيل...'}
-                </span>
+                {loadingAgents && agents.length === 0 ? (
+                  <span style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-spinner fa-spin" style={{ color: '#2563eb' }}></i>
+                    جاري تحميل الوكلاء...
+                  </span>
+                ) : (
+                  <span style={{ color: selectedAgent ? '#111827' : '#9ca3af' }}>
+                    {selectedAgent ? `${selectedAgent.agency_name} - ${selectedAgent.agent_name}` : 'اختر وكيل...'}
+                  </span>
+                )}
                 <i
                   className={`fa-solid fa-chevron-${showAgentDropdown ? 'up' : 'down'}`}
                   style={{ color: '#9ca3af' }}
@@ -494,6 +515,13 @@ export default function BranchAgentAccountReport() {
                   />
                 </div>
                 <div style={{ maxHeight: 250, overflowY: 'auto' }}>
+                  {loadingAgents && agents.length === 0 ? (
+                    <div style={{ padding: '24px 12px', textAlign: 'center', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-spinner fa-spin" style={{ color: '#2563eb' }}></i>
+                      <span>جاري تحميل قائمة الوكلاء...</span>
+                    </div>
+                  ) : (
+                    <>
                   <div
                     onClick={() => {
                       setSelectedAgent(null);
@@ -540,8 +568,10 @@ export default function BranchAgentAccountReport() {
                   ))}
                   {filteredAgents.length === 0 && (
                     <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                      لا توجد نتائج
+                      لا توجد نتائج مطابقة
                     </div>
+                  )}
+                    </>
                   )}
                 </div>
               </div>

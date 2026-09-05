@@ -133,8 +133,13 @@ export const ComprehensiveProductionReport: React.FC = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
+        const cached = sessionStorage.getItem('cached_agents_light');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) setAgents(parsed);
+        }
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/branches-agents`, {
+        const res = await fetch(`${API_BASE_URL}/branches-agents?light=1`, {
           headers: {
             'Accept': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -144,6 +149,9 @@ export const ComprehensiveProductionReport: React.FC = () => {
           const d = await res.json();
           const list = Array.isArray(d) ? d : (d.data || []);
           setAgents(list);
+          try {
+            sessionStorage.setItem('cached_agents_light', JSON.stringify(list));
+          } catch (e) {}
         }
       } catch (e) {
         console.error('Failed to load agents list', e);
