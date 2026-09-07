@@ -54,58 +54,8 @@ export default function OutstandingDebts() {
       }
 
       if (response.ok) {
-        const rawData: any[] = await response.json();
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;
-
-        // Fetch monthly ledger breakdown for each agent to accurately separate past overdue debt from current active month
-        const enhancedDebts: DebtRecord[] = await Promise.all(
-          rawData.map(async (d) => {
-            let pastOverdue = 0;
-            let currentMonthBalance = 0;
-
-            try {
-              const ledgerRes = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${d.agent_id || d.id}&exclude_canceled=1`, { headers });
-              if (ledgerRes.ok) {
-                const ledgerData = await ledgerRes.json();
-                if (ledgerData && Array.isArray(ledgerData.months)) {
-                  ledgerData.months.forEach((m: any) => {
-                    const isCurrentMonth = m.year === currentYear && m.month === currentMonth;
-                    const rem = m.remaining ?? Math.max(0, (m.company_share || 0) + (m.carried_balance || 0) - (m.paid_amount || 0));
-                    if (isCurrentMonth) {
-                      currentMonthBalance += rem;
-                    } else if (m.year < currentYear || (m.year === currentYear && m.month < currentMonth)) {
-                      if (rem > 0.01) pastOverdue += rem;
-                    }
-                  });
-                }
-              }
-            } catch (err) {
-              // Fallback to raw total_debt if ledger fetch fails
-              pastOverdue = d.total_debt;
-            }
-
-            // Determine status based STRICTLY on past ended months overdue
-            let computedStatus: 'critical' | 'warning' | 'normal' = 'normal';
-            if (pastOverdue > 10000) {
-              computedStatus = 'critical';
-            } else if (pastOverdue > 0.01) {
-              computedStatus = 'warning';
-            } else {
-              computedStatus = 'normal';
-            }
-
-            return {
-              ...d,
-              past_overdue_debt: pastOverdue,
-              current_month_debt: currentMonthBalance,
-              status: computedStatus,
-            };
-          })
-        );
-
-        setDebts(enhancedDebts);
+        const rawData: DebtRecord[] = await response.json();
+        setDebts(rawData);
       } else {
         const errText = await response.text().catch(() => '');
         console.error('Error response fetching debts:', response.status, errText);
@@ -122,13 +72,25 @@ export default function OutstandingDebts() {
 
   const getStatusBadge = (debt: DebtRecord) => {
     if (debt.status === 'critical') {
-      return { bg: '#fee2e2', color: '#991b1b', text: `خطير (متأخرات سابقة: ${debt.past_overdue_debt?.toLocaleString()} د.ل)` };
+      return { 
+        bg: '#fee2e2', 
+        color: '#991b1b', 
+        text: `خطير (متأخرات سابقة: ${(debt.past_overdue_debt ?? debt.total_debt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل)` 
+      };
     }
     if (debt.status === 'warning') {
-      return { bg: '#fef3c7', color: '#92400e', text: `تنبيه (متأخرات سابقة: ${debt.past_overdue_debt?.toLocaleString()} د.ل)` };
+      return { 
+        bg: '#fef3c7', 
+        color: '#92400e', 
+        text: `تنبيه (متأخرات سابقة: ${(debt.past_overdue_debt ?? debt.total_debt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل)` 
+      };
     }
     if ((debt.current_month_debt ?? 0) > 0) {
-      return { bg: '#e0f2fe', color: '#0369a1', text: 'طبيعي (إنتاج جاري الشهر الحالي)' };
+      return { 
+        bg: '#e0f2fe', 
+        color: '#0369a1', 
+        text: `طبيعي (إنتاج الشهر الحالي: ${(debt.current_month_debt ?? debt.total_debt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل)` 
+      };
     }
     return { bg: '#dcfce7', color: '#166534', text: 'طبيعي (خالص الحساب)' };
   };
@@ -370,8 +332,12 @@ export default function OutstandingDebts() {
                   <td style={{ color: '#059669', fontWeight: 'bold' }}>
                     {totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
                   </td>
-                  <td style={{ color: (debt.past_overdue_debt ?? 0) > 0 ? '#ef4444' : '#059669', fontWeight: 'bold', fontSize: '15px' }}>
-                    {(debt.past_overdue_debt ?? debt.total_debt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
+                  <td style={{ 
+                    color: debt.total_debt > 0 ? (debt.status === 'critical' ? '#ef4444' : debt.status === 'warning' ? '#d97706' : '#2563eb') : '#059669', 
+                    fontWeight: 'bold', 
+                    fontSize: '15px' 
+                  }}>
+                    {debt.total_debt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل
                   </td>
                   <td>{debt.last_payment_date}</td>
                   <td>

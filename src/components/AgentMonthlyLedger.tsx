@@ -145,6 +145,7 @@ export default function AgentMonthlyLedger() {
   const [assignCustodyModal, setAssignCustodyModal] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [loadingInventoryItems, setLoadingInventoryItems] = useState(false);
+  const [inventorySettings, setInventorySettings] = useState<any[]>([]);
   const [assigningCustody, setAssigningCustody] = useState(false);
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [assignmentRows, setAssignmentRows] = useState<Array<{
@@ -158,6 +159,22 @@ export default function AgentMonthlyLedger() {
   }>>([
     { inventory_type: '', item_id: '', quantity: 1, serial_start: '', serial_end: '', condition: 'new', notes: '' }
   ]);
+
+  const dbInventoryTypes = inventorySettings.filter(s => s.setting_type === 'inventory_type').map(s => s.name);
+  const defaultInventoryTypes = ['مخزون مستهلك', 'مخزون رقمي', 'مخزون اداري', 'الأصول الثابتة'];
+  const allInventoryTypes = dbInventoryTypes.length > 0 ? dbInventoryTypes : defaultInventoryTypes;
+  const inventoryTypeOptions = allInventoryTypes.map(t => ({ value: t, label: t }));
+
+  const getInventoryTypeName = (inventoryType?: string) => {
+    if (!inventoryType) return 'غير محدد';
+    if (allInventoryTypes.includes(inventoryType)) return inventoryType;
+    const lowerType = inventoryType.toLowerCase();
+    if (lowerType === 'fixed' || lowerType.includes('ثابت')) return allInventoryTypes.find(t => t.includes('ثابت')) || 'الأصول الثابتة';
+    if (lowerType === 'consumable' || lowerType.includes('مستهلك')) return allInventoryTypes.find(t => t.includes('مستهلك')) || 'مخزون مستهلك';
+    if (lowerType === 'digital' || lowerType.includes('رقمي')) return allInventoryTypes.find(t => t.includes('رقمي')) || 'مخزون رقمي';
+    if (lowerType === 'administrative' || lowerType.includes('إداري') || lowerType.includes('اداري')) return allInventoryTypes.find(t => t.includes('إداري') || t.includes('اداري')) || 'مخزون اداري';
+    return inventoryType;
+  };
 
   // Audit / Verification State
   const [togglingMonthKey, setTogglingMonthKey] = useState<string | null>(null);
@@ -1065,14 +1082,22 @@ export default function AgentMonthlyLedger() {
     setAgentCustodyLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const [agentRes, custodyRes] = await Promise.all([
+      const [agentRes, custodyRes, settingsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/branches-agents/${selectedAgentId}`, {
           headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
         }),
         fetch(`${API_BASE_URL}/inventory/custody`, {
           headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+        }).catch(() => null),
+        fetch(`${API_BASE_URL}/inventory/settings`, {
+          headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
         }).catch(() => null)
       ]);
+
+      if (settingsRes && settingsRes.ok) {
+        const sData = await settingsRes.json().catch(() => null);
+        if (Array.isArray(sData)) setInventorySettings(sData);
+      }
 
       let fixed: any[] = [];
       let consumed: any[] = [];
@@ -1095,7 +1120,7 @@ export default function AgentMonthlyLedger() {
             const itemObj = {
               id: c.id,
               item_name: c.item?.name || c.item_name || 'صنف عهدة',
-              category: c.item?.category || c.category || (c.item?.inventory_type === 'fixed' ? 'أصول ثابتة' : 'مستهلكة / مطبوعات'),
+              category: c.item?.category || c.category || (c.item?.inventory_type ? getInventoryTypeName(c.item.inventory_type) : 'مستهلكة / مطبوعات'),
               serial_number: c.serial_start ? (c.serial_end ? `${c.serial_start} - ${c.serial_end}` : c.serial_start) : (c.serial_number || c.code || '—'),
               quantity: c.quantity || 1,
               delivery_date: c.assigned_at || c.created_at || c.delivery_date,
@@ -1106,7 +1131,7 @@ export default function AgentMonthlyLedger() {
               raw_item: c
             };
 
-            const isFixed = c.item?.inventory_type === 'fixed' || (c.category && c.category.includes('ثابت'));
+            const isFixed = c.item?.inventory_type === 'fixed' || (c.category && c.category.includes('ثابت')) || (c.item?.inventory_type && (c.item.inventory_type.includes('ثابت') || c.item.inventory_type === 'الأصول الثابتة'));
             if (isFixed) {
               if (!fixed.some((f: any) => f.id === c.id)) fixed.push(itemObj);
             } else {
@@ -1135,12 +1160,20 @@ export default function AgentMonthlyLedger() {
     setAssignmentNotes('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, {
-        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      });
+      const headers = { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+      const [res, settingsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/inventory/items?t=${Date.now()}`, { headers }),
+        fetch(`${API_BASE_URL}/inventory/settings`, { headers }).catch(() => null)
+      ]);
       if (res.ok) {
         const data = await res.json();
         setInventoryItems(Array.isArray(data) ? data : (data.data || []));
+      }
+      if (settingsRes && settingsRes.ok) {
+        const sData = await settingsRes.json().catch(() => null);
+        if (Array.isArray(sData)) {
+          setInventorySettings(sData);
+        }
       }
     } catch (e) {
       console.error('Error fetching inventory items for assignment:', e);
@@ -1162,10 +1195,17 @@ export default function AgentMonthlyLedger() {
     setAssignmentRows(prev => prev.map((row, i) => {
       if (i !== index) return row;
       const updated = { ...row, [key]: value };
+      if (key === 'inventory_type') {
+        updated.item_id = '';
+        if (value === 'digital' || String(value).includes('رقمي')) {
+          updated.quantity = 1;
+          updated.condition = 'new';
+        }
+      }
       if (key === 'item_id') {
         const selItem = inventoryItems.find(it => String(it.id) === String(value));
         if (selItem && selItem.inventory_type) {
-          updated.inventory_type = selItem.inventory_type;
+          updated.inventory_type = getInventoryTypeName(selItem.inventory_type);
         }
       }
       return updated;
@@ -6734,8 +6774,13 @@ export default function AgentMonthlyLedger() {
                 {/* Items Dynamic Rows */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
                   {assignmentRows.map((row, idx) => {
+                    const isDigital = row.inventory_type === 'digital' || row.inventory_type.includes('رقمي');
                     const filteredItems = inventoryItems.filter(
-                      (it) => !row.inventory_type || it.inventory_type === row.inventory_type
+                      (it) => {
+                        if (!row.inventory_type) return true;
+                        const t = it.inventory_type ?? 'consumable';
+                        return t === row.inventory_type || getInventoryTypeName(t) === row.inventory_type;
+                      }
                     );
 
                     return (
@@ -6747,7 +6792,7 @@ export default function AgentMonthlyLedger() {
                           padding: '14px',
                           border: '1px solid var(--border)',
                           display: 'grid',
-                          gridTemplateColumns: '160px 1.5fr 90px 110px 120px 120px 1fr 40px',
+                          gridTemplateColumns: '170px 1.5fr 90px 110px 130px 130px 1fr 40px',
                           gap: '10px',
                           alignItems: 'center',
                         }}
@@ -6772,8 +6817,9 @@ export default function AgentMonthlyLedger() {
                             }}
                           >
                             <option value="">اختر النوع...</option>
-                            <option value="fixed">أصول ثابتة</option>
-                            <option value="consumable">مستهلكات ومطبوعات</option>
+                            {inventoryTypeOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
                           </select>
                         </div>
 
@@ -6784,6 +6830,7 @@ export default function AgentMonthlyLedger() {
                           </label>
                           <select
                             required
+                            disabled={!row.inventory_type}
                             value={row.item_id}
                             onChange={(e) => updateAssignmentItemRow(idx, 'item_id', e.target.value)}
                             style={{
@@ -6795,14 +6842,16 @@ export default function AgentMonthlyLedger() {
                               color: 'var(--text)',
                               fontWeight: 800,
                               fontSize: '12px',
+                              opacity: !row.inventory_type ? 0.6 : 1,
+                              cursor: !row.inventory_type ? 'not-allowed' : 'pointer',
                             }}
                           >
-                            <option value="">اختر صنفاً من المخزن...</option>
+                            <option value="">{row.inventory_type ? 'اختر صنفاً من المخزن...' : 'اختر نوع المخزون أولاً...'}</option>
                             {filteredItems.map((it) => {
                               const qty = it.stocks?.[0]?.quantity ?? it.quantity ?? 0;
                               return (
-                                <option key={it.id} value={it.id}>
-                                  {it.name} ({it.category || (it.inventory_type === 'fixed' ? 'أصول ثابتة' : 'مستهلكات')} - متوفر: {qty})
+                                <option key={it.id} value={it.id} disabled={qty <= 0}>
+                                  {it.name} ({it.category || getInventoryTypeName(it.inventory_type)} - متوفر: {qty})
                                 </option>
                               );
                             })}
@@ -6818,6 +6867,7 @@ export default function AgentMonthlyLedger() {
                             type="number"
                             min="1"
                             required
+                            disabled={isDigital}
                             value={row.quantity}
                             onChange={(e) => updateAssignmentItemRow(idx, 'quantity', parseInt(e.target.value) || 1)}
                             style={{
@@ -6825,7 +6875,7 @@ export default function AgentMonthlyLedger() {
                               padding: '8px 10px',
                               borderRadius: '8px',
                               border: '1px solid var(--border)',
-                              background: 'var(--card-bg)',
+                              background: isDigital ? 'rgba(0,0,0,0.05)' : 'var(--card-bg)',
                               color: 'var(--text)',
                               fontWeight: 800,
                               textAlign: 'center',
@@ -6841,6 +6891,7 @@ export default function AgentMonthlyLedger() {
                             حالة الصنف
                           </label>
                           <select
+                            disabled={isDigital}
                             value={row.condition}
                             onChange={(e) => updateAssignmentItemRow(idx, 'condition', e.target.value)}
                             style={{
@@ -6848,7 +6899,7 @@ export default function AgentMonthlyLedger() {
                               padding: '8px 10px',
                               borderRadius: '8px',
                               border: '1px solid var(--border)',
-                              background: 'var(--card-bg)',
+                              background: isDigital ? 'rgba(0,0,0,0.05)' : 'var(--card-bg)',
                               color: 'var(--text)',
                               fontWeight: 700,
                               fontSize: '12px',
@@ -6862,11 +6913,13 @@ export default function AgentMonthlyLedger() {
                         {/* 5. Serial Start */}
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
-                            السيريال (من)
+                            {isDigital ? 'المستخدم / الإيميل *' : 'السيريال (من)'}
                           </label>
                           <input
                             type="text"
-                            placeholder="اختياري"
+                            dir={isDigital ? 'rtl' : 'ltr'}
+                            required={isDigital}
+                            placeholder={isDigital ? 'اسم المستخدم / الإيميل' : 'اختياري'}
                             value={row.serial_start}
                             onChange={(e) => updateAssignmentItemRow(idx, 'serial_start', e.target.value)}
                             style={{
@@ -6885,11 +6938,12 @@ export default function AgentMonthlyLedger() {
                         {/* 6. Serial End */}
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
-                            السيريال (إلى)
+                            {isDigital ? 'الرابط / الرقم' : 'السيريال (إلى)'}
                           </label>
                           <input
                             type="text"
-                            placeholder="اختياري"
+                            dir={isDigital ? 'rtl' : 'ltr'}
+                            placeholder={isDigital ? 'رابط المنظومة أو الرقم' : 'اختياري'}
                             value={row.serial_end}
                             onChange={(e) => updateAssignmentItemRow(idx, 'serial_end', e.target.value)}
                             style={{
@@ -6908,11 +6962,11 @@ export default function AgentMonthlyLedger() {
                         {/* 7. Row Notes */}
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>
-                            ملاحظات الصنف
+                            {isDigital ? 'كلمة المرور / تفاصيل' : 'ملاحظات الصنف'}
                           </label>
                           <input
                             type="text"
-                            placeholder="موديل / تفاصيل..."
+                            placeholder={isDigital ? 'كلمة المرور / تفاصيل أخرى' : 'موديل / تفاصيل...'}
                             value={row.notes}
                             onChange={(e) => updateAssignmentItemRow(idx, 'notes', e.target.value)}
                             style={{
