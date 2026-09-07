@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CancelDocumentModal from "./CancelDocumentModal";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
 import InsuranceTermsModal from "./InsuranceTermsModal";
@@ -36,6 +37,7 @@ type MarineStructureInsuranceDocument = {
 export default function MarineStructureInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<MarineStructureInsuranceDocument[]>([]);
+  const [cancellationDoc, setCancellationDoc] = useState<any>(null);
   const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -758,6 +760,20 @@ export default function MarineStructureInsuranceList({ isArchive = false }: { is
         insuranceTypeKey="marine"
         insuranceTypeName="تأمين الهياكل البحرية"
       />
+          {cancellationDoc && (
+        <CancelDocumentModal
+          isOpen={!!cancellationDoc}
+          onClose={() => setCancellationDoc(null)}
+          documentId={cancellationDoc.id}
+          documentNumber={cancellationDoc.insurance_number}
+          insuredName={cancellationDoc.insured_name || ''}
+          documentType="تأمين هياكل بحرية"
+          issueDate={cancellationDoc.issue_date || ''}
+          onSuccess={() => {
+            fetchDocuments();
+          }}
+        />
+      )}
     </section>
   );
 }

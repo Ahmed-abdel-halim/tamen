@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CancelDocumentModal from "./CancelDocumentModal";
 
 type Passenger = { id: number; is_main_passenger: boolean; relationship?: string; name_ar: string; name_en: string; phone?: string; passport_number?: string; address?: string; birth_date?: string; age?: number; gender?: string; nationality?: string; };
 type ResidentInsuranceDocument = { id: number; insurance_number: string; insurance_type: string; issue_date: string; start_date: string; end_date: string; duration?: string; geographic_area?: string; premium: number; family_members_premium: number; stamp: number; issue_fees: number; supervision_fees: number; total: number; whatsapp_number?: string; passengers?: Passenger[]; };
@@ -32,6 +33,7 @@ export default function ViewResidentInsurance() {
   const navigate = useNavigate();
   const [document, setDocument] = useState<ResidentInsuranceDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const fetchDocument = useCallback(async () => {
     try {
@@ -94,6 +96,7 @@ export default function ViewResidentInsurance() {
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/resident-insurance-documents') },
               { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
               { label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/resident-insurance-documents/${id}/edit`) },
+              ...(!(document as any).is_canceled ? [{ label: 'إلغاء الوثيقة', icon: 'fa-ban', bg: '#dc2626', border: '#dc2626', color: '#fff', onClick: () => setShowCancelModal(true) }] : []),
             ].map((btn, i) => (
               <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
@@ -185,6 +188,20 @@ export default function ViewResidentInsurance() {
           )}
         </div>
       </div>
+          {document && (
+        <CancelDocumentModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          documentId={document.id}
+          documentNumber={(document as any).insurance_number || ''}
+          insuredName={(document as any).passengers?.[0]?.name_ar || (document as any).insured_name || ''}
+          documentType="تأمين طبي (وافدين)"
+          issueDate={fmtDate((document as any).issue_date || (document as any).start_date)}
+          onSuccess={() => {
+            fetchDocument();
+          }}
+        />
+      )}
     </section>
   );
 }

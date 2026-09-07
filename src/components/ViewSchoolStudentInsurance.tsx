@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
+import CancelDocumentModal from './CancelDocumentModal';
 
 const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
 const fmtDateTime = (d?: string) => d ? new Date(d).toLocaleString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -27,6 +28,7 @@ const ViewSchoolStudentInsurance: React.FC = () => {
   const navigate = useNavigate();
   const [document, setDocument] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => { fetchDocument(); }, [id]);
 
@@ -80,6 +82,7 @@ const ViewSchoolStudentInsurance: React.FC = () => {
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate(-1) },
               { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
               { label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/school-student-insurance/edit/${id}`) },
+              ...(!(document as any).is_canceled ? [{ label: 'إلغاء الوثيقة', icon: 'fa-ban', bg: '#dc2626', border: '#dc2626', color: '#fff', onClick: () => setShowCancelModal(true) }] : []),
             ].map((btn, i) => (
               <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
@@ -134,6 +137,20 @@ const ViewSchoolStudentInsurance: React.FC = () => {
           </div>
         </div>
       </div>
+          {document && (
+        <CancelDocumentModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          documentId={document.id}
+          documentNumber={(document as any).insurance_number || ''}
+          insuredName={(document as any).insured_name || (document as any).student_name || ''}
+          documentType="تأمين حماية طلاب مدارس"
+          issueDate={fmtDate((document as any).issue_date || (document as any).start_date)}
+          onSuccess={() => {
+            fetchDocument();
+          }}
+        />
+      )}
     </section>
   );
 };

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CancelDocumentModal from "./CancelDocumentModal";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
 import InsuranceTermsModal from "./InsuranceTermsModal";
@@ -19,6 +20,7 @@ type SchoolStudentInsuranceDocument = {
 export default function SchoolStudentInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<SchoolStudentInsuranceDocument[]>([]);
+  const [cancellationDoc, setCancellationDoc] = useState<any>(null);
   const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -443,6 +445,17 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
                         <button className="action-btn view" title="عرض" onClick={() => navigate(`/school-student-insurance/${doc.id}`)}>
                           <i className="fa-solid fa-eye"></i>
                         </button>
+                          {!(doc as any).is_canceled && (
+                            <button
+                              onClick={() => setCancellationDoc(doc)}
+                              className="action-btn cancel-btn"
+                              style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}
+                              aria-label="إلغاء الوثيقة"
+                              title="طلب إلغاء الوثيقة"
+                            >
+                              <i className="fa-solid fa-ban"></i> إلغاء
+                            </button>
+                          )}
                         <button className="action-btn edit" title="تعديل" onClick={() => navigate(`/school-student-insurance/edit/${doc.id}`)} style={{ background: '#f59e0b', color: '#fff' }}>
                           <i className="fa-solid fa-pen-to-square"></i>
                         </button>
@@ -516,6 +529,20 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
         insuranceTypeKey="school"
         insuranceTypeName="تأمين حماية طلاب المدارس"
       />
+          {cancellationDoc && (
+        <CancelDocumentModal
+          isOpen={!!cancellationDoc}
+          onClose={() => setCancellationDoc(null)}
+          documentId={cancellationDoc.id}
+          documentNumber={cancellationDoc.insurance_number}
+          insuredName={cancellationDoc.insured_name || ''}
+          documentType="تأمين حماية طلاب مدارس"
+          issueDate={cancellationDoc.issue_date || ''}
+          onSuccess={() => {
+            fetchDocuments();
+          }}
+        />
+      )}
     </section>
   );
 }

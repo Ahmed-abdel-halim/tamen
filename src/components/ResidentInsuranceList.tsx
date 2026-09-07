@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CancelDocumentModal from "./CancelDocumentModal";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
 import InsuranceTermsModal from "./InsuranceTermsModal";
@@ -30,6 +31,7 @@ type ResidentInsuranceDocument = {
 export default function ResidentInsuranceList({ isArchive = false }: { isArchive?: boolean } = {}) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<ResidentInsuranceDocument[]>([]);
+  const [cancellationDoc, setCancellationDoc] = useState<any>(null);
   const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -749,6 +751,20 @@ export default function ResidentInsuranceList({ isArchive = false }: { isArchive
         insuranceTypeKey="resident"
         insuranceTypeName="تأمين الوافدين والإقامة"
       />
+          {cancellationDoc && (
+        <CancelDocumentModal
+          isOpen={!!cancellationDoc}
+          onClose={() => setCancellationDoc(null)}
+          documentId={cancellationDoc.id}
+          documentNumber={cancellationDoc.insurance_number}
+          insuredName={cancellationDoc.insured_name || ''}
+          documentType="تأمين طبي (وافدين)"
+          issueDate={cancellationDoc.issue_date || ''}
+          onSuccess={() => {
+            fetchDocuments();
+          }}
+        />
+      )}
     </section>
   );
 }
