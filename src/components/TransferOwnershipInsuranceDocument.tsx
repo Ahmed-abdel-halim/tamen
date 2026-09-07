@@ -86,18 +86,7 @@ export default function TransferOwnershipInsuranceDocument() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // تحديث رقم اللوحة المعدنية عند اختيار الجهة المقيد بها
-  useEffect(() => {
-    if (formData.plate_id) {
-      const selectedPlate = plates.find(p => p.id === parseInt(formData.plate_id));
-      if (selectedPlate) {
-        setFormData(prev => ({
-          ...prev,
-          plate_number_manual: selectedPlate.plate_number
-        }));
-      }
-    }
-  }, [formData.plate_id, plates]);
+
 
   const fetchDocument = async () => {
     try {
@@ -147,14 +136,51 @@ export default function TransferOwnershipInsuranceDocument() {
   );
 
   const selectedPlate = plates.find(p => p.id === parseInt(formData.plate_id));
+  const cityCode = selectedPlate ? selectedPlate.plate_number : "";
   const isMandatoryInsurance = originalDocument?.insurance_type === 'تأمين إجباري سيارات';
   const isThirdPartyInsurance = originalDocument?.insurance_type === 'تأمين طرف ثالث سيارات';
+
+  const getPlateNumberRaw = (fullPlate: string, code: string) => {
+    if (!fullPlate) return "";
+    if (code && fullPlate.endsWith(`-${code}`)) {
+      return fullPlate.substring(0, fullPlate.length - code.length - 1);
+    }
+    if (fullPlate.includes("-")) {
+      return fullPlate.split("-")[0];
+    }
+    if (code && fullPlate === code) {
+      return "";
+    }
+    return fullPlate;
+  };
+
+  const handlePlateIdChange = (newPlateId: string) => {
+    const nextPlate = plates.find(p => p.id.toString() === newPlateId);
+    const nextCode = nextPlate ? nextPlate.plate_number : "";
+    const currentRaw = getPlateNumberRaw(formData.plate_number_manual, cityCode);
+    const newFullPlate = nextCode ? (currentRaw ? `${currentRaw}-${nextCode}` : '') : currentRaw;
+    setFormData(prev => ({ 
+      ...prev, 
+      plate_id: newPlateId, 
+      plate_number_manual: newFullPlate 
+    }));
+  };
+
+  const handlePlateNumberChange = (val: string) => {
+    const rawVal = val.replace(/[\-]/g, "");
+    const newFullPlate = cityCode ? (rawVal ? `${rawVal}-${cityCode}` : '') : rawVal;
+    setFormData(prev => ({ ...prev, plate_number_manual: newFullPlate }));
+  };
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
     if ((isMandatoryInsurance || isThirdPartyInsurance) && !formData.plate_id) {
       errors.plate_id = 'الجهة المقيد بها مطلوبة';
+    }
+
+    if ((isMandatoryInsurance || isThirdPartyInsurance) && (!formData.plate_number_manual || !formData.plate_number_manual.trim())) {
+      errors.plate_number_manual = 'رقم اللوحة المعدنية مطلوب';
     }
     
     if (!formData.insured_name) {
@@ -525,7 +551,7 @@ export default function TransferOwnershipInsuranceDocument() {
                             <div
                               key={plate.id}
                               onClick={() => {
-                                setFormData({ ...formData, plate_id: plate.id.toString() });
+                                handlePlateIdChange(plate.id.toString());
                                 setShowPlateDropdown(false);
                                 setPlateSearch('');
                               }}
@@ -558,28 +584,44 @@ export default function TransferOwnershipInsuranceDocument() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label htmlFor="plate_number_manual">رقم اللوحة المعدنية</label>
+              <div className={`form-group ${formErrors.plate_number_manual ? 'has-error' : ''}`}>
+                <label htmlFor="plate_number_manual">
+                  رقم اللوحة المعدنية {(isMandatoryInsurance || isThirdPartyInsurance) && <span className="required">*</span>}
+                </label>
+                <div style={{ display: 'flex', alignItems: 'stretch', direction: 'ltr' }}>
                   <input
                     type="text"
                     id="plate_number_manual"
-                    value={formData.plate_number_manual}
-                    onChange={(e) => setFormData({ ...formData, plate_number_manual: e.target.value })}
-                    placeholder="سيتم ملؤه تلقائياً عند اختيار الجهة المقيد بها"
+                    value={getPlateNumberRaw(formData.plate_number_manual, cityCode)}
+                    onChange={(e) => handlePlateNumberChange(e.target.value)}
+                    placeholder="مثال: 123456"
+                    className={formErrors.plate_number_manual ? 'error' : ''}
+                    style={{ 
+                      borderRadius: cityCode ? '6px 0 0 6px' : '6px', 
+                      borderRight: cityCode ? 'none' : undefined,
+                      textAlign: 'left',
+                      flex: 1
+                    }}
                   />
+                  {cityCode && (
+                    <span style={{ 
+                      padding: '0 12px', 
+                      background: '#f1f5f9', 
+                      border: '1.5px solid var(--border, #cbd5e1)', 
+                      borderLeft: 'none',
+                      borderRadius: '0 6px 6px 0',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      color: '#475569',
+                      fontWeight: 'bold',
+                      fontSize: '0.95rem',
+                      userSelect: 'none'
+                    }}>
+                      -{cityCode}
+                    </span>
+                  )}
                 </div>
-                {(isMandatoryInsurance || isThirdPartyInsurance) && (
-                  <div className="form-group">
-                    <label>رقم اللوحة</label>
-                    <input
-                      type="text"
-                      value={selectedPlate ? selectedPlate.plate_number : ''}
-                      disabled
-                      style={{ background: '#f3f4f6', color: '#6b7280' }}
-                    />
-                  </div>
-                )}
+                {formErrors.plate_number_manual && <span className="error-message">{formErrors.plate_number_manual}</span>}
               </div>
 
               <div className="form-group">
