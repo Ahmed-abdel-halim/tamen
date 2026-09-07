@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CancelDocumentModal from "./CancelDocumentModal";
 
 type VehicleType = { id: number; brand: string; category: string; };
 type InternationalInsuranceDocument = {
@@ -12,7 +13,7 @@ type InternationalInsuranceDocument = {
   start_date: string; number_of_days: number; end_date: string; item_type?: string;
   number_of_countries: number; daily_premium: number; premium: number;
   tax: number; supervision_fees: number; issue_fees: number; stamp: number; total: number;
-  vehicle_brand?: string;
+  vehicle_brand?: string; is_canceled?: boolean; canceled_at?: string; cancel_reason?: string;
 };
 
 const toNum = (v: any) => (typeof v === 'number' ? v : parseFloat(String(v)) || 0);
@@ -41,6 +42,7 @@ export default function ViewInternationalInsurance() {
   const navigate = useNavigate();
   const [document, setDocument] = useState<InternationalInsuranceDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => { if (id) fetchDocument(); }, [id]);
 
@@ -112,6 +114,7 @@ export default function ViewInternationalInsurance() {
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/international-insurance-documents') },
               { label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint },
               { label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/international-insurance-documents/${id}/edit`) },
+              ...(!document.is_canceled ? [{ label: 'إلغاء الوثيقة', icon: 'fa-ban', bg: '#dc2626', border: '#dc2626', color: '#fff', onClick: () => setShowCancelModal(true) }] : []),
             ].map((btn, i) => (
               <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
@@ -122,6 +125,20 @@ export default function ViewInternationalInsurance() {
         </div>
 
         <div style={{ padding: '16px 20px' }}>
+          {document.is_canceled && (
+            <div style={{ background: '#fef2f2', border: '1.5px solid #ef4444', borderRadius: '12px', padding: '14px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                <i className="fa-solid fa-ban"></i>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, color: '#991b1b', fontSize: '1rem' }}>هذه الوثيقة ملغية رسمياً في النظام</div>
+                <div style={{ fontSize: '0.85rem', color: '#b91c1c', marginTop: '2px' }}>
+                  {document.cancel_reason ? `سبب الإلغاء: ${document.cancel_reason}` : 'تم اعتماد إلغاء هذه الوثيقة ولا تغطي أي حوادث أو مطالبات.'}
+                  {document.canceled_at ? ` | تاريخ الإلغاء: ${fmtDate(document.canceled_at)}` : ''}
+                </div>
+              </div>
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
             {stats.map((s, i) => (
               <div key={i} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
@@ -174,6 +191,20 @@ export default function ViewInternationalInsurance() {
           </div>
         </div>
       </div>
+          {document && (
+        <CancelDocumentModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          documentId={document.id}
+          documentNumber={document.document_number}
+          insuredName={document.insured_name || ''}
+          documentType="تأمين سيارات دولي"
+          issueDate={fmtDate(document.issue_date || document.start_date)}
+          onSuccess={() => {
+            fetchDocument();
+          }}
+        />
+      )}
     </section>
   );
 }

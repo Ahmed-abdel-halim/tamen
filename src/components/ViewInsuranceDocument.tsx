@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import CancelDocumentModal from "./CancelDocumentModal";
 
 type Plate = {
   id: number;
@@ -24,7 +25,7 @@ type InsuranceDocument = {
   eidc_sync_status?: string; eidc_pdf_url?: string; eidc_error?: string;
   nationality?: string; nid_passport?: string; address?: string;
   email?: string; engine_number?: string; engine_cc?: string;
-  vehicle_weight?: string; notes?: string;
+  vehicle_weight?: string; notes?: string; is_canceled?: boolean; canceled_at?: string; cancel_reason?: string;
 };
 type OwnershipTransfer = {
   id: number; previous_plate_id?: number; previous_plate?: Plate;
@@ -42,6 +43,7 @@ export default function ViewInsuranceDocument() {
   const [loading, setLoading] = useState(true);
   const [ownershipTransfers, setOwnershipTransfers] = useState<OwnershipTransfer[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     loadUserPermissions();
@@ -214,6 +216,7 @@ export default function ViewInsuranceDocument() {
               }] : []),
               ...(isAdmin ? [{ label: 'تعديل', icon: 'fa-pencil', bg: '#2563eb', border: '#2563eb', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/edit`) }] : []),
               { label: 'نقل ملكية', icon: 'fa-exchange-alt', bg: '#10b981', border: '#10b981', color: '#fff', onClick: () => navigate(`/insurance-documents/${id}/transfer-ownership`) },
+              ...(!document.is_canceled ? [{ label: 'إلغاء الوثيقة', icon: 'fa-ban', bg: '#dc2626', border: '#dc2626', color: '#fff', onClick: () => setShowCancelModal(true) }] : []),
             ].map((btn, i) => (
               <button key={i} onClick={btn.onClick} style={{ display: 'flex', alignItems: 'center', gap: '7px', height: '38px', padding: '0 16px', fontSize: '0.88rem', fontWeight: '700', background: btn.bg, border: `1px solid ${btn.border}`, color: btn.color, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
@@ -227,6 +230,20 @@ export default function ViewInsuranceDocument() {
         </div>
 
         <div style={{ padding: '16px 20px' }}>
+          {document.is_canceled && (
+            <div style={{ background: '#fef2f2', border: '1.5px solid #ef4444', borderRadius: '12px', padding: '14px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                <i className="fa-solid fa-ban"></i>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, color: '#991b1b', fontSize: '1rem' }}>هذه الوثيقة ملغية رسمياً في النظام</div>
+                <div style={{ fontSize: '0.85rem', color: '#b91c1c', marginTop: '2px' }}>
+                  {document.cancel_reason ? `سبب الإلغاء: ${document.cancel_reason}` : 'تم اعتماد إلغاء هذه الوثيقة ولا تغطي أي حوادث أو مطالبات.'}
+                  {document.canceled_at ? ` | تاريخ الإلغاء: ${formatDate(document.canceled_at)}` : ''}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Stats Row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
             {[
@@ -374,6 +391,21 @@ export default function ViewInsuranceDocument() {
           )}
         </div>
       </div>
+    
+      {document && (
+        <CancelDocumentModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          documentId={document.id}
+          documentNumber={document.insurance_number}
+          insuredName={document.insured_name || ''}
+          documentType={document.insurance_type || 'تأمين سيارات'}
+          issueDate={formatDate(document.issue_date || document.start_date)}
+          onSuccess={() => {
+            fetchDocument();
+          }}
+        />
+      )}
     </section>
   );
 }

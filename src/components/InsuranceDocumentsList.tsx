@@ -5,6 +5,7 @@ import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
 import InsuranceTermsModal from "./InsuranceTermsModal";
+import CancelDocumentModal from "./CancelDocumentModal";
 
 type Plate = {
   id: number;
@@ -68,6 +69,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const [deleting, setDeleting] = useState(false);
   // Cancel document state
   const [showCancelModal, setShowCancelModal] = useState<InsuranceDocument | null>(null);
+  const [cancellationDoc, setCancellationDoc] = useState<InsuranceDocument | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [canceling, setCanceling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -869,13 +871,13 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                                 <i className="fa-solid fa-pencil"></i>
                               </button>
                             )}
-                            {isAdmin && !doc.is_canceled && doc.status !== 'cancelled' && (
+                            {!doc.is_canceled && doc.status !== 'cancelled' && (
                               <button
-                                onClick={() => { setShowCancelModal(doc); setCancelReason(''); }}
+                                onClick={() => setCancellationDoc(doc)}
                                 className="action-btn cancel-btn"
-                                style={{ background: '#e74c3c', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}
+                                style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}
                                 aria-label="إلغاء الوثيقة"
-                                title="إلغاء الوثيقة (تستثنى من الحسابات)"
+                                title="طلب إلغاء الوثيقة"
                               >
                                 <i className="fa-solid fa-ban"></i> إلغاء
                               </button>
@@ -1233,6 +1235,21 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         insuranceTypeKey="motor"
         insuranceTypeName="تأمين السيارات الإجباري والتكميلي"
       />
+
+      {cancellationDoc && (
+        <CancelDocumentModal
+          isOpen={!!cancellationDoc}
+          onClose={() => setCancellationDoc(null)}
+          documentId={cancellationDoc.id}
+          documentNumber={cancellationDoc.insurance_number}
+          insuredName={cancellationDoc.insured_name || ''}
+          documentType={cancellationDoc.insurance_type || 'تأمين سيارات'}
+          issueDate={cancellationDoc.issue_date || ''}
+          onSuccess={() => {
+            fetchDocuments();
+          }}
+        />
+      )}
     </section>
   );
 }
