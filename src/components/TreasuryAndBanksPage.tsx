@@ -296,6 +296,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [editingMachineId, setEditingMachineId] = useState<number | null>(null);
+  const [isSavingMachine, setIsSavingMachine] = useState(false);
   const [showPosTxnModal, setShowPosTxnModal] = useState(false);
   const [machineFormData, setMachineFormData] = useState({
     machine_name: '',
@@ -838,6 +839,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleSaveMachine = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingMachine(true);
     try {
       const url = editingMachineId
         ? `${API_BASE_URL}/pos-machines/${editingMachineId}`
@@ -850,10 +852,14 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
         showToast(editingMachineId ? 'تم تحديث بيانات الماكينة بنجاح' : 'تم إضافة ماكينة POS بنجاح', 'success');
         setShowMachineModal(false);
         setEditingMachineId(null);
@@ -867,20 +873,35 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
           branch_agent_ids: []
         });
         fetchPosData();
+      } else {
+        let errMsg = data.message || 'فشل حفظ بيانات الماكينة';
+        if (data.errors) {
+          const firstKey = Object.keys(data.errors)[0];
+          if (firstKey && data.errors[firstKey][0]) {
+            errMsg = data.errors[firstKey][0];
+          }
+        }
+        showToast(errMsg, 'error');
       }
     } catch (e) {
-      showToast('فشل حفظ بيانات الماكينة', 'error');
+      showToast('فشل حفظ بيانات الماكينة: خطأ في الاتصال بالخادم', 'error');
+    } finally {
+      setIsSavingMachine(false);
     }
   };
 
   const handleToggleMachineActive = async (id: number) => {
     try {
       const res = await fetch(`${API_BASE_URL}/pos-machines/${id}/toggle-active`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getAuthHeaders()
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
         showToast('تم تغيير حالة نشاط الماكينة', 'success');
         fetchPosData();
+      } else {
+        showToast(data.message || 'خطأ في تغيير حالة النشاط', 'error');
       }
     } catch (e) {
       showToast('خطأ في تغيير حالة النشاط', 'error');
@@ -894,9 +915,12 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
           method: 'DELETE',
           headers: getAuthHeaders()
         });
-        if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success !== false) {
           showToast('تم حذف الماكينة بنجاح', 'success');
           fetchPosData();
+        } else {
+          showToast(data.message || 'فشل حذف الماكينة', 'error');
         }
       } catch (e) {
         showToast('فشل حذف الماكينة', 'error');
@@ -918,9 +942,11 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
     try {
       const res = await fetch(`${API_BASE_URL}/pos-transactions`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: formData
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
         showToast('تم تسجيل معاملة تسوية POS بنجاح', 'success');
         setShowPosTxnModal(false);
         setPosTxnFormData({
@@ -934,8 +960,14 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
         });
         fetchPosData();
       } else {
-        const errData = await res.json();
-        showToast(errData.message || 'فشل حفظ الحركة', 'error');
+        let errMsg = data.message || 'فشل حفظ الحركة';
+        if (data.errors) {
+          const firstKey = Object.keys(data.errors)[0];
+          if (firstKey && data.errors[firstKey][0]) {
+            errMsg = data.errors[firstKey][0];
+          }
+        }
+        showToast(errMsg, 'error');
       }
     } catch (err) {
       showToast('خطأ في الاتصال بالخادم', 'error');
@@ -945,11 +977,15 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   const handleTogglePosReconcile = async (id: number) => {
     try {
       const res = await fetch(`${API_BASE_URL}/pos-transactions/${id}/reconcile`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getAuthHeaders()
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
         showToast('تم تغيير حالة مطابقة معاملة POS', 'success');
         fetchPosData();
+      } else {
+        showToast(data.message || 'خطأ في مطابقة معاملة POS', 'error');
       }
     } catch (e) {
       showToast('خطأ في مطابقة معاملة POS', 'error');
@@ -3339,7 +3375,9 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
               </div>
               <div className="form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                 <button type="button" onClick={() => { setShowMachineModal(false); setEditingMachineId(null); }} className="secondary" style={{ padding: '8px 16px' }}>إلغاء</button>
-                <button type="submit" className="primary" style={{ padding: '8px 24px' }}>{editingMachineId ? 'حفظ التعديلات' : 'حفظ وتعريف الماكينة'}</button>
+                <button type="submit" className="primary" disabled={isSavingMachine} style={{ padding: '8px 24px', opacity: isSavingMachine ? 0.7 : 1, cursor: isSavingMachine ? 'not-allowed' : 'pointer' }}>
+                  {isSavingMachine ? 'جاري الحفظ...' : (editingMachineId ? 'حفظ التعديلات' : 'حفظ وتعريف الماكينة')}
+                </button>
               </div>
             </form>
           </div>
