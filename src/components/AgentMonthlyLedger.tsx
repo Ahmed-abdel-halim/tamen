@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel, generateGroupedDocsExcel } from '../utils/excelGenerator';
 import CustomDateInput from './CustomDateInput';
@@ -133,6 +133,11 @@ export default function AgentMonthlyLedger() {
   const [loadingMonthVouchers, setLoadingMonthVouchers] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [payPosMachineId, setPayPosMachineId] = useState('');
+  const [payPosTxnCount, setPayPosTxnCount] = useState('1');
+  const [payReportFile, setPayReportFile] = useState<File | null>(null);
+  const [posMachinesList, setPosMachinesList] = useState<any[]>([]);
+  const [loadingPosMachines, setLoadingPosMachines] = useState(false);
 
   // Agent Custody Modal State (عهد الوكيل)
   const [agentCustodyModal, setAgentCustodyModal] = useState(false);
@@ -863,18 +868,57 @@ export default function AgentMonthlyLedger() {
     }
   };
 
+  const fetchPosMachinesForAgent = async (agentId: number) => {
+    setLoadingPosMachines(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/pos-machines`, {
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const machines = data.data || [];
+        setPosMachinesList(machines);
+        const agentMachine = machines.find((m: any) =>
+          Number(m.current_agent_id) === Number(agentId) ||
+          m.branch_agents?.some((a: any) => Number(a.id) === Number(agentId))
+        );
+        if (agentMachine) {
+          setPayPosMachineId(String(agentMachine.id));
+          setPayBankName(agentMachine.bank_name || '');
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching POS machines:', e);
+    } finally {
+      setLoadingPosMachines(false);
+    }
+  };
+
+  const handleSelectPosMachine = (machineId: string) => {
+    setPayPosMachineId(machineId);
+    const m = posMachinesList.find((item: any) => String(item.id) === String(machineId));
+    if (m && m.bank_name) {
+      setPayBankName(m.bank_name);
+    }
+  };
+
   const openPay = (row: MonthRow) => {
     setPayModal({ row });
     const due = Math.max(0, row.company_share + row.carried_balance - row.paid_amount);
     setPayAmount(due > 0 ? due.toFixed(2) : '');
-    setPayMethod('نقدي');
+    setPayMethod('نقاط البيع (POS)');
     setPayBankName('');
     setPayRefNumber('');
     setPayDate(new Date().toISOString().split('T')[0]);
     setPayNotes('');
+    setPayPosMachineId('');
+    setPayPosTxnCount('1');
+    setPayReportFile(null);
     setPayVoucherNumber(`PV-${row.year}-${Math.floor(1000 + Math.random() * 9000)}`);
     if (selectedAgentId) {
       fetchMonthVouchers(selectedAgentId, row.year, row.month);
+      fetchPosMachinesForAgent(selectedAgentId);
     }
   };
 
@@ -1451,34 +1495,50 @@ export default function AgentMonthlyLedger() {
       showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error');
       return;
     }
+
+    const isPosMethod = payMethod === 'نقاط البيع (POS)' || payMethod === 'بطاقة';
+    if (isPosMethod && !payPosMachineId) {
+      showToast('يرجى اختيار الماكينة المستخدمة لتسجيل تسوية مبيعات POS', 'error');
+      return;
+    }
+
     setPayLoading(true);
     try {
       const token = localStorage.getItem('token');
       const dueTotal = payModal.row.company_share + payModal.row.carried_balance;
       const voucherNumber = payVoucherNumber || `PV-${payModal.row.year}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // Register payment in monthly ledger closure & auto-create single payment voucher and treasury transaction
+      const formData = new FormData();
+      formData.append('branch_agent_id', String(selectedAgentId));
+      formData.append('year', String(payModal.row.year));
+      formData.append('month', String(payModal.row.month));
+      formData.append('paid_amount', String(payModal.row.paid_amount + amt));
+      formData.append('due_amount', String(dueTotal));
+      formData.append('payment_amount', String(amt));
+      formData.append('payment_method', payMethod);
+      if (payBankName) formData.append('bank_name', payBankName);
+      if (payRefNumber) formData.append('reference_number', payRefNumber);
+      formData.append('payment_date', payDate || new Date().toISOString().split('T')[0]);
+      formData.append('voucher_number', voucherNumber);
+      if (payNotes) formData.append('notes', payNotes);
+
+      if (isPosMethod && payPosMachineId) {
+        formData.append('pos_machine_id', payPosMachineId);
+        formData.append('transactions_count', payPosTxnCount || '1');
+      }
+
+      if (payReportFile) {
+        formData.append('report_file', payReportFile);
+      }
+
+      // Register payment in monthly ledger closure & auto-create single payment voucher, treasury transaction, and POS transaction
       const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-monthly-ledger/payment`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Accept: 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          branch_agent_id: selectedAgentId,
-          year: payModal.row.year,
-          month: payModal.row.month,
-          paid_amount: payModal.row.paid_amount + amt,
-          due_amount: dueTotal,
-          payment_amount: amt,
-          payment_method: payMethod,
-          bank_name: payBankName || null,
-          reference_number: payRefNumber || null,
-          payment_date: payDate || new Date().toISOString().split('T')[0],
-          voucher_number: voucherNumber,
-          notes: payNotes || null,
-        }),
+        body: formData,
       });
 
       const data = await res.json();
@@ -1486,13 +1546,16 @@ export default function AgentMonthlyLedger() {
         throw new Error(data?.message || 'فشل في حفظ الدفعة');
       }
 
-      showToast('تم تسجيل الدفعة وإصدار إيصال القبض في إدارة الإيرادات والخزينة بنجاح', 'success');
+      showToast(data.message || 'تم تسجيل الدفعة وإصدار إيصال القبض في إدارة الإيرادات والخزينة بنجاح', 'success');
 
       // Reset form fields
       setPayAmount('');
       setPayNotes('');
       setPayRefNumber('');
       setPayBankName('');
+      setPayPosMachineId('');
+      setPayPosTxnCount('1');
+      setPayReportFile(null);
       setPayVoucherNumber(`PV-${payModal.row.year}-${Math.floor(1000 + Math.random() * 9000)}`);
 
       // Refresh data
@@ -4115,7 +4178,16 @@ export default function AgentMonthlyLedger() {
                     </label>
                     <select
                       value={payMethod}
-                      onChange={(e) => setPayMethod(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPayMethod(val);
+                        if (val === 'نقاط البيع (POS)' || val === 'بطاقة') {
+                          if (payPosMachineId) {
+                            const m = posMachinesList.find(x => String(x.id) === String(payPosMachineId));
+                            if (m?.bank_name) setPayBankName(m.bank_name);
+                          }
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '9px 12px',
@@ -4132,6 +4204,7 @@ export default function AgentMonthlyLedger() {
                       }}
                     >
                       <option value="نقدي">نقدي (كاش)</option>
+                      <option value="نقاط البيع (POS)">نقاط البيع (POS)</option>
                       <option value="بطاقة">بطاقة مصرفية</option>
                       <option value="حوالة">تحويل / حوالة مصرفية</option>
                       <option value="شيك">شيك مصرفي</option>
@@ -4163,17 +4236,393 @@ export default function AgentMonthlyLedger() {
                     />
                   </div>
 
-                  {/* Bank Name (conditional) */}
-                  {(payMethod === 'بطاقة' || payMethod === 'شيك' || payMethod === 'حوالة') && (
+                  {/* POS Settlement Section (Matching Daily POS Settlement Registration) */}
+                  {(payMethod === 'نقاط البيع (POS)' || payMethod === 'بطاقة') && (
+                    <div
+                      style={{
+                        gridColumn: '1 / -1',
+                        background: '#f8fafc',
+                        border: '2px solid #93c5fd',
+                        borderRadius: '14px',
+                        padding: '16px',
+                        marginTop: '4px',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 900, fontSize: '13px', color: '#1e40af', fontFamily: "'Cairo', sans-serif" }}>
+                          <i className="fa-solid fa-calculator" style={{ color: '#2563eb' }} />
+                          <span>تسجيل تسوية المبيعات اليومية لنقاط البيع POS</span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, fontFamily: "'Cairo', sans-serif" }}>
+                          سيتم ترحيل المعاملة تلقائياً لقسم تسويات ومطابقة POS
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                        {/* 1. Machine select */}
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                            اختار الماكينة المستخدمة <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <select
+                            value={payPosMachineId}
+                            onChange={(e) => handleSelectPosMachine(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              borderRadius: '10px',
+                              border: `2px solid ${!payPosMachineId ? '#f59e0b' : '#cbd5e1'}`,
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              background: '#ffffff',
+                              outline: 'none',
+                              fontFamily: "'Cairo', sans-serif",
+                              boxSizing: 'border-box',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <option value="">{loadingPosMachines ? 'جاري تحميل الماكينات...' : '-- اختر الماكينة --'}</option>
+                            {posMachinesList.filter(m => Number(m.current_agent_id) === Number(selectedAgentId) || m.branch_agents?.some((a: any) => Number(a.id) === Number(selectedAgentId))).map(m => (
+                              <option key={m.id} value={m.id}>
+                                ⭐ {m.machine_name} - {m.bank_name} (عهدة الوكيل)
+                              </option>
+                            ))}
+                            {posMachinesList.filter(m => !(Number(m.current_agent_id) === Number(selectedAgentId) || m.branch_agents?.some((a: any) => Number(a.id) === Number(selectedAgentId)))).map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.machine_name} - {m.bank_name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 2. Bank Name (Auto from machine or editable) */}
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                            المصرف المضيف
+                          </label>
+                          <input
+                            type="text"
+                            value={payBankName}
+                            onChange={(e) => setPayBankName(e.target.value)}
+                            placeholder="اسم المصرف المرتبط بالماكينة..."
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              borderRadius: '10px',
+                              border: '2px solid #cbd5e1',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              outline: 'none',
+                              fontFamily: "'Cairo', sans-serif",
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 3. Accepted operations count */}
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                            عدد العمليات المقبولة بالتقرير
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={payPosTxnCount}
+                            onChange={(e) => setPayPosTxnCount(e.target.value)}
+                            placeholder="1"
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              borderRadius: '10px',
+                              border: '2px solid #cbd5e1',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              outline: 'none',
+                              fontFamily: "'Cairo', sans-serif",
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 4. Reference / Auth Code */}
+                        <div style={{ gridColumn: 'span 1' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                            رقم مرجع التسوية / كود التثبيت
+                          </label>
+                          <input
+                            type="text"
+                            value={payRefNumber}
+                            onChange={(e) => setPayRefNumber(e.target.value)}
+                            placeholder="أدخل رمز التسوية المطبوع في إيصال إغلاق الماكينة"
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              borderRadius: '10px',
+                              border: '2px solid #cbd5e1',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              outline: 'none',
+                              fontFamily: "'Cairo', sans-serif",
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        {/* 5. Paper Report Receipt Image / File */}
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                            تحميل إيصال تسوية الماكينة (صورة التقرير الورقي أو PDF)
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={(e) => setPayReportFile(e.target.files ? e.target.files[0] : null)}
+                              style={{
+                                flex: 1,
+                                padding: '7px 10px',
+                                borderRadius: '10px',
+                                border: '2px solid #cbd5e1',
+                                fontSize: '12px',
+                                fontFamily: "'Cairo', sans-serif",
+                                background: '#ffffff',
+                                cursor: 'pointer',
+                                boxSizing: 'border-box',
+                              }}
+                            />
+                            {payReportFile && (
+                              <button
+                                type="button"
+                                onClick={() => setPayReportFile(null)}
+                                title="إلغاء الملف"
+                                style={{
+                                  border: 'none',
+                                  background: '#fee2e2',
+                                  color: '#dc2626',
+                                  borderRadius: '8px',
+                                  padding: '8px 10px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                ✕ إلغاء الملف
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bank Transfer (حوالة مصرفية) specific fields */}
+                  {payMethod === 'حوالة' && (
+                    <>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                          اسم المصرف المحول منه / إليه
+                        </label>
+                        <input
+                          type="text"
+                          value={payBankName}
+                          onChange={(e) => setPayBankName(e.target.value)}
+                          placeholder="مثال: مصرف الجمهورية، التجارة والتنمية..."
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '10px',
+                            border: '2px solid #cbd5e1',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            outline: 'none',
+                            fontFamily: "'Cairo', sans-serif",
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                          رقم المرجع / الحوالة المصرفية
+                        </label>
+                        <input
+                          type="text"
+                          value={payRefNumber}
+                          onChange={(e) => setPayRefNumber(e.target.value)}
+                          placeholder="رقم المعاملة أو كود الحوالة..."
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '10px',
+                            border: '2px solid #cbd5e1',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            outline: 'none',
+                            fontFamily: "'Cairo', sans-serif",
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                          تحميل إشعار / إيصال الحوالة المصرفية (صورة أو PDF)
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={(e) => setPayReportFile(e.target.files ? e.target.files[0] : null)}
+                            style={{
+                              flex: 1,
+                              padding: '7px 10px',
+                              borderRadius: '10px',
+                              border: '2px solid #cbd5e1',
+                              fontSize: '12px',
+                              fontFamily: "'Cairo', sans-serif",
+                              background: '#ffffff',
+                              cursor: 'pointer',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                          {payReportFile && (
+                            <button
+                              type="button"
+                              onClick={() => setPayReportFile(null)}
+                              title="إلغاء الملف"
+                              style={{
+                                border: 'none',
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                borderRadius: '8px',
+                                padding: '8px 10px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                              }}
+                            >
+                              ✕ إلغاء الملف
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Cheque (شيك مصرفي) fields */}
+                  {payMethod === 'شيك' && (
+                    <>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                          اسم المصرف المسحوب عليه
+                        </label>
+                        <input
+                          type="text"
+                          value={payBankName}
+                          onChange={(e) => setPayBankName(e.target.value)}
+                          placeholder="مثال: مصرف التجارة والتنمية..."
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '10px',
+                            border: '2px solid #cbd5e1',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            outline: 'none',
+                            fontFamily: "'Cairo', sans-serif",
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                          رقم الشيك المصرفي
+                        </label>
+                        <input
+                          type="text"
+                          value={payRefNumber}
+                          onChange={(e) => setPayRefNumber(e.target.value)}
+                          placeholder="أدخل رقم الشيك..."
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '10px',
+                            border: '2px solid #cbd5e1',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            outline: 'none',
+                            fontFamily: "'Cairo', sans-serif",
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
+                          تحميل صورة الشيك المصرفي
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={(e) => setPayReportFile(e.target.files ? e.target.files[0] : null)}
+                            style={{
+                              flex: 1,
+                              padding: '7px 10px',
+                              borderRadius: '10px',
+                              border: '2px solid #cbd5e1',
+                              fontSize: '12px',
+                              fontFamily: "'Cairo', sans-serif",
+                              background: '#ffffff',
+                              cursor: 'pointer',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                          {payReportFile && (
+                            <button
+                              type="button"
+                              onClick={() => setPayReportFile(null)}
+                              title="إلغاء الملف"
+                              style={{
+                                border: 'none',
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                borderRadius: '8px',
+                                padding: '8px 10px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                              }}
+                            >
+                              ✕ إلغاء الملف
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Cash or Other reference field */}
+                  {(payMethod === 'نقدي' || payMethod === 'أخرى') && (
                     <div>
                       <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
-                        اسم المصرف
+                        رقم المرجع / الإيصال اليدوي (اختياري)
                       </label>
                       <input
                         type="text"
-                        value={payBankName}
-                        onChange={(e) => setPayBankName(e.target.value)}
-                        placeholder="مثال: مصرف الجمهورية، التجارة والتنمية..."
+                        value={payRefNumber}
+                        onChange={(e) => setPayRefNumber(e.target.value)}
+                        placeholder="رقم مرجعي اختياري..."
                         style={{
                           width: '100%',
                           padding: '9px 12px',
@@ -4189,31 +4638,6 @@ export default function AgentMonthlyLedger() {
                       />
                     </div>
                   )}
-
-                  {/* Reference Number */}
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>
-                      رقم المرجع / الشيك / الإيصال
-                    </label>
-                    <input
-                      type="text"
-                      value={payRefNumber}
-                      onChange={(e) => setPayRefNumber(e.target.value)}
-                      placeholder="رقم المعاملة أو الحوالة..."
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '10px',
-                        border: '2px solid #cbd5e1',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#0f172a',
-                        outline: 'none',
-                        fontFamily: "'Cairo', sans-serif",
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
                 </div>
 
                 {/* Notes & Submit Button */}
@@ -4335,8 +4759,14 @@ export default function AgentMonthlyLedger() {
                               </span>
                             </td>
                             <td style={{ padding: '8px 10px', textAlign: 'center', color: '#475569' }}>
+                              {v.extra_details?.pos_machine_name && (
+                                <div style={{ fontWeight: 800, color: '#1d4ed8', fontSize: '11px', marginBottom: '2px' }}>
+                                  <i className="fa-solid fa-calculator" style={{ marginLeft: '4px' }} />
+                                  {v.extra_details.pos_machine_name}
+                                </div>
+                              )}
                               {v.bank_name ? `${v.bank_name}` : ''}
-                              {v.reference_number ? ` (مرجع: ${v.reference_number})` : (!v.bank_name ? '—' : '')}
+                              {v.reference_number ? ` (مرجع: ${v.reference_number})` : (!v.bank_name && !v.extra_details?.pos_machine_name ? '—' : '')}
                             </td>
                             <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 900, color: '#059669', fontSize: '13px' }}>
                               {fmt(v.amount)} <small style={{ fontSize: '10px' }}>د.ل</small>
@@ -4346,6 +4776,32 @@ export default function AgentMonthlyLedger() {
                             </td>
                             <td style={{ padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                               <div style={{ display: 'inline-flex', gap: '4px' }}>
+                                {(v.extra_details?.report_file || v.report_file) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const filePath = v.extra_details?.report_file || v.report_file;
+                                      const fileUrl = resolveImageUrl(filePath);
+                                      window.open(fileUrl, '_blank');
+                                    }}
+                                    title="عرض التقرير الورقي / الإيصال المرفق"
+                                    style={{
+                                      border: 'none',
+                                      background: '#eff6ff',
+                                      color: '#1d4ed8',
+                                      padding: '4px 7px',
+                                      borderRadius: '6px',
+                                      fontSize: '11px',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                    }}
+                                  >
+                                    <i className="fa-solid fa-paperclip" /> ملف
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handlePrintVoucher({ ...v, agent_name: ledger?.agent.agency_name, agent_phone: (ledger?.agent as any)?.phone })}
