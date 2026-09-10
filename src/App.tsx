@@ -74,6 +74,7 @@ import EditPersonalAccidentInsurance from './components/EditPersonalAccidentInsu
 import ViewExpenseDetails from './components/ViewExpenseDetails';
 // // import UserDetails from './components/UserDetails';
 import EmployeeProfile from './components/EmployeeProfile';
+import EmployeeManagement from './components/EmployeeManagement';
 
 import SchoolStudentInsuranceList from './components/SchoolStudentInsuranceList';
 import CreateSchoolStudentInsurance from './components/CreateSchoolStudentInsurance';
@@ -206,7 +207,8 @@ function hasAccessToRoute(
     'تأمين حماية طلاب المدارس': ['/school-student-insurance'],
     'تأمين نقل النقدية': ['/cash-in-transit-insurance'],
     'تأمين شحن البضائع': ['/cargo-insurance'],
-    'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations'],
+    'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries'],
+    'صرف المرتبات والمسيرات': ['/reports/employee-salaries'],
     'إدارة الوثائق القديمة': ['/old-documents'],
     'الوثائق الملغية': ['/canceled-documents'],
 
@@ -217,9 +219,10 @@ function hasAccessToRoute(
     'إلغاء الوكالات': ['/agency-cancellations'],
     'طلبات تعديل بيانات الوكلاء': ['/profile-update-requests'],
 
-    'إدارة الموظفين': ['/users', '/employee-requests', '/departments'],
+    'إدارة الموظفين': ['/users', '/employee-requests', '/departments', '/employees', '/employees-management'],
     // تفصيل صلاحيات الموظفين
-    'قائمة الموظفين': ['/users'],
+    'إدارة الموظف': ['/employees', '/employees-management'],
+    'قائمة الموظفين': ['/users', '/employees', '/employees-management'],
     'إدارة أقسام الشركة': ['/departments', '/management/department'],
     'طلبات الموظفين': ['/employee-requests'],
     'طلبات تعديل بيانات الموظفين': ['/profile-update-requests'],
@@ -433,10 +436,12 @@ const menuSections: SidebarSection[] = [
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
           { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
           { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent' },
+          { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
         ]
       },
       {
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
+          { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
           { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
@@ -657,6 +662,7 @@ const createMenuSections = (
       { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
       { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+      { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     ],
     // تفصيل صلاحيات الفروع والوكلاء
     'قائمة الفروع والوكلاء': { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
@@ -664,14 +670,17 @@ const createMenuSections = (
     'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
     'إلغاء الوكالات': { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
     'طلبات تعديل بيانات الوكلاء': { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+    'صرف المرتبات والمسيرات': { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
 
     'إدارة الموظفين': [
+      { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
       { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
       { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
       { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
     ],
     // تفصيل صلاحيات الموظفين
+    'إدارة الموظف': { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
     'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
     'إدارة أقسام الشركة': { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
     'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
@@ -1642,6 +1651,10 @@ export default function App() {
                   <Route path="/departments" element={<AuthorizedRoute requiredPath="/departments"><DepartmentsList /></AuthorizedRoute>} />
                   <Route path="/employee-requests" element={<AuthorizedRoute requiredPath="/employee-requests"><AllEmployeeRequests /></AuthorizedRoute>} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
+                  <Route path="/employees" element={<AuthorizedRoute requiredPath="/users"><EmployeeManagement /></AuthorizedRoute>} />
+                  <Route path="/employees/:id" element={<AuthorizedRoute requiredPath="/users"><EmployeeManagement /></AuthorizedRoute>} />
+                  <Route path="/employees-management" element={<AuthorizedRoute requiredPath="/users"><EmployeeManagement /></AuthorizedRoute>} />
+                  <Route path="/employees-management/:id" element={<AuthorizedRoute requiredPath="/users"><EmployeeManagement /></AuthorizedRoute>} />
                   <Route path="/agent-requests" element={<AuthorizedRoute requiredPath="/agent-requests"><AllAgentRequests /></AuthorizedRoute>} />
                   <Route path="/agency-cancellations" element={<AuthorizedRoute requiredPath="/agency-cancellations"><AgencyCancellations /></AuthorizedRoute>} />
 

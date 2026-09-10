@@ -1957,6 +1957,16 @@ export default function UsersList() {
                             <button
                               type="button"
                               className="action-btn"
+                              onClick={() => navigate(`/employees/${u.id}`)}
+                              aria-label="إدارة الموظف"
+                              title="إدارة الموظف - الصفحة الشاملة"
+                              style={{ color: '#6366f1', fontWeight: 'bold' }}
+                            >
+                              <i className="fa-solid fa-user-shield"></i>
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn"
                               onClick={() => navigate(`/users/${u.id}`)}
                               aria-label="عرض التفاصيل"
                               title="عرض التفاصيل"
@@ -1964,6 +1974,7 @@ export default function UsersList() {
                             >
                               <i className="fa-solid fa-eye"></i>
                             </button>
+
                             <button
                               type="button"
                               className="action-btn"
@@ -2112,6 +2123,15 @@ export default function UsersList() {
                         </div>
                       )}
                       <div className="user-mobile-actions">
+                        <button
+                          type="button"
+                          className="action-btn"
+                          onClick={() => navigate(`/employees/${u.id}`)}
+                          title="إدارة الموظف - الصفحة الشاملة"
+                          style={{ color: '#6366f1', fontWeight: 'bold' }}
+                        >
+                          <i className="fa-solid fa-user-shield"></i>
+                        </button>
                         <button
                           type="button"
                           className="action-btn"

@@ -169,6 +169,11 @@ export default function EmployeeSalaries() {
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [status, setStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [branchAgents, setBranchAgents] = useState<{ id: number; agency_name: string; code: string }[]>([]);
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('agent_id') || params.get('branch_agent_id') || 'all';
+  });
   const [historyFor, setHistoryFor] = useState<Employee | null>(null);
   const [history, setHistory] = useState<SalaryHistory[]>([]);
 
@@ -213,9 +218,18 @@ export default function EmployeeSalaries() {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
 
+      let scopeParam = '';
+      if (selectedAgentFilter === 'hq') {
+        scopeParam = '&scope=hq';
+      } else if (selectedAgentFilter !== 'all') {
+        scopeParam = `&branch_agent_id=${selectedAgentFilter}`;
+      } else {
+        scopeParam = '&scope=all';
+      }
+
       const [employeesRes, payrollsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/employee-payrolls/employees?year=${year}&month=${month}`, { headers }),
-        fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}`, { headers }),
+        fetch(`${API_BASE_URL}/employee-payrolls/employees?year=${year}&month=${month}${scopeParam}`, { headers }),
+        fetch(`${API_BASE_URL}/employee-payrolls?year=${year}&month=${month}${status !== 'all' ? `&status=${status}` : ''}${scopeParam}`, { headers }),
       ]);
       const employeesData = await employeesRes.json();
       const payrollsData = await payrollsRes.json();
@@ -229,8 +243,25 @@ export default function EmployeeSalaries() {
   };
 
   useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/branches-agents?per_page=500`, {
+          headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+        });
+        const d = await res.json();
+        const list = Array.isArray(d) ? d : (d.data || []);
+        setBranchAgents(list);
+      } catch (err) {
+        console.error('Failed to load agents', err);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  useEffect(() => {
     loadAll();
-  }, [year, month, status]);
+  }, [year, month, status, selectedAgentFilter]);
 
   const fetchRangeReport = async () => {
     setRangeReportLoading(true);
@@ -539,7 +570,11 @@ export default function EmployeeSalaries() {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ year, month }),
+        body: JSON.stringify({
+          year,
+          month,
+          branch_agent_id: (selectedAgentFilter !== 'all' && selectedAgentFilter !== 'hq') ? Number(selectedAgentFilter) : undefined
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1492,6 +1527,22 @@ export default function EmployeeSalaries() {
                 <p className="ep-payroll-toolbar-hint">اختر الشهر والسنة ثم طبّق البحث أو صدّر الكشف</p>
               </div>
               <div className="ep-payroll-fields">
+                <div className="ep-field">
+                  <label htmlFor="ep-payroll-branch-agent">الفرع / الوكيل</label>
+                  <select
+                    id="ep-payroll-branch-agent"
+                    value={selectedAgentFilter}
+                    onChange={(e) => setSelectedAgentFilter(e.target.value)}
+                  >
+                    <option value="all">جميع الفروع والوكلاء والمقر</option>
+                    <option value="hq">المقر الرئيسي فقط</option>
+                    {branchAgents.map((ag) => (
+                      <option key={ag.id} value={String(ag.id)}>
+                        {ag.agency_name} ({ag.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="ep-field">
                   <label htmlFor="ep-payroll-search">اختيار موظف</label>
                   <select

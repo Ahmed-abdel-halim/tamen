@@ -3,6 +3,7 @@ import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel, generateGroupedDocsExcel } from '../utils/excelGenerator';
 import CustomDateInput from './CustomDateInput';
+import AgentSalariesModal from './AgentSalariesModal';
 
 const ARABIC_MONTHS_LDG = [
   'يناير','فبراير','مارس','أبريل','مايو','يونيو',
@@ -138,6 +139,9 @@ export default function AgentMonthlyLedger() {
   const [payReportFile, setPayReportFile] = useState<File | null>(null);
   const [posMachinesList, setPosMachinesList] = useState<any[]>([]);
   const [loadingPosMachines, setLoadingPosMachines] = useState(false);
+
+  // Agent Salaries Modal State (صرف ومرتبات الوكيل والفرع)
+  const [agentSalariesModal, setAgentSalariesModal] = useState(false);
 
   // Agent Custody Modal State (عهد الوكيل)
   const [agentCustodyModal, setAgentCustodyModal] = useState(false);
@@ -2466,6 +2470,34 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-file-invoice" />
                 <span>إذن مباشرة</span>
+              </button>
+
+              <button
+                onClick={() => setAgentSalariesModal(true)}
+                title="عرض وإدارة وصرف مرتبات الوكيل وموظفي الفرع"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #059669, #10b981)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo',sans-serif",
+                  boxShadow: '0 2px 10px rgba(16,185,129,0.35)',
+                  transition: 'all .2s'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+              >
+                <i className="fa-solid fa-money-check-dollar" />
+                <span>صرف المرتبات</span>
               </button>
 
               <button
@@ -7564,6 +7596,14 @@ export default function AgentMonthlyLedger() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ====== Modal: Agent Salaries View & Disbursement (صرف وإدارة مرتبات الوكيل والفرع) ====== */}
+      {agentSalariesModal && ledger && (
+        <AgentSalariesModal
+          agent={ledger.agent}
+          onClose={() => setAgentSalariesModal(false)}
+        />
       )}
     </div>
   );
