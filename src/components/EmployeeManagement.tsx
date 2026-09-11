@@ -55,10 +55,12 @@ export interface Employee {
   daily_leave_deduction?: number;
   social_security_percentage?: number;
   tax_percentage?: number;
+  solidarity_percentage?: number;
   tax_file_number?: string | null;
   social_security_file_number?: string | null;
   apply_tax?: boolean;
   apply_social_security?: boolean;
+  apply_solidarity?: boolean;
   profile_photo_url?: string | null;
   national_id_photo_url?: string | null;
   identity_proof_url?: string | null;
@@ -4020,6 +4022,7 @@ export default function EmployeeManagement() {
                   <div className="d-row"><span>رقم ملف الضريبة:</span><strong>{employee.tax_file_number || "—"}</strong></div>
                   <div className="d-row"><span>نسبة الضمان الاجتماعي:</span><strong>{employee.apply_social_security ? `${employee.social_security_percentage ?? 19.475}%` : "غير مطبق"}</strong></div>
                   <div className="d-row"><span>رقم ملف الضمان:</span><strong>{employee.social_security_file_number || "—"}</strong></div>
+                  <div className="d-row"><span>ضريبة التضامن الاجتماعي:</span><strong>{employee.apply_solidarity ? `${employee.solidarity_percentage ?? 0}%` : "غير مطبق"}</strong></div>
                 </div>
               </div>
             </div>
@@ -5206,6 +5209,71 @@ export default function EmployeeManagement() {
                     value={editFormData.transportation_allowance || 0}
                     onChange={(e) => setEditFormData({ ...editFormData, transportation_allowance: parseFloat(e.target.value) || 0 })}
                   />
+                </div>
+
+                <div className="form-fld">
+                  <label>نوع المرتب</label>
+                  <select
+                    value={editFormData.salary_type || 'monthly'}
+                    onChange={(e) => setEditFormData({ ...editFormData, salary_type: e.target.value })}
+                  >
+                    <option value="monthly">شهري (ثابت)</option>
+                    <option value="hourly">بالوقت (بالساعة)</option>
+                  </select>
+                </div>
+
+                {editFormData.salary_type === 'hourly' && (
+                  <div className="form-fld">
+                    <label>سعر الساعة (د.ل)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editFormData.hourly_rate || 0}
+                      onChange={(e) => setEditFormData({ ...editFormData, hourly_rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                )}
+
+                <div className="form-fld">
+                  <label>تاريخ التوظيف</label>
+                  <input
+                    type="date"
+                    value={editFormData.start_date || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, start_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-fld">
+                  <label>تاريخ انهاء العمل</label>
+                  <input
+                    type="date"
+                    value={editFormData.end_date || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, end_date: e.target.value || null })}
+                  />
+                </div>
+
+                <div className="form-fld">
+                  <label>ضريبة التضامن الاجتماعي (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editFormData.solidarity_percentage ?? 0}
+                    onChange={(e) => setEditFormData({ ...editFormData, solidarity_percentage: parseFloat(e.target.value) || 0 })}
+                    placeholder="مثال: 3"
+                  />
+                </div>
+
+                <div className="form-fld">
+                  <label>تطبيق التضامن الاجتماعي</label>
+                  <select
+                    value={editFormData.apply_solidarity === false ? 'false' : 'true'}
+                    onChange={(e) => setEditFormData({ ...editFormData, apply_solidarity: e.target.value === 'true' })}
+                  >
+                    <option value="true">مطبق</option>
+                    <option value="false">غير مطبق</option>
+                  </select>
                 </div>
 
                 <div className="form-fld">

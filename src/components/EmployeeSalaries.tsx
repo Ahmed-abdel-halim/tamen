@@ -9,10 +9,14 @@ type Employee = {
   name: string;
   email?: string;
   salary?: number | string | null;
+  salary_type?: string | null;
+  hourly_rate?: number | string | null;
   tax_percentage?: number | string;
   social_security_percentage?: number | string;
+  solidarity_percentage?: number | string;
   apply_tax?: boolean;
   apply_social_security?: boolean;
+  apply_solidarity?: boolean;
   housing_allowance?: number | string | null;
   transportation_allowance?: number | string | null;
   communication_allowance?: number | string | null;
@@ -37,6 +41,7 @@ type Payroll = {
   penalty_amount: number | string;
   tax_amount: number | string;
   social_security_amount: number | string;
+  solidarity_amount: number | string;
   deduction_amount: number | string;
   advance_amount: number | string;
   net_salary: number | string;
@@ -46,6 +51,7 @@ type Payroll = {
   extra_fields?: { label: string; amount: number }[] | null;
   paid_at?: string | null;
   notes?: string | null;
+  hours_worked?: number | string | null;
   user?: Employee;
 };
 
@@ -192,6 +198,11 @@ export default function EmployeeSalaries() {
   const [payrollForm, setPayrollForm] = useState<null | {
     user_id: number;
     name: string;
+    salary_type: string;
+    hourly_rate: number | string;
+    hours_worked: number | string;
+    start_date: string;
+    end_date: string;
     base_salary: number | string;
     housing_allowance: number | string;
     transportation_allowance: number | string;
@@ -202,9 +213,12 @@ export default function EmployeeSalaries() {
     penalty_amount: number | string;
     deduction_amount: number | string;
     advance_amount: number | string;
+    solidarity_percentage: number | string;
+    apply_solidarity: boolean;
     status: 'paid' | 'unpaid';
     delivery_method: string;
     custom_delivery_method: string;
+    paid_at: string;
     extra_fields: { label: string; amount: number | string }[];
     notes: string;
   }>(null);
@@ -351,19 +365,27 @@ export default function EmployeeSalaries() {
 
     const tax_pct = toNum(e.tax_percentage || 10);
     const ss_pct = toNum(e.social_security_percentage || 19.475);
+    const solidarity_pct = toNum(e.solidarity_percentage || 0);
 
     // التحقق من خيارات التطبيق
     const isTaxApplied = e.apply_tax !== false;
     const isSSApplied = e.apply_social_security !== false;
+    const isSolidarityApplied = e.apply_solidarity === true;
 
     // إذا كانت القيمة في قاعدة البيانات 0 والمرتب لم يصرف بعد، نعرض القيمة المحسوبة تلقائياً مع احترام الخيارات
     const tax_val = (p && toNum(p.tax_amount) > 0) ? toNum(p.tax_amount) : (isTaxApplied ? (base * tax_pct / 100) : 0);
     const ss_val = (p && toNum(p.social_security_amount) > 0) ? toNum(p.social_security_amount) : (isSSApplied ? (base * ss_pct / 100) : 0);
 
-    // حساب الصافي بناءً على القيم المعروضة لضمان الدقة في العرض
-    const net = (base + housing + transport + communication + bonus + other + misc + extra_total - deduction - advance - penalty - tax_val - ss_val);
+    // التضامن يُحسب من إجمالي المرتب
+    const gross = base + housing + transport + communication + bonus + other + misc + extra_total;
+    const solidarity_val = (p && toNum((p as any).solidarity_amount) > 0)
+      ? toNum((p as any).solidarity_amount)
+      : (isSolidarityApplied ? (gross * solidarity_pct / 100) : 0);
 
-    return { e, p, base, housing, transport, communication, misc, bonus, other, deduction, advance, penalty, tax_val, ss_val, extra_fields, extra_total, net };
+    // حساب الصافي بناءً على القيم المعروضة لضمان الدقة في العرض
+    const net = (gross - deduction - advance - penalty - tax_val - ss_val - solidarity_val);
+
+    return { e, p, base, housing, transport, communication, misc, bonus, other, deduction, advance, penalty, tax_val, ss_val, solidarity_val, extra_fields, extra_total, net };
   });
 
   const allExtraLabels = useMemo(() => {
@@ -385,6 +407,11 @@ export default function EmployeeSalaries() {
     setPayrollForm({
       user_id: r.e.id,
       name: r.e.name,
+      salary_type: r.e.salary_type || 'monthly',
+      hourly_rate: r.e.hourly_rate || 0,
+      hours_worked: r.p?.hours_worked || 0,
+      start_date: r.e.start_date || '',
+      end_date: r.e.end_date || '',
       base_salary: r.base,
       housing_allowance: r.housing,
       transportation_allowance: r.transport,
@@ -395,9 +422,12 @@ export default function EmployeeSalaries() {
       penalty_amount: r.penalty,
       deduction_amount: r.deduction,
       advance_amount: r.advance,
+      solidarity_percentage: r.e.solidarity_percentage || 0,
+      apply_solidarity: r.e.apply_solidarity !== false,
       status: r.p?.status || 'unpaid',
       delivery_method: r.p?.delivery_method || 'كاش',
       custom_delivery_method: r.p?.custom_delivery_method || '',
+      paid_at: r.p?.paid_at ? r.p.paid_at.substring(0, 10) : new Date().toISOString().substring(0, 10),
       extra_fields: r.p?.extra_fields || [],
       notes: r.p?.notes || '',
     });
@@ -408,13 +438,52 @@ export default function EmployeeSalaries() {
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      // حساب صافي المرتب
+      const grossSalary = toNum(payrollForm.base_salary) +
+        toNum(payrollForm.housing_allowance) +
+        toNum(payrollForm.transportation_allowance) +
+        toNum(payrollForm.communication_allowance) +
+        toNum(payrollForm.bonus_amount) +
+        toNum(payrollForm.other_additions) +
+        toNum(payrollForm.allowance_amount) +
+        payrollForm.extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0);
+
+      const emp = employees.find(e => e.id === payrollForm.user_id);
+      const taxAmt = emp?.apply_tax !== false
+        ? (toNum(payrollForm.base_salary) * toNum(emp?.tax_percentage || 10) / 100)
+        : 0;
+      const ssAmt = emp?.apply_social_security !== false
+        ? (toNum(payrollForm.base_salary) * toNum(emp?.social_security_percentage || 19.475) / 100)
+        : 0;
+      const solidarityAmt = payrollForm.apply_solidarity
+        ? (grossSalary * toNum(payrollForm.solidarity_percentage) / 100)
+        : 0;
+
+      // تحديث بيانات الموظف (التواريخ + نوع المرتب + التضامن)
+      const empUpdatePayload: any = {
+        start_date: payrollForm.start_date || null,
+        end_date: payrollForm.end_date || null,
+        salary_type: payrollForm.salary_type,
+        hourly_rate: payrollForm.salary_type === 'hourly' ? toNum(payrollForm.hourly_rate) : undefined,
+        solidarity_percentage: toNum(payrollForm.solidarity_percentage),
+        apply_solidarity: payrollForm.apply_solidarity,
+      };
+      await fetch(`${API_BASE_URL}/users/${payrollForm.user_id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(empUpdatePayload),
+      });
+
+      // حفظ بيان المرتب
       const res = await fetch(`${API_BASE_URL}/employee-payrolls`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
+        headers,
         body: JSON.stringify({
           user_id: payrollForm.user_id,
           year,
@@ -429,7 +498,12 @@ export default function EmployeeSalaries() {
           penalty_amount: payrollForm.penalty_amount,
           deduction_amount: payrollForm.deduction_amount,
           advance_amount: payrollForm.advance_amount,
+          tax_amount: taxAmt,
+          social_security_amount: ssAmt,
+          solidarity_amount: solidarityAmt,
+          hours_worked: payrollForm.salary_type === 'hourly' ? toNum(payrollForm.hours_worked) : undefined,
           status: payrollForm.status,
+          paid_at: payrollForm.status === 'paid' ? (payrollForm.paid_at || new Date().toISOString().substring(0, 10)) : null,
           delivery_method: payrollForm.delivery_method,
           custom_delivery_method: payrollForm.custom_delivery_method,
           extra_fields: payrollForm.extra_fields,
@@ -480,6 +554,7 @@ export default function EmployeeSalaries() {
         { header: 'مكافآت', key: 'bonus', width: 12 },
         { header: 'ضرائب', key: 'tax', width: 12 },
         { header: 'ضمان', key: 'ss', width: 12 },
+        { header: 'تضامن اجتماعي', key: 'solidarity', width: 14 },
         { header: 'خصومات', key: 'deduction', width: 12 },
         { header: 'سلف', key: 'advance', width: 12 },
         { header: 'غرامات', key: 'penalty', width: 12 },
@@ -500,6 +575,7 @@ export default function EmployeeSalaries() {
           bonus: r.bonus,
           tax: r.tax_val.toFixed(2),
           ss: r.ss_val.toFixed(2),
+          solidarity: r.solidarity_val.toFixed(2),
           deduction: r.deduction,
           advance: r.advance,
           penalty: r.penalty,
@@ -606,6 +682,7 @@ export default function EmployeeSalaries() {
         <td style="color:#10b981">${money.format(r.bonus)}</td>
         <td style="color:#ef4444">${money.format(r.tax_val)}</td>
         <td style="color:#ef4444">${money.format(r.ss_val)}</td>
+        <td style="color:#f97316">${money.format(r.solidarity_val)}</td>
         <td style="color:#ef4444">${money.format(r.deduction)}</td>
         <td style="color:#ef4444">${money.format(r.advance)}</td>
         <td style="color:#ef4444">${money.format(r.penalty)}</td>
@@ -754,6 +831,7 @@ export default function EmployeeSalaries() {
               <th>مكافآت</th>
               <th>ضرائب</th>
               <th>ضمان</th>
+              <th style="color:#f97316">تضامن</th>
               <th>خصومات</th>
               <th>سلف</th>
               <th>غرامات</th>
@@ -769,7 +847,7 @@ export default function EmployeeSalaries() {
           <tfoot>
             <tr style="background:#f1f5f9; font-weight:900">
               <td colspan="2">الإجمالي العام</td>
-              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
               ${allExtraLabels.map(() => `<td>-</td>`).join('')}
               <td style="color:#10b981; font-size:14px">${money.format(totals.total)} د.ل</td>
               <td colspan="2">موظفين ( ${rows.length} )</td>
@@ -822,6 +900,7 @@ export default function EmployeeSalaries() {
           const penalty = toNum(p.penalty_amount);
           const tax = toNum(p.tax_amount);
           const ss = toNum(p.social_security_amount);
+          const solidarity = toNum((p as any).solidarity_amount || 0);
           const net = toNum(p.net_salary);
 
           return `
@@ -835,6 +914,7 @@ export default function EmployeeSalaries() {
               <td style="color:#10b981">${money.format(bonus)}</td>
               <td style="color:#ef4444">${money.format(tax)}</td>
               <td style="color:#ef4444">${money.format(ss)}</td>
+              <td style="color:#f97316">${money.format(solidarity)}</td>
               <td style="color:#ef4444">${money.format(deduction)}</td>
               <td style="color:#ef4444">${money.format(advance)}</td>
               <td style="color:#ef4444">${money.format(penalty)}</td>
@@ -978,6 +1058,7 @@ export default function EmployeeSalaries() {
               <th>مكافآت</th>
               <th>ضرائب</th>
               <th>ضمان</th>
+              <th style="color:#f97316">تضامن</th>
               <th>خصومات</th>
               <th>سلف</th>
               <th>غرامات</th>
@@ -993,7 +1074,7 @@ export default function EmployeeSalaries() {
           <tfoot>
             <tr style="background:#f1f5f9; font-weight:900">
               <td colspan="2">الإجمالي العام</td>
-              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
               <td style="color:#10b981; font-size:13px">${money.format(rangeReportTotals.total)} د.ل</td>
               <td colspan="3">سجلات الرواتب ( ${rangeReportPayrolls.length} )</td>
             </tr>
@@ -1037,6 +1118,7 @@ export default function EmployeeSalaries() {
     const penalty = toNum(p.penalty_amount);
     const tax_val = toNum(p.tax_amount);
     const ss_val = toNum(p.social_security_amount);
+    const solidarity_val = toNum((p as any).solidarity_amount || 0);
     const extra_fields = p.extra_fields || [];
     const net = toNum(p.net_salary);
 
@@ -1288,6 +1370,11 @@ export default function EmployeeSalaries() {
                   <span>ضمان اجتماعي</span>
                   <span class="value">${money.format(ss_val)} د.ل</span>
                 </div>` : ''}
+                ${solidarity_val > 0 ? `
+                <div class="row-item" style="color:#f97316">
+                  <span>تضامن اجتماعي</span>
+                  <span class="value">${money.format(solidarity_val)} د.ل</span>
+                </div>` : ''}
                 ${deduction > 0 ? `
                 <div class="row-item">
                   <span>خصومات</span>
@@ -1358,6 +1445,7 @@ export default function EmployeeSalaries() {
       penalty_amount: r.penalty,
       tax_amount: r.tax_val,
       social_security_amount: r.ss_val,
+      solidarity_amount: r.solidarity_val,
       deduction_amount: r.deduction,
       advance_amount: r.advance,
       net_salary: r.net,
@@ -1390,6 +1478,7 @@ export default function EmployeeSalaries() {
         { header: 'مكافآت', key: 'bonus', width: 12 },
         { header: 'ضرائب', key: 'tax', width: 12 },
         { header: 'ضمان', key: 'ss', width: 12 },
+        { header: 'تضامن', key: 'solidarity', width: 12 },
         { header: 'خصومات', key: 'deduction', width: 12 },
         { header: 'سلف', key: 'advance', width: 12 },
         { header: 'غرامات', key: 'penalty', width: 12 },
@@ -1411,6 +1500,7 @@ export default function EmployeeSalaries() {
           bonus: toNum(p.bonus_amount),
           tax: toNum(p.tax_amount).toFixed(2),
           ss: toNum(p.social_security_amount).toFixed(2),
+          solidarity: toNum((p as any).solidarity_amount || 0).toFixed(2),
           deduction: toNum(p.deduction_amount),
           advance: toNum(p.advance_amount),
           penalty: toNum(p.penalty_amount),
@@ -1439,6 +1529,7 @@ export default function EmployeeSalaries() {
         bonus: '',
         tax: '',
         ss: '',
+        solidarity: '',
         deduction: '',
         advance: '',
         penalty: '',
@@ -1653,6 +1744,7 @@ export default function EmployeeSalaries() {
                     <th style={{ color: '#10b981' }}>مكافآت</th>
                     <th style={{ color: '#ef4444' }}>ضرائب</th>
                     <th style={{ color: '#ef4444' }}>ضمان</th>
+                    <th style={{ color: '#f97316' }}>تضامن</th>
                     <th style={{ color: '#ef4444' }}>خصومات</th>
                     <th style={{ color: '#ef4444' }}>سلف</th>
                     <th style={{ color: '#ef4444' }}>غرامات</th>
@@ -1670,7 +1762,10 @@ export default function EmployeeSalaries() {
                     <tr><td colSpan={15 + allExtraLabels.length} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات</td></tr>
                   ) : rows.map((r) => (
                     <tr key={r.e.id}>
-                      <td style={{ minWidth: '120px' }}>{r.e.name}</td>
+                      <td style={{ minWidth: '120px' }}>
+                        <div>{r.e.name}</div>
+                        {r.e.salary_type === 'hourly' && <div style={{ fontSize: '10px', color: '#f97316', marginTop: '2px' }}><i className="fa-solid fa-clock" style={{marginLeft:'3px'}}></i>بالوقت</div>}
+                      </td>
                       <td style={{ fontSize: '12px', color: '#64748b' }}>{r.e.start_date ? new Date(r.e.start_date).toLocaleDateString('ar-LY') : '—'}</td>
                       <td>{money.format(r.base)}</td>
                       <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.housing)}</td>
@@ -1679,6 +1774,7 @@ export default function EmployeeSalaries() {
                       <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(r.bonus)}</td>
                       <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.tax_val)}</td>
                       <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.ss_val)}</td>
+                      <td style={{ color: '#f97316', fontWeight: 600 }}>{money.format(r.solidarity_val)}</td>
                       <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.deduction)}</td>
                       <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.advance)}</td>
                       <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(r.penalty)}</td>
@@ -1793,6 +1889,7 @@ export default function EmployeeSalaries() {
                     <th style={{ color: '#10b981' }}>مكافآت</th>
                     <th style={{ color: '#ef4444' }}>ضرائب</th>
                     <th style={{ color: '#ef4444' }}>ضمان</th>
+                    <th style={{ color: '#f97316' }}>تضامن</th>
                     <th style={{ color: '#ef4444' }}>خصومات</th>
                     <th style={{ color: '#ef4444' }}>سلف</th>
                     <th style={{ color: '#ef4444' }}>غرامات</th>
@@ -1805,9 +1902,9 @@ export default function EmployeeSalaries() {
                 </thead>
                 <tbody>
                   {rangeReportLoading ? (
-                    <tr><td colSpan={17} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
+                    <tr><td colSpan={18} style={{ textAlign: 'center', padding: '28px 0' }}>جاري التحميل...</td></tr>
                   ) : rangeReportPayrolls.length === 0 ? (
-                    <tr><td colSpan={17} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات للفترة المحددة</td></tr>
+                    <tr><td colSpan={18} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات للفترة المحددة</td></tr>
                   ) : rangeReportPayrolls.map((p) => {
                     const emp = p.user || employees.find((e) => e.id === p.user_id);
                     return (
@@ -1821,6 +1918,7 @@ export default function EmployeeSalaries() {
                         <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.bonus_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.tax_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.social_security_amount))}</td>
+                        <td style={{ color: '#f97316', fontWeight: 600 }}>{money.format(toNum((p as any).solidarity_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.deduction_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.advance_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.penalty_amount))}</td>
@@ -1849,48 +1947,128 @@ export default function EmployeeSalaries() {
           <div className="modal-content user-form-modal">
             <div className="modal-header"><h3>تعديل بيان مرتب - {payrollForm.name}</h3></div>
             <div className="user-form">
+
+              {/* ── قسم: بيانات التوظيف ── */}
+              <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--panel)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fa-solid fa-user-clock"></i> بيانات التوظيف
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  <div className="form-group">
+                    <label>نوع المرتب</label>
+                    <select value={payrollForm.salary_type} onChange={(e) => setPayrollForm({ ...payrollForm, salary_type: e.target.value, hours_worked: 0 })}>
+                      <option value="monthly">شهري (ثابت)</option>
+                      <option value="hourly">بالوقت (بالساعة)</option>
+                    </select>
+                  </div>
+                  {payrollForm.salary_type === 'hourly' ? (
+                    <>
+                      <div className="form-group">
+                        <label>سعر الساعة (د.ل)</label>
+                        <input type="number" step="0.01" min="0" value={payrollForm.hourly_rate}
+                          onChange={(e) => {
+                            const rate = Number(e.target.value) || 0;
+                            const hours = toNum(payrollForm.hours_worked);
+                            setPayrollForm({ ...payrollForm, hourly_rate: e.target.value, base_salary: rate * hours });
+                          }} />
+                      </div>
+                      <div className="form-group">
+                        <label>عدد الساعات</label>
+                        <input type="number" step="0.5" min="0" value={payrollForm.hours_worked}
+                          onChange={(e) => {
+                            const hours = Number(e.target.value) || 0;
+                            const rate = toNum(payrollForm.hourly_rate);
+                            setPayrollForm({ ...payrollForm, hours_worked: e.target.value, base_salary: rate * hours });
+                          }} />
+                      </div>
+                    </>
+                  ) : <div />}
+                  <div className="form-group">
+                    <label>تاريخ التوظيف</label>
+                    <input type="date" value={payrollForm.start_date}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, start_date: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>تاريخ انهاء العمل</label>
+                    <input type="date" value={payrollForm.end_date}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, end_date: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── قسم: المرتب والبدلات ── */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
-                <div className="form-group"><label>المرتب الثابت</label><input type="number" value={payrollForm.base_salary} onChange={(e) => setPayrollForm({ ...payrollForm, base_salary: e.target.value })} /></div>
+                <div className="form-group">
+                  <label>{payrollForm.salary_type === 'hourly' ? 'المرتب المحسوب (أساسي)' : 'المرتب الثابت'}</label>
+                  <input type="number" value={payrollForm.base_salary}
+                    onChange={(e) => setPayrollForm({ ...payrollForm, base_salary: e.target.value })}
+                    readOnly={payrollForm.salary_type === 'hourly'}
+                    style={payrollForm.salary_type === 'hourly' ? { backgroundColor: '#f1f5f9', fontWeight: 'bold' } : {}} />
+                </div>
                 <div className="form-group"><label>بدل سكن</label><input type="number" value={payrollForm.housing_allowance} onChange={(e) => setPayrollForm({ ...payrollForm, housing_allowance: e.target.value })} /></div>
                 <div className="form-group"><label>بدل مواصلات</label><input type="number" value={payrollForm.transportation_allowance} onChange={(e) => setPayrollForm({ ...payrollForm, transportation_allowance: e.target.value })} /></div>
                 <div className="form-group"><label>بدل اتصالات</label><input type="number" value={payrollForm.communication_allowance} onChange={(e) => setPayrollForm({ ...payrollForm, communication_allowance: e.target.value })} /></div>
                 <div className="form-group"><label>مكافآت</label><input type="number" value={payrollForm.bonus_amount} onChange={(e) => setPayrollForm({ ...payrollForm, bonus_amount: e.target.value })} /></div>
                 <div className="form-group"><label>إضافات أخرى</label><input type="number" value={payrollForm.other_additions} onChange={(e) => setPayrollForm({ ...payrollForm, other_additions: e.target.value })} /></div>
 
+                {/* الضرائب - للعرض فقط */}
                 <div className="form-group">
                   <label style={{ color: '#ef4444' }}>
                     ضرائب (%{employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10})
                     {employees.find(e => e.id === payrollForm.user_id)?.apply_tax === false && ' (غير منطبقة)'}
                   </label>
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
+                  <input type="text" readOnly disabled
                     style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold', opacity: employees.find(e => e.id === payrollForm.user_id)?.apply_tax === false ? 0.5 : 1 }}
                     value={money.format(
-                      employees.find(e => e.id === payrollForm.user_id)?.apply_tax !== false 
-                      ? (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100)
-                      : 0
-                    )}
-                  />
+                      employees.find(e => e.id === payrollForm.user_id)?.apply_tax !== false
+                        ? (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100)
+                        : 0
+                    )} />
                 </div>
 
+                {/* الضمان - للعرض فقط */}
                 <div className="form-group">
                   <label style={{ color: '#ef4444' }}>
                     ضمان (%{employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475})
                     {employees.find(e => e.id === payrollForm.user_id)?.apply_social_security === false && ' (غير منطبق)'}
                   </label>
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
+                  <input type="text" readOnly disabled
                     style={{ backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 'bold', opacity: employees.find(e => e.id === payrollForm.user_id)?.apply_social_security === false ? 0.5 : 1 }}
                     value={money.format(
                       employees.find(e => e.id === payrollForm.user_id)?.apply_social_security !== false
-                      ? (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100)
-                      : 0
-                    )}
-                  />
+                        ? (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100)
+                        : 0
+                    )} />
+                </div>
+
+                {/* التضامن الاجتماعي - قابل للتعديل */}
+                <div className="form-group">
+                  <label style={{ color: '#f97316' }}>
+                    تضامن اجتماعي % (من الإجمالي)
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <input type="number" step="0.01" min="0" max="100"
+                      value={payrollForm.solidarity_percentage}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, solidarity_percentage: e.target.value })}
+                      placeholder="0"
+                      style={{ flex: 1 }} />
+                    <select value={payrollForm.apply_solidarity ? 'true' : 'false'}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, apply_solidarity: e.target.value === 'true' })}
+                      style={{ width: '90px', fontSize: '12px' }}>
+                      <option value="true">مطبق</option>
+                      <option value="false">معطل</option>
+                    </select>
+                  </div>
+                  {payrollForm.apply_solidarity && toNum(payrollForm.solidarity_percentage) > 0 && (
+                    <div style={{ fontSize: '11px', color: '#f97316', marginTop: '4px' }}>
+                      = {money.format(
+                        (toNum(payrollForm.base_salary) + toNum(payrollForm.housing_allowance) + toNum(payrollForm.transportation_allowance) +
+                          toNum(payrollForm.communication_allowance) + toNum(payrollForm.bonus_amount) + toNum(payrollForm.other_additions) +
+                          toNum(payrollForm.allowance_amount) + payrollForm.extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0)) *
+                        toNum(payrollForm.solidarity_percentage) / 100
+                      )} د.ل
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group"><label style={{ color: '#ef4444' }}>خصومات</label><input type="number" value={payrollForm.deduction_amount} onChange={(e) => setPayrollForm({ ...payrollForm, deduction_amount: e.target.value })} /></div>
@@ -1910,17 +2088,24 @@ export default function EmployeeSalaries() {
                   <div className="form-group"><label>اكتب طريقة أخرى</label><input type="text" value={payrollForm.custom_delivery_method} onChange={(e) => setPayrollForm({ ...payrollForm, custom_delivery_method: e.target.value })} placeholder="مثال: تحويل بطاقة" /></div>
                 )}
                 <div className="form-group"><label>حالة الصرف</label><select value={payrollForm.status} onChange={(e) => setPayrollForm({ ...payrollForm, status: e.target.value as 'paid' | 'unpaid' })}><option value="unpaid">غير مصروف</option><option value="paid">مصروف</option></select></div>
+                {payrollForm.status === 'paid' && (
+                  <div className="form-group">
+                    <label>تاريخ الصرف</label>
+                    <input
+                      type="date"
+                      value={payrollForm.paid_at}
+                      onChange={(e) => setPayrollForm({ ...payrollForm, paid_at: e.target.value })}
+                    />
+                  </div>
+                )}
               </div>
 
+              {/* بنود إضافية */}
               <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <h4 style={{ margin: 0, fontSize: '14px' }}>بنود إضافية أخرى</h4>
-                  <button
-                    type="button"
-                    className="btn-submit"
-                    style={{ padding: '4px 12px', fontSize: '12px' }}
-                    onClick={() => setPayrollForm({ ...payrollForm, extra_fields: [...payrollForm.extra_fields, { label: '', amount: 0 }] })}
-                  >
+                  <button type="button" className="btn-submit" style={{ padding: '4px 12px', fontSize: '12px' }}
+                    onClick={() => setPayrollForm({ ...payrollForm, extra_fields: [...payrollForm.extra_fields, { label: '', amount: 0 }] })}>
                     <i className="fa-solid fa-plus" style={{ marginLeft: '5px' }}></i> إضافة بند
                   </button>
                 </div>
@@ -1966,21 +2151,29 @@ export default function EmployeeSalaries() {
               <div style={{ marginTop: '20px', padding: '15px', background: 'var(--panel)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
                 <span style={{ fontSize: '18px', fontWeight: 'bold' }}>إجمالي الصافي للموظف:</span>
                 <span style={{ fontSize: '24px', fontWeight: 900, color: '#10b981' }}>
-                  {money.format(
-                    toNum(payrollForm.base_salary) +
-                    toNum(payrollForm.housing_allowance) +
-                    toNum(payrollForm.transportation_allowance) +
-                    toNum(payrollForm.communication_allowance) +
-                    toNum(payrollForm.bonus_amount) +
-                    toNum(payrollForm.other_additions) +
-                    toNum(payrollForm.allowance_amount) +
-                    payrollForm.extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0) -
-                    (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.tax_percentage || 10) / 100) -
-                    (toNum(payrollForm.base_salary) * toNum(employees.find(e => e.id === payrollForm.user_id)?.social_security_percentage || 19.475) / 100) -
-                    toNum(payrollForm.deduction_amount) -
-                    toNum(payrollForm.advance_amount) -
-                    toNum(payrollForm.penalty_amount)
-                  )} د.ل
+                  {(() => {
+                    const grossM = toNum(payrollForm.base_salary) +
+                      toNum(payrollForm.housing_allowance) +
+                      toNum(payrollForm.transportation_allowance) +
+                      toNum(payrollForm.communication_allowance) +
+                      toNum(payrollForm.bonus_amount) +
+                      toNum(payrollForm.other_additions) +
+                      toNum(payrollForm.allowance_amount) +
+                      payrollForm.extra_fields.reduce((acc, f) => acc + toNum(f.amount), 0);
+
+                    const empM = employees.find(e => e.id === payrollForm.user_id);
+                    const taxM = empM?.apply_tax !== false
+                      ? (toNum(payrollForm.base_salary) * toNum(empM?.tax_percentage || 10) / 100)
+                      : 0;
+                    const ssM = empM?.apply_social_security !== false
+                      ? (toNum(payrollForm.base_salary) * toNum(empM?.social_security_percentage || 19.475) / 100)
+                      : 0;
+                    const solM = payrollForm.apply_solidarity
+                      ? (grossM * toNum(payrollForm.solidarity_percentage) / 100)
+                      : 0;
+                    const netM = grossM - toNum(payrollForm.deduction_amount) - toNum(payrollForm.advance_amount) - toNum(payrollForm.penalty_amount) - taxM - ssM - solM;
+                    return money.format(netM);
+                  })()} د.ل
                 </span>
               </div>
 
