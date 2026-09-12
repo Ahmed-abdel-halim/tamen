@@ -186,12 +186,8 @@ export default function EmployeeSalaries() {
   // States for Range reports
   const [activeView, setActiveView] = useState<'monthly' | 'range_reports'>('monthly');
   const [rangeEmployeeId, setRangeEmployeeId] = useState<string>('');
-  const [rangeFromDate, setRangeFromDate] = useState<string>(
-    new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0]
-  );
-  const [rangeToDate, setRangeToDate] = useState<string>(
-    now.toISOString().split('T')[0]
-  );
+  const [rangeFromDate, setRangeFromDate] = useState<string>('2025-01-01');
+  const [rangeToDate, setRangeToDate] = useState<string>('2026-12-01');
   const [rangeReportPayrolls, setRangeReportPayrolls] = useState<Payroll[]>([]);
   const [rangeReportLoading, setRangeReportLoading] = useState<boolean>(false);
 
@@ -288,21 +284,110 @@ export default function EmployeeSalaries() {
 
       const params = new URLSearchParams();
       if (rangeEmployeeId) params.append('user_id', rangeEmployeeId);
-      if (rangeFromDate) params.append('from_date', rangeFromDate);
-      if (rangeToDate) params.append('to_date', rangeToDate);
+      params.append('per_page', '1000');
 
       const res = await fetch(`${API_BASE_URL}/employee-payrolls?${params.toString()}`, { headers });
       if (!res.ok) {
         throw new Error('فشل تحميل تقرير الفترة');
       }
       const data = await res.json();
-      setRangeReportPayrolls(Array.isArray(data) ? data : []);
+      const list: Payroll[] = Array.isArray(data) ? data : (data.data || []);
+
+      // فلترة الفترة بناءً على الشهر والسنة محلياً لتجنب استبعاد الموظفين القدامى
+      const fromParts = (rangeFromDate || '2025-01-01').split('-');
+      const toParts = (rangeToDate || '2026-12-01').split('-');
+      const fromPeriod = (parseInt(fromParts[0], 10) || 2025) * 100 + (parseInt(fromParts[1], 10) || 1);
+      const toPeriod = (parseInt(toParts[0], 10) || 2026) * 100 + (parseInt(toParts[1], 10) || 12);
+
+      const filtered = list.filter((p) => {
+        const pPeriod = Number(p.year) * 100 + Number(p.month);
+        return pPeriod >= fromPeriod && pPeriod <= toPeriod;
+      });
+
+      filtered.sort((a, b) => {
+        const diff = (Number(a.year) * 100 + Number(a.month)) - (Number(b.year) * 100 + Number(b.month));
+        if (diff !== 0) return diff;
+        const nameA = a.user?.name || '';
+        const nameB = b.user?.name || '';
+        return nameA.localeCompare(nameB, 'ar');
+      });
+
+      setRangeReportPayrolls(filtered);
     } catch (error: any) {
       showToast(error?.message || 'حدث خطأ أثناء تحميل تقرير الفترة', 'error');
     } finally {
       setRangeReportLoading(false);
     }
   };
+
+  const rangeReportTotals = useMemo(() => {
+    return rangeReportPayrolls.reduce(
+      (acc, p) => {
+        const emp = p.user || employees.find((e) => e.id === p.user_id);
+        const base = toNum(p.base_salary);
+        const housing = toNum(p.housing_allowance);
+        const transport = toNum(p.transportation_allowance);
+        const communication = toNum(p.communication_allowance);
+        const bonus = toNum(p.bonus_amount);
+        const other = toNum(p.other_additions) + toNum(p.allowance_amount);
+        const deduction = toNum(p.deduction_amount);
+        const advance = toNum(p.advance_amount);
+        const penalty = toNum(p.penalty_amount);
+
+        const tax = toNum(p.tax_amount) > 0
+          ? toNum(p.tax_amount)
+          : (emp?.apply_tax !== false ? (base * toNum(emp?.tax_percentage || 10) / 100) : 0);
+
+        const ss = toNum(p.social_security_amount) > 0
+          ? toNum(p.social_security_amount)
+          : (emp?.apply_social_security !== false ? (base * toNum(emp?.social_security_percentage || 19.475) / 100) : 0);
+
+        const solidarity = toNum((p as any).solidarity_amount) > 0
+          ? toNum((p as any).solidarity_amount)
+          : (emp?.apply_solidarity ? (base * toNum(emp?.solidarity_percentage || 1) / 100) : 0);
+
+        const allBonuses = bonus + other + housing + transport + communication;
+        const allDeductions = deduction + advance + penalty;
+        const net = toNum(p.net_salary) > 0 ? toNum(p.net_salary) : Math.max(0, base + allBonuses - allDeductions - tax - ss - solidarity);
+
+        acc.base += base;
+        acc.housing += housing;
+        acc.transport += transport;
+        acc.communication += communication;
+        acc.bonus += bonus;
+        acc.other += other;
+        acc.allBonuses += allBonuses;
+        acc.deduction += deduction;
+        acc.advance += advance;
+        acc.penalty += penalty;
+        acc.allDeductions += allDeductions;
+        acc.tax += tax;
+        acc.ss += ss;
+        acc.solidarity += solidarity;
+        acc.net += net;
+        if (p.status === 'paid') acc.paidCount += 1;
+        return acc;
+      },
+      {
+        base: 0,
+        housing: 0,
+        transport: 0,
+        communication: 0,
+        bonus: 0,
+        other: 0,
+        allBonuses: 0,
+        deduction: 0,
+        advance: 0,
+        penalty: 0,
+        allDeductions: 0,
+        tax: 0,
+        ss: 0,
+        solidarity: 0,
+        net: 0,
+        paidCount: 0,
+      }
+    );
+  }, [rangeReportPayrolls, employees]);
 
   useEffect(() => {
     if (activeView === 'range_reports') {
@@ -927,13 +1012,7 @@ export default function EmployeeSalaries() {
       )
       .join('');
 
-    const rangeReportTotals = rangeReportPayrolls.reduce(
-      (acc, p) => {
-        acc.total += toNum(p.net_salary);
-        return acc;
-      },
-      { total: 0 }
-    );
+    const totals = rangeReportTotals;
 
     printWindow.document.write(`
       <html dir="rtl">
@@ -942,7 +1021,7 @@ export default function EmployeeSalaries() {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
           @media print { 
-            @page { margin: 8mm; } 
+            @page { margin: 8mm; size: landscape; } 
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
           body { 
@@ -956,7 +1035,7 @@ export default function EmployeeSalaries() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             padding-bottom: 12px;
             border-bottom: 3px double #1a365d;
           }
@@ -971,17 +1050,31 @@ export default function EmployeeSalaries() {
             color: #1a365d;
             font-weight: 600;
           }
-          .header-info h1 { margin: 0; font-size: 22px; color: #1a365d; font-weight: 900; line-height: 1.2; }
-          .header-info p { margin: 2px 0; color: #4a5568; font-size: 14px; }
+          .header-info h1 { margin: 0; font-size: 20px; color: #1a365d; font-weight: 900; line-height: 1.2; }
+          .header-info p { margin: 2px 0; color: #4a5568; font-size: 13px; }
           
           .report-title {
             text-align: center;
-            margin: 15px 0;
+            margin: 12px 0 16px;
           }
           .report-title h2 {
             font-size: 18px;
             color: #1a365d;
             font-weight: 900;
+            margin: 0;
+          }
+
+          .summary-strip {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 11px;
           }
 
           table { 
@@ -994,12 +1087,12 @@ export default function EmployeeSalaries() {
             background-color: #f1f5f9; 
             color: #1e293b; 
             font-weight: 700; 
-            padding: 10px 4px; 
+            padding: 8px 4px; 
             border: 1px solid #1a365d;
             text-align: center;
           }
           td { 
-            padding: 8px 4px; 
+            padding: 6px 4px; 
             border: 1px solid #cbd5e1; 
             text-align: center;
             vertical-align: middle;
@@ -1007,7 +1100,7 @@ export default function EmployeeSalaries() {
           tr:nth-child(even) { background-color: #f8fafc; }
           
           .footer {
-            margin-top: 50px;
+            margin-top: 40px;
             display: flex;
             justify-content: space-between;
           }
@@ -1020,7 +1113,7 @@ export default function EmployeeSalaries() {
             color: #1a365d;
           }
           .print-date {
-            margin-top: 30px;
+            margin-top: 25px;
             font-size: 11px;
             text-align: left;
             color: #64748b;
@@ -1030,10 +1123,10 @@ export default function EmployeeSalaries() {
       <body onload="window.print()">
         <div class="header">
           <div class="header-right">
-            <img src="/img/logo.png" style="height: 85px; width: auto;" alt="Logo" onerror="this.src='/img/official_logo.PNG'">
+            <img src="/img/logo.png" style="height: 75px; width: auto;" alt="Logo" onerror="this.src='/img/official_logo.PNG'">
             <div class="header-info" style="margin-right: 15px;">
-              <h1 style="font-size: 20px; margin-bottom: 2px;">المدار الليبي للتأمين</h1>
-              <p><strong>قسم الشؤون المالية والموارد البشرية</strong></p>
+              <h1 style="font-size: 20px; margin-bottom: 2px;">شركة المدار الليبي للتأمين</h1>
+              <p><strong>كشف مسير رواتب الموظفين بالفترة الزمنية</strong></p>
             </div>
           </div>
           <div class="header-left">
@@ -1043,7 +1136,17 @@ export default function EmployeeSalaries() {
         </div>
 
         <div class="report-title">
-          <h2>تقرير مرتبات الموظف (${employeeName}) للفترة من [ ${rangeFromDate} ] إلى [ ${rangeToDate} ]</h2>
+          <h2>تقرير رواتب الموظف: (${employeeName}) — للفترة من [ ${formatDateToDisplay(rangeFromDate)} ] إلى [ ${formatDateToDisplay(rangeToDate)} ]</h2>
+        </div>
+
+        <div class="summary-strip">
+          <div>الأساسي الإجمالي: <strong>${money.format(totals.base)} د.ل</strong></div>
+          <div style="color: #ef4444">حصة الضمان: <strong>-${money.format(totals.ss)} د.ل</strong></div>
+          <div style="color: #f97316">حصة التضامن: <strong>-${money.format(totals.solidarity)} د.ل</strong></div>
+          <div style="color: #ef4444">حصة الضرائب: <strong>-${money.format(totals.tax)} د.ل</strong></div>
+          <div style="color: #10b981">المكافآت والبدلات: <strong>+${money.format(totals.allBonuses)} د.ل</strong></div>
+          <div style="color: #b91c1c">الخصومات والسلف: <strong>-${money.format(totals.allDeductions)} د.ل</strong></div>
+          <div style="font-size: 12.5px; color: #0f766e">صافي المرتبات: <strong>${money.format(totals.net)} د.ل</strong></div>
         </div>
 
         <table>
@@ -1073,10 +1176,20 @@ export default function EmployeeSalaries() {
           </tbody>
           <tfoot>
             <tr style="background:#f1f5f9; font-weight:900">
-              <td colspan="2">الإجمالي العام</td>
-              <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-              <td style="color:#10b981; font-size:13px">${money.format(rangeReportTotals.total)} د.ل</td>
-              <td colspan="3">سجلات الرواتب ( ${rangeReportPayrolls.length} )</td>
+              <td colspan="2">الإجمالي العام (${rangeReportPayrolls.length} مسير)</td>
+              <td>${money.format(totals.base)} د.ل</td>
+              <td style="color:#10b981">${money.format(totals.housing)}</td>
+              <td style="color:#10b981">${money.format(totals.transport)}</td>
+              <td style="color:#10b981">${money.format(totals.communication)}</td>
+              <td style="color:#10b981">${money.format(totals.bonus)}</td>
+              <td style="color:#ef4444">${money.format(totals.tax)}</td>
+              <td style="color:#ef4444">${money.format(totals.ss)}</td>
+              <td style="color:#f97316">${money.format(totals.solidarity)}</td>
+              <td style="color:#ef4444">${money.format(totals.deduction)}</td>
+              <td style="color:#ef4444">${money.format(totals.advance)}</td>
+              <td style="color:#ef4444">${money.format(totals.penalty)}</td>
+              <td style="color:#10b981; font-size:12px">${money.format(totals.net)} د.ل</td>
+              <td colspan="3">مصروف: ${totals.paidCount} | غير مصروف: ${rangeReportPayrolls.length - totals.paidCount}</td>
             </tr>
           </tfoot>
         </table>
@@ -1469,72 +1582,82 @@ export default function EmployeeSalaries() {
 
     try {
       const columns = [
-        { header: 'الموظف', key: 'name', width: 30 },
-        { header: 'الشهر/السنة', key: 'period', width: 15 },
-        { header: 'الأساسي', key: 'base', width: 15 },
+        { header: 'الموظف', key: 'name', width: 28 },
+        { header: 'الشهر/السنة', key: 'period', width: 14 },
+        { header: 'المرتب الأساسي', key: 'base', width: 16 },
+        { header: 'حصة الضمان', key: 'ss', width: 14 },
+        { header: 'حصة التضامن', key: 'solidarity', width: 14 },
+        { header: 'حصة الضرائب', key: 'tax', width: 14 },
         { header: 'سكن', key: 'housing', width: 12 },
         { header: 'مواصلات', key: 'transport', width: 12 },
         { header: 'اتصالات', key: 'communication', width: 12 },
         { header: 'مكافآت', key: 'bonus', width: 12 },
-        { header: 'ضرائب', key: 'tax', width: 12 },
-        { header: 'ضمان', key: 'ss', width: 12 },
-        { header: 'تضامن', key: 'solidarity', width: 12 },
+        { header: 'إضافات أخرى', key: 'other', width: 12 },
         { header: 'خصومات', key: 'deduction', width: 12 },
         { header: 'سلف', key: 'advance', width: 12 },
         { header: 'غرامات', key: 'penalty', width: 12 },
-        { header: 'الصافي', key: 'net', width: 20 },
-        { header: 'الحالة', key: 'status', width: 15 },
-        { header: 'تاريخ الصرف', key: 'paid_at', width: 18 },
-        { header: 'التسليم', key: 'delivery', width: 20 },
+        { header: 'صافي المرتب', key: 'net', width: 18 },
+        { header: 'حالة الصرف', key: 'status', width: 14 },
+        { header: 'تاريخ الصرف', key: 'paid_at', width: 16 },
+        { header: 'التسليم', key: 'delivery', width: 16 },
       ];
 
       const data = rangeReportPayrolls.map((p) => {
-        const empName = p.user?.name || (p.user_id ? (employees.find(e => e.id === p.user_id)?.name || '—') : '—');
+        const emp = p.user || (p.user_id ? employees.find(e => e.id === p.user_id) : undefined);
+        const empName = p.user?.name || emp?.name || '—';
+        const base = toNum(p.base_salary);
+        const housing = toNum(p.housing_allowance);
+        const transport = toNum(p.transportation_allowance);
+        const communication = toNum(p.communication_allowance);
+        const bonus = toNum(p.bonus_amount);
+        const other = toNum(p.other_additions) + toNum(p.allowance_amount);
+        const tax = toNum(p.tax_amount) > 0 ? toNum(p.tax_amount) : (emp?.apply_tax !== false ? (base * toNum(emp?.tax_percentage || 10) / 100) : 0);
+        const ss = toNum(p.social_security_amount) > 0 ? toNum(p.social_security_amount) : (emp?.apply_social_security !== false ? (base * toNum(emp?.social_security_percentage || 19.475) / 100) : 0);
+        const solidarity = toNum((p as any).solidarity_amount) > 0 ? toNum((p as any).solidarity_amount) : (emp?.apply_solidarity ? (base * toNum(emp?.solidarity_percentage || 1) / 100) : 0);
+        const deduction = toNum(p.deduction_amount);
+        const advance = toNum(p.advance_amount);
+        const penalty = toNum(p.penalty_amount);
+        const net = toNum(p.net_salary) > 0 ? toNum(p.net_salary) : (base + housing + transport + communication + bonus + other - tax - ss - solidarity - deduction - advance - penalty);
+
         return {
           name: empName,
-          period: `${p.month}/${p.year}`,
-          base: toNum(p.base_salary),
-          housing: toNum(p.housing_allowance),
-          transport: toNum(p.transportation_allowance),
-          communication: toNum(p.communication_allowance),
-          bonus: toNum(p.bonus_amount),
-          tax: toNum(p.tax_amount).toFixed(2),
-          ss: toNum(p.social_security_amount).toFixed(2),
-          solidarity: toNum((p as any).solidarity_amount || 0).toFixed(2),
-          deduction: toNum(p.deduction_amount),
-          advance: toNum(p.advance_amount),
-          penalty: toNum(p.penalty_amount),
-          net: toNum(p.net_salary).toLocaleString() + ' د.ل',
+          period: `${String(p.month).padStart(2, '0')}/${p.year}`,
+          base: base.toFixed(2),
+          ss: ss.toFixed(2),
+          solidarity: solidarity.toFixed(2),
+          tax: tax.toFixed(2),
+          housing: housing.toFixed(2),
+          transport: transport.toFixed(2),
+          communication: communication.toFixed(2),
+          bonus: bonus.toFixed(2),
+          other: other.toFixed(2),
+          deduction: deduction.toFixed(2),
+          advance: advance.toFixed(2),
+          penalty: penalty.toFixed(2),
+          net: net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' د.ل',
           status: p.status === 'paid' ? 'مصروف' : 'غير مصروف',
           paid_at: p.paid_at ? new Date(p.paid_at).toLocaleDateString('ar-LY') : '—',
           delivery: p.delivery_method === 'أخرى' ? p.custom_delivery_method || 'أخرى' : (p.delivery_method || '-'),
         };
       });
 
-      const rangeReportTotals = rangeReportPayrolls.reduce(
-        (acc, p) => {
-          acc.total += toNum(p.net_salary);
-          return acc;
-        },
-        { total: 0 }
-      );
-
       const summaryRow: any = {
-        name: 'الإجمالي الكلي',
-        period: '',
-        base: '',
-        housing: '',
-        transport: '',
-        communication: '',
-        bonus: '',
-        tax: '',
-        ss: '',
-        solidarity: '',
-        deduction: '',
-        advance: '',
-        penalty: '',
-        net: rangeReportTotals.total.toLocaleString() + ' د.ل',
-        status: `${rangeReportPayrolls.length} سجل رواتب`,
+        name: `الإجمالي الكلي (${rangeReportPayrolls.length} مسير)`,
+        period: `${formatDateToDisplay(rangeFromDate)} إلى ${formatDateToDisplay(rangeToDate)}`,
+        base: rangeReportTotals.base.toFixed(2),
+        ss: rangeReportTotals.ss.toFixed(2),
+        solidarity: rangeReportTotals.solidarity.toFixed(2),
+        tax: rangeReportTotals.tax.toFixed(2),
+        housing: rangeReportTotals.housing.toFixed(2),
+        transport: rangeReportTotals.transport.toFixed(2),
+        communication: rangeReportTotals.communication.toFixed(2),
+        bonus: rangeReportTotals.bonus.toFixed(2),
+        other: rangeReportTotals.other.toFixed(2),
+        deduction: rangeReportTotals.deduction.toFixed(2),
+        advance: rangeReportTotals.advance.toFixed(2),
+        penalty: rangeReportTotals.penalty.toFixed(2),
+        net: rangeReportTotals.net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' د.ل',
+        status: `مصروف: ${rangeReportTotals.paidCount}`,
         paid_at: '',
         delivery: '',
       };
@@ -1542,11 +1665,11 @@ export default function EmployeeSalaries() {
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير رواتب الموظفين بالفترة',
-        subtitle: `الفترة من (${formatDateToDisplay(rangeFromDate)}) إلى (${formatDateToDisplay(rangeToDate)}) - الموظف: ${employeeName} - إجمالي الصافي: ${rangeReportTotals.total.toLocaleString()} د.ل`,
+        subtitle: `الفترة من (${formatDateToDisplay(rangeFromDate)}) إلى (${formatDateToDisplay(rangeToDate)}) - الموظف: ${employeeName} - إجمالي الصافي: ${rangeReportTotals.net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل`,
         columns,
         data,
         fileName: `تقرير_الرواتب_${rangeFromDate}_إلى_${rangeToDate}`,
-        qrData: `تقرير الرواتب - المدار الليبي\nالفترة: ${formatDateToDisplay(rangeFromDate)} إلى ${formatDateToDisplay(rangeToDate)}\nالموظف: ${employeeName}\nالإجمالي: ${rangeReportTotals.total.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `تقرير الرواتب - المدار الليبي\nالفترة: ${formatDateToDisplay(rangeFromDate)} إلى ${formatDateToDisplay(rangeToDate)}\nالموظف: ${employeeName}\nالإجمالي: ${rangeReportTotals.net.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير تقرير الفترة بنجاح', 'success');
@@ -1804,9 +1927,83 @@ export default function EmployeeSalaries() {
           <div className="users-card" style={{ marginBottom: '16px' }}>
             <div className="ep-payroll-toolbar">
               <div className="ep-payroll-toolbar-head">
-                <h2 className="ep-payroll-toolbar-title">تقرير الرواتب بالفترة</h2>
-                <p className="ep-payroll-toolbar-hint">استعرض إحصائيات ورواتب الموظفين خلال فترة محددة</p>
+                <h2 className="ep-payroll-toolbar-title">تقرير رواتب الموظفين بالفترة</h2>
+                <p className="ep-payroll-toolbar-hint">استعرض إحصائيات ورواتب الموظفين خلال فترة مخصصة مع كافة التفاصيل الضريبية والضمانية</p>
               </div>
+
+              {/* Quick Period Presets */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--muted)' }}>فترات سريعة:</span>
+                <button
+                  type="button"
+                  onClick={() => { setRangeFromDate('2025-01-01'); setRangeToDate('2026-12-01'); }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    border: (rangeFromDate === '2025-01-01' && rangeToDate === '2026-12-01') ? '2px solid #0d9488' : '1px solid var(--border)',
+                    background: (rangeFromDate === '2025-01-01' && rangeToDate === '2026-12-01') ? '#ccfbf1' : 'var(--card-bg)',
+                    color: (rangeFromDate === '2025-01-01' && rangeToDate === '2026-12-01') ? '#0f766e' : 'var(--text)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <i className="fa-solid fa-star" style={{ color: '#f59e0b' }}></i>
+                  الفترة المطلوبة (1/1/2025 إلى 1/12/2026)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRangeFromDate('2026-01-01'); setRangeToDate('2026-12-31'); }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: (rangeFromDate === '2026-01-01' && rangeToDate === '2026-12-31') ? '2px solid #1e40af' : '1px solid var(--border)',
+                    background: (rangeFromDate === '2026-01-01' && rangeToDate === '2026-12-31') ? '#dbeafe' : 'var(--card-bg)',
+                    color: (rangeFromDate === '2026-01-01' && rangeToDate === '2026-12-31') ? '#1e40af' : 'var(--text)',
+                  }}
+                >
+                  سنة 2026 كاملة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRangeFromDate('2025-01-01'); setRangeToDate('2025-12-31'); }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: (rangeFromDate === '2025-01-01' && rangeToDate === '2025-12-31') ? '2px solid #1e40af' : '1px solid var(--border)',
+                    background: (rangeFromDate === '2025-01-01' && rangeToDate === '2025-12-31') ? '#dbeafe' : 'var(--card-bg)',
+                    color: (rangeFromDate === '2025-01-01' && rangeToDate === '2025-12-31') ? '#1e40af' : 'var(--text)',
+                  }}
+                >
+                  سنة 2025 كاملة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRangeFromDate('2020-01-01'); setRangeToDate('2030-12-31'); }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: 'var(--card-bg)',
+                    color: 'var(--text)',
+                  }}
+                >
+                  كل السجلات
+                </button>
+              </div>
+
               <div className="ep-payroll-fields">
                 <div className="ep-field">
                   <label htmlFor="range-employee">الموظف</label>
@@ -1841,13 +2038,13 @@ export default function EmployeeSalaries() {
                 </div>
               </div>
               <div className="ep-payroll-actions">
-                <button className="btn-submit" type="button" onClick={handleRangeReportExportExcel}>
+                <button className="btn-submit" type="button" onClick={handleRangeReportExportExcel} style={{ background: 'linear-gradient(135deg, #059669, #10b981)', border: 'none', color: '#fff' }}>
                   <i className="fa-solid fa-file-excel"></i>
                   تصدير Excel
                 </button>
-                <button className="btn-submit" type="button" onClick={handleRangeReportPrint}>
+                <button className="btn-submit" type="button" onClick={handleRangeReportPrint} style={{ background: 'linear-gradient(135deg, #0f766e, #0d9488)', border: 'none', color: '#fff' }}>
                   <i className="fa-solid fa-print"></i>
-                  طباعة التقرير
+                  طباعة التقرير A4
                 </button>
                 <button className="btn-submit" type="button" onClick={fetchRangeReport} disabled={rangeReportLoading}>
                   <i className="fa-solid fa-rotate"></i>
@@ -1857,21 +2054,54 @@ export default function EmployeeSalaries() {
             </div>
           </div>
 
-          <div className="users-card" style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))', gap: '12px' }}>
-              <div><strong>عدد سجلات الصرف:</strong> {rangeReportPayrolls.length}</div>
-              <div>
-                <strong>متوسط الرواتب:</strong> {money.format(
-                  rangeReportPayrolls.length > 0
-                    ? (rangeReportPayrolls.reduce((sum, p) => sum + toNum(p.net_salary), 0) / rangeReportPayrolls.length)
-                    : 0
-                )} د.ل
-              </div>
-              <div>
-                <strong>إجمالي الصافي الموزع:</strong> {money.format(
-                  rangeReportPayrolls.reduce((sum, p) => sum + toNum(p.net_salary), 0)
-                )} د.ل
-              </div>
+          {/* 7 Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #3b82f6' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>عدد السجلات</div>
+              <div style={{ fontSize: '18px', fontWeight: 900, marginTop: '4px' }}>{rangeReportPayrolls.length} مسير</div>
+              <div style={{ fontSize: '10.5px', color: '#10b981', marginTop: '2px' }}>مصروف: {rangeReportTotals.paidCount}</div>
+            </div>
+
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #1e40af' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>المرتب الأساسي</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, marginTop: '4px', color: '#1e40af' }}>{money.format(rangeReportTotals.base)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>إجمالي الأساسي للفترة</div>
+            </div>
+
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #d97706' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>حصة الضمان (19.475%)</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, marginTop: '4px', color: '#d97706' }}>-{money.format(rangeReportTotals.ss)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>الضمان الاجتماعي</div>
+            </div>
+
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #f97316' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>حصة التضامن (1%)</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, marginTop: '4px', color: '#f97316' }}>-{money.format(rangeReportTotals.solidarity)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>التضامن الاجتماعي</div>
+            </div>
+
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #ef4444' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>حصة الضرائب (10%)</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, marginTop: '4px', color: '#ef4444' }}>-{money.format(rangeReportTotals.tax)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>ضريبة الدخل</div>
+            </div>
+
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #10b981' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>المكافآت والبدلات</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, marginTop: '4px', color: '#10b981' }}>+{money.format(rangeReportTotals.allBonuses)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>سكن، مواصلات، مكافآت</div>
+            </div>
+
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #b91c1c' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>الخصومات والسلف</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, marginTop: '4px', color: '#b91c1c' }}>-{money.format(rangeReportTotals.allDeductions)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>خصم، سلف، غرامات</div>
+            </div>
+
+            <div style={{ background: '#f0fdf4', border: '1.5px solid #0f766e', borderRadius: '10px', padding: '12px 14px', borderRight: '4px solid #0f766e' }}>
+              <div style={{ fontSize: '11px', color: '#0f766e', fontWeight: 800 }}>صافي المرتبات الإجمالي</div>
+              <div style={{ fontSize: '19px', fontWeight: 900, marginTop: '4px', color: '#0f766e' }}>{money.format(rangeReportTotals.net)} د.ل</div>
+              <div style={{ fontSize: '10.5px', color: '#0f766e', marginTop: '2px' }}>المبلغ النهائي المستحق</div>
             </div>
           </div>
 
@@ -1907,27 +2137,39 @@ export default function EmployeeSalaries() {
                     <tr><td colSpan={18} style={{ textAlign: 'center', padding: '28px 0' }}>لا توجد بيانات للفترة المحددة</td></tr>
                   ) : rangeReportPayrolls.map((p) => {
                     const emp = p.user || employees.find((e) => e.id === p.user_id);
+                    const base = toNum(p.base_salary);
+                    const tax = toNum(p.tax_amount) > 0 ? toNum(p.tax_amount) : (emp?.apply_tax !== false ? (base * toNum(emp?.tax_percentage || 10) / 100) : 0);
+                    const ss = toNum(p.social_security_amount) > 0 ? toNum(p.social_security_amount) : (emp?.apply_social_security !== false ? (base * toNum(emp?.social_security_percentage || 19.475) / 100) : 0);
+                    const solidarity = toNum((p as any).solidarity_amount) > 0 ? toNum((p as any).solidarity_amount) : (emp?.apply_solidarity ? (base * toNum(emp?.solidarity_percentage || 1) / 100) : 0);
+                    const net = toNum(p.net_salary) > 0 ? toNum(p.net_salary) : Math.max(0, base + toNum(p.housing_allowance) + toNum(p.transportation_allowance) + toNum(p.communication_allowance) + toNum(p.bonus_amount) - tax - ss - solidarity - toNum(p.deduction_amount) - toNum(p.advance_amount) - toNum(p.penalty_amount));
+
                     return (
                       <tr key={p.id}>
-                        <td style={{ minWidth: '120px' }}>{emp?.name || '—'}</td>
-                        <td>{p.month} / {p.year}</td>
-                        <td>{money.format(toNum(p.base_salary))}</td>
+                        <td style={{ minWidth: '120px' }}><strong>{emp?.name || '—'}</strong></td>
+                        <td><span style={{ direction: 'ltr', display: 'inline-block', fontWeight: 700 }}>{String(p.month).padStart(2, '0')} / {p.year}</span></td>
+                        <td><strong>{money.format(base)}</strong></td>
                         <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.housing_allowance))}</td>
                         <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.transportation_allowance))}</td>
                         <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.communication_allowance))}</td>
                         <td style={{ color: '#10b981', fontWeight: 600 }}>{money.format(toNum(p.bonus_amount))}</td>
-                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.tax_amount))}</td>
-                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.social_security_amount))}</td>
-                        <td style={{ color: '#f97316', fontWeight: 600 }}>{money.format(toNum((p as any).solidarity_amount))}</td>
+                        <td style={{ color: '#ef4444', fontWeight: 600 }}>{tax > 0 ? `-${money.format(tax)}` : '0.00'}</td>
+                        <td style={{ color: '#d97706', fontWeight: 600 }}>{ss > 0 ? `-${money.format(ss)}` : '0.00'}</td>
+                        <td style={{ color: '#f97316', fontWeight: 600 }}>{solidarity > 0 ? `-${money.format(solidarity)}` : '0.00'}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.deduction_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.advance_amount))}</td>
                         <td style={{ color: '#ef4444', fontWeight: 600 }}>{money.format(toNum(p.penalty_amount))}</td>
-                        <td style={{ fontWeight: 800 }}>{money.format(toNum(p.net_salary))}</td>
-                        <td>{p.status === 'paid' ? 'مصروف' : 'غير مصروف'}</td>
+                        <td><strong style={{ color: '#0f766e' }}>{money.format(net)} د.ل</strong></td>
+                        <td>
+                          {p.status === 'paid' ? (
+                            <span className="status-tag paid" style={{ fontSize: '11px' }}><i className="fa-solid fa-check" /> مصروف</span>
+                          ) : (
+                            <span className="status-tag unpaid" style={{ fontSize: '11px' }}><i className="fa-solid fa-clock" /> غير مصروف</span>
+                          )}
+                        </td>
                         <td style={{ fontSize: '11px' }}>{p.paid_at ? new Date(p.paid_at).toLocaleDateString('ar-LY') : '—'}</td>
                         <td style={{ fontSize: '11px' }}>{p.delivery_method === 'أخرى' ? p.custom_delivery_method : (p.delivery_method || '-')}</td>
                         <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '6px' }}>
                             <button className="action-btn" onClick={() => handlePrintSinglePayslip(p, emp!)} title="طباعة واصل المرتب" style={{ backgroundColor: '#10b981', color: 'white' }}><i className="fa-solid fa-print"></i></button>
                             <button className="action-btn" onClick={() => emp && openHistory(emp)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
                           </div>
@@ -1936,6 +2178,28 @@ export default function EmployeeSalaries() {
                     );
                   })}
                 </tbody>
+                <tfoot style={{ background: '#f8fafc', borderTop: '2px solid #0f766e', fontWeight: 900 }}>
+                  <tr>
+                    <td colSpan={2} style={{ textAlign: 'center', color: '#0f766e' }}>
+                      الإجمالي العام ({rangeReportPayrolls.length} مسير)
+                    </td>
+                    <td><strong>{money.format(rangeReportTotals.base)} د.ل</strong></td>
+                    <td style={{ color: '#10b981' }}>{money.format(rangeReportTotals.housing)}</td>
+                    <td style={{ color: '#10b981' }}>{money.format(rangeReportTotals.transport)}</td>
+                    <td style={{ color: '#10b981' }}>{money.format(rangeReportTotals.communication)}</td>
+                    <td style={{ color: '#10b981' }}>+{money.format(rangeReportTotals.bonus)}</td>
+                    <td style={{ color: '#ef4444' }}>-{money.format(rangeReportTotals.tax)}</td>
+                    <td style={{ color: '#d97706' }}>-{money.format(rangeReportTotals.ss)}</td>
+                    <td style={{ color: '#f97316' }}>-{money.format(rangeReportTotals.solidarity)}</td>
+                    <td style={{ color: '#ef4444' }}>-{money.format(rangeReportTotals.deduction)}</td>
+                    <td style={{ color: '#ef4444' }}>-{money.format(rangeReportTotals.advance)}</td>
+                    <td style={{ color: '#ef4444' }}>-{money.format(rangeReportTotals.penalty)}</td>
+                    <td><strong style={{ color: '#0f766e', fontSize: '13px' }}>{money.format(rangeReportTotals.net)} د.ل</strong></td>
+                    <td colSpan={4} style={{ textAlign: 'center', fontSize: '11px', color: 'var(--muted)' }}>
+                      مصروف: {rangeReportTotals.paidCount} | غير مصروف: {rangeReportPayrolls.length - rangeReportTotals.paidCount}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
