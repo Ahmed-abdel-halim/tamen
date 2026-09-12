@@ -1854,6 +1854,7 @@ export default function EmployeeManagement() {
 
     const penalty = Number(p.penalty_amount || 0);
     const deduction = Number(p.deduction_amount || 0);
+    const advance = Number(p.advance_amount || 0);
     const extra = (p as any).extra_fields || {};
     const tax = Number(p.tax_amount || 0) > 0 
       ? Number(p.tax_amount) 
