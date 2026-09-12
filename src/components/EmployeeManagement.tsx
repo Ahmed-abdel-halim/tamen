@@ -3291,14 +3291,14 @@ export default function EmployeeManagement() {
                     <thead>
                       <tr>
                         <th>الشهر / السنة</th>
-                        <th>الراتب الأساسي</th>
-                        <th>البدلات والمكافآت</th>
-                        <th>الخصومات والغرامات</th>
-                        <th>الضرائب والضمان</th>
-                        <th>صافي الراتب المستحق</th>
-                        <th>حالة الصرف</th>
+                        <th>الأساسي</th>
+                        <th>البدلات</th>
+                        <th>الخصومات</th>
+                        <th>الضرائب/الضمان</th>
+                        <th>صافي المستحق</th>
+                        <th>الحالة</th>
                         <th>تاريخ وطريقة الصرف</th>
-                        <th className="actions-col" style={{ textAlign: "center" }}>الإجراءات</th>
+                        <th style={{ textAlign: "center" }}>الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3323,16 +3323,16 @@ export default function EmployeeManagement() {
                                   display: 'inline-block',
                                   fontWeight: 800,
                                   fontFamily: 'monospace, sans-serif',
-                                  fontSize: '13px',
+                                  fontSize: '12px',
                                 }}
                               >
                                 {String(p.month).padStart(2, '0')} / {p.year}
                               </span>
                             </td>
-                            <td><strong>{money(p.base_salary)}</strong> د.ل</td>
-                            <td className="text-green">+{money(adds)} د.ل</td>
-                            <td className="text-red">-{money(fines)} د.ل</td>
-                            <td className="text-orange">-{money(taxes)} د.ل</td>
+                            <td><strong>{money(p.base_salary)}</strong></td>
+                            <td className="text-green">+{money(adds)}</td>
+                            <td className="text-red">-{money(fines)}</td>
+                            <td className="text-orange">-{money(taxes)}</td>
                             <td>
                               <span className="net-salary-pill">{money(p.net_salary)} د.ل</span>
                             </td>
@@ -3347,24 +3347,24 @@ export default function EmployeeManagement() {
                                 </span>
                               )}
                             </td>
-                            <td style={{ textAlign: "center", minWidth: "125px" }}>
+                            <td style={{ textAlign: "center" }}>
                               {p.status === "paid" ? (
-                                <div className="payment-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                <div className="payment-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                                   <span
                                     style={{
                                       direction: 'ltr',
                                       display: 'inline-block',
                                       fontWeight: 800,
                                       fontFamily: 'monospace, sans-serif',
-                                      fontSize: '12.5px',
+                                      fontSize: '11.5px',
                                       color: 'var(--text)',
-                                      letterSpacing: '0.5px',
+                                      letterSpacing: '0.3px',
                                     }}
                                   >
                                     {p.paid_at ? p.paid_at.substring(0, 10) : (fmtDate(p.paid_at) || "—")}
                                   </span>
                                   {p.delivery_method && (
-                                    <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>
+                                    <span style={{ fontSize: '10.5px', color: 'var(--muted)', fontWeight: 700 }}>
                                       ({p.delivery_method})
                                     </span>
                                   )}
@@ -3373,8 +3373,8 @@ export default function EmployeeManagement() {
                                 <span style={{ color: 'var(--muted)', fontWeight: 700 }}>—</span>
                               )}
                             </td>
-                            <td className="actions-col" style={{ textAlign: "center", minWidth: "165px", whiteSpace: "nowrap" }}>
-                              <div style={{ display: 'inline-flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                            <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                              <div style={{ display: 'inline-flex', gap: '5px', justifyContent: 'center', alignItems: 'center' }}>
                                 <button
                                   type="button"
                                   onClick={() => openPaySalaryModal(p)}
@@ -3383,24 +3383,24 @@ export default function EmployeeManagement() {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '6px',
-                                    padding: '6px 14px',
-                                    height: '32px',
+                                    gap: '4px',
+                                    padding: '4px 10px',
+                                    height: '28px',
                                     width: 'auto',
-                                    borderRadius: '8px',
+                                    borderRadius: '7px',
                                     border: 'none',
                                     background: p.status === 'paid' ? 'linear-gradient(135deg, #2563eb, #3b82f6)' : 'linear-gradient(135deg, #059669, #10b981)',
                                     color: '#ffffff',
                                     fontWeight: 800,
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontFamily: "'Cairo', sans-serif",
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
-                                    boxShadow: p.status === 'paid' ? '0 2px 6px rgba(37,99,235,0.25)' : '0 2px 6px rgba(16,185,129,0.25)',
+                                    boxShadow: p.status === 'paid' ? '0 2px 5px rgba(37,99,235,0.25)' : '0 2px 5px rgba(16,185,129,0.25)',
                                     transition: 'all 0.15s',
                                   }}
                                 >
-                                  <i className={`fa-solid ${p.status === 'paid' ? 'fa-pencil' : 'fa-hand-holding-dollar'}`} />
+                                  <i className={`fa-solid ${p.status === 'paid' ? 'fa-pencil' : 'fa-hand-holding-dollar'}`} style={{ fontSize: '10.5px' }} />
                                   <span>{p.status === 'paid' ? 'تعديل' : 'تسديد'}</span>
                                 </button>
                                 <button
@@ -3411,23 +3411,23 @@ export default function EmployeeManagement() {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '5px',
-                                    padding: '6px 12px',
-                                    height: '32px',
+                                    gap: '3px',
+                                    padding: '4px 9px',
+                                    height: '28px',
                                     width: 'auto',
-                                    borderRadius: '8px',
+                                    borderRadius: '7px',
                                     border: '1px solid var(--border)',
                                     background: 'var(--card-bg)',
                                     color: 'var(--text)',
                                     fontWeight: 800,
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontFamily: "'Cairo', sans-serif",
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                     transition: 'all 0.15s',
                                   }}
                                 >
-                                  <i className="fa-solid fa-receipt text-cyan" />
+                                  <i className="fa-solid fa-receipt text-cyan" style={{ fontSize: '10.5px' }} />
                                   <span>وصل</span>
                                 </button>
                               </div>
@@ -6428,21 +6428,21 @@ export default function EmployeeManagement() {
           background: var(--card-bg);
           border: 1px solid var(--border);
           border-radius: 16px;
-          padding: 24px;
+          padding: 16px 14px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         }
         .pane-header {
           display: flex; justify-content: space-between; align-items: center;
-          margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+          margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
         }
         .pane-title { display: flex; align-items: center; gap: 10px; }
         .pane-title i { font-size: 20px; color: #1e40af; }
-        .pane-title h3 { font-size: 17px; font-weight: 800; margin: 0; color: var(--text); }
+        .pane-title h3 { font-size: 16px; font-weight: 800; margin: 0; color: var(--text); }
         .pane-actions { display: flex; gap: 8px; }
         .btn-action {
           display: inline-flex; align-items: center; gap: 6px;
-          padding: 9px 16px; border-radius: 10px; border: none;
-          font-family: inherit; font-size: 12.5px; font-weight: 800;
+          padding: 8px 14px; border-radius: 9px; border: none;
+          font-family: inherit; font-size: 12px; font-weight: 800;
           cursor: pointer; transition: all 0.2s; color: #fff;
         }
         .btn-action.primary { background: #1e40af; }
@@ -6458,27 +6458,28 @@ export default function EmployeeManagement() {
         .pane-empty p { margin: 0; font-size: 13.5px; font-weight: 700; }
 
         /* ── Modern Data Table ── */
-        .table-responsive-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-responsive-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
         .modern-data-table {
-          width: 100%; border-collapse: collapse; font-size: 12.5px;
+          width: 100%; border-collapse: collapse; font-size: 11.5px;
         }
         .modern-data-table th {
           background: var(--table-header); color: var(--text); font-weight: 800;
-          padding: 10px 10px; text-align: center; border-bottom: 2px solid var(--border);
-          white-space: nowrap;
+          padding: 8px 6px; text-align: center; border-bottom: 2px solid var(--border);
+          white-space: nowrap; font-size: 11.5px;
         }
         .modern-data-table td {
-          padding: 10px 10px; border-bottom: 1px solid var(--border);
+          padding: 8px 6px; border-bottom: 1px solid var(--border);
           color: var(--text); white-space: nowrap; text-align: center;
-          vertical-align: middle;
+          vertical-align: middle; font-size: 11.5px;
         }
         .modern-data-table tr:hover td { background: var(--hover-bg); }
-        .month-tag { font-weight: 800; color: var(--text); }
-        .net-salary-pill { font-weight: 900; color: #10b981; font-size: 13.5px; }
+        .month-tag { font-weight: 800; color: var(--text); font-size: 11.5px; }
+        .net-salary-pill { font-weight: 900; color: #10b981; font-size: 12px; }
 
         .status-tag {
-          display: inline-flex; align-items: center; gap: 4px;
-          padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;
+          display: inline-flex; align-items: center; gap: 3px;
+          padding: 2px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 800;
+          white-space: nowrap;
         }
         .status-tag.paid { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
         .status-tag.unpaid { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
