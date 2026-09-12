@@ -32,7 +32,10 @@ type User = {
   bank_name?: string;
   bank_branch?: string;
   account_number?: string;
+  hire_date?: string | null;
+  work_start_date?: string | null;
   start_date?: string;
+  resignation_date?: string | null;
   working_hours_from?: string;
   working_hours_to?: string;
   working_days_from?: string;
@@ -1028,8 +1031,10 @@ export default function EmployeeProfile() {
                   <InfoItem label="اسم المصرف" value={user.bank_name} />
                   <InfoItem label="فرع المصرف" value={user.bank_branch} />
                   <InfoItem label="رقم الحساب" value={user.account_number} />
-                  <InfoItem label="تاريخ مباشرة العمل" value={formatDate(user.start_date)} />
-                  <InfoItem label="تاريخ انتهاء العمل" value={formatDate(user.end_date)} />
+                  <InfoItem label="تاريخ التعيين" value={formatDate(user.hire_date || user.start_date)} />
+                  <InfoItem label="بداية العمل (بدء المرتب)" value={formatDate(user.work_start_date || user.start_date)} />
+                  <InfoItem label="تاريخ الاستقالة" value={user.resignation_date ? formatDate(user.resignation_date) : 'لا يوجد'} />
+                  <InfoItem label="تاريخ انتهاء العمل" value={user.end_date ? formatDate(user.end_date) : 'مستمر بالعمل'} />
                   <InfoItem label="رقم الملف الضريبي" value={user.tax_file_number} />
                   <InfoItem label="رقم الملف الضماني" value={user.social_security_file_number} />
                   <InfoItem label="ساعات الدوام" value={user.working_hours_from ? `${user.working_hours_from} إلى ${user.working_hours_to}` : '—'} />

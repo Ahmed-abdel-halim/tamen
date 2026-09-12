@@ -37,8 +37,11 @@ export interface Employee {
   bank_name?: string;
   bank_branch?: string;
   account_number?: string;
+  hire_date?: string | null;
+  work_start_date?: string | null;
   start_date?: string;
   end_date?: string | null;
+  resignation_date?: string | null;
   working_hours_from?: string;
   working_hours_to?: string;
   working_days_from?: string;
@@ -418,6 +421,8 @@ export default function EmployeeManagement() {
 
   const [notesModal, setNotesModal] = useState<{ reqId: number; status: "approved" | "rejected" } | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [notesResignationDate, setNotesResignationDate] = useState("");
+  const [notesEndDate, setNotesEndDate] = useState("");
 
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
@@ -973,18 +978,31 @@ export default function EmployeeManagement() {
     }
   };
 
-  const handleUpdateRequestStatus = async (reqId: number, status: "approved" | "rejected", notes?: string) => {
+  const handleUpdateRequestStatus = async (
+    reqId: number, 
+    status: "approved" | "rejected", 
+    notes?: string,
+    resignationDate?: string,
+    endDate?: string
+  ) => {
     if (!employee) return;
     try {
       const res = await fetch(`${API_BASE_URL}/employee-requests/${reqId}`, {
         method: "PUT",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ status, admin_notes: notes }),
+        body: JSON.stringify({ 
+          status, 
+          admin_notes: notes,
+          resignation_date: resignationDate || null,
+          end_date: endDate || null
+        }),
       });
       if (!res.ok) throw new Error("فشل تحديث حالة الطلب");
-      showToast(status === "approved" ? "تمت الموافقة على الطلب بنجاح" : "تم رفض الطلب", "success");
+      showToast(status === "approved" ? "تمت الموافقة على الطلب بنجاح وتحديث بيانات الموظف" : "تم رفض الطلب", "success");
       setNotesModal(null);
       setAdminNotes("");
+      setNotesResignationDate("");
+      setNotesEndDate("");
       loadEmployeeData(employee.id);
     } catch (e: any) {
       showToast(e.message || "حدث خطأ", "error");
@@ -3379,7 +3397,10 @@ export default function EmployeeManagement() {
               {/* 2. تعديل */}
               <button
                 className="action-btn-pill amber"
-                onClick={() => setShowEditModal(true)}
+                onClick={() => {
+                  setEditFormData({ ...employee });
+                  setShowEditModal(true);
+                }}
                 title="تعديل بيانات الموظف"
               >
                 <i className="fa-solid fa-pencil" />
@@ -3490,23 +3511,27 @@ export default function EmployeeManagement() {
               </div>
 
               <div className="meta-badge-box">
-                <span className="lbl"><i className="fa-solid fa-calendar-plus" /> تاريخ التعاقد / التعيين:</span>
-                <span className="val">{fmtDate(employee.start_date)}</span>
+                <span className="lbl"><i className="fa-solid fa-calendar-plus" /> تاريخ التعيين:</span>
+                <span className="val">{fmtDate(employee.hire_date || employee.start_date)}</span>
               </div>
 
               <div className="meta-badge-box">
-                <span className="lbl"><i className="fa-solid fa-play" /> بدء النشاط (أول وثيقة):</span>
-                <span className="val">{insuranceDocs.length > 0 ? fmtDate(insuranceDocs[insuranceDocs.length - 1].created_at) : "—"}</span>
+                <span className="lbl"><i className="fa-solid fa-play" style={{ color: '#10b981' }} /> بداية العمل (بدء المرتب):</span>
+                <span className="val bold" style={{ color: '#10b981' }}>{fmtDate(employee.work_start_date || employee.start_date)}</span>
               </div>
 
               <div className="meta-badge-box">
-                <span className="lbl"><i className="fa-solid fa-clock-rotate-left" /> آخر نشاط مسجل:</span>
-                <span className="val">{insuranceDocs.length > 0 ? fmtDate(insuranceDocs[0].created_at) : fmtDate(employee.start_date)}</span>
+                <span className="lbl"><i className="fa-solid fa-file-circle-xmark" style={{ color: '#f59e0b' }} /> تاريخ الاستقالة:</span>
+                <span className={`val ${employee.resignation_date ? 'bold' : ''}`} style={{ color: employee.resignation_date ? '#f59e0b' : 'inherit' }}>
+                  {employee.resignation_date ? fmtDate(employee.resignation_date) : "—"}
+                </span>
               </div>
 
               <div className="meta-badge-box">
-                <span className="lbl"><i className="fa-solid fa-calendar-xmark" /> تاريخ انتهاء العقد / التوقف:</span>
-                <span className="val text-orange">{fmtDate(employee.end_date)}</span>
+                <span className="lbl"><i className="fa-solid fa-calendar-xmark" style={{ color: '#ef4444' }} /> نهاية العمل (توقف المرتب):</span>
+                <span className={`val ${employee.end_date || employee.resignation_date ? 'bold' : ''}`} style={{ color: (employee.end_date || employee.resignation_date) ? '#ef4444' : 'inherit' }}>
+                  {(employee.end_date || employee.resignation_date) ? fmtDate(employee.end_date || employee.resignation_date) : "مستمر بالعمل"}
+                </span>
               </div>
             </div>
 
@@ -5794,16 +5819,44 @@ export default function EmployeeManagement() {
                 )}
 
                 <div className="form-fld">
-                  <label>تاريخ التوظيف</label>
+                  <label>تاريخ التعيين (التعاقد)</label>
                   <input
                     type="date"
-                    value={editFormData.start_date || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, start_date: e.target.value })}
+                    value={editFormData.hire_date || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, hire_date: e.target.value || null })}
                   />
                 </div>
 
                 <div className="form-fld">
-                  <label>تاريخ انهاء العمل</label>
+                  <label style={{ color: '#059669', fontWeight: 800 }}>بداية العمل (يبدأ منه احتساب المرتب)</label>
+                  <input
+                    type="date"
+                    value={editFormData.work_start_date || editFormData.start_date || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, work_start_date: e.target.value || null, start_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-fld">
+                  <label style={{ color: '#d97706', fontWeight: 800 }}>تاريخ الاستقالة (إيقاف المرتب)</label>
+                  <input
+                    type="date"
+                    value={editFormData.resignation_date || ''}
+                    onChange={(e) => {
+                      const val = e.target.value || null;
+                      setEditFormData({ 
+                        ...editFormData, 
+                        resignation_date: val,
+                        end_date: editFormData.end_date ? editFormData.end_date : val
+                      });
+                    }}
+                  />
+                  <small style={{ color: '#d97706', fontSize: '11px', display: 'block', marginTop: '2px' }}>
+                    * إدخال تاريخ الاستقالة يوقف ظهور الموظف وصرف راتبه تلقائياً للأشهر اللاحقة.
+                  </small>
+                </div>
+
+                <div className="form-fld">
+                  <label style={{ color: '#dc2626', fontWeight: 800 }}>نهاية العمل (تاريخ التوقف النهائي)</label>
                   <input
                     type="date"
                     value={editFormData.end_date || ''}
@@ -5948,7 +6001,42 @@ export default function EmployeeManagement() {
             {/* Form */}
             <form onSubmit={handleProcessSalaryPayment} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
-                
+                {/* Warning if after resignation / termination or before work start */}
+                {(() => {
+                  if (!payFormData || !employee) return null;
+                  const payMonthStart = new Date(payFormData.year, payFormData.month - 1, 1);
+                  const payMonthEnd = new Date(payFormData.year, payFormData.month, 0, 23, 59, 59);
+                  const isResigned = Boolean(employee.resignation_date && new Date(employee.resignation_date) < payMonthStart);
+                  const isEnded = Boolean(employee.end_date && new Date(employee.end_date) < payMonthStart);
+                  const effectiveStart = employee.work_start_date || employee.start_date || employee.hire_date;
+                  const isBeforeStart = Boolean(effectiveStart && new Date(effectiveStart) > payMonthEnd);
+
+                  if (isResigned || isEnded) {
+                    const stopDate = employee.resignation_date || employee.end_date;
+                    return (
+                      <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', color: '#b91c1c', fontSize: '12px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '18px' }} />
+                        <span>
+                          تنبيه هام: تم تسجيل {employee.resignation_date ? 'استقالة' : 'انتهاء عمل'} الموظف بتاريخ ({fmtDate(stopDate)})، ويتوقف صرف المرتب قانونياً عن شهر {payFormData.month} / {payFormData.year} وما يليه!
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  if (isBeforeStart) {
+                    return (
+                      <div style={{ padding: '12px 16px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', color: '#b45309', fontSize: '12px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-circle-info" style={{ fontSize: '18px' }} />
+                        <span>
+                          ملاحظة: تاريخ بداية العمل للموظف هو ({fmtDate(effectiveStart)})، وهو يقع بعد هذا الشهر.
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
+
                 {/* 1. Month / Year / Salary Type */}
                 <div style={{ background: 'var(--bg, #f8fafc)', borderRadius: '12px', padding: '14px', marginBottom: '16px', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: '12px', fontWeight: 900, color: 'var(--primary, #047857)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -6894,6 +6982,45 @@ export default function EmployeeManagement() {
             </div>
 
             <div className="modal-body-scrollable">
+              {(() => {
+                const curReq = requests.find((r) => r.id === notesModal.reqId);
+                if (curReq?.type === "termination" && notesModal.status === "approved") {
+                  const defaultDate = curReq.details?.last_working_day || new Date().toISOString().substring(0, 10);
+                  return (
+                    <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '12px', color: '#b45309', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="fa-solid fa-triangle-exclamation" /> اعتماد طلب الاستقالة وإيقاف المرتب
+                      </div>
+                      <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 10px 0' }}>
+                        سيتم تحديث تاريخ الاستقالة ونهاية العمل في ملف الموظف مباشرةً وإيقاف صرف المرتب للأشهر التالية.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div className="form-fld" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '11px', fontWeight: 800 }}>تاريخ الاستقالة</label>
+                          <input
+                            type="date"
+                            value={notesResignationDate || defaultDate}
+                            onChange={(e) => {
+                              setNotesResignationDate(e.target.value);
+                              if (!notesEndDate) setNotesEndDate(e.target.value);
+                            }}
+                          />
+                        </div>
+                        <div className="form-fld" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '11px', fontWeight: 800 }}>تاريخ نهاية العمل</label>
+                          <input
+                            type="date"
+                            value={notesEndDate || notesResignationDate || defaultDate}
+                            onChange={(e) => setNotesEndDate(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <div className="form-fld">
                 <label>ملاحظات الإدارة (اختياري)</label>
                 <textarea
@@ -6909,7 +7036,13 @@ export default function EmployeeManagement() {
               <button className="btn-modal ghost" onClick={() => setNotesModal(null)}>إلغاء</button>
               <button
                 className={`btn-modal ${notesModal.status === "approved" ? "green" : "red"}`}
-                onClick={() => handleUpdateRequestStatus(notesModal.reqId, notesModal.status, adminNotes)}
+                onClick={() => {
+                  const curReq = requests.find((r) => r.id === notesModal.reqId);
+                  const defaultDate = curReq?.details?.last_working_day || new Date().toISOString().substring(0, 10);
+                  const resDate = notesResignationDate || (curReq?.type === "termination" ? defaultDate : undefined);
+                  const endDate = notesEndDate || resDate;
+                  handleUpdateRequestStatus(notesModal.reqId, notesModal.status, adminNotes, resDate, endDate);
+                }}
               >
                 {notesModal.status === "approved" ? "تأكيد الموافقة" : "تأكيد الرفض"}
               </button>

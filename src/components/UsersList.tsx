@@ -42,7 +42,10 @@ type User = {
   bank_name?: string;
   bank_branch?: string;
   account_number?: string;
+  hire_date?: string;
+  work_start_date?: string;
   start_date?: string;
+  resignation_date?: string;
   working_hours_from?: string;
   working_hours_to?: string;
   working_days_from?: string;
@@ -326,7 +329,10 @@ export default function UsersList() {
     bank_name: '',
     bank_branch: '',
     account_number: '',
+    hire_date: '',
+    work_start_date: '',
     start_date: '',
+    resignation_date: '',
     working_hours_from: '',
     working_hours_to: '',
     working_days_from: '',
@@ -1348,7 +1354,10 @@ export default function UsersList() {
         bank_name: showForm.user.bank_name || '',
         bank_branch: showForm.user.bank_branch || '',
         account_number: showForm.user.account_number || '',
+        hire_date: showForm.user.hire_date || '',
+        work_start_date: showForm.user.work_start_date || '',
         start_date: showForm.user.start_date || '',
+        resignation_date: showForm.user.resignation_date || '',
         working_hours_from: showForm.user.working_hours_from || '',
         working_hours_to: showForm.user.working_hours_to || '',
         working_days_from: showForm.user.working_days_from || '',
@@ -1410,7 +1419,10 @@ export default function UsersList() {
         bank_name: '',
         bank_branch: '',
         account_number: '',
+        hire_date: '',
+        work_start_date: '',
         start_date: '',
+        resignation_date: '',
         working_hours_from: '',
         working_hours_to: '',
         working_days_from: '',
@@ -1706,7 +1718,10 @@ export default function UsersList() {
         bank_name: '',
         bank_branch: '',
         account_number: '',
+        hire_date: '',
+        work_start_date: '',
         start_date: '',
+        resignation_date: '',
         working_hours_from: '',
         working_hours_to: '',
         working_days_from: '',
@@ -2561,8 +2576,33 @@ export default function UsersList() {
                 </div>
                 <div className="form-row">
                   <div className="form-group flex-1">
-                    <label>تاريخ المباشرة</label>
-                    <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+                    <label>تاريخ التعيين (التعاقد)</label>
+                    <input type="date" value={formData.hire_date || ''} onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })} />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label style={{ color: '#059669', fontWeight: 800 }}>بداية العمل (بدء المرتب)</label>
+                    <input type="date" value={formData.work_start_date || formData.start_date || ''} onChange={(e) => setFormData({ ...formData, work_start_date: e.target.value, start_date: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group flex-1">
+                    <label style={{ color: '#d97706', fontWeight: 800 }}>تاريخ الاستقالة (إيقاف المرتب)</label>
+                    <input 
+                      type="date" 
+                      value={formData.resignation_date || ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ 
+                          ...formData, 
+                          resignation_date: val, 
+                          end_date: formData.end_date ? formData.end_date : val 
+                        });
+                      }} 
+                    />
+                  </div>
+                  <div className="form-group flex-1">
+                    <label style={{ color: '#dc2626', fontWeight: 800 }}>تاريخ انتهاء العمل (التوقف)</label>
+                    <input type="date" value={formData.end_date || ''} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
                   </div>
                   <div className="form-group flex-1">
                     <label>مدة العقد</label>
@@ -2582,10 +2622,6 @@ export default function UsersList() {
                       <option value="تلات سنوات" />
                       <option value="غير محدد" />
                     </datalist>
-                  </div>
-                  <div className="form-group flex-1">
-                    <label>تاريخ انتهاء العمل</label>
-                    <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
                   </div>
                 </div>
                 <div className="form-row">

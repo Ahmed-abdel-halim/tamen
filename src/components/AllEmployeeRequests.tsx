@@ -40,6 +40,8 @@ export default function AllEmployeeRequests() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<{id: number, status: 'approved' | 'rejected'} | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [resignationDate, setResignationDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [submittingStatus, setSubmittingStatus] = useState(false);
 
   const fetchRequests = async () => {
@@ -66,9 +68,12 @@ export default function AllEmployeeRequests() {
     fetchRequests();
   }, []);
 
-  const openStatusModal = (requestId: number, newStatus: 'approved' | 'rejected') => {
-    setSelectedRequest({ id: requestId, status: newStatus });
+  const openStatusModal = (req: EmployeeRequest, newStatus: 'approved' | 'rejected') => {
+    setSelectedRequest({ id: req.id, status: newStatus });
     setAdminNotes('');
+    const defaultDate = req.details?.last_working_day || new Date().toISOString().substring(0, 10);
+    setResignationDate(defaultDate);
+    setEndDate(defaultDate);
     setShowStatusModal(true);
   };
 
@@ -77,6 +82,9 @@ export default function AllEmployeeRequests() {
     setSubmittingStatus(true);
     try {
       const token = localStorage.getItem('token');
+      const curReq = requests.find((r) => r.id === selectedRequest.id);
+      const isTerminationApproved = curReq?.type === 'termination' && selectedRequest.status === 'approved';
+
       const res = await fetch(`${API_BASE_URL}/employee-requests/${selectedRequest.id}`, {
         method: 'PUT',
         headers: { 
@@ -84,12 +92,17 @@ export default function AllEmployeeRequests() {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ status: selectedRequest.status, admin_notes: adminNotes }),
+        body: JSON.stringify({ 
+          status: selectedRequest.status, 
+          admin_notes: adminNotes,
+          resignation_date: isTerminationApproved ? (resignationDate || null) : null,
+          end_date: isTerminationApproved ? (endDate || resignationDate || null) : null
+        }),
       });
       
       if (!res.ok) throw new Error("فشل تحديث حالة الطلب");
       
-      showToast(selectedRequest.status === 'approved' ? "تمت الموافقة على الطلب" : "تم رفض الطلب", 'success');
+      showToast(selectedRequest.status === 'approved' ? "تمت الموافقة على الطلب بنجاح وتحديث بيانات الموظف" : "تم رفض الطلب", 'success');
       window.dispatchEvent(new CustomEvent('adminPendingCountsUpdated'));
       setShowStatusModal(false);
       fetchRequests();
@@ -385,8 +398,8 @@ export default function AllEmployeeRequests() {
                       )}
                       {req.status === 'pending' && (
                           <>
-                             <button onClick={() => openStatusModal(req.id, 'approved')} className="action-btn" style={{ color: '#10b981' }} title="موافقة"><i className="fa-solid fa-check"></i></button>
-                             <button onClick={() => openStatusModal(req.id, 'rejected')} className="action-btn" style={{ color: '#ef4444' }} title="رفض"><i className="fa-solid fa-xmark"></i></button>
+                             <button onClick={() => openStatusModal(req, 'approved')} className="action-btn" style={{ color: '#10b981' }} title="موافقة"><i className="fa-solid fa-check"></i></button>
+                             <button onClick={() => openStatusModal(req, 'rejected')} className="action-btn" style={{ color: '#ef4444' }} title="رفض"><i className="fa-solid fa-xmark"></i></button>
                           </>
                       )}
                     </div>
@@ -400,19 +413,59 @@ export default function AllEmployeeRequests() {
       {/* Status Update Modal */}
       {showStatusModal && (
         <div className="modal-overlay">
-          <div className="modal-inner" style={{ maxWidth: '450px' }}>
+          <div className="modal-inner" style={{ maxWidth: '480px' }}>
             <div className="modal-top">
               <h3>معالجة طلب موظف</h3>
               <button onClick={() => setShowStatusModal(false)} className="close-btn"><i className="fa-solid fa-times"></i></button>
             </div>
             <div className="modal-form" style={{ padding: '20px' }}>
+              {(() => {
+                const curReq = requests.find((r) => r.id === selectedRequest?.id);
+                if (curReq?.type === 'termination' && selectedRequest?.status === 'approved') {
+                  return (
+                    <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#b45309', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="fa-solid fa-triangle-exclamation" /> اعتماد طلب الاستقالة وإيقاف المرتب
+                      </div>
+                      <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '0 0 12px 0' }}>
+                        الموافقة ستسجل تاريخ الاستقالة ونهاية العمل في ملف الموظف مباشرة وتوقف صرف المرتب تلقائياً للأشهر التالية.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '11px', fontWeight: 800, marginBottom: '4px', display: 'block' }}>تاريخ الاستقالة</label>
+                          <input
+                            type="date"
+                            value={resignationDate}
+                            onChange={(e) => {
+                              setResignationDate(e.target.value);
+                              if (!endDate) setEndDate(e.target.value);
+                            }}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                          />
+                        </div>
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '11px', fontWeight: 800, marginBottom: '4px', display: 'block' }}>نهاية العمل (آخر يوم)</label>
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <div className="input-group">
                 <label style={{ marginBottom: '10px', display: 'block', fontWeight: 800 }}>ملاحظات الإدارة</label>
                 <textarea 
                   placeholder="اكتب ردك أو ملاحظاتك هنا..." 
                   value={adminNotes} 
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  style={{ minHeight: '120px', width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                  style={{ minHeight: '100px', width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}
                 ></textarea>
               </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

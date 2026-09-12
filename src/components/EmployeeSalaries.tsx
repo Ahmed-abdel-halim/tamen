@@ -22,8 +22,11 @@ type Employee = {
   communication_allowance?: number | string | null;
   fixed_bonuses?: number | string | null;
   fixed_fines?: number | string | null;
+  hire_date?: string | null;
+  work_start_date?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  resignation_date?: string | null;
 };
 
 type Payroll = {
@@ -71,9 +74,9 @@ const toNum = (v: unknown) => {
 };
 
 /**
- * يتحقق إذا كان الموظف نشطاً في الشهر/السنة المحددة:
- * - start_date يجب أن يكون قبل أو في نفس الشهر المحدد
- * - end_date إما فارغ (لا يزال موظفاً) أو بعد بداية الشهر المحدد
+ * يتحقق إذا كان الموظف نشطاً ومستحقاً للمرتب في الشهر/السنة المحددة:
+ * - يبدأ المرتب من تاريخ بداية العمل (work_start_date أو start_date أو hire_date).
+ * - يتوقف المرتب فوراً إذا كان تاريخ الاستقالة (resignation_date) أو نهاية العمل (end_date) قبل بداية الشهر المحدد.
  */
 const isEmployeeActiveInPeriod = (emp: Employee, year: number, month: number): boolean => {
   // بداية الشهر المحدد
@@ -81,16 +84,26 @@ const isEmployeeActiveInPeriod = (emp: Employee, year: number, month: number): b
   // نهاية الشهر المحدد
   const periodEnd = new Date(year, month, 0, 23, 59, 59);
 
-  if (emp.start_date) {
-    const startDate = new Date(emp.start_date);
-    // إذا كان تاريخ التعيين بعد نهاية الشهر المحدد، لا يُدرج
+  // بداية العمل (بدء المرتب)
+  const effectiveStart = emp.work_start_date || emp.start_date || emp.hire_date;
+  if (effectiveStart) {
+    const startDate = new Date(effectiveStart);
+    // إذا كان تاريخ بداية العمل بعد نهاية الشهر المحدد، لا يُدرج في المرتب
     if (startDate > periodEnd) return false;
   }
 
+  // نهاية العمل (توقف المرتب)
   if (emp.end_date) {
     const endDate = new Date(emp.end_date);
-    // إذا كان تاريخ انهاء العمل قبل بداية الشهر المحدد، لا يُدرج
+    // إذا كان تاريخ انهاء العمل قبل بداية الشهر المحدد، يتوقف المرتب ولا يُدرج
     if (endDate < periodStart) return false;
+  }
+
+  // تاريخ الاستقالة (توقف المرتب)
+  if (emp.resignation_date) {
+    const resDate = new Date(emp.resignation_date);
+    // إذا كان تاريخ الاستقالة قبل بداية الشهر المحدد، يتوقف المرتب ولا يُدرج
+    if (resDate < periodStart) return false;
   }
 
   return true;
