@@ -92,6 +92,7 @@ interface Payroll {
   penalty_amount: number;
   tax_amount: number;
   social_security_amount: number;
+  solidarity_amount?: number;
   deduction_amount: number;
   advance_amount: number;
   net_salary: number;
@@ -238,77 +239,99 @@ export default function EmployeeManagement() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
-  const [quickPayModal, setQuickPayModal] = useState(false);
-  const [quickPayYear, setQuickPayYear] = useState(new Date().getFullYear());
-  const [quickPayMonth, setQuickPayMonth] = useState(new Date().getMonth() + 1);
-  const [quickPaySaving, setQuickPaySaving] = useState(false);
-  const [quickPayForm, setQuickPayForm] = useState({
-    base_salary: 0,
-    housing_allowance: 0,
-    transportation_allowance: 0,
-    communication_allowance: 0,
-    bonus_amount: 0,
-    deduction_amount: 0,
-    advance_amount: 0,
-    penalty_amount: 0,
-    other_additions: 0,
-    delivery_method: 'نقدي',
-    notes: '',
-  });
+  const [payFormData, setPayFormData] = useState<null | {
+    id?: number;
+    year: number;
+    month: number;
+    salary_type: "monthly" | "hourly";
+    base_salary: number;
+    hourly_rate: number;
+    hours_worked: number;
+    housing_allowance: number;
+    transportation_allowance: number;
+    communication_allowance: number;
+    bonus_amount: number;
+    other_additions: number;
+    deduction_amount: number;
+    advance_amount: number;
+    penalty_amount: number;
+    apply_tax: boolean;
+    tax_percentage: number;
+    apply_social_security: boolean;
+    social_security_percentage: number;
+    apply_solidarity: boolean;
+    solidarity_percentage: number;
+    status: "paid" | "unpaid";
+    paid_at: string;
+    delivery_method: string;
+    custom_delivery_method: string;
+    notes: string;
+    voucher_number: string;
+  }>(null);
 
   const handleOpenQuickPay = () => {
     if (!employee) return;
-    setQuickPayForm({
+    const now = new Date();
+    setPayFormData({
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      salary_type: (employee.salary_type as any) || "monthly",
       base_salary: Number(employee.salary || 0),
+      hourly_rate: Number(employee.hourly_rate || 0),
+      hours_worked: 0,
       housing_allowance: Number(employee.housing_allowance || 0),
       transportation_allowance: Number(employee.transportation_allowance || 0),
       communication_allowance: Number(employee.communication_allowance || 0),
       bonus_amount: Number(employee.fixed_bonuses || 0),
+      other_additions: 0,
       deduction_amount: Number(employee.fixed_fines || 0),
       advance_amount: 0,
       penalty_amount: 0,
-      other_additions: 0,
-      delivery_method: 'نقدي',
-      notes: '',
+      apply_tax: employee.apply_tax !== false,
+      tax_percentage: Number(employee.tax_percentage ?? 10),
+      apply_social_security: employee.apply_social_security !== false,
+      social_security_percentage: Number(employee.social_security_percentage ?? 19.475),
+      apply_solidarity: employee.apply_solidarity === true,
+      solidarity_percentage: Number(employee.solidarity_percentage ?? 1),
+      status: "paid",
+      paid_at: now.toISOString().substring(0, 10),
+      delivery_method: "نقدي (خزينة الشركة)",
+      custom_delivery_method: "",
+      notes: "",
+      voucher_number: "",
     });
-    setQuickPayModal(true);
   };
 
-  const handleSaveQuickPay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!employee) return;
-    setQuickPaySaving(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/employee-payrolls`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders(),
-        },
-        body: JSON.stringify({
-          user_id: employee.id,
-          year: quickPayYear,
-          month: quickPayMonth,
-          ...quickPayForm,
-          status: 'paid',
-        })
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d?.message || 'فشل صرف المرتب');
-      }
-      showToast('تم اعتماد وصرف المرتب لهذا الشهر بنجاح', 'success');
-      setQuickPayModal(false);
-      const rPay = await fetch(`${API_BASE_URL}/employee-payrolls?user_id=${employee.id}`, { headers: authHeaders() });
-      if (rPay.ok) {
-        const d = await rPay.json();
-        setPayrolls(Array.isArray(d) ? d : d.data || []);
-      }
-    } catch (err: any) {
-      showToast(err?.message || 'حدث خطأ أثناء صرف المرتب', 'error');
-    } finally {
-      setQuickPaySaving(false);
-    }
+  const openPaySalaryModal = (p: Payroll) => {
+    setPayFormData({
+      id: p.id,
+      year: p.year,
+      month: p.month,
+      salary_type: (employee?.salary_type as any) || "monthly",
+      base_salary: Number(p.base_salary ?? (employee?.salary || 0)),
+      hourly_rate: Number(employee?.hourly_rate || 0),
+      hours_worked: (p as any).hours_worked ? Number((p as any).hours_worked) : 0,
+      housing_allowance: Number(p.housing_allowance || 0),
+      transportation_allowance: Number(p.transportation_allowance || 0),
+      communication_allowance: Number(p.communication_allowance || 0),
+      bonus_amount: Number(p.bonus_amount || 0),
+      other_additions: Number(p.other_additions || p.allowance_amount || 0),
+      deduction_amount: Number(p.deduction_amount || 0),
+      advance_amount: Number(p.advance_amount || 0),
+      penalty_amount: Number(p.penalty_amount || 0),
+      apply_tax: p.tax_amount != null ? Number(p.tax_amount) > 0 : (employee?.apply_tax !== false),
+      tax_percentage: Number(employee?.tax_percentage ?? 10),
+      apply_social_security: p.social_security_amount != null ? Number(p.social_security_amount) > 0 : (employee?.apply_social_security !== false),
+      social_security_percentage: Number(employee?.social_security_percentage ?? 19.475),
+      apply_solidarity: (p as any).solidarity_amount != null ? Number((p as any).solidarity_amount) > 0 : (employee?.apply_solidarity === true),
+      solidarity_percentage: Number(employee?.solidarity_percentage ?? 1),
+      status: p.status || "paid",
+      paid_at: p.paid_at ? p.paid_at.substring(0, 10) : new Date().toISOString().substring(0, 10),
+      delivery_method: p.delivery_method || "نقدي (خزينة الشركة)",
+      custom_delivery_method: (p as any).custom_delivery_method || "",
+      notes: p.notes || "",
+      voucher_number: (p as any).voucher_number || "",
+    });
   };
   const [custody, setCustody] = useState<CustodyItem[]>([]);
   const [insuranceDocs, setInsuranceDocs] = useState<InsuranceDoc[]>([]);
@@ -341,10 +364,6 @@ export default function EmployeeManagement() {
   const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const [showPayModal, setShowPayModal] = useState<Payroll | null>(null);
-  const [payMethod, setPayMethod] = useState("نقدي");
-  const [payVoucher, setPayVoucher] = useState("");
-  const [payNotes, setPayNotes] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
   const [showAssignCustodyModal, setShowAssignCustodyModal] = useState(false);
@@ -684,29 +703,97 @@ export default function EmployeeManagement() {
     }
   };
 
-  // ─── Salary Payment ───
+  // ─── Salary Payment & Adjustment ───
   const handleProcessSalaryPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!showPayModal || !employee) return;
+    if (!payFormData || !employee) return;
     setSubmittingPayment(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/payrolls/${showPayModal.id}`, {
-        method: "PUT",
+      const baseSalaryEffective =
+        payFormData.salary_type === "hourly"
+          ? Number(payFormData.hourly_rate || 0) * Number(payFormData.hours_worked || 0)
+          : Number(payFormData.base_salary || 0);
+
+      const adds =
+        Number(payFormData.housing_allowance || 0) +
+        Number(payFormData.transportation_allowance || 0) +
+        Number(payFormData.communication_allowance || 0) +
+        Number(payFormData.bonus_amount || 0) +
+        Number(payFormData.other_additions || 0);
+
+      const directDeductions =
+        Number(payFormData.deduction_amount || 0) +
+        Number(payFormData.advance_amount || 0) +
+        Number(payFormData.penalty_amount || 0);
+
+      const taxAmount = payFormData.apply_tax
+        ? (baseSalaryEffective * Number(payFormData.tax_percentage || 0)) / 100
+        : 0;
+
+      const ssAmount = payFormData.apply_social_security
+        ? (baseSalaryEffective * Number(payFormData.social_security_percentage || 0)) / 100
+        : 0;
+
+      const solidarityAmount = payFormData.apply_solidarity
+        ? (baseSalaryEffective * Number(payFormData.solidarity_percentage || 0)) / 100
+        : 0;
+
+      const netSalary = Math.max(
+        0,
+        baseSalaryEffective + adds - directDeductions - taxAmount - ssAmount - solidarityAmount
+      );
+
+      const payload = {
+        user_id: employee.id,
+        year: payFormData.year,
+        month: payFormData.month,
+        base_salary: baseSalaryEffective,
+        housing_allowance: Number(payFormData.housing_allowance || 0),
+        transportation_allowance: Number(payFormData.transportation_allowance || 0),
+        communication_allowance: Number(payFormData.communication_allowance || 0),
+        allowance_amount: 0,
+        bonus_amount: Number(payFormData.bonus_amount || 0),
+        other_additions: Number(payFormData.other_additions || 0),
+        penalty_amount: Number(payFormData.penalty_amount || 0),
+        deduction_amount: Number(payFormData.deduction_amount || 0),
+        advance_amount: Number(payFormData.advance_amount || 0),
+        tax_amount: Number(taxAmount.toFixed(2)),
+        social_security_amount: Number(ssAmount.toFixed(2)),
+        solidarity_amount: Number(solidarityAmount.toFixed(2)),
+        net_salary: Number(netSalary.toFixed(2)),
+        hours_worked: payFormData.salary_type === "hourly" ? Number(payFormData.hours_worked || 0) : undefined,
+        status: payFormData.status,
+        paid_at: payFormData.status === "paid" ? (payFormData.paid_at || new Date().toISOString().substring(0, 10)) : null,
+        delivery_method: payFormData.delivery_method,
+        custom_delivery_method: payFormData.custom_delivery_method,
+        voucher_number: payFormData.voucher_number,
+        notes: payFormData.notes,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/employee-payrolls`, {
+        method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "paid",
-          paid_at: new Date().toISOString().split("T")[0],
-          delivery_method: payMethod,
-          notes: payNotes,
-          voucher_number: payVoucher,
-        }),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("فشل تسجيل عملية الصرف");
-      showToast("تم تسجيل صرف الراتب بنجاح", "success");
-      setShowPayModal(null);
-      loadEmployeeData(employee.id);
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.message || "فشل حفظ واعتماد صرف المرتب");
+      }
+
+      showToast("تم حفظ واعتماد مسير وصرف المرتب بنجاح", "success");
+      setPayFormData(null);
+
+      // Refresh payrolls
+      const rPay = await fetch(`${API_BASE_URL}/employee-payrolls?user_id=${employee.id}&per_page=100`, {
+        headers: authHeaders(),
+      });
+      if (rPay.ok) {
+        const d = await rPay.json();
+        setPayrolls(Array.isArray(d) ? d : d.data || []);
+      }
     } catch (err: any) {
-      showToast(err.message || "حدث خطأ أثناء الصرف", "error");
+      showToast(err.message || "حدث خطأ أثناء حفظ المرتب", "error");
     } finally {
       setSubmittingPayment(false);
     }
@@ -1663,67 +1750,199 @@ export default function EmployeeManagement() {
     w.document.close();
   };
 
-  // 10. Print Monthly Payslip
+  // 10. Print Monthly Payslip / Official Voucher
   const printPaySlip = (u: Employee, p: Payroll) => {
-    const w = window.open("", "_blank", "width=700,height=750");
+    const w = window.open("", "_blank", "width=850,height=900");
     if (!w) return;
     const logoSrc = resolvePublicUrl("/img/logo.png");
 
+    const base = Number(p.base_salary || 0);
+    const housing = Number(p.housing_allowance || 0);
+    const transport = Number(p.transportation_allowance || 0);
+    const communication = Number(p.communication_allowance || 0);
+    const bonus = Number(p.bonus_amount || 0);
+    const other = Number(p.other_additions || p.allowance_amount || 0);
+    const totalEarnings = base + housing + transport + communication + bonus + other;
+
+    const penalty = Number(p.penalty_amount || 0);
+    const deduction = Number(p.deduction_amount || 0);
+    const advance = Number(p.advance_amount || 0);
+    const tax = Number(p.tax_amount || 0);
+    const ss = Number(p.social_security_amount || 0);
+    const solidarity = Number((p as any).solidarity_amount || 0);
+    const totalDeductions = penalty + deduction + advance + tax + ss + solidarity;
+
+    const net = Number(p.net_salary || (totalEarnings - totalDeductions));
+    const voucherNum = p.voucher_number || `SAL-${p.year}${String(p.month).padStart(2, "0")}-${u.id}`;
+    const printDate = new Date().toLocaleString("ar-LY");
+    const payDate = p.paid_at ? new Date(p.paid_at).toLocaleDateString("ar-LY") : "—";
+    const statusText = p.status === "paid" ? "تم الصرف (مسدد)" : "قيد الانتظار (غير مسدد)";
+
     w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-      <title>قسيمة راتب - ${String(p.month).padStart(2, '0')}/${p.year}</title>
+      <title>سند صرف وقسيمة راتب - ${escapeHtml(u.name)} (${String(p.month).padStart(2, '0')}/${p.year})</title>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-        @page { size: A5 landscape; margin: 10mm; }
-        body { font-family: 'Cairo', sans-serif; direction: rtl; color: #0f172a; margin: 0; padding: 0; font-size: 10pt; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 10px; }
-        .header img { height: 45px; }
-        .title h2 { margin: 0; font-size: 14pt; color: #047857; }
-        .emp-box { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 10px; font-size: 9pt; }
-        table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 10px; }
-        th, td { border: 1px solid #cbd5e1; padding: 4px 8px; text-align: right; }
-        th { background: #f1f5f9; font-weight: 700; }
-        .total-box { display: flex; justify-content: space-between; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 12px; font-weight: 800; font-size: 11pt; color: #065f46; }
-      </style></head>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+        @page { size: A4 portrait; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; direction: rtl; color: #0f172a; margin: 0; padding: 15px; font-size: 10pt; line-height: 1.5; background: #fff; }
+        .voucher-card { border: 2px solid #0f766e; border-radius: 12px; padding: 20px; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f766e; padding-bottom: 12px; margin-bottom: 16px; }
+        .header-title h1 { margin: 0; font-size: 16pt; color: #0f766e; font-weight: 900; }
+        .header-title p { margin: 2px 0 0; font-size: 9pt; color: #64748b; font-weight: 600; }
+        .header-logo { max-height: 55px; }
+        .voucher-badge { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 11pt; text-align: center; }
+        .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 18px; font-size: 9pt; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { color: #64748b; font-size: 8pt; font-weight: 700; margin-bottom: 2px; }
+        .meta-val { color: #0f172a; font-weight: 800; font-size: 9.5pt; }
+        .tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+        .fin-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+        .fin-table th { padding: 8px 10px; text-align: right; font-weight: 800; font-size: 9.5pt; }
+        .fin-table td { padding: 6px 10px; border-bottom: 1px dashed #cbd5e1; font-weight: 600; }
+        .fin-table tr:last-child td { border-bottom: none; }
+        .th-green { background: #dcfce7; color: #166534; border-bottom: 2px solid #22c55e; }
+        .th-red { background: #fee2e2; color: #991b1b; border-bottom: 2px solid #ef4444; }
+        .total-subrow { background: #f1f5f9; font-weight: 800; }
+        .net-banner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #064e3b, #047857); color: #fff; padding: 14px 20px; border-radius: 10px; margin-bottom: 24px; box-shadow: 0 4px 10px rgba(4,120,87,0.25); }
+        .net-label { font-size: 12pt; font-weight: 800; }
+        .net-amount { font-size: 18pt; font-weight: 900; color: #a7f3d0; letter-spacing: 0.5px; }
+        .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: center; margin-top: 30px; font-size: 9pt; }
+        .sig-box { display: flex; flex-direction: column; justify-content: space-between; height: 75px; }
+        .sig-title { font-weight: 800; color: #334155; }
+        .sig-line { border-bottom: 1px dotted #64748b; margin-top: auto; }
+        .footer-note { text-align: center; font-size: 8pt; color: #94a3b8; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+        .no-print-bar { text-align: center; margin-bottom: 15px; }
+        .btn-print { background: #0f766e; color: #fff; border: none; padding: 8px 24px; border-radius: 6px; font-weight: 800; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 11pt; }
+        @media print { .no-print-bar { display: none !important; } }
+      </style>
+      </head>
       <body onload="window.print()">
-        <div class="header">
-          <img src="${logoSrc}" alt="" onerror="this.src='/img/logo.png'" />
-          <div class="title" style="text-align:center">
-            <h2>قسيمة صرف راتب شهر ${String(p.month).padStart(2, '0')}/${p.year}</h2>
-            <div style="font-size: 8pt; color: #64748b">المدار الليبي للتأمين</div>
+        <div class="no-print-bar">
+          <button class="btn-print" onclick="window.print()">🖨️ طباعة إيصال الراتب</button>
+        </div>
+        <div class="voucher-card">
+          <div class="header">
+            <div class="header-title">
+              <h1>شركة المدار الليبي للتأمين</h1>
+              <p>الإدارة العامة للشؤون المالية والإدارية - وحدة الرواتب والأجور</p>
+            </div>
+            <img src="${logoSrc}" class="header-logo" alt="Logo" onerror="this.src='/img/logo.png'" />
           </div>
-          <div style="font-size: 8pt; color: #64748b">تاريخ الصرف: ${fmtDate(p.paid_at)}</div>
-        </div>
 
-        <div class="emp-box">
-          <div>الموظف: <strong>${escapeHtml(u.name)}</strong></div>
-          <div>الرقم الوظيفي: <strong>${escapeHtml(u.job_number || `EMP-${u.id}`)}</strong></div>
-          <div>المسمى: <strong>${escapeHtml(u.job_title || "—")}</strong></div>
-          <div>حساب المصرف: <strong>${escapeHtml(u.bank_name || "—")} (${escapeHtml(u.account_number || "—")})</strong></div>
-        </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div class="voucher-badge">
+              سند صرف وقسيمة راتب شهر (${String(p.month).padStart(2, '0')} / ${p.year})
+            </div>
+            <div style="font-size: 8.5pt; color: #475569; font-weight: 700;">
+              رقم القيد/الإيصال: <span style="font-family: monospace; font-size: 9.5pt; color: #0f766e;">${escapeHtml(voucherNum)}</span>
+            </div>
+          </div>
 
-        <table>
-          <thead>
-            <tr><th>البيان المالي</th><th>المبلغ (د.ل)</th><th>البيان المالي</th><th>المبلغ (د.ل)</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>الراتب الأساسي</td><td>${money(p.base_salary)}</td>
-              <td>غرامات وخصومات</td><td style="color:#ef4444">-${money(Number(p.penalty_amount || 0) + Number(p.deduction_amount || 0))}</td>
-            </tr>
-            <tr>
-              <td>بدل سكن ومواصلات</td><td>${money(Number(p.housing_allowance || 0) + Number(p.transportation_allowance || 0))}</td>
-              <td>سلف مستردة</td><td style="color:#ef4444">-${money(p.advance_amount)}</td>
-            </tr>
-            <tr>
-              <td>مكافآت وإضافات أخرى</td><td>${money(Number(p.bonus_amount || 0) + Number(p.allowance_amount || 0) + Number(p.other_additions || 0))}</td>
-              <td>استقطاع ضرائب وضمان</td><td style="color:#ef4444">-${money(Number(p.tax_amount || 0) + Number(p.social_security_amount || 0))}</td>
-            </tr>
-          </tbody>
-        </table>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">اسم الموظف</span>
+              <span class="meta-val">${escapeHtml(u.name)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">الرقم الوظيفي / المالي</span>
+              <span class="meta-val">${escapeHtml(u.job_number || u.financial_number || `EMP-${u.id}`)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">المسمى الوظيفي</span>
+              <span class="meta-val">${escapeHtml(u.job_title || "—")}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">تاريخ التعيين</span>
+              <span class="meta-val">${fmtDate(u.start_date)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">طريقة وتاريخ الصرف</span>
+              <span class="meta-val">${escapeHtml(p.delivery_method || "نقدي")} (${payDate})</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">حالة الصرف</span>
+              <span class="meta-val" style="color: ${p.status === 'paid' ? '#15803d' : '#b45309'}">${statusText}</span>
+            </div>
+            ${u.bank_name ? `
+            <div class="meta-item" style="grid-column: span 3;">
+              <span class="meta-label">بيانات الحساب المصرفي</span>
+              <span class="meta-val">${escapeHtml(u.bank_name)} ${u.bank_branch ? `(${escapeHtml(u.bank_branch)})` : ''} - رقم الحساب: <span style="font-family:monospace">${escapeHtml(u.account_number || "—")}</span></span>
+            </div>` : ''}
+          </div>
 
-        <div class="total-box">
-          <span>صافي الراتب المستحق للصرف:</span>
-          <span>${money(p.net_salary)} د.ل</span>
+          <div class="tables-grid">
+            <!-- الاستحقاقات -->
+            <div style="border: 1px solid #bbf7d0; border-radius: 8px; overflow: hidden;">
+              <table class="fin-table">
+                <thead>
+                  <tr class="th-green"><th>الاستحقاقات والإضافات</th><th style="text-align:left">المبلغ (د.ل)</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>الراتب الأساسي</td><td style="text-align:left">${money(base)}</td></tr>
+                  ${housing > 0 ? `<tr><td>بدل سكن</td><td style="text-align:left">${money(housing)}</td></tr>` : ''}
+                  ${transport > 0 ? `<tr><td>بدل مواصلات</td><td style="text-align:left">${money(transport)}</td></tr>` : ''}
+                  ${communication > 0 ? `<tr><td>بدل اتصالات</td><td style="text-align:left">${money(communication)}</td></tr>` : ''}
+                  ${bonus > 0 ? `<tr><td>مكافآت وحوافز</td><td style="text-align:left">${money(bonus)}</td></tr>` : ''}
+                  ${other > 0 ? `<tr><td>إضافات وبدلات أخرى</td><td style="text-align:left">${money(other)}</td></tr>` : ''}
+                  <tr class="total-subrow">
+                    <td><strong>إجمالي الاستحقاقات</strong></td>
+                    <td style="text-align:left; color:#166534"><strong>${money(totalEarnings)} د.ل</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- الاستقطاعات -->
+            <div style="border: 1px solid #fecaca; border-radius: 8px; overflow: hidden;">
+              <table class="fin-table">
+                <thead>
+                  <tr class="th-red"><th>الاستقطاعات والخصومات</th><th style="text-align:left">المبلغ (د.ل)</th></tr>
+                </thead>
+                <tbody>
+                  ${tax > 0 ? `<tr><td>ضريبة الدخل</td><td style="text-align:left; color:#ef4444">-${money(tax)}</td></tr>` : ''}
+                  ${ss > 0 ? `<tr><td>الضمان الاجتماعي</td><td style="text-align:left; color:#ef4444">-${money(ss)}</td></tr>` : ''}
+                  ${solidarity > 0 ? `<tr><td>التضامن الاجتماعي</td><td style="text-align:left; color:#ef4444">-${money(solidarity)}</td></tr>` : ''}
+                  ${deduction > 0 ? `<tr><td>خصومات وجزاءات</td><td style="text-align:left; color:#ef4444">-${money(deduction)}</td></tr>` : ''}
+                  ${advance > 0 ? `<tr><td>سلف على المرتب</td><td style="text-align:left; color:#ef4444">-${money(advance)}</td></tr>` : ''}
+                  ${penalty > 0 ? `<tr><td>غرامات</td><td style="text-align:left; color:#ef4444">-${money(penalty)}</td></tr>` : ''}
+                  ${totalDeductions === 0 ? `<tr><td colspan="2" style="text-align:center; color:#94a3b8">لا توجد استقطاعات مسجلة</td></tr>` : ''}
+                  <tr class="total-subrow">
+                    <td><strong>إجمالي الاستقطاعات</strong></td>
+                    <td style="text-align:left; color:#991b1b"><strong>-${money(totalDeductions)} د.ل</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="net-banner">
+            <div>
+              <div class="net-label">صافي الراتب المستحق للصرف:</div>
+              <div style="font-size: 8.5pt; opacity: 0.85; margin-top: 2px;">
+                ${p.notes ? `ملاحظات: ${escapeHtml(p.notes)}` : 'تم احتساب كافة الاستحقاقات والخصومات وفقاً للوائح الشركة.'}
+              </div>
+            </div>
+            <div class="net-amount">${money(net)} د.ل</div>
+          </div>
+
+          <div class="signatures">
+            <div class="sig-box">
+              <span class="sig-title">توقيع الموظف بالاستلام</span>
+              <div class="sig-line"></div>
+            </div>
+            <div class="sig-box">
+              <span class="sig-title">أمين الخزينة / الحسابات</span>
+              <div class="sig-line"></div>
+            </div>
+            <div class="sig-box">
+              <span class="sig-title">اعتماد الشؤون المالية والإدارية</span>
+              <div class="sig-line"></div>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            تم استخراج هذا الإيصال آلياً من منظومة المدار الليبي للتأمين بتاريخ: ${printDate}
+          </div>
         </div>
       </body></html>`);
     w.document.close();
@@ -3061,220 +3280,6 @@ export default function EmployeeManagement() {
                 </div>
               </div>
 
-              {quickPayModal && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.6)',
-                    zIndex: 9999,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '16px',
-                    backdropFilter: 'blur(4px)',
-                  }}
-                  onClick={(e) => { if (e.target === e.currentTarget) setQuickPayModal(false); }}
-                >
-                  <div
-                    style={{
-                      background: 'var(--card-bg)',
-                      borderRadius: '20px',
-                      maxWidth: '600px',
-                      width: '100%',
-                      maxHeight: '90vh',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-                      border: '1px solid var(--border)',
-                      overflow: 'hidden',
-                      fontFamily: "'Cairo',sans-serif",
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: 'linear-gradient(135deg, #059669, #10b981)',
-                        padding: '16px 20px',
-                        color: '#fff',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900 }}>صرف مرتب: {employee?.name}</h3>
-                        <p style={{ margin: '2px 0 0', fontSize: '12px', opacity: 0.9 }}>
-                          تأكيد بيانات الراتب واعتماده كمصروف لشهر محدد
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setQuickPayModal(false)}
-                        style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}
-                      >
-                        <i className="fa-solid fa-xmark" />
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleSaveQuickPay} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                      <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>السنة</label>
-                            <input
-                              type="number"
-                              value={quickPayYear}
-                              onChange={(e) => setQuickPayYear(Number(e.target.value))}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>الشهر</label>
-                            <select
-                              value={quickPayMonth}
-                              onChange={(e) => setQuickPayMonth(Number(e.target.value))}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 800 }}
-                            >
-                              {Array.from({ length: 12 }).map((_, i) => (
-                                <option key={i + 1} value={i + 1}>
-                                  شهر {i + 1} - {MONTHS_AR[i]}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '14px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>الراتب الأساسي (د.ل) *</label>
-                            <input
-                              type="number"
-                              value={quickPayForm.base_salary}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, base_salary: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 800 }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>بدل سكن (د.ل)</label>
-                            <input
-                              type="number"
-                              value={quickPayForm.housing_allowance}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, housing_allowance: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>بدل مواصلات (د.ل)</label>
-                            <input
-                              type="number"
-                              value={quickPayForm.transportation_allowance}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, transportation_allowance: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>بدل اتصالات (د.ل)</label>
-                            <input
-                              type="number"
-                              value={quickPayForm.communication_allowance}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, communication_allowance: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>مكافآت (د.ل)</label>
-                            <input
-                              type="number"
-                              value={quickPayForm.bonus_amount}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, bonus_amount: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#ef4444', marginBottom: '4px' }}>خصومات وسلف (د.ل)</label>
-                            <input
-                              type="number"
-                              value={quickPayForm.deduction_amount}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, deduction_amount: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>طريقة الصرف</label>
-                            <select
-                              value={quickPayForm.delivery_method}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, delivery_method: e.target.value })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 800 }}
-                            >
-                              <option value="نقدي">نقدي (كاش)</option>
-                              <option value="تحويل مصرفي">تحويل مصرفي</option>
-                              <option value="صك">صك مصرفي</option>
-                              <option value="أخرى">أخرى</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>ملاحظات</label>
-                            <input
-                              type="text"
-                              placeholder="رقم الإيصال أو ملاحظة..."
-                              value={quickPayForm.notes}
-                              onChange={(e) => setQuickPayForm({ ...quickPayForm, notes: e.target.value })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Net preview */}
-                        {(() => {
-                          const b = quickPayForm.base_salary;
-                          const adds = quickPayForm.housing_allowance + quickPayForm.transportation_allowance + quickPayForm.communication_allowance + quickPayForm.bonus_amount + quickPayForm.other_additions;
-                          const subs = quickPayForm.deduction_amount + quickPayForm.advance_amount + quickPayForm.penalty_amount;
-                          const net = b + adds - subs;
-                          return (
-                            <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid #10b981', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontWeight: 800, color: '#059669' }}>صافي المرتب المستحق:</span>
-                              <span style={{ fontWeight: 900, color: '#059669', fontSize: '18px' }}>{money(net)} د.ل</span>
-                            </div>
-                          );
-                        })()}
-                      </div>
-
-                      <div style={{ padding: '14px 20px', background: 'var(--bg)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setQuickPayModal(false)}
-                          disabled={quickPaySaving}
-                          style={{ padding: '8px 18px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer', fontWeight: 800 }}
-                        >
-                          إلغاء
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={quickPaySaving}
-                          style={{
-                            padding: '8px 24px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: 'linear-gradient(135deg, #059669, #10b981)',
-                            color: '#fff',
-                            cursor: quickPaySaving ? 'wait' : 'pointer',
-                            fontWeight: 800,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                        >
-                          {quickPaySaving ? <i className="fa-solid fa-circle-notch fa-spin" /> : <i className="fa-solid fa-check" />}
-                          <span>اعتماد وصرف المرتب</span>
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-
               {payrolls.length === 0 ? (
                 <div className="pane-empty">
                   <i className="fa-solid fa-calendar-xmark" />
@@ -3293,7 +3298,7 @@ export default function EmployeeManagement() {
                         <th>صافي الراتب المستحق</th>
                         <th>حالة الصرف</th>
                         <th>تاريخ وطريقة الصرف</th>
-                        <th>الإجراءات</th>
+                        <th className="actions-col" style={{ textAlign: "center" }}>الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3306,7 +3311,7 @@ export default function EmployeeManagement() {
                           Number(p.allowance_amount || 0) +
                           Number(p.other_additions || 0);
                         const fines = Number(p.penalty_amount || 0) + Number(p.deduction_amount || 0) + Number(p.advance_amount || 0);
-                        const taxes = Number(p.tax_amount || 0) + Number(p.social_security_amount || 0);
+                        const taxes = Number(p.tax_amount || 0) + Number(p.social_security_amount || 0) + Number((p as any).solidarity_amount || 0);
 
                         return (
                           <tr key={p.id}>
@@ -3352,26 +3357,53 @@ export default function EmployeeManagement() {
                                 "—"
                               )}
                             </td>
-                            <td>
-                              <div className="table-actions">
+                            <td className="actions-col" style={{ textAlign: "center" }}>
+                              <div className="table-actions" style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                                <button
+                                  className={`tbl-btn ${p.status === "paid" ? "edit-pay-btn" : "pay-btn"}`}
+                                  onClick={() => openPaySalaryModal(p)}
+                                  title={p.status === "paid" ? "تعديل بيانات الراتب والخصومات والصرف" : "تسديد وصرف المرتب"}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: p.status === 'paid' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'linear-gradient(135deg, #059669, #10b981)',
+                                    color: '#fff',
+                                    fontWeight: 800,
+                                    fontSize: '11.5px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontFamily: "'Cairo',sans-serif",
+                                    boxShadow: p.status === 'paid' ? '0 2px 6px rgba(37,99,235,0.25)' : '0 2px 6px rgba(16,185,129,0.25)',
+                                  }}
+                                >
+                                  <i className={`fa-solid ${p.status === 'paid' ? 'fa-pencil' : 'fa-hand-holding-dollar'}`} />
+                                  <span>{p.status === 'paid' ? 'تعديل' : 'تسديد'}</span>
+                                </button>
                                 <button
                                   className="tbl-btn print"
                                   onClick={() => printPaySlip(employee, p)}
-                                  title="طباعة قسيمة الراتب"
+                                  title="طباعة سند وقسيمة الراتب"
+                                  style={{
+                                    padding: '6px 10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--card-bg)',
+                                    color: 'var(--text)',
+                                    fontWeight: 700,
+                                    fontSize: '11.5px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontFamily: "'Cairo',sans-serif",
+                                  }}
                                 >
-                                  <i className="fa-solid fa-print" />
+                                  <i className="fa-solid fa-receipt" />
+                                  <span>وصل</span>
                                 </button>
-                                {p.status !== "paid" && (
-                                  <button
-                                    className="tbl-btn pay"
-                                    onClick={() => {
-                                      setShowPayModal(p);
-                                    }}
-                                    title="تسديد الراتب"
-                                  >
-                                    <i className="fa-solid fa-hand-holding-dollar" /> صرف
-                                  </button>
-                                )}
                               </div>
                             </td>
                           </tr>
@@ -5318,62 +5350,498 @@ export default function EmployeeManagement() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════════════
-          MODAL: PAY SALARY (صرف الراتب)
+          MODAL: PAY & ADJUST SALARY (تسديد وتعديل الراتب - نفس أسلوب إدارة الوكيل)
       ════════════════════════════════════════════════════════════════════════ */}
-      {showPayModal && employee && (
-        <div className="modal-overlay" onClick={() => setShowPayModal(null)}>
-          <div className="modal-box medium" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">
-                <i className="fa-solid fa-hand-holding-dollar text-green" />
-                <h3>تسديد راتب شهر: {MONTHS_AR[showPayModal.month - 1]} {showPayModal.year}</h3>
+      {payFormData && employee && (
+        <div
+          className="modal-overlay"
+          onClick={() => setPayFormData(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backdropFilter: 'blur(5px)',
+          }}
+        >
+          <div
+            className="modal-box large"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--card-bg, #ffffff)',
+              borderRadius: '20px',
+              maxWidth: '750px',
+              width: '100%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+              fontFamily: "'Cairo', sans-serif",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                background: payFormData.status === 'paid' ? 'linear-gradient(135deg, #047857, #10b981)' : 'linear-gradient(135deg, #1e40af, #3b82f6)',
+                padding: '18px 24px',
+                color: '#fff',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px', fontSize: '20px' }}>
+                  <i className={`fa-solid ${payFormData.status === 'paid' ? 'fa-file-invoice-dollar' : 'fa-hand-holding-dollar'}`} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 900 }}>
+                    {payFormData.id ? 'تسديد وتعديل مسير الراتب' : 'صرف مسير راتب جديد'} - {employee.name}
+                  </h3>
+                  <p style={{ margin: '3px 0 0', fontSize: '12px', opacity: 0.9 }}>
+                    شهر {payFormData.month} / {payFormData.year} • {employee.job_title || 'موظف'}
+                  </p>
+                </div>
               </div>
-              <button className="close-btn" onClick={() => setShowPayModal(null)}>
-                <i className="fa-solid fa-times" />
+              <button
+                type="button"
+                onClick={() => setPayFormData(null)}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: '18px', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
 
-            <form onSubmit={handleProcessSalaryPayment} className="modal-body-scrollable">
-              <div className="form-fld">
-                <label>صافي المبلغ المستحق (د.ل)</label>
-                <input type="text" value={money(showPayModal.net_salary)} readOnly style={{ background: "#1e293b", fontWeight: "bold" }} />
+            {/* Form */}
+            <form onSubmit={handleProcessSalaryPayment} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+                
+                {/* 1. Month / Year / Salary Type */}
+                <div style={{ background: 'var(--bg, #f8fafc)', borderRadius: '12px', padding: '14px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: 'var(--primary, #047857)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-calendar-check" /> فترة الراتب ونوع الاستحقاق
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>السنة</label>
+                      <input
+                        type="number"
+                        value={payFormData.year}
+                        onChange={(e) => setPayFormData({ ...payFormData, year: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>الشهر</label>
+                      <select
+                        value={payFormData.month}
+                        onChange={(e) => setPayFormData({ ...payFormData, month: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                      >
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <option key={i + 1} value={i + 1}>
+                            شهر {i + 1} - {MONTHS_AR[i]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>نوع المرتب</label>
+                      <select
+                        value={payFormData.salary_type}
+                        onChange={(e) => setPayFormData({ ...payFormData, salary_type: e.target.value as any })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                      >
+                        <option value="monthly">مرتب شهري ثابت</option>
+                        <option value="hourly">مرتب بالوقت / بالساعة</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Hourly inputs or base salary input */}
+                  {payFormData.salary_type === "hourly" ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', padding: '10px', background: 'rgba(59,130,246,0.06)', borderRadius: '8px', border: '1px dashed #3b82f6' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#2563eb', marginBottom: '4px' }}>معدل أجر الساعة (د.ل)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={payFormData.hourly_rate}
+                          onChange={(e) => setPayFormData({ ...payFormData, hourly_rate: Number(e.target.value) })}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#2563eb', marginBottom: '4px' }}>عدد الساعات المنجزة للشهر</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={payFormData.hours_worked}
+                          onChange={(e) => setPayFormData({ ...payFormData, hours_worked: Number(e.target.value) })}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '4px' }}>الراتب الأساسي الشهري (د.ل) *</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.base_salary}
+                        onChange={(e) => setPayFormData({ ...payFormData, base_salary: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 900, fontSize: '14px' }}
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Allowances & Bonuses */}
+                <div style={{ background: 'var(--bg, #f8fafc)', borderRadius: '12px', padding: '14px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#16a34a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-circle-plus" /> البدلات والمكافآت والإضافات
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>بدل سكن (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.housing_allowance}
+                        onChange={(e) => setPayFormData({ ...payFormData, housing_allowance: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>بدل مواصلات (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.transportation_allowance}
+                        onChange={(e) => setPayFormData({ ...payFormData, transportation_allowance: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>بدل اتصالات (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.communication_allowance}
+                        onChange={(e) => setPayFormData({ ...payFormData, communication_allowance: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>مكافآت وحوافز (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.bonus_amount}
+                        onChange={(e) => setPayFormData({ ...payFormData, bonus_amount: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>إضافات أخرى (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.other_additions}
+                        onChange={(e) => setPayFormData({ ...payFormData, other_additions: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Deductions & Advances & Fines */}
+                <div style={{ background: 'var(--bg, #f8fafc)', borderRadius: '12px', padding: '14px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#dc2626', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-circle-minus" /> الخصومات والسلف والجزاءات
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#ef4444', marginBottom: '3px' }}>خصومات وجزاءات (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.deduction_amount}
+                        onChange={(e) => setPayFormData({ ...payFormData, deduction_amount: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#ef4444', marginBottom: '3px' }}>سلف على المرتب (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.advance_amount}
+                        onChange={(e) => setPayFormData({ ...payFormData, advance_amount: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#ef4444', marginBottom: '3px' }}>غرامات وتأخير (د.ل)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={payFormData.penalty_amount}
+                        onChange={(e) => setPayFormData({ ...payFormData, penalty_amount: Number(e.target.value) })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Taxes & Social Security & Solidarity (مفتوحة حسب طلب المستخدم) */}
+                <div style={{ background: 'var(--bg, #f8fafc)', borderRadius: '12px', padding: '14px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#d97706', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-scale-balanced" /> الضرائب والضمان والتضامن الاجتماعي
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                    {/* Tax */}
+                    <div style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={payFormData.apply_tax}
+                          onChange={(e) => setPayFormData({ ...payFormData, apply_tax: e.target.checked })}
+                        />
+                        <span>احتساب ضريبة الدخل</span>
+                      </label>
+                      {payFormData.apply_tax && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="number"
+                            step="any"
+                            value={payFormData.tax_percentage}
+                            onChange={(e) => setPayFormData({ ...payFormData, tax_percentage: Number(e.target.value) })}
+                            style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 800 }}
+                          />
+                          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>% من الأساسي</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Social Security */}
+                    <div style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={payFormData.apply_social_security}
+                          onChange={(e) => setPayFormData({ ...payFormData, apply_social_security: e.target.checked })}
+                        />
+                        <span>احتساب الضمان الاجتماعي</span>
+                      </label>
+                      {payFormData.apply_social_security && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="number"
+                            step="any"
+                            value={payFormData.social_security_percentage}
+                            onChange={(e) => setPayFormData({ ...payFormData, social_security_percentage: Number(e.target.value) })}
+                            style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 800 }}
+                          />
+                          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>% من الأساسي</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Solidarity (التضامن الاجتماعي) */}
+                    <div style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={payFormData.apply_solidarity}
+                          onChange={(e) => setPayFormData({ ...payFormData, apply_solidarity: e.target.checked })}
+                        />
+                        <span>ضريبة التضامن الاجتماعي</span>
+                      </label>
+                      {payFormData.apply_solidarity && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="number"
+                            step="any"
+                            value={payFormData.solidarity_percentage}
+                            onChange={(e) => setPayFormData({ ...payFormData, solidarity_percentage: Number(e.target.value) })}
+                            style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 800 }}
+                          />
+                          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>% (مفتوحة)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Payment Settings */}
+                <div style={{ background: 'var(--bg, #f8fafc)', borderRadius: '12px', padding: '14px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-money-bill-transfer" /> إعدادات وبيانات الصرف والتسليم
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>حالة الصرف *</label>
+                      <select
+                        value={payFormData.status}
+                        onChange={(e) => setPayFormData({ ...payFormData, status: e.target.value as any })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                      >
+                        <option value="paid">مدفوع (تم الصرف)</option>
+                        <option value="unpaid">غير مدفوع (معلق)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>تاريخ الصرف</label>
+                      <input
+                        type="date"
+                        value={payFormData.paid_at}
+                        onChange={(e) => setPayFormData({ ...payFormData, paid_at: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>طريقة الصرف</label>
+                      <select
+                        value={payFormData.delivery_method}
+                        onChange={(e) => setPayFormData({ ...payFormData, delivery_method: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 800 }}
+                      >
+                        <option value="نقدي (خزينة الشركة)">نقدي (خزينة الشركة)</option>
+                        <option value="تحويل مصرفي (حساب الموظف)">تحويل مصرفي (حساب الموظف)</option>
+                        <option value="صك مصرفي">صك مصرفي</option>
+                        <option value="خصم من عهدة الموظف">خصم من عهدة الموظف</option>
+                        <option value="أخرى">أخرى</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>رقم إيصال / إذن الصرف</label>
+                      <input
+                        type="text"
+                        placeholder="مثال: VCH-2026-001"
+                        value={payFormData.voucher_number}
+                        onChange={(e) => setPayFormData({ ...payFormData, voucher_number: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                  </div>
+
+                  {payFormData.delivery_method === "أخرى" && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>تحديد طريقة الصرف الأخرى</label>
+                      <input
+                        type="text"
+                        placeholder="اكتب طريقة الصرف..."
+                        value={payFormData.custom_delivery_method}
+                        onChange={(e) => setPayFormData({ ...payFormData, custom_delivery_method: e.target.value })}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--muted)', marginBottom: '3px' }}>ملاحظات إضافية</label>
+                    <input
+                      type="text"
+                      placeholder="أية ملاحظات خاصة بالصرف أو الخصم..."
+                      value={payFormData.notes}
+                      onChange={(e) => setPayFormData({ ...payFormData, notes: e.target.value })}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                    />
+                  </div>
+                </div>
+
+                {/* 6. Dynamic Live Calculations Summary Banner */}
+                {(() => {
+                  const bEff = payFormData.salary_type === "hourly"
+                    ? Number(payFormData.hourly_rate || 0) * Number(payFormData.hours_worked || 0)
+                    : Number(payFormData.base_salary || 0);
+
+                  const addsTotal =
+                    Number(payFormData.housing_allowance || 0) +
+                    Number(payFormData.transportation_allowance || 0) +
+                    Number(payFormData.communication_allowance || 0) +
+                    Number(payFormData.bonus_amount || 0) +
+                    Number(payFormData.other_additions || 0);
+
+                  const directDeds =
+                    Number(payFormData.deduction_amount || 0) +
+                    Number(payFormData.advance_amount || 0) +
+                    Number(payFormData.penalty_amount || 0);
+
+                  const tAmt = payFormData.apply_tax ? (bEff * Number(payFormData.tax_percentage || 0)) / 100 : 0;
+                  const ssAmt = payFormData.apply_social_security ? (bEff * Number(payFormData.social_security_percentage || 0)) / 100 : 0;
+                  const solAmt = payFormData.apply_solidarity ? (bEff * Number(payFormData.solidarity_percentage || 0)) / 100 : 0;
+                  const totalDeds = directDeds + tAmt + ssAmt + solAmt;
+                  const net = Math.max(0, bEff + addsTotal - totalDeds);
+
+                  return (
+                    <div
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(5,150,105,0.08))',
+                        border: '2px solid #10b981',
+                        borderRadius: '14px',
+                        padding: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--muted)', fontWeight: 700 }}>
+                        <span>إجمالي الاستحقاقات: <strong style={{ color: '#10b981' }}>+{money(bEff + addsTotal)} د.ل</strong></span>
+                        <span>إجمالي الاستقطاعات والضرائب: <strong style={{ color: '#ef4444' }}>-{money(totalDeds)} د.ل</strong></span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #10b981', paddingTop: '8px' }}>
+                        <span style={{ fontWeight: 900, color: '#047857', fontSize: '15px' }}>
+                          صافي المرتب المستحق للصرف:
+                        </span>
+                        <span style={{ fontWeight: 900, color: '#047857', fontSize: '22px' }}>
+                          {money(net)} د.ل
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-              <div className="form-fld">
-                <label>طريقة الصرف</label>
-                <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                  <option value="نقدي (خزينة الشركة)">نقدي (خزينة الشركة)</option>
-                  <option value="تحويل مصرفي (حساب الموظف)">تحويل مصرفي (حساب الموظف)</option>
-                  <option value="صك مصرفي">صك مصرفي</option>
-                </select>
-              </div>
-
-              <div className="form-fld">
-                <label>رقم إذن / إيصال الصرف (اختياري)</label>
-                <input
-                  type="text"
-                  placeholder="مثال: VCH-2026-001"
-                  value={payVoucher}
-                  onChange={(e) => setPayVoucher(e.target.value)}
-                />
-              </div>
-
-              <div className="form-fld">
-                <label>ملاحظات إضافية</label>
-                <textarea
-                  rows={2}
-                  value={payNotes}
-                  onChange={(e) => setPayNotes(e.target.value)}
-                  placeholder="ملاحظات الصرف..."
-                />
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn-modal ghost" onClick={() => setShowPayModal(null)}>
+              {/* Modal Footer */}
+              <div style={{ padding: '14px 24px', background: 'var(--bg, #f8fafc)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setPayFormData(null)}
+                  disabled={submittingPayment}
+                  style={{ padding: '9px 20px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer', fontWeight: 800 }}
+                >
                   إلغاء
                 </button>
-                <button type="submit" className="btn-modal green" disabled={submittingPayment}>
-                  {submittingPayment ? "جارِ التسجيل..." : "تأكيد صرف الراتب"}
+                <button
+                  type="submit"
+                  disabled={submittingPayment}
+                  style={{
+                    padding: '9px 28px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #059669, #10b981)',
+                    color: '#fff',
+                    cursor: submittingPayment ? 'wait' : 'pointer',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                  }}
+                >
+                  {submittingPayment ? <i className="fa-solid fa-circle-notch fa-spin" /> : <i className="fa-solid fa-check" />}
+                  <span>{submittingPayment ? "جارِ الحفظ..." : "حفظ واعتماد الصرف"}</span>
                 </button>
               </div>
             </form>
@@ -5994,13 +6462,31 @@ export default function EmployeeManagement() {
         .payment-meta { display: flex; flex-direction: column; font-size: 11.5px; }
         .payment-meta small { color: var(--muted); }
 
+        .modern-data-table th.actions-col,
+        .modern-data-table td.actions-col {
+          position: sticky;
+          left: 0;
+          background: var(--card-bg, #ffffff);
+          z-index: 2;
+          box-shadow: -3px 0 8px rgba(0, 0, 0, 0.08);
+          white-space: nowrap;
+          text-align: center;
+        }
+        .modern-data-table th.actions-col {
+          background: var(--table-header, #f8fafc);
+          z-index: 3;
+        }
+        .modern-data-table tr:hover td.actions-col {
+          background: var(--hover-bg, #f1f5f9);
+        }
+
         .table-actions { display: flex; gap: 6px; }
         .tbl-btn {
           width: 32px; height: 32px; border-radius: 8px; border: none;
           display: flex; align-items: center; justify-content: center;
           cursor: pointer; transition: all 0.15s; font-family: inherit; font-size: 12px;
         }
-        .tbl-btn.print { background: rgba(99,102,241,0.15); color: #6366f1; }
+        .tbl-btn.print { width: auto; padding: 0 10px; background: rgba(99,102,241,0.15); color: #6366f1; }
         .tbl-btn.print:hover { background: rgba(99,102,241,0.3); }
         .tbl-btn.pay { width: auto; padding: 0 12px; background: rgba(16,185,129,0.15); color: #10b981; font-weight: 800; gap: 4px; }
         .tbl-btn.pay:hover { background: rgba(16,185,129,0.3); }
