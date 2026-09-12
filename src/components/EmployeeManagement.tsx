@@ -3157,13 +3157,19 @@ export default function EmployeeManagement() {
           </button>
 
           <button
-            className="pill-btn purple"
+            className="pill-btn teal"
             onClick={() => setShowPeriodReportModal(true)}
             disabled={!employee}
+            style={{
+              background: "linear-gradient(135deg, #0f766e, #0d9488)",
+              boxShadow: "0 4px 14px rgba(15, 118, 110, 0.45)",
+              color: "#ffffff",
+              fontWeight: 800,
+            }}
             title="استخراج تقرير مرتب الموظف بفترة زمنية محددة مع الضريبة والضمان والخصومات"
           >
-            <i className="fa-solid fa-file-invoice-dollar" />
-            <span>تقرير المرتب بالفترة</span>
+            <i className="fa-solid fa-file-invoice-dollar" style={{ color: "#ffffff", fontSize: "14px" }} />
+            <span style={{ color: "#ffffff", fontWeight: 800 }}>تقرير المرتب بالفترة</span>
           </button>
 
           <button
@@ -6965,6 +6971,8 @@ export default function EmployeeManagement() {
         .pill-btn.green { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
         .pill-btn.cyan { background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 4px 12px rgba(2,132,199,0.3); }
         .pill-btn.vcard-pill { background: linear-gradient(135deg, #7c3aed, #6d28d9); box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
+        .pill-btn.teal { background: linear-gradient(135deg, #0f766e, #0d9488); box-shadow: 0 4px 14px rgba(15,118,110,0.45); color: #ffffff !important; }
+        .pill-btn.purple { background: linear-gradient(135deg, #7c3aed, #6d28d9); box-shadow: 0 4px 12px rgba(124,58,237,0.3); color: #ffffff !important; }
 
         /* ── Filter Bar ── */
         .ledger-filter-bar {
