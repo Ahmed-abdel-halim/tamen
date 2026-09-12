@@ -303,6 +303,32 @@ export default function EmployeeManagement() {
   };
 
   const openPaySalaryModal = (p: Payroll) => {
+    const extra = (p as any).extra_fields || {};
+
+    const applyTax = extra.apply_tax !== undefined
+      ? Boolean(extra.apply_tax)
+      : (p.tax_amount != null && Number(p.tax_amount) > 0 ? true : (employee?.apply_tax !== false));
+
+    const taxPercentage = extra.tax_percentage !== undefined
+      ? Number(extra.tax_percentage)
+      : Number(employee?.tax_percentage ?? 10);
+
+    const applySS = extra.apply_social_security !== undefined
+      ? Boolean(extra.apply_social_security)
+      : (p.social_security_amount != null && Number(p.social_security_amount) > 0 ? true : (employee?.apply_social_security !== false));
+
+    const ssPercentage = extra.social_security_percentage !== undefined
+      ? Number(extra.social_security_percentage)
+      : Number(employee?.social_security_percentage ?? 19.475);
+
+    const applySolidarity = extra.apply_solidarity !== undefined
+      ? Boolean(extra.apply_solidarity)
+      : ((p as any).solidarity_amount != null && Number((p as any).solidarity_amount) > 0 ? true : (employee?.apply_solidarity === true));
+
+    const solidarityPercentage = extra.solidarity_percentage !== undefined
+      ? Number(extra.solidarity_percentage)
+      : Number(employee?.solidarity_percentage ?? 1);
+
     setPayFormData({
       id: p.id,
       year: p.year,
@@ -319,18 +345,18 @@ export default function EmployeeManagement() {
       deduction_amount: Number(p.deduction_amount || 0),
       advance_amount: Number(p.advance_amount || 0),
       penalty_amount: Number(p.penalty_amount || 0),
-      apply_tax: p.tax_amount != null ? Number(p.tax_amount) > 0 : (employee?.apply_tax !== false),
-      tax_percentage: Number(employee?.tax_percentage ?? 10),
-      apply_social_security: p.social_security_amount != null ? Number(p.social_security_amount) > 0 : (employee?.apply_social_security !== false),
-      social_security_percentage: Number(employee?.social_security_percentage ?? 19.475),
-      apply_solidarity: (p as any).solidarity_amount != null ? Number((p as any).solidarity_amount) > 0 : (employee?.apply_solidarity === true),
-      solidarity_percentage: Number(employee?.solidarity_percentage ?? 1),
+      apply_tax: applyTax,
+      tax_percentage: taxPercentage,
+      apply_social_security: applySS,
+      social_security_percentage: ssPercentage,
+      apply_solidarity: applySolidarity,
+      solidarity_percentage: solidarityPercentage,
       status: p.status || "paid",
       paid_at: p.paid_at ? p.paid_at.substring(0, 10) : new Date().toISOString().substring(0, 10),
       delivery_method: p.delivery_method || "نقدي (خزينة الشركة)",
       custom_delivery_method: (p as any).custom_delivery_method || "",
       notes: p.notes || "",
-      voucher_number: (p as any).voucher_number || "",
+      voucher_number: (p as any).voucher_number || extra.voucher_number || "",
     });
   };
   const [custody, setCustody] = useState<CustodyItem[]>([]);
@@ -743,6 +769,57 @@ export default function EmployeeManagement() {
         baseSalaryEffective + adds - directDeductions - taxAmount - ssAmount - solidarityAmount
       );
 
+      // 1. Sync employee profile settings (taxes, percentages, salary type) to user record
+      try {
+        await fetch(`${API_BASE_URL}/users/${employee.id}`, {
+          method: "PUT",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            apply_tax: payFormData.apply_tax,
+            tax_percentage: Number(payFormData.tax_percentage || 0),
+            apply_social_security: payFormData.apply_social_security,
+            social_security_percentage: Number(payFormData.social_security_percentage || 0),
+            apply_solidarity: payFormData.apply_solidarity,
+            solidarity_percentage: Number(payFormData.solidarity_percentage || 0),
+            salary_type: payFormData.salary_type,
+            hourly_rate: Number(payFormData.hourly_rate || 0),
+          }),
+        });
+
+        // Update local employee state immediately
+        setEmployee((prev) =>
+          prev
+            ? {
+                ...prev,
+                apply_tax: payFormData.apply_tax,
+                tax_percentage: Number(payFormData.tax_percentage || 0),
+                apply_social_security: payFormData.apply_social_security,
+                social_security_percentage: Number(payFormData.social_security_percentage || 0),
+                apply_solidarity: payFormData.apply_solidarity,
+                solidarity_percentage: Number(payFormData.solidarity_percentage || 0),
+                salary_type: payFormData.salary_type,
+                hourly_rate: Number(payFormData.hourly_rate || 0),
+              }
+            : prev
+        );
+      } catch (syncErr) {
+        console.warn("Failed to sync employee user profile tax settings:", syncErr);
+      }
+
+      // 2. Prepare payload for payroll row with explicit extra_fields
+      const existingExtra = ((payrolls.find((p) => p.id === payFormData.id) as any)?.extra_fields) || {};
+      const extra_fields: any = {
+        ...existingExtra,
+        apply_tax: payFormData.apply_tax,
+        tax_percentage: Number(payFormData.tax_percentage || 0),
+        apply_social_security: payFormData.apply_social_security,
+        social_security_percentage: Number(payFormData.social_security_percentage || 0),
+        apply_solidarity: payFormData.apply_solidarity,
+        solidarity_percentage: Number(payFormData.solidarity_percentage || 0),
+        solidarity_amount: Number(solidarityAmount.toFixed(2)),
+        voucher_number: payFormData.voucher_number || "",
+      };
+
       const payload = {
         user_id: employee.id,
         year: payFormData.year,
@@ -760,6 +837,12 @@ export default function EmployeeManagement() {
         tax_amount: Number(taxAmount.toFixed(2)),
         social_security_amount: Number(ssAmount.toFixed(2)),
         solidarity_amount: Number(solidarityAmount.toFixed(2)),
+        apply_tax: payFormData.apply_tax,
+        tax_percentage: Number(payFormData.tax_percentage || 0),
+        apply_social_security: payFormData.apply_social_security,
+        social_security_percentage: Number(payFormData.social_security_percentage || 0),
+        apply_solidarity: payFormData.apply_solidarity,
+        solidarity_percentage: Number(payFormData.solidarity_percentage || 0),
         net_salary: Number(netSalary.toFixed(2)),
         hours_worked: payFormData.salary_type === "hourly" ? Number(payFormData.hours_worked || 0) : undefined,
         status: payFormData.status,
@@ -767,6 +850,7 @@ export default function EmployeeManagement() {
         delivery_method: payFormData.delivery_method,
         custom_delivery_method: payFormData.custom_delivery_method,
         voucher_number: payFormData.voucher_number,
+        extra_fields: extra_fields,
         notes: payFormData.notes,
       };
 
@@ -927,8 +1011,12 @@ export default function EmployeeManagement() {
           Number(p.allowance_amount || 0)
         ).toFixed(2),
         bonus: Number(p.bonus_amount || 0).toFixed(2),
-        fines: (Number(p.penalty_amount || 0) + Number(p.deduction_amount || 0)).toFixed(2),
-        taxes: (Number(p.tax_amount || 0) + Number(p.social_security_amount || 0)).toFixed(2),
+        fines: (Number(p.penalty_amount || 0) + Number(p.deduction_amount || 0) + Number(p.advance_amount || 0)).toFixed(2),
+        taxes: (
+          (Number(p.tax_amount || 0) > 0 ? Number(p.tax_amount) : ((p as any).extra_fields?.apply_tax ? (Number(p.base_salary || 0) * Number((p as any).extra_fields.tax_percentage ?? employee?.tax_percentage ?? 10) / 100) : 0)) +
+          (Number(p.social_security_amount || 0) > 0 ? Number(p.social_security_amount) : ((p as any).extra_fields?.apply_social_security ? (Number(p.base_salary || 0) * Number((p as any).extra_fields.social_security_percentage ?? employee?.social_security_percentage ?? 19.475) / 100) : 0)) +
+          (Number((p as any).solidarity_amount || 0) > 0 ? Number((p as any).solidarity_amount) : ((p as any).extra_fields?.apply_solidarity ? (Number(p.base_salary || 0) * Number((p as any).extra_fields.solidarity_percentage ?? employee?.solidarity_percentage ?? 1) / 100) : 0))
+        ).toFixed(2),
         net: Number(p.net_salary || 0).toFixed(2),
         status: p.status === "paid" ? "مدفوع" : "غير مدفوع",
         paid_at: p.paid_at || "—",
@@ -1766,10 +1854,16 @@ export default function EmployeeManagement() {
 
     const penalty = Number(p.penalty_amount || 0);
     const deduction = Number(p.deduction_amount || 0);
-    const advance = Number(p.advance_amount || 0);
-    const tax = Number(p.tax_amount || 0);
-    const ss = Number(p.social_security_amount || 0);
-    const solidarity = Number((p as any).solidarity_amount || 0);
+    const extra = (p as any).extra_fields || {};
+    const tax = Number(p.tax_amount || 0) > 0 
+      ? Number(p.tax_amount) 
+      : (extra.apply_tax ? (base * Number(extra.tax_percentage ?? u.tax_percentage ?? 10) / 100) : 0);
+    const ss = Number(p.social_security_amount || 0) > 0 
+      ? Number(p.social_security_amount) 
+      : (extra.apply_social_security ? (base * Number(extra.social_security_percentage ?? u.social_security_percentage ?? 19.475) / 100) : 0);
+    const solidarity = Number((p as any).solidarity_amount || 0) > 0 
+      ? Number((p as any).solidarity_amount) 
+      : (extra.apply_solidarity ? (base * Number(extra.solidarity_percentage ?? u.solidarity_percentage ?? 1) / 100) : 0);
     const totalDeductions = penalty + deduction + advance + tax + ss + solidarity;
 
     const net = Number(p.net_salary || (totalEarnings - totalDeductions));
@@ -3311,7 +3405,17 @@ export default function EmployeeManagement() {
                           Number(p.allowance_amount || 0) +
                           Number(p.other_additions || 0);
                         const fines = Number(p.penalty_amount || 0) + Number(p.deduction_amount || 0) + Number(p.advance_amount || 0);
-                        const taxes = Number(p.tax_amount || 0) + Number(p.social_security_amount || 0) + Number((p as any).solidarity_amount || 0);
+                        const extra = (p as any).extra_fields || {};
+                        const taxAmt = Number(p.tax_amount || 0) > 0 
+                          ? Number(p.tax_amount) 
+                          : (extra.apply_tax ? (Number(p.base_salary || 0) * Number(extra.tax_percentage ?? employee?.tax_percentage ?? 10) / 100) : 0);
+                        const ssAmt = Number(p.social_security_amount || 0) > 0 
+                          ? Number(p.social_security_amount) 
+                          : (extra.apply_social_security ? (Number(p.base_salary || 0) * Number(extra.social_security_percentage ?? employee?.social_security_percentage ?? 19.475) / 100) : 0);
+                        const solAmt = Number((p as any).solidarity_amount || 0) > 0 
+                          ? Number((p as any).solidarity_amount) 
+                          : (extra.apply_solidarity ? (Number(p.base_salary || 0) * Number(extra.solidarity_percentage ?? employee?.solidarity_percentage ?? 1) / 100) : 0);
+                        const taxes = taxAmt + ssAmt + solAmt;
 
                         return (
                           <tr key={p.id}>
