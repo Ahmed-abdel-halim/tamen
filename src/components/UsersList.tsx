@@ -1609,31 +1609,67 @@ export default function UsersList() {
 
       const method = showForm?.mode === 'edit' ? 'PUT' : 'POST';
 
-      const body: any = {
+      const rawBody: any = {
         ...formData,
-        email: formData.email || null,
-        salary: formData.salary || null,
-        national_id_number: formData.national_id_number.trim() || null,
-        job_title: formData.job_title.trim() || null,
-        housing_allowance: formData.housing_allowance || 0,
-        transportation_allowance: formData.transportation_allowance || 0,
-        communication_allowance: formData.communication_allowance || 0,
-        fixed_bonuses: formData.fixed_bonuses || 0,
-        fixed_fines: formData.fixed_fines || 0,
-        hourly_leave_deduction: formData.hourly_leave_deduction || 0,
-        daily_leave_deduction: formData.daily_leave_deduction || 0,
-        is_active: formData.is_active,
-        social_security_percentage: formData.social_security_percentage || 0,
-        tax_percentage: formData.tax_percentage || 0,
-        apply_tax: formData.apply_tax,
-        apply_social_security: formData.apply_social_security,
-        salary_type: formData.salary_type || 'monthly',
-        hourly_rate: formData.hourly_rate || 0,
-        tax_file_number: formData.tax_file_number || null,
-        social_security_file_number: formData.social_security_file_number || null,
+        email: formData.email?.trim() || null,
+        salary: formData.salary !== '' && formData.salary !== null && formData.salary !== undefined ? Number(formData.salary) : null,
+        national_id_number: formData.national_id_number?.trim() || null,
+        job_title: formData.job_title?.trim() || null,
+        birth_date: formData.birth_date || null,
+        hire_date: formData.hire_date || null,
+        work_start_date: formData.work_start_date || null,
+        start_date: formData.start_date || null,
+        resignation_date: formData.resignation_date || null,
         end_date: formData.end_date || null,
-        show_on_landing: formData.show_on_landing,
+        gender: formData.gender || null,
+        social_status: formData.social_status || null,
+        qualification: formData.qualification?.trim() || null,
+        blood_type: formData.blood_type?.trim() || null,
+        personal_phone: formData.personal_phone?.trim() || null,
+        guardian_phone: formData.guardian_phone?.trim() || null,
+        address: formData.address?.trim() || null,
+        bank_name: formData.bank_name?.trim() || null,
+        bank_branch: formData.bank_branch?.trim() || null,
+        account_number: formData.account_number?.trim() || null,
+        working_hours_from: formData.working_hours_from?.trim() || null,
+        working_hours_to: formData.working_hours_to?.trim() || null,
+        working_days_from: formData.working_days_from?.trim() || null,
+        working_days_to: formData.working_days_to?.trim() || null,
+        contract_type: formData.contract_type?.trim() || null,
+        contract_duration: formData.contract_duration?.trim() || null,
+        contract_conditions: formData.contract_conditions?.trim() || null,
+        eidc_username: formData.eidc_username?.trim() || null,
+        eidc_password: formData.eidc_password?.trim() || null,
+        lifo_username: formData.lifo_username?.trim() || null,
+        lifo_password: formData.lifo_password?.trim() || null,
+        housing_allowance: Number(formData.housing_allowance || 0),
+        transportation_allowance: Number(formData.transportation_allowance || 0),
+        communication_allowance: Number(formData.communication_allowance || 0),
+        fixed_bonuses: Number(formData.fixed_bonuses || 0),
+        fixed_fines: Number(formData.fixed_fines || 0),
+        hourly_leave_deduction: Number(formData.hourly_leave_deduction || 0),
+        daily_leave_deduction: Number(formData.daily_leave_deduction || 0),
+        is_active: Boolean(formData.is_active),
+        social_security_percentage: Number(formData.social_security_percentage || 0),
+        tax_percentage: Number(formData.tax_percentage || 0),
+        apply_tax: Boolean(formData.apply_tax),
+        apply_social_security: Boolean(formData.apply_social_security),
+        salary_type: formData.salary_type?.trim() || 'monthly',
+        hourly_rate: Number(formData.hourly_rate || 0),
+        tax_file_number: formData.tax_file_number?.trim() || null,
+        social_security_file_number: formData.social_security_file_number?.trim() || null,
+        show_on_landing: Boolean(formData.show_on_landing),
       };
+
+      // تحويل القيم النصية الفارغة إلى null لحماية قاعدة البيانات وقواعد التحقق
+      const body: any = {};
+      for (const [k, v] of Object.entries(rawBody)) {
+        if (typeof v === 'string' && v.trim() === '') {
+          body[k] = null;
+        } else {
+          body[k] = v;
+        }
+      }
 
       // الصلاحيات فقط للمستخدمين غير المديرين
       if (!formData.is_admin) {
@@ -1656,10 +1692,26 @@ export default function UsersList() {
       });
 
       if (!res.ok) {
-        let errorMessage = 'حدث خطأ';
+        let errorMessage = 'حدث خطأ في البيانات المدخلة';
         try {
-          const error = await res.json();
-          errorMessage = error.message || error.error || errorMessage;
+          const errorData = await res.json();
+          if (errorData.errors && typeof errorData.errors === 'object') {
+            const errorList = Object.values(errorData.errors).flat() as string[];
+            if (errorList.length > 0) {
+              errorMessage = errorList.join(' | ');
+            }
+            const fieldErrorsMap: Record<string, string> = {};
+            for (const [key, val] of Object.entries(errorData.errors)) {
+              if (Array.isArray(val) && val.length > 0) {
+                fieldErrorsMap[key] = String(val[0]);
+              }
+            }
+            setFormErrors(prev => ({ ...prev, ...fieldErrorsMap }));
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
         } catch (e) {
           errorMessage = `خطأ ${res.status}: ${res.statusText}`;
         }

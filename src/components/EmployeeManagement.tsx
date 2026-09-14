@@ -737,12 +737,34 @@ export default function EmployeeManagement() {
     if (!employee) return;
     setSavingEdit(true);
     try {
+      // تنظيف البيانات وتحويل النصوص الفارغة إلى null
+      const cleanEditData: any = {};
+      for (const [k, v] of Object.entries(editFormData)) {
+        if (typeof v === "string" && v.trim() === "") {
+          cleanEditData[k] = null;
+        } else {
+          cleanEditData[k] = v;
+        }
+      }
+
       const res = await fetch(`${API_BASE_URL}/users/${employee.id}`, {
         method: "PUT",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify(cleanEditData),
       });
-      if (!res.ok) throw new Error("فشل تحديث البيانات");
+      if (!res.ok) {
+        let errMsg = "فشل تحديث بيانات الموظف";
+        try {
+          const errData = await res.json();
+          if (errData.errors && typeof errData.errors === "object") {
+            const errList = Object.values(errData.errors).flat() as string[];
+            if (errList.length > 0) errMsg = errList.join(" | ");
+          } else if (errData.message) {
+            errMsg = errData.message;
+          }
+        } catch {}
+        throw new Error(errMsg);
+      }
       const updated = await res.json();
       setEmployee(updated);
       setEmployeesList((prev) => prev.map((e) => (e.id === employee.id ? { ...e, ...updated } : e)));
