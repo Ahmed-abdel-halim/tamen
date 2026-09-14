@@ -1230,7 +1230,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                    <div className="field-group"><label className="premium-label">موديل السيارة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_model} onChange={e => setClaimData({ ...claimData, damaged_vehicle_model: e.target.value })} placeholder="الموديل..." /></div>
                    <div className="field-group"><label className="premium-label">رقم لوحة السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_plate} onChange={e => setClaimData({ ...claimData, damaged_vehicle_plate: e.target.value })} placeholder="رقم اللوحة..." /></div>
                    <div className="field-group"><label className="premium-label">ورشة التصليح</label><input className="premium-field" value={claimData.damaged_vehicle_repair_shop} onChange={e => setClaimData({ ...claimData, damaged_vehicle_repair_shop: e.target.value })} placeholder="اسم وعنوان الورشة..." /></div>
-                   <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_vehicle_amount} onChange={e => setClaimData({ ...claimData, damaged_vehicle_amount: e.target.value })} placeholder="0.000" /></div>
+                   <div className="field-group"><label className="premium-label">مبلغ الأضرار ({claimCurrency === 'دينار تونسي' ? 'دينار تونسي' : 'دينار ليبي'})</label><input type="number" className="premium-field" value={claimData.damaged_vehicle_amount} onChange={e => setClaimData({ ...claimData, damaged_vehicle_amount: e.target.value })} placeholder="0.000" /></div>
                    <div className="field-group"><label className="premium-label">بيانات أضرار السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_details} onChange={e => setClaimData({ ...claimData, damaged_vehicle_details: e.target.value })} placeholder="كسر زجاج أمامي، إلخ..." /></div>
                    <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">صور الأضرار (يمكن اختيار أكثر من صورة)</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedVehiclePhotos(Array.from(e.target.files || []))} /></div>
                  </div>
@@ -1239,7 +1239,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px', borderBottom: '1px dashed var(--border)', paddingBottom: '20px' }}>
                    <h5 style={{ gridColumn: 'span 2', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: 0 }}><i className="fa-solid fa-person me-2"></i>أضرار الشخص/الإصابة الجسدية</h5>
                    <div className="field-group"><label className="premium-label">اسم الشخص المتضرر</label><input className="premium-field" value={claimData.damaged_person_name} onChange={e => setClaimData({ ...claimData, damaged_person_name: e.target.value })} placeholder="الاسم الكامل..." /></div>
-                   <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_person_amount} onChange={e => setClaimData({ ...claimData, damaged_person_amount: e.target.value })} placeholder="0.000" /></div>
+                   <div className="field-group"><label className="premium-label">مبلغ الأضرار ({claimCurrency === 'دينار تونسي' ? 'دينار تونسي' : 'دينار ليبي'})</label><input type="number" className="premium-field" value={claimData.damaged_person_amount} onChange={e => setClaimData({ ...claimData, damaged_person_amount: e.target.value })} placeholder="0.000" /></div>
                    <div className="field-group"><label className="premium-label">بيانات أضرار الشخص</label><input className="premium-field" value={claimData.damaged_person_details} onChange={e => setClaimData({ ...claimData, damaged_person_details: e.target.value })} placeholder="كسر في اليد، إلخ..." /></div>
                    <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedPersonPhotos(Array.from(e.target.files || []))} /></div>
                  </div>
@@ -1248,7 +1248,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                    <h5 style={{ gridColumn: 'span 2', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: 0 }}><i className="fa-solid fa-building me-2"></i>أضرار المبنى/الممتلكات</h5>
                    <div className="field-group" style={{ gridColumn: 'span 2' }}><label className="premium-label">وصف المبنى المتضرر</label><input className="premium-field" value={claimData.damaged_building_description} onChange={e => setClaimData({ ...claimData, damaged_building_description: e.target.value })} placeholder="وصف الضرر..." /></div>
-                   <div className="field-group"><label className="premium-label">مبلغ الأضرار (دينار)</label><input type="number" className="premium-field" value={claimData.damaged_building_amount} onChange={e => setClaimData({ ...claimData, damaged_building_amount: e.target.value })} placeholder="0.000" /></div>
+                   <div className="field-group"><label className="premium-label">مبلغ الأضرار ({claimCurrency === 'دينار تونسي' ? 'دينار تونسي' : 'دينار ليبي'})</label><input type="number" className="premium-field" value={claimData.damaged_building_amount} onChange={e => setClaimData({ ...claimData, damaged_building_amount: e.target.value })} placeholder="0.000" /></div>
                    <div className="field-group"><label className="premium-label">صور الأضرار</label><input type="file" accept="image/*" multiple className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDamagedBuildingPhotos(Array.from(e.target.files || []))} /></div>
                  </div>
                )}
@@ -1326,7 +1326,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
 
                 {claimCurrency !== 'دينار ليبي' && (
                   <div className="field-group">
-                    <label className="premium-label">المبلغ بالعملة الأجنبية ({claimCurrency === 'أخرى' ? customCurrency || 'المخصصة' : claimCurrency})</label>
+                    <label className="premium-label">{claimCurrency === 'دينار تونسي' ? 'المبلغ بالدينار التونسي (د.ت)' : (claimCurrency === 'أخرى' ? `المبلغ بالعملة (${customCurrency || 'المخصصة'})` : `المبلغ بالعملة الأجنبية (${claimCurrency})`)}</label>
                     <input 
                       type="number" 
                       step="any"
@@ -1346,7 +1346,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
 
                 <div className="field-group">
                   <label className="premium-label">
-                    {claimCurrency === 'دينار ليبي' ? 'قيمة الأضرار (دينار ليبي)' : 'ما يعادل بالدينار الليبي'}
+                    {claimCurrency === 'دينار ليبي' ? 'قيمة الأضرار (دينار ليبي)' : (claimCurrency === 'دينار تونسي' ? 'ما يعادل بالدينار الليبي (د.ل) إن توفر' : 'ما يعادل بالدينار الليبي')}
                   </label>
                   <input 
                     type="number" 

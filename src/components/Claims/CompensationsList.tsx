@@ -147,7 +147,17 @@ export default function CompensationsList() {
     setRecipientName(claim.recipient_name || claim.claimant_name || '');
     setPaymentMethod(claim.payment_method || 'خصم من وديعة');
     setDocNumber(claim.document_number || '');
-    setCurrency(claim.currency || 'LYD');
+    let detectedCurrency = claim.currency;
+    if (!detectedCurrency) {
+      if (claim.assessor_other_amount && (claim.assessor_other_amount.includes('تونس') || claim.assessor_other_amount.includes('TND'))) {
+        detectedCurrency = 'TND';
+      } else if (claim.assessor_amount_dollar) {
+        detectedCurrency = 'USD';
+      } else {
+        detectedCurrency = 'LYD';
+      }
+    }
+    setCurrency(detectedCurrency);
     setSubCategory(claim.sub_category || 'التعويضات');
     setNotes(claim.finance_notes || '');
     setFinancialImage(null);
@@ -477,9 +487,10 @@ export default function CompensationsList() {
               const rawAdd = c.additional_expenses;
               const rawTot = c.total_paid || (rawComp ? (Number(rawComp) + (Number(rawAdd) || 0)) : null);
 
-              const compVal = rawComp ? `${Number(rawComp).toLocaleString('en-US')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
-              const addExp = rawAdd ? `${Number(rawAdd).toLocaleString('en-US')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
-              const totalVal = rawTot ? `${Number(rawTot).toLocaleString('en-US')} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—';
+              const getCurrSymbol = (curr: string) => curr === 'TND' ? 'د.ت' : (curr === 'USD' ? '$' : 'د.ل');
+              const compVal = rawComp ? `${Number(rawComp).toLocaleString('en-US')} ${getCurrSymbol(c.currency)}` : '—';
+              const addExp = rawAdd ? `${Number(rawAdd).toLocaleString('en-US')} ${getCurrSymbol(c.currency)}` : '—';
+              const totalVal = rawTot ? `${Number(rawTot).toLocaleString('en-US')} ${getCurrSymbol(c.currency)}` : '—';
               
               const statusDisplay = getStatusLabel(c.status, c.finance_status);
 
@@ -701,7 +712,7 @@ export default function CompensationsList() {
                         <td>{c.sub_category || 'التعويضات'}</td>
                         <td style={{ fontWeight: 800 }}>
                           {c.compensation_value 
-                            ? `${parseFloat(c.compensation_value).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` 
+                            ? `${parseFloat(c.compensation_value).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}` 
                             : (() => {
                                 const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
                                 const sVal = settlement?.details?.total_value;
@@ -713,10 +724,10 @@ export default function CompensationsList() {
                               })()
                           }
                         </td>
-                        <td>{c.additional_expenses ? `${parseFloat(c.additional_expenses).toLocaleString()} د.ل` : '—'}</td>
+                        <td>{c.additional_expenses ? `${parseFloat(c.additional_expenses).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : 'د.ل'}` : '—'}</td>
                         <td style={{ fontWeight: 850, color: '#166534' }}>
                           {c.total_paid 
-                            ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` 
+                            ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}` 
                             : (() => {
                                 const settlement = c.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
                                 const sVal = settlement?.details?.total_value;
@@ -828,12 +839,13 @@ export default function CompensationsList() {
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>نوع العملة</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button type="button" onClick={() => setCurrency('LYD')} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: currency === 'LYD' ? '#014cb1' : 'var(--bg)', color: currency === 'LYD' ? '#fff' : 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>دينار ليبي (LYD)</button>
+                    <button type="button" onClick={() => setCurrency('TND')} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: currency === 'TND' ? '#014cb1' : 'var(--bg)', color: currency === 'TND' ? '#fff' : 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>دينار تونسي (TND)</button>
                     <button type="button" onClick={() => setCurrency('USD')} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: currency === 'USD' ? '#014cb1' : 'var(--bg)', color: currency === 'USD' ? '#fff' : 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>دولار ($)</button>
                   </div>
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>إجمالي القيمة المسددة (تلقائي)</label>
-                  <input type="text" readOnly value={`${(Number(compensationValue) || 0) + (Number(additionalExpenses) || 0)} ${currency}`} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--panel)', color: '#166534', fontWeight: 'bold' }} />
+                  <input type="text" readOnly value={`${(Number(compensationValue) || 0) + (Number(additionalExpenses) || 0)} ${currency === 'TND' ? 'د.ت (دينار تونسي)' : (currency === 'USD' ? '$ (دولار)' : 'د.ل (دينار ليبي)')}`} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--panel)', color: '#166534', fontWeight: 'bold' }} />
                 </div>
               </div>
 

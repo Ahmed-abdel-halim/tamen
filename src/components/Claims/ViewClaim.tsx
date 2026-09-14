@@ -666,15 +666,15 @@ export default function ViewClaim() {
                 </div>
                 <div className="detail-item">
                   <span className="label">قيمة التعويض</span>
-                  <span className="value fw-bold" style={{ color: '#014cb1' }}>{Number(claim.compensation_value).toLocaleString()} {claim.currency === 'USD' ? '$' : 'د.ل'}</span>
+                  <span className="value fw-bold" style={{ color: '#014cb1' }}>{Number(claim.compensation_value).toLocaleString()} {claim.currency === 'TND' ? 'د.ت (دينار تونسي)' : (claim.currency === 'USD' ? '$' : 'د.ل (دينار ليبي)')}</span>
                 </div>
                 <div className="detail-item">
                   <span className="label">مصاريف إضافية</span>
-                  <span className="value">{Number(claim.additional_expenses).toLocaleString()} د.ل</span>
+                  <span className="value">{Number(claim.additional_expenses).toLocaleString()} {claim.currency === 'TND' ? 'د.ت' : 'د.ل'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="label">إجمالي القيمة المسددة</span>
-                  <span className="value fw-bold" style={{ color: '#139625', fontSize: '1.1rem' }}>{Number(claim.total_paid).toLocaleString()} {claim.currency === 'USD' ? '$' : 'د.ل'}</span>
+                  <span className="value fw-bold" style={{ color: '#139625', fontSize: '1.1rem' }}>{Number(claim.total_paid).toLocaleString()} {claim.currency === 'TND' ? 'د.ت (دينار تونسي)' : (claim.currency === 'USD' ? '$' : 'د.ل (دينار ليبي)')}</span>
                 </div>
                 {claim.finance_status && (
                   <div className="detail-item">

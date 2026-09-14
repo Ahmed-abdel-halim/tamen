@@ -122,7 +122,8 @@ export default function FinanceClaimsList() {
     const printWindow = window.open('', '', 'width=1000,height=850');
     if (!printWindow) return;
 
-    const qrData = `وصل صرف تعويض حادث\nرقم المطالبة: ${claim.claim_number}\nالمستلم: ${claim.recipient_name}\nالقيمة الكلية: ${claim.total_paid} ${claim.currency}\nالتاريخ: ${new Date().toLocaleDateString('en-GB')}`;
+    const currName = claim.currency === 'TND' ? 'دينار تونسي' : (claim.currency === 'USD' ? 'دولار أمريكي' : 'دينار ليبي');
+    const qrData = `وصل صرف تعويض حادث\nرقم المطالبة: ${claim.claim_number}\nالمستلم: ${claim.recipient_name}\nالقيمة الكلية: ${claim.total_paid} ${currName}\nالتاريخ: ${new Date().toLocaleDateString('en-GB')}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
 
     printWindow.document.write(`
@@ -195,7 +196,7 @@ export default function FinanceClaimsList() {
             </div>
             <div class="row">
               <div class="label">مبلغا وقدره:</div>
-              <div class="value amount-highlight">${Number(claim.total_paid).toLocaleString('en-US')} ${claim.currency === 'USD' ? 'دولار أمريكي' : 'دينار ليبي'}</div>
+              <div class="value amount-highlight">${Number(claim.total_paid).toLocaleString('en-US')} ${claim.currency === 'TND' ? 'دينار تونسي' : (claim.currency === 'USD' ? 'دولار أمريكي' : 'دينار ليبي')}</div>
             </div>
             <div class="row">
               <div class="label">طريقة السداد:</div>
@@ -308,9 +309,9 @@ export default function FinanceClaimsList() {
                 <td>${c.recipient_name}</td>
                 <td>${c.payment_method}</td>
                 <td>${c.document_number || '—'}</td>
-                <td>${Number(c.compensation_value).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}</td>
-                <td>${Number(c.additional_expenses).toLocaleString()} د.ل</td>
-                <td style="color: #166534; font-weight: bold;">${Number(c.total_paid).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}</td>
+                <td>${Number(c.compensation_value).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}</td>
+                <td>${Number(c.additional_expenses).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : 'د.ل'}</td>
+                <td style="color: #166534; font-weight: bold;">${Number(c.total_paid).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}</td>
                 <td>${c.finance_approved_at ? new Date(c.finance_approved_at).toLocaleDateString('en-GB') : '—'}</td>
               </tr>
             `).join('')}
@@ -458,9 +459,9 @@ export default function FinanceClaimsList() {
                       <td>{c.document?.insurance_number || c.document_manual_data?.insurance_number || '—'}</td>
                       <td>{c.payment_method}</td>
                       <td>{c.document_number || '—'}</td>
-                      <td style={{ fontWeight: 'bold' }}>{c.compensation_value ? `${parseFloat(c.compensation_value).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—'}</td>
-                      <td>{c.additional_expenses ? `${parseFloat(c.additional_expenses).toLocaleString()} د.ل` : '—'}</td>
-                      <td style={{ fontWeight: 'bold', color: '#139625' }}>{c.total_paid ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'USD' ? '$' : 'د.ل'}` : '—'}</td>
+                      <td style={{ fontWeight: 'bold' }}>{c.compensation_value ? `${parseFloat(c.compensation_value).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}` : '—'}</td>
+                      <td>{c.additional_expenses ? `${parseFloat(c.additional_expenses).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : 'د.ل'}` : '—'}</td>
+                      <td style={{ fontWeight: 'bold', color: '#139625' }}>{c.total_paid ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}` : '—'}</td>
                       <td>{c.updated_at ? c.updated_at.split('T')[0] : '—'}</td>
                       <td className="no-print">
                         {activeTab === 'pending' ? (
