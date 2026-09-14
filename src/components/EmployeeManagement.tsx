@@ -131,7 +131,10 @@ interface CustodyItem {
 
 interface InsuranceDoc {
   id: number;
-  document_number: string;
+  document_number?: string;
+  insurance_number?: string;
+  doc_category?: string;
+  view_url_prefix?: string;
   insured_name?: string;
   insurance_type?: string;
   start_date?: string;
@@ -637,13 +640,25 @@ export default function EmployeeManagement() {
       } catch {}
 
       try {
-        const rDocs = await fetch(`${API_BASE_URL}/insurance-documents?created_by=${empId}&per_page=100`, {
+        let docsData: any[] = [];
+        // First try the unified issued-documents endpoint
+        const rIssued = await fetch(`${API_BASE_URL}/users/${empId}/issued-documents?per_page=1000`, {
           headers: authHeaders(),
         });
-        if (rDocs.ok) {
-          const d = await rDocs.json();
-          setInsuranceDocs(Array.isArray(d) ? d : d.data || []);
+        if (rIssued.ok) {
+          const res = await rIssued.json();
+          docsData = Array.isArray(res) ? res : res.data || [];
+        } else {
+          // Fallback to insurance-documents with filter
+          const rDocs = await fetch(`${API_BASE_URL}/insurance-documents?created_by=${empId}&user_id=${empId}&per_page=1000`, {
+            headers: authHeaders(),
+          });
+          if (rDocs.ok) {
+            const d = await rDocs.json();
+            docsData = Array.isArray(d) ? d : d.data || [];
+          }
         }
+        setInsuranceDocs(docsData);
       } catch {}
 
       try {
@@ -1075,7 +1090,7 @@ export default function EmployeeManagement() {
       ];
 
       const data = filteredDocs.map((d) => ({
-        doc_num: d.document_number,
+        doc_num: d.insurance_number || d.document_number || "—",
         type: d.insurance_type || "—",
         insured: d.insured_name || "—",
         start: fmtDate(d.start_date),
@@ -3051,7 +3066,21 @@ export default function EmployeeManagement() {
 
   const filteredDocs = insuranceDocs.filter((d) => {
     if (excludeCanceledDocs && d.status === "canceled") return false;
-    if (selectedDocType !== "all" && d.insurance_type && !d.insurance_type.includes(selectedDocType)) {
+    if (selectedDocType !== "all") {
+      const cat = d.doc_category;
+      if (cat && cat === selectedDocType) return true;
+      const t = d.insurance_type || "";
+      if (selectedDocType === "insurance_documents" && (t.includes("سيارات") || t.includes("إجباري") || t.includes("شامل"))) return true;
+      if (selectedDocType === "international_insurance_documents" && (t.includes("دولي") || t.includes("بطاقة"))) return true;
+      if (selectedDocType === "travel_insurance_documents" && (t.includes("سفر") || t.includes("مسافر"))) return true;
+      if (selectedDocType === "resident_insurance_documents" && (t.includes("وافد") || t.includes("مقيم") || t.includes("إقامة"))) return true;
+      if (selectedDocType === "marine_structure_insurance_documents" && (t.includes("بحر") || t.includes("هياكل"))) return true;
+      if (selectedDocType === "professional_liability_insurance_documents" && (t.includes("مسؤولية") || t.includes("مهنية"))) return true;
+      if (selectedDocType === "personal_accident_insurance_documents" && (t.includes("حوادث") || t.includes("شخصية"))) return true;
+      if (selectedDocType === "school_student_insurance_documents" && (t.includes("طالب") || t.includes("مدارس"))) return true;
+      if (selectedDocType === "cargo_insurance_documents" && (t.includes("بضائع") || t.includes("شحن"))) return true;
+      if (selectedDocType === "cash_in_transit_insurance_documents" && (t.includes("نقد") || t.includes("أموال"))) return true;
+      if (t.includes(selectedDocType)) return true;
       return false;
     }
     return true;
@@ -4010,7 +4039,7 @@ export default function EmployeeManagement() {
                       {filteredDocs.map((doc) => (
                         <tr key={doc.id}>
                           <td>
-                            <strong className="text-cyan">{doc.document_number}</strong>
+                            <strong className="text-cyan">{doc.insurance_number || doc.document_number || "—"}</strong>
                           </td>
                           <td>{doc.insurance_type || "تأمين عام"}</td>
                           <td>{doc.insured_name || "—"}</td>
@@ -4030,7 +4059,10 @@ export default function EmployeeManagement() {
                           <td>
                             <button
                               className="tbl-btn view"
-                              onClick={() => navigate(`/insurance-documents/${doc.id}`)}
+                              onClick={() => {
+                                const prefix = doc.view_url_prefix || "/insurance-documents/";
+                                navigate(`${prefix}${doc.id}`);
+                              }}
                               title="عرض تفاصيل الوثيقة"
                             >
                               <i className="fa-solid fa-arrow-up-right-from-square" />
