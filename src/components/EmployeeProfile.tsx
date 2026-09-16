@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
+import { printEmployeeForm } from "../utils/printEmployeeForm";
 
 type User = {
   id: number;
@@ -950,7 +951,11 @@ export default function EmployeeProfile() {
             >
               <i className="fa-solid fa-stamp"></i> طباعة اعتماد الصفة والتوقيع
             </button>
-            <button className="btn-primary-sm" onClick={() => window.print()}>
+            <button 
+              className="btn-primary-sm" 
+              onClick={() => printEmployeeForm(user, custodiesList)}
+              style={{ background: '#0369a1', borderColor: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
               <i className="fa-solid fa-print"></i> طباعة الاستمارة
             </button>
           </div>
