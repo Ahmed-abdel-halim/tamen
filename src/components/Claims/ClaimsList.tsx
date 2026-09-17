@@ -6,6 +6,7 @@ import CreateClaimModal from './CreateClaim';
 // @ts-ignore
 import { saveAs } from 'file-saver';
 import { generatePremiumExcel } from '../../utils/excelGenerator';
+import { printClaimsDetailedReport } from '../../utils/printClaimsDetailedReport';
 
 
 export default function ClaimsList() {
@@ -23,11 +24,98 @@ export default function ClaimsList() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [claimIdToDelete, setClaimIdToDelete] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [yearFilter, setYearFilter] = useState('');
+  const [exchangeRates, setExchangeRates] = useState<{ usd_to_lyd: number; tnd_to_lyd: number; eur_to_lyd: number }>({
+    usd_to_lyd: 7.15,
+    tnd_to_lyd: 2.30,
+    eur_to_lyd: 7.65
+  });
+  const [reportUsdRate, setReportUsdRate] = useState<string>('7.15');
+  const [reportTndRate, setReportTndRate] = useState<string>('2.30');
+  const [showRatesModal, setShowRatesModal] = useState(false);
+  const [savingRates, setSavingRates] = useState(false);
+  const [modalRates, setModalRates] = useState({ usd_to_lyd: '7.15', tnd_to_lyd: '2.30', eur_to_lyd: '7.65' });
+
+  useEffect(() => {
+    fetchExchangeRates();
+  }, []);
+
+  const fetchExchangeRates = async () => {
+    try {
+      const cached = localStorage.getItem('mli_exchange_rates');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setExchangeRates(parsed);
+        setReportUsdRate(String(parsed.usd_to_lyd || 7.15));
+        setReportTndRate(String(parsed.tnd_to_lyd || 2.30));
+        setModalRates({
+          usd_to_lyd: String(parsed.usd_to_lyd || 7.15),
+          tnd_to_lyd: String(parsed.tnd_to_lyd || 2.30),
+          eur_to_lyd: String(parsed.eur_to_lyd || 7.65)
+        });
+      }
+      const response = await fetch(`${API_BASE_URL}/exchange-rates`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setExchangeRates(data);
+        localStorage.setItem('mli_exchange_rates', JSON.stringify(data));
+        setReportUsdRate(String(data.usd_to_lyd || 7.15));
+        setReportTndRate(String(data.tnd_to_lyd || 2.30));
+        setModalRates({
+          usd_to_lyd: String(data.usd_to_lyd || 7.15),
+          tnd_to_lyd: String(data.tnd_to_lyd || 2.30),
+          eur_to_lyd: String(data.eur_to_lyd || 7.65)
+        });
+      }
+    } catch (e) {
+      console.warn('Could not fetch exchange rates', e);
+    }
+  };
+
+  const handleSaveSystemRates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingRates(true);
+    try {
+      const payload = {
+        usd_to_lyd: parseFloat(modalRates.usd_to_lyd) || 7.15,
+        tnd_to_lyd: parseFloat(modalRates.tnd_to_lyd) || 2.30,
+        eur_to_lyd: parseFloat(modalRates.eur_to_lyd) || 7.65
+      };
+      const response = await fetch(`${API_BASE_URL}/exchange-rates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        console.warn('Backend exchange-rates response not ok');
+      }
+      setExchangeRates(payload);
+      localStorage.setItem('mli_exchange_rates', JSON.stringify(payload));
+      setReportUsdRate(String(payload.usd_to_lyd));
+      setReportTndRate(String(payload.tnd_to_lyd));
+      setShowRatesModal(false);
+      showToast('تم تحديث وحفظ أسعار الصرف بنجاح', 'success');
+    } catch (e) {
+      showToast('خطأ في حفظ أسعار الصرف', 'error');
+    } finally {
+      setSavingRates(false);
+    }
+  };
+
   const perPage = 15;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, damageTypeFilter, startDateFilter, endDateFilter, searchQuery, sortBy]);
+  }, [statusFilter, damageTypeFilter, startDateFilter, endDateFilter, searchQuery, sortBy, yearFilter]);
 
   useEffect(() => {
     fetchClaims();
@@ -109,23 +197,33 @@ export default function ClaimsList() {
     setDamageTypeFilter('');
     setStartDateFilter('');
     setEndDateFilter('');
+    setYearFilter('');
     setSortBy('date_desc');
+    setReportUsdRate(String(exchangeRates.usd_to_lyd || 7.15));
+    setReportTndRate(String(exchangeRates.tnd_to_lyd || 2.30));
   };
 
   const exportToExcel = async () => {
     try {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const activeUsdRate = parseFloat(String(reportUsdRate)) || exchangeRates.usd_to_lyd || 7.15;
+      const activeTndRate = parseFloat(String(reportTndRate)) || exchangeRates.tnd_to_lyd || 2.30;
+      const activeEurRate = exchangeRates.eur_to_lyd || 7.65;
+
       const columns = [
-        { header: 'رقم المطالبة', key: 'reference_number', width: 25 },
-        { header: 'رقم الوثيقة', key: 'insurance_number', width: 25 },
-        { header: 'تاريخ الحادث', key: 'accident_date', width: 20 },
-        { header: 'تاريخ طلب التعويض', key: 'claim_date', width: 20 },
-        { header: 'القيمة المقدرة للتعويض', key: 'estimated_amount', width: 25 },
-        { header: 'نوع الأضرار', key: 'damage_type', width: 15 },
-        { header: 'مكان الحادث', key: 'accident_location', width: 25 },
-        { header: 'مبلغ التعويض النهائي', key: 'final_amount', width: 25 },
-        { header: 'وين واصلة المطالبة', key: 'status', width: 25 },
-        { header: 'تاريخ التسجيل', key: 'created_at', width: 20 },
+        { header: 'رقم المطالبة', key: 'reference_number', width: 22 },
+        { header: 'رقم الوثيقة', key: 'insurance_number', width: 22 },
+        { header: 'المؤمن له', key: 'insured_name', width: 25 },
+        { header: 'تاريخ الحادث', key: 'accident_date', width: 18 },
+        { header: 'تاريخ طلب التعويض', key: 'claim_date', width: 18 },
+        { header: 'نوع الأضرار', key: 'damage_type', width: 18 },
+        { header: 'مكان الحادث', key: 'accident_location', width: 22 },
+        { header: 'الاحتياطي (عملة أجنبية)', key: 'foreign_amount', width: 22 },
+        { header: 'سعر التحويل المعتمد', key: 'applied_rate', width: 18 },
+        { header: 'الاحتياطي المحتسب (دينار ليبي)', key: 'reserve_lyd', width: 25 },
+        { header: 'مبلغ التعويض النهائي (دينار ليبي)', key: 'final_amount', width: 25 },
+        { header: 'وين واصلة المطالبة', key: 'status', width: 22 },
+        { header: 'تاريخ التسجيل', key: 'created_at', width: 18 },
       ];
 
       const toArabicNumerals = (str: string | number) => {
@@ -133,34 +231,74 @@ export default function ClaimsList() {
       };
 
       const data = filteredClaims.map(claim => {
-        // Extract Estimated Amount (from assessor or settlement transfer)
-        let estimatedAmount = claim.assessor_amount_dinar ? Number(claim.assessor_amount_dinar) : 0;
-        const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
-        if (settlementTransfer && settlementTransfer.details?.total_value) {
-          estimatedAmount = Number(settlementTransfer.details.total_value);
+        let foreignAmountStr = '—';
+        let appliedRateStr = '—';
+        let reserveLYD = 0;
+
+        if (claim.assessor_amount_dollar && Number(claim.assessor_amount_dollar) > 0) {
+          const dollarVal = Number(claim.assessor_amount_dollar);
+          foreignAmountStr = `${dollarVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} $`;
+          appliedRateStr = `1$ = ${activeUsdRate} د.ل`;
+          reserveLYD = dollarVal * activeUsdRate;
+        } else if (claim.assessor_other_amount) {
+          const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s*(.*)$/);
+          if (match) {
+            const amt = parseFloat(match[1]) || 0;
+            const curr = match[2]?.trim() || '';
+            if (curr.includes('تونس') || curr.toUpperCase().includes('TND')) {
+              foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ت`;
+              appliedRateStr = `1 د.ت = ${activeTndRate} د.ل`;
+              reserveLYD = amt * activeTndRate;
+            } else if (curr.includes('يورو') || curr.toUpperCase().includes('EUR')) {
+              foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} €`;
+              appliedRateStr = `1€ = ${activeEurRate} د.ل`;
+              reserveLYD = amt * activeEurRate;
+            } else if (curr.includes('دولار') || curr.toUpperCase().includes('USD')) {
+              foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} $`;
+              appliedRateStr = `1$ = ${activeUsdRate} د.ل`;
+              reserveLYD = amt * activeUsdRate;
+            } else {
+              foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} ${curr}`;
+              appliedRateStr = '1.00';
+              reserveLYD = amt;
+            }
+          } else {
+            foreignAmountStr = claim.assessor_other_amount;
+            reserveLYD = Number(claim.assessor_amount_dinar) || 0;
+          }
+        } else if (claim.assessor_amount_dinar) {
+          reserveLYD = Number(claim.assessor_amount_dinar) || 0;
+          appliedRateStr = '1.00';
         }
 
-        let estimatedText = estimatedAmount ? `${toArabicNumerals(estimatedAmount.toLocaleString('en-US'))} د.ل` : '—';
-        if (claim.assessor_other_amount) {
-          estimatedText += ` (${claim.assessor_other_amount})`;
-        }
-
-        // Extract Final Amount (from payment transfer)
+        // Final / Settlement Amount
         let finalAmount = 0;
+        const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
         const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
-        if (paymentTransfer && paymentTransfer.details?.financial_value) {
+        if (claim.total_paid && Number(claim.total_paid) > 0) {
+          finalAmount = Number(claim.total_paid);
+        } else if (claim.compensation_value && Number(claim.compensation_value) > 0) {
+          finalAmount = Number(claim.compensation_value) + (Number(claim.additional_expenses) || 0);
+        } else if (paymentTransfer && paymentTransfer.details?.financial_value) {
           finalAmount = Number(paymentTransfer.details.financial_value);
+        } else if (settlementTransfer && settlementTransfer.details?.total_value) {
+          finalAmount = Number(settlementTransfer.details.total_value);
         }
+
+        const insuredName = claim.document?.insured_name || claim.document_manual_data?.insured_name || (claim.additional_documents && claim.additional_documents[0]?.insured_name) || '—';
 
         return {
           reference_number: toArabicNumerals(claim.claim_number || claim.reference_number),
           insurance_number: toArabicNumerals(claim.document?.insurance_number || claim.document_manual_data?.insurance_number || (claim.additional_documents && claim.additional_documents[0]?.insurance_number) || '—'),
+          insured_name: insuredName,
           accident_date: claim.accident_date ? toArabicNumerals(new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
           claim_date: claim.claim_date ? toArabicNumerals(new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB')) : '—',
-          estimated_amount: estimatedText,
           damage_type: claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: string) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—',
           accident_location: claim.accident_location || '—',
-          final_amount: finalAmount ? `${toArabicNumerals(finalAmount.toLocaleString('en-US'))} د.ل` : '—',
+          foreign_amount: foreignAmountStr,
+          applied_rate: appliedRateStr,
+          reserve_lyd: reserveLYD ? `${reserveLYD.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ل` : '—',
+          final_amount: finalAmount ? `${finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ل` : '—',
           status: getStatusLabel(claim.status),
           created_at: toArabicNumerals(new Date(claim.created_at).toLocaleDateString('en-GB')),
         };
@@ -168,11 +306,11 @@ export default function ClaimsList() {
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - إدارة المطالبات',
-        subtitle: `تقرير المطالبات المسجلة - تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}`,
+        subtitle: `تقرير المطالبات المسجلة (سعر الدولار: ${activeUsdRate} د.ل | سعر التونسي: ${activeTndRate} د.ل) - استخراج: ${new Date().toLocaleDateString('en-GB')}`,
         columns,
         data,
         fileName: 'تقرير_المطالبات',
-        qrData: `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `تقرير المطالبات - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nسعر الدولار: ${activeUsdRate}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير التقرير بنجاح', 'success');
@@ -180,6 +318,8 @@ export default function ClaimsList() {
       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
     }
   };
+
+
 
 
 
@@ -204,6 +344,12 @@ export default function ClaimsList() {
       c.status?.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (!matchesSearch) return false;
+
+    if (yearFilter) {
+      const yearAcc = c.accident_date ? new Date(String(c.accident_date).replace(' ', 'T')).getFullYear().toString() : '';
+      const yearClm = c.claim_date ? new Date(String(c.claim_date).replace(' ', 'T')).getFullYear().toString() : '';
+      if (yearAcc !== yearFilter && yearClm !== yearFilter) return false;
+    }
 
     if (startDateFilter) {
       const claimDate = new Date(c.claim_date);
@@ -244,319 +390,31 @@ export default function ClaimsList() {
   const paginatedClaims = filteredClaims.slice(startIndex, endIndex);
 
   const handlePrintDetailedReport = () => {
-    const printWindow = window.open('', '', 'width=1200,height=900');
-    if (!printWindow) return;
+    const activeRates = {
+      usd_to_lyd: parseFloat(String(reportUsdRate)) || exchangeRates.usd_to_lyd || 7.15,
+      tnd_to_lyd: parseFloat(String(reportTndRate)) || exchangeRates.tnd_to_lyd || 2.30,
+      eur_to_lyd: exchangeRates.eur_to_lyd || 7.65,
+    };
 
     const dateText = startDateFilter || endDateFilter
       ? `الفترة من: ${startDateFilter || 'البداية'} إلى: ${endDateFilter || 'النهاية'}`
       : 'كل التواريخ';
 
-    const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
+    const statusText = statusFilter ? getStatusLabel(statusFilter) : 'كل الحالات';
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-    const qrData = `تقرير المطالبات التفصيلي - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nالفترة: ${dateText}\nعدد المطالبات: ${filteredClaims.length}`;
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
-
-    // Calculate totals dynamically
-    let totalReserveLYD = 0;
-    const currencySums: { [key: string]: number } = {};
-    let totalSettlementLYD = 0;
-
-    filteredClaims.forEach(claim => {
-      if (claim.assessor_amount_dinar) {
-        totalReserveLYD += Number(claim.assessor_amount_dinar) || 0;
-      }
-
-      const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
-      if (settlementTransfer?.details?.total_value) {
-        totalSettlementLYD += Number(settlementTransfer.details.total_value) || 0;
-      }
-
-      if (claim.assessor_other_amount) {
-        const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s+(.+)$/);
-        if (match) {
-          const amount = Number(match[1]) || 0;
-          const currency = match[2].trim();
-          currencySums[currency] = (currencySums[currency] || 0) + amount;
-        } else {
-          const numMatch = String(claim.assessor_other_amount).match(/[\d.]+/);
-          const num = numMatch ? Number(numMatch[0]) || 0 : 0;
-          const curr = String(claim.assessor_other_amount).replace(/[\d.\s]+/g, '').trim() || 'عملة أخرى';
-          if (num) {
-            currencySums[curr] = (currencySums[curr] || 0) + num;
-          }
-        }
-      } else if (claim.assessor_amount_dollar) {
-        currencySums['دولار أمريكي'] = (currencySums['دولار أمريكي'] || 0) + (Number(claim.assessor_amount_dollar) || 0);
-      }
+    printClaimsDetailedReport(filteredClaims, {
+      rates: activeRates,
+      dateText,
+      statusText,
+      yearText: yearFilter ? `حوادث سنة ${yearFilter}` : undefined,
+      currentUser
     });
-
-    const originalCurrencySumText = Object.entries(currencySums)
-      .map(([curr, sum]) => `${sum.toLocaleString('en-US')} ${curr}`)
-      .join(' + ') || '—';
-
-    const documentTypeLabelMap: any = {
-      'InsuranceDocument': 'سيارات',
-      'InternationalInsuranceDocument': 'سيارات دولي',
-      'TravelInsuranceDocument': 'مسافرين',
-      'ResidentInsuranceDocument': 'وافدين مقيمين',
-      'MarineStructureInsuranceDocument': 'هياكل بحرية',
-      'ProfessionalLiabilityInsuranceDocument': 'مسؤولية مهنية',
-      'PersonalAccidentInsuranceDocument': 'حوادث شخصية',
-      'SchoolStudentInsuranceDocument': 'طلاب مدارس',
-      'CashInTransitInsuranceDocument': 'نقل نقدية',
-      'CargoInsuranceDocument': 'شحن بضائع'
-    };
-
-    printWindow.document.write(`
-      <html dir="rtl">
-      <head>
-        <title>تقرير المطالبات التفصيلي</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-          @media print { 
-            @page { margin: 5mm; size: A4 landscape; } 
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { margin: 0; padding: 10px; }
-          }
-          body { 
-            font-family: 'Cairo', sans-serif; 
-            margin: 0 auto; 
-            padding: 15px; 
-            color: #000;
-            background: #fff;
-            line-height: 1.4;
-            font-size: 10px;
-            direction: rtl;
-          }
-          .report-header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 1.5px solid #000;
-            padding-bottom: 10px;
-          }
-          .header-right {
-            width: 150px;
-            text-align: right;
-          }
-          .header-right .logo {
-            height: 60px;
-            width: auto;
-          }
-          .header-center {
-            text-align: center;
-            flex: 1;
-          }
-          .header-center h2 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 900;
-          }
-          .header-center h3 {
-            margin: 5px 0 0 0;
-            font-size: 13px;
-            font-weight: 700;
-            color: #4b5563;
-          }
-          .header-left {
-            width: 150px;
-            text-align: left;
-          }
-          .header-left .qr-code {
-            height: 60px;
-            width: 60px;
-          }
-          .meta-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-weight: 700;
-            font-size: 10px;
-            border: 1px solid #000;
-            padding: 6px 12px;
-            background: #f8fafc;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 5px;
-          }
-          th, td {
-            border: 1.5px solid #000;
-            padding: 6px;
-            text-align: center;
-            vertical-align: middle;
-            font-weight: 700;
-          }
-          th {
-            font-weight: 900;
-            font-size: 10px;
-          }
-          .category-claim { background-color: #fef08a !important; color: #000; }
-          .category-accident { background-color: #bbf7d0 !important; color: #000; }
-          .category-policy { background-color: #bae6fd !important; color: #000; }
-          .category-financial { background-color: #fecaca !important; color: #000; }
-          .category-gray { background-color: #f1f5f9 !important; color: #000; }
-          
-          .totals-row td {
-            font-weight: 900;
-            background-color: #f8fafc !important;
-            border-top: 2.5px solid #000;
-          }
-          
-          .footer-sigs {
-            margin-top: 35px;
-            display: flex;
-            justify-content: flex-start;
-            padding-right: 50px;
-          }
-          .sig-box {
-            text-align: center;
-            font-size: 11px;
-            line-height: 1.6;
-          }
-          .sig-title {
-            font-weight: 700;
-          }
-          .sig-name {
-            font-weight: 900;
-            margin-top: 20px;
-            font-size: 12px;
-          }
-          .print-meta {
-            margin-top: 20px;
-            font-size: 8px;
-            color: #6b7280;
-            text-align: center;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 5px;
-          }
-        </style>
-      </head>
-      <body onload="setTimeout(() => { window.print(); }, 500);">
-        <div class="report-header-container">
-          <div class="header-right">
-            <img src="/img/logo.png" class="logo" onerror="this.style.display='none'" />
-          </div>
-          <div class="header-center">
-            <h2>شركة المدار الليبي للتأمين</h2>
-            <h3>إدارة المطالبات والحوادث - تقرير تفصيلي</h3>
-          </div>
-          <div class="header-left">
-            <img src="${qrApiUrl}" class="qr-code" />
-          </div>
-        </div>
-
-        <div class="meta-info">
-          <div>تاريخ الاستخراج: ${new Date().toLocaleDateString('en-GB')}</div>
-          <div>${dateText}</div>
-          <div>${statusText}</div>
-          <div>إجمالي المطالبات: ${filteredClaims.length}</div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th rowspan="2" style="width: 40px; background: #f1f5f9; border: 1.5px solid #000;">م</th>
-              <th colspan="3" class="category-claim">بيانات المطالبة</th>
-              <th colspan="3" class="category-accident">بيانات الحادث</th>
-              <th colspan="4" class="category-policy">بيانات الوثيقة</th>
-              <th colspan="3" class="category-financial">البيانات المالية</th>
-              <th rowspan="2" class="category-gray" style="border: 1.5px solid #000;">الحالة</th>
-            </tr>
-            <tr>
-              <th class="category-claim">تاريخ المطالبة</th>
-              <th class="category-claim">مقدم المطالبة</th>
-              <th class="category-claim">رقم المطالبة</th>
-              
-              <th class="category-accident">تاريخ الحادث</th>
-              <th class="category-accident">نوع الحادث</th>
-              <th class="category-accident">نوع الأضرار</th>
-              
-              <th class="category-policy">نوع الوثيقة</th>
-              <th class="category-policy">تغطية الوثيقة</th>
-              <th class="category-policy">رقم الوثيقة</th>
-              <th class="category-policy">المؤمن له</th>
-              
-              <th class="category-financial">الاحتياطي المرصود<br><small>(اختيار نوع العملة)</small></th>
-              <th class="category-financial">الاحتياطي المرصود<br><small>بالدينار الليبي</small></th>
-              <th class="category-financial">قيمة التعويض<br><small>بعد التسوية</small></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredClaims.map((claim, idx) => {
-              let reserveForeign = '—';
-              if (claim.assessor_other_amount) {
-                reserveForeign = claim.assessor_other_amount;
-              } else if (claim.assessor_amount_dollar) {
-                reserveForeign = `${Number(claim.assessor_amount_dollar).toLocaleString('en-US')} دولار أمريكي`;
-              } else if (claim.assessor_amount_dinar) {
-                reserveForeign = `${Number(claim.assessor_amount_dinar).toLocaleString('en-US')} دينار ليبي`;
-              }
-
-              const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
-              const settlementValue = settlementTransfer?.details?.total_value;
-              const settlementValueText = settlementValue ? `${Number(settlementValue).toLocaleString('en-US')} دينار ليبي` : '—';
-
-              const docTypeLabel = documentTypeLabelMap[claim.document_type] || claim.document_manual_data?.insurance_type || claim.document_type || '—';
-
-              const damages = claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '—';
-
-              return `
-              <tr>
-                <td>${idx + 1}</td>
-                <td>${claim.claim_date ? new Date(String(claim.claim_date).replace(' ', 'T')).toLocaleDateString('en-GB') : '—'}</td>
-                <td>${claim.claimant_name || '—'}</td>
-                <td><strong>${claim.claim_number}</strong></td>
-                
-                <td>${claim.accident_date ? new Date(String(claim.accident_date).replace(' ', 'T')).toLocaleDateString('en-GB') : '—'}</td>
-                <td>${claim.accident_type || 'غير محدد'}</td>
-                <td>${damages}</td>
-                
-                <td>${docTypeLabel}</td>
-                <td>${claim.document_coverage || claim.document_manual_data?.document_coverage || '—'}</td>
-                <td>${claim.document?.insurance_number || claim.document_manual_data?.insurance_number || (claim.additional_documents && claim.additional_documents[0]?.insurance_number) || '—'}</td>
-                <td>${claim.document?.insured_name || claim.document_manual_data?.insured_name || (claim.additional_documents && claim.additional_documents[0]?.insured_name) || '—'}</td>
-                
-                <td style="color: #059669; font-weight: bold;">${reserveForeign}</td>
-                <td style="color: #059669; font-weight: bold;">${claim.assessor_amount_dinar ? `${Number(claim.assessor_amount_dinar).toLocaleString('en-US')} دينار ليبي` : '—'}</td>
-                <td style="color: #000; font-weight: bold;">${settlementValueText}</td>
-                
-                <td>${getStatusLabel(claim.status)}</td>
-              </tr>
-            `;
-            }).join('')}
-            
-            <tr class="totals-row">
-              <td colspan="11" style="text-align: center; font-weight: 900;">المجمـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــوع العـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــام</td>
-              <td style="color: #059669; font-weight: bold;">${originalCurrencySumText}</td>
-              <td style="color: #059669; font-weight: bold;">${totalReserveLYD ? `${totalReserveLYD.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
-              <td style="color: #000; font-weight: bold;">${totalSettlementLYD ? `${totalSettlementLYD.toLocaleString('en-US')} دينار ليبي` : '—'}</td>
-              <td>—</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="footer-sigs">
-          <div class="sig-box">
-            <div class="sig-title">المدار الليبي للتأمين المساهمه</div>
-            <div class="sig-title">مدير إدارة المطالبات</div>
-            <div class="sig-name">أشرف محمد الشافعي</div>
-          </div>
-        </div>
-
-        <div class="print-meta">
-          تم استخراج هذا التقرير آلياً من نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
-        </div>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
   };
 
+
   // @ts-ignore
-  const handlePrintCompensationsReport = () => {
+    const handlePrintCompensationsReport = () => {
     const printWindow = window.open('', '', 'width=1200,height=900');
     if (!printWindow) return;
 
@@ -1193,7 +1051,26 @@ export default function ClaimsList() {
       <div className="users-card">
         <div className="claims-modern-header">
           <div className="header-main-row">
-            <h5 className="claims-title">قائمة المطالبات المسجلة</h5>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+              <h5 className="claims-title">قائمة المطالبات المسجلة</h5>
+              <div 
+                className="exchange-rates-widget" 
+                onClick={() => {
+                  setModalRates({
+                    usd_to_lyd: String(exchangeRates.usd_to_lyd),
+                    tnd_to_lyd: String(exchangeRates.tnd_to_lyd),
+                    eur_to_lyd: String(exchangeRates.eur_to_lyd || 7.65)
+                  });
+                  setShowRatesModal(true);
+                }}
+                title="انقر لتعديل أسعار الصرف الرسمية للمنظومة"
+              >
+                <span className="rates-title"><i className="fa-solid fa-coins"></i> أسعار الصرف:</span>
+                <span className="rate-chip"><i className="fa-solid fa-dollar-sign"></i> 1$ = <strong>{exchangeRates.usd_to_lyd} د.ل</strong></span>
+                <span className="rate-chip"><i className="fa-solid fa-money-bill-transfer"></i> 1 د.ت = <strong>{exchangeRates.tnd_to_lyd} د.ل</strong></span>
+                <span className="rate-edit-icon"><i className="fa-solid fa-pen-to-square"></i></span>
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 className="print-report-btn"
@@ -1225,6 +1102,54 @@ export default function ClaimsList() {
             </div>
           </div>
 
+          <div className="report-currency-quickbar">
+            <div className="quickbar-label">
+              <i className="fa-solid fa-sliders" style={{ color: 'var(--accent-cyan)' }}></i>
+              <span>سعر الصرف المعتمد بالتقرير (يمكنك تعديله لحظياً لأي سنة أو تقرير):</span>
+            </div>
+            <div className="quickbar-inputs-wrap">
+              <div className="quickbar-field">
+                <span className="field-addon">💵 دولار (USD)</span>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  value={reportUsdRate} 
+                  onChange={e => setReportUsdRate(e.target.value)}
+                  placeholder="سعر الدولار..."
+                  title="سعر صرف 1 دولار مقابل الدينار الليبي للتقرير"
+                />
+                <span className="field-unit">د.ل</span>
+              </div>
+
+              <div className="quickbar-field">
+                <span className="field-addon">🇹🇳 دينار تونسي (TND)</span>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  value={reportTndRate} 
+                  onChange={e => setReportTndRate(e.target.value)}
+                  placeholder="سعر التونسي..."
+                  title="سعر صرف 1 دينار تونسي مقابل الدينار الليبي للتقرير"
+                />
+                <span className="field-unit">د.ل</span>
+              </div>
+
+              <button 
+                type="button" 
+                className="quickbar-reset-btn" 
+                onClick={() => {
+                  setReportUsdRate(String(exchangeRates.usd_to_lyd));
+                  setReportTndRate(String(exchangeRates.tnd_to_lyd));
+                  showToast('تمت استعادة سعر الصرف الرسمي المعتمد', 'success');
+                }}
+                title="استعادة السعر الرسمي للمنظومة"
+              >
+                <i className="fa-solid fa-rotate-left"></i>
+                <span>السعر الرسمي</span>
+              </button>
+            </div>
+          </div>
+
 
           <div className="search-row-modern">
             <label>بحث نصي</label>
@@ -1242,6 +1167,32 @@ export default function ClaimsList() {
           </div>
 
           <div className="filters-row-modern" style={{ flexWrap: 'wrap', gap: '16px 12px' }}>
+            <div className="filter-group" style={{ minWidth: '140px' }}>
+              <label>سنة الحوادث</label>
+              <select
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  padding: '0 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">كل السنوات</option>
+                <option value="2026">حوادث 2026</option>
+                <option value="2025">حوادث 2025</option>
+                <option value="2024">حوادث 2024</option>
+                <option value="2023">حوادث 2023</option>
+              </select>
+            </div>
+
             <div className="filter-group" style={{ minWidth: '160px' }}>
               <label>تصفية حسب الحالة</label>
               <select
@@ -1346,6 +1297,75 @@ export default function ClaimsList() {
           </div>
         </div>
 
+                {/* Custom Exchange Rates Management Modal */}
+        {showRatesModal && (
+          <div className="transfer-overlay">
+            <div className="transfer-modal" style={{ maxWidth: '480px' }}>
+              <div className="modal-header">
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="fa-solid fa-coins" style={{ color: 'var(--accent-cyan)' }}></i>
+                  تعديل وضبط أسعار الصرف الرسمية
+                </h3>
+                <button className="close-btn" onClick={() => setShowRatesModal(false)}>&times;</button>
+              </div>
+              <form onSubmit={handleSaveSystemRates}>
+                <div className="form-body" style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ background: 'rgba(14, 165, 233, 0.08)', border: '1px solid rgba(14, 165, 233, 0.2)', padding: '12px 14px', borderRadius: '10px', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5 }}>
+                    <i className="fa-solid fa-circle-info me-2" style={{ color: 'var(--accent-cyan)' }}></i>
+                    هذه الأسعار تمثل السعر المعتمد في المنظومة لجميع المعاملات والتقارير. يمكنك تعديلها في أي وقت وتظل سارية في النظام حتى تعديلها مرة أخرى.
+                  </div>
+
+                  <div className="field-group">
+                    <label className="premium-label">💵 سعر صرف 1 دولار أمريكي (USD / LYD)</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      required
+                      className="premium-field" 
+                      value={modalRates.usd_to_lyd} 
+                      onChange={e => setModalRates({ ...modalRates, usd_to_lyd: e.target.value })}
+                      placeholder="مثال: 7.15"
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label className="premium-label">🇹🇳 سعر صرف 1 دينار تونسي (TND / LYD)</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      required
+                      className="premium-field" 
+                      value={modalRates.tnd_to_lyd} 
+                      onChange={e => setModalRates({ ...modalRates, tnd_to_lyd: e.target.value })}
+                      placeholder="مثال: 2.30"
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label className="premium-label">💶 سعر صرف 1 يورو (EUR / LYD) — اختياري</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      className="premium-field" 
+                      value={modalRates.eur_to_lyd} 
+                      onChange={e => setModalRates({ ...modalRates, eur_to_lyd: e.target.value })}
+                      placeholder="مثال: 7.65"
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-footer" style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button type="button" className="btn-cancel" onClick={() => setShowRatesModal(false)}>إلغاء</button>
+                  <button type="submit" className="btn-confirm" disabled={savingRates} style={{ background: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {savingRates ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-check"></i>}
+                    <span>حفظ واعتماد الأسعار</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Custom Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <div className="transfer-overlay">
@@ -1368,6 +1388,137 @@ export default function ClaimsList() {
         )}
 
         <style>{`
+          .exchange-rates-widget {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--panel);
+            border: 1.5px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+          }
+          .exchange-rates-widget:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.15);
+          }
+          .rates-title {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .rate-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(14, 165, 233, 0.08);
+            color: var(--text);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+          }
+          .rate-chip strong {
+            color: var(--accent-cyan);
+          }
+          .rate-edit-icon {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            transition: color 0.2s;
+          }
+          .exchange-rates-widget:hover .rate-edit-icon {
+            color: var(--accent-cyan);
+          }
+
+          .report-currency-quickbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--panel);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+          }
+          .quickbar-label {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .quickbar-inputs-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
+          .quickbar-field {
+            display: flex;
+            align-items: center;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 2px 8px;
+            transition: all 0.2s;
+          }
+          .quickbar-field:focus-within {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+          }
+          .field-addon {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding-left: 6px;
+            border-left: 1px solid var(--border);
+            margin-left: 6px;
+          }
+          .quickbar-field input {
+            width: 75px;
+            border: none;
+            background: transparent;
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--text);
+            text-align: center;
+            outline: none;
+            font-family: inherit;
+          }
+          .field-unit {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-muted);
+          }
+          .quickbar-reset-btn {
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+          }
+          .quickbar-reset-btn:hover {
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            background: rgba(14, 165, 233, 0.05);
+          }
+
           .claims-modern-header {
             padding: 0 0 24px 0;
             display: flex;
