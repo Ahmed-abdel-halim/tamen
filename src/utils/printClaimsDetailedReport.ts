@@ -1,4 +1,4 @@
-// src/utils/printClaimsDetailedReport.ts
+﻿// src/utils/printClaimsDetailedReport.ts
 
 export interface ExchangeRates {
   usd_to_lyd: number;
@@ -154,8 +154,13 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
 
     // Settlement amount
     let settlementLYD = 0;
-    const settlementTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'تسويه وديه');
+    const allSettlementTransfers = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
+    const settlementTransfer = allSettlementTransfers[0];
+    const latestSettlement = allSettlementTransfers[allSettlementTransfers.length - 1];
     const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
+    // Last settlement TND and LYD
+    const lastSettlementTND = latestSettlement?.details?.tnd_amount || latestSettlement?.details?.total_value || '';
+    const lastSettlementLYD = latestSettlement?.details?.lyd_amount || '';
 
     if (claim.total_paid && Number(claim.total_paid) > 0) {
       settlementLYD = Number(claim.total_paid);
@@ -192,7 +197,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
       settlementLYD,
       statusLabel: getStatusLabel(claim.status),
       statusBadge: getStatusBadgeClass(claim.status),
-      paymentMethod: claim.payment_method || (settlementLYD > 0 ? 'معتمد' : '—')
+      paymentMethod: claim.payment_method || (settlementLYD > 0 ? 'معتمد' : '—'),
+      lastSettlementTND,
+      lastSettlementLYD
     };
   });
 
@@ -759,7 +766,7 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <th colspan="3" class="group-accident">بيانات الحادث والأضرار</th>
               <th colspan="3" class="group-policy">بيانات الوثيقة والمؤمن له</th>
               <th colspan="3" class="group-finance">التقييم والاحتياطي المرصود</th>
-              <th colspan="2" class="group-settlement">التسوية والسداد</th>
+              <th colspan="4" class="group-settlement">التسوية والسداد</th>
               <th rowspan="2" style="width: 58px; background: #0f172a; border-color: #334155;">الحالة</th>
             </tr>
             <tr>
@@ -779,7 +786,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <th style="width: 38px;">سعر التحويل</th>
               <th style="width: 76px;">المرصود (د.ل)</th>
 
-              <th style="width: 76px;">المسدد (د.ل)</th>
+              <th style="width: 72px;">آخر تسوية (د.ت)</th>
+              <th style="width: 72px;">آخر تسوية (د.ل)</th>
+              <th style="width: 72px;">المسدد (د.ل)</th>
               <th style="width: 58px;">طريقة السداد</th>
             </tr>
           </thead>
@@ -809,6 +818,8 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
                 <td style="color: #64748b; font-weight: 700; font-size: 6.8pt;">${row.rateLabel}</td>
                 <td class="col-lyd-reserve">${formatMoney(row.reserveLYD)}</td>
 
+                <td class="col-foreign-money" style="color: #0369a1;">${row.lastSettlementTND ? escapeHtml(row.lastSettlementTND) : '—'}</td>
+                <td class="col-settlement" style="color: #065f46;">${row.lastSettlementLYD ? formatMoney(row.lastSettlementLYD) : '—'}</td>
                 <td class="col-settlement">${formatMoney(row.settlementLYD)}</td>
                 <td style="font-size: 6.8pt; color: #475569;">${escapeHtml(row.paymentMethod)}</td>
 
@@ -826,6 +837,7 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <td style="font-size: 7pt; color: #cbd5e1;">${claimsWithForeignCount} عملة أجنبية</td>
               <td style="color: #cbd5e1; font-size: 7pt;">—</td>
               <td class="total-val">${formatMoney(totalReserveLYD)} د.ل</td>
+              <td colspan="2" style="font-size: 7pt; color: #cbd5e1;">—</td>
               <td class="total-paid">${formatMoney(totalSettlementLYD)} د.ل</td>
               <td colspan="2" style="font-size: 7pt; color: #cbd5e1;">—</td>
             </tr>
@@ -897,3 +909,6 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
 
   printWindow.document.close();
 }
+
+
+

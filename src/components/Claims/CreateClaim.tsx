@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from '../Toast';
 import { API_BASE_URL } from '../../config/api';
 
@@ -259,6 +259,8 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     // Damaged body
     damaged_body_type: claim?.damaged_body_type || 'سيارة',
     damaged_vehicle_model: claim?.damaged_vehicle_model || '',
+    damaged_vehicle_type: claim?.damaged_vehicle_type || '',
+    damaged_vehicle_color: claim?.damaged_vehicle_color || '',
     damaged_vehicle_plate: claim?.damaged_vehicle_plate || '',
     damaged_vehicle_amount: claim?.damaged_vehicle_amount || '',
     damaged_vehicle_repair_shop: claim?.damaged_vehicle_repair_shop || '',
@@ -1311,7 +1313,9 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px', borderBottom: '1px dashed var(--border)', paddingBottom: '20px' }}>
                    <h5 style={{ gridColumn: 'span 2', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: 0 }}><i className="fa-solid fa-car me-2"></i>أضرار المركبة</h5>
                    <div className="field-group"><label className="premium-label">موديل السيارة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_model} onChange={e => setClaimData({ ...claimData, damaged_vehicle_model: e.target.value })} placeholder="الموديل..." /></div>
-                   <div className="field-group"><label className="premium-label">رقم لوحة السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_plate} onChange={e => setClaimData({ ...claimData, damaged_vehicle_plate: e.target.value })} placeholder="رقم اللوحة..." /></div>
+                   <div className="field-group"><label className="premium-label">نوع المركبة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_type} onChange={e => setClaimData({ ...claimData, damaged_vehicle_type: e.target.value })} placeholder="سيارة خاصة، شاحنة، إلخ..." /></div>
+                    <div className="field-group"><label className="premium-label">لون المركبة المتضررة</label><input className="premium-field" value={claimData.damaged_vehicle_color} onChange={e => setClaimData({ ...claimData, damaged_vehicle_color: e.target.value })} placeholder="اللون..." /></div>
+                    <div className="field-group"><label className="premium-label">رقم لوحة السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_plate} onChange={e => setClaimData({ ...claimData, damaged_vehicle_plate: e.target.value })} placeholder="رقم اللوحة..." /></div>
                    <div className="field-group"><label className="premium-label">ورشة التصليح</label><input className="premium-field" value={claimData.damaged_vehicle_repair_shop} onChange={e => setClaimData({ ...claimData, damaged_vehicle_repair_shop: e.target.value })} placeholder="اسم وعنوان الورشة..." /></div>
                    <div className="field-group"><label className="premium-label">مبلغ الأضرار ({claimCurrency === 'دينار تونسي' ? 'دينار تونسي' : 'دينار ليبي'})</label><input type="number" className="premium-field" value={claimData.damaged_vehicle_amount} onChange={e => setClaimData({ ...claimData, damaged_vehicle_amount: e.target.value })} placeholder="0.000" /></div>
                    <div className="field-group"><label className="premium-label">بيانات أضرار السيارة</label><input className="premium-field" value={claimData.damaged_vehicle_details} onChange={e => setClaimData({ ...claimData, damaged_vehicle_details: e.target.value })} placeholder="كسر زجاج أمامي، إلخ..." /></div>
@@ -1583,3 +1587,4 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     </div>
   );
 }
+

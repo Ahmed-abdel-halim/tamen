@@ -35,6 +35,19 @@ export default function ClaimsList() {
   const [showRatesModal, setShowRatesModal] = useState(false);
   const [savingRates, setSavingRates] = useState(false);
   const [modalRates, setModalRates] = useState({ usd_to_lyd: '7.15', tnd_to_lyd: '2.30', eur_to_lyd: '7.65' });
+  const [showSettlementModal, setShowSettlementModal] = useState(false);
+  const [settlementClaimId, setSettlementClaimId] = useState<number | null>(null);
+  const [settlementLoading, setSettlementLoading] = useState(false);
+  const [settlementData, setSettlementData] = useState({
+    settlement_number: '',
+    settlement_presenter: '',
+    settlement_date: new Date().toISOString().split('T')[0],
+    tnd_amount: '',
+    lyd_amount: '',
+    committee_manager: '',
+    manager_report: '',
+  });
+
 
   useEffect(() => {
     fetchExchangeRates();
@@ -216,6 +229,53 @@ export default function ClaimsList() {
       }
     } catch (error) {
       showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
+  const handleOpenSettlementModal = (claimId: number) => {
+    setSettlementClaimId(claimId);
+    setSettlementData({
+      settlement_number: '',
+      settlement_presenter: '',
+      settlement_date: new Date().toISOString().split('T')[0],
+      tnd_amount: '',
+      lyd_amount: '',
+      committee_manager: '',
+      manager_report: '',
+    });
+    setShowSettlementModal(true);
+  };
+
+  const handleSubmitSettlement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settlementClaimId) return;
+    setSettlementLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('transfer_type', 'تسويه وديه');
+      formData.append('detail_settlement_number', settlementData.settlement_number);
+      formData.append('detail_settlement_presenter', settlementData.settlement_presenter);
+      formData.append('detail_settlement_date', settlementData.settlement_date);
+      formData.append('detail_tnd_amount', settlementData.tnd_amount);
+      formData.append('detail_lyd_amount', settlementData.lyd_amount);
+      formData.append('detail_committee_manager', settlementData.committee_manager);
+      formData.append('detail_manager_report', settlementData.manager_report);
+      const response = await fetch(`${API_BASE_URL}/claims/${settlementClaimId}/transfers`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+      if (!response.ok) throw new Error('Failed');
+      showToast('تمت إضافة التسوية بنجاح', 'success');
+      setShowSettlementModal(false);
+      fetchClaims();
+    } catch {
+      showToast('خطأ في إضافة التسوية', 'error');
+    } finally {
+      setSettlementLoading(false);
     }
   };
 
@@ -739,331 +799,373 @@ export default function ClaimsList() {
       }
     } catch (e) {}
 
-    const printWindow = window.open('', '', 'width=1000,height=900');
+    const printWindow = window.open('', '', 'width=1100,height=950');
     if (!printWindow) return;
 
-    const qrData = `مطالبة رقم: ${fullClaim.claim_number}\nمقدم المطالبة: ${fullClaim.claimant_name}\nرقم الوثيقة: ${fullClaim.document?.insurance_number || fullClaim.document_manual_data?.insurance_number || (fullClaim.additional_documents && fullClaim.additional_documents[0]?.insurance_number) || '---'}\nالتاريخ: ${new Date().toLocaleString('en-GB')}`;
+    // --- Document type label ---
+    const docTypeLabelMap: Record<string, string> = {
+      'InsuranceDocument': 'سيارات محلي',
+      'InternationalInsuranceDocument': 'سيارات دولي',
+      'TravelInsuranceDocument': 'مسافرين',
+      'ResidentInsuranceDocument': 'وافدين مقيمين',
+      'MarineStructureInsuranceDocument': 'هياكل بحرية',
+      'ProfessionalLiabilityInsuranceDocument': 'مسؤولية مهنية',
+      'PersonalAccidentInsuranceDocument': 'حوادث شخصية',
+      'SchoolStudentInsuranceDocument': 'طلاب مدارس',
+      'CashInTransitInsuranceDocument': 'نقل نقدية',
+      'CargoInsuranceDocument': 'شحن بضائع'
+    };
+    const docTypeLabel = docTypeLabelMap[fullClaim.document_type] || fullClaim.document_manual_data?.insurance_type || fullClaim.document_type || '---';
+
+    // --- Policy fields ---
+    const policyNum     = fullClaim.document?.insurance_number || fullClaim.document_manual_data?.insurance_number || (fullClaim.additional_documents?.[0]?.insurance_number) || '---';
+    const insuranceType = docTypeLabel;
+    const coverage      = fullClaim.document_coverage || fullClaim.document_manual_data?.document_coverage || (fullClaim.additional_documents?.[0]?.document_coverage) || '---';
+    const insuredName   = fullClaim.document?.insured_name || fullClaim.document_manual_data?.insured_name || (fullClaim.additional_documents?.[0]?.insured_name) || '---';
+    const issueDate     = fullClaim.document?.issue_date || fullClaim.document_manual_data?.issue_date || '---';
+    const endDate       = fullClaim.document?.end_date || fullClaim.document_manual_data?.end_date || '---';
+    const plateNum      = fullClaim.document?.plate?.plate_number || fullClaim.document?.plate_number || fullClaim.document_manual_data?.plate_number || '---';
+
+    // --- Financial ---
+    const tndAmount = fullClaim.assessor_other_amount || '---';
+    const lydAmount = fullClaim.assessor_amount_dinar ? (Number(fullClaim.assessor_amount_dinar).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
+
+    // --- Settlements ---
+    const settlements = (fullClaim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
+
+    const settlementsHtml = settlements.length > 0
+      ? `<table class="settlements-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>تاريخ التسوية</th>
+              <th>مقدم التسوية</th>
+              <th>رقم التسوية</th>
+              <th>مبلغ الأضرار (د.ت)</th>
+              <th>قيمة التقييم (د.ل)</th>
+              <th>مدير اللجنة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${settlements.map((t: any, i: number) => `<tr>
+              <td>${i + 1}</td>
+              <td>${t.details?.settlement_date || new Date(t.created_at).toLocaleDateString('en-GB')}</td>
+              <td>${t.details?.settlement_presenter || t.details?.committee_manager || '---'}</td>
+              <td>${t.details?.settlement_number || '---'}</td>
+              <td class="money">${t.details?.tnd_amount || t.details?.total_value || '---'}</td>
+              <td class="money lyd">${t.details?.lyd_amount || '---'}</td>
+              <td>${t.details?.committee_manager || '---'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`
+      : '<p class="no-settlements">لا توجد تسويات مسجلة</p>';
+
+    // --- QR ---
+    const qrData = `مطالبة رقم: ${fullClaim.claim_number}\nمقدم المطالبة: ${fullClaim.claimant_name}\nرقم الوثيقة: ${policyNum}\nالتاريخ: ${new Date().toLocaleString('en-GB')}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
 
     printWindow.document.write(`
       <html dir="rtl">
       <head>
-        <title>طباعة مطالبة - ${fullClaim.claim_number}</title>
+        <title>نموذج المطالبة التأمينية - ${fullClaim.claim_number}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
-          @media print { 
-            @page { margin: 5mm; size: A4; } 
+          @media print {
+            @page { margin: 5mm; size: A4; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { margin: 0; }
           }
-          body { 
-            font-family: 'Cairo', sans-serif; 
-            margin: 0 auto; 
-            max-width: 190mm;
-            padding: 10px; 
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0 auto;
+            max-width: 195mm;
+            padding: 8px 10px;
             color: #000;
             background: #fff;
-            font-size: 11px;
+            font-size: 10.5px;
           }
-          .a4-container {
-            padding: 12px;
-            min-height: 260mm;
-            position: relative;
-          }
-          
-          /* Header Grid */
-          .print-header-grid {
-            position: relative;
+
+          /* ===== HEADER ===== */
+          .print-header {
             display: grid;
-            grid-template-columns: 1fr 200px;
-            grid-template-rows: auto auto;
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: 1fr auto 1fr;
             align-items: start;
+            margin-bottom: 14px;
+            gap: 10px;
           }
-          
-          /* Top Right: Title and Logo */
-          .header-top-right {
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start; /* Push logo to the right */
+          .hdr-logo { display: flex; align-items: flex-start; }
+          .hdr-logo img { height: 68px; }
+          .hdr-center { text-align: center; }
+          .hdr-title {
+            font-size: 17px; font-weight: 900; color: #1e293b;
+            border: 2px solid #1e293b; padding: 5px 22px;
+            border-radius: 8px; display: inline-block; margin-bottom: 4px;
           }
-          .header-top-right .eye-logo {
-            height: 70px;
+          .hdr-subtitle { font-size: 11px; font-weight: 700; color: #475569; }
+          .hdr-qr { display: flex; justify-content: flex-end; align-items: flex-start; }
+          .hdr-qr img { width: 82px; height: 82px; border: 1.5px solid #000; padding: 2px; }
+
+          /* Company strip */
+          .company-strip {
+            display: grid; grid-template-columns: 1fr 1fr;
+            border: 1.5px solid #000; margin-bottom: 10px;
           }
-          .main-title {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            top: 5px;
-            font-size: 18px;
-            font-weight: 900;
-            color: #4b5563; /* Gray text color */
-            border: 1.5px solid #000;
-            padding: 6px 30px;
-            border-radius: 8px;
-            background-color: #fff;
-            text-align: center;
-            z-index: 10;
-          }
-          
-          /* Top Left: QR Code */
-          .header-top-left {
-            display: flex;
-            justify-content: flex-end; /* flex-end in RTL pushes to left */
-          }
-          .qr-wrapper {
-            border: 1px solid #000;
-            padding: 4px;
-            display: inline-block;
-          }
-          .qr-wrapper img {
-            width: 85px;
-            height: 85px;
-            display: block;
-          }
-          
-          /* Bottom Right: Company Info Box */
-          .header-bottom-right {
-            border: 1.5px solid #000;
-            padding: 10px 15px;
-            margin-left: 20px; /* Don't stretch all the way */
-          }
-          .company-info-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            font-weight: 800;
-            margin-bottom: 5px;
-          }
-          .company-info-row .val { font-weight: 900; }
-          
-          /* Bottom Left: Legal Text Box */
-          .header-bottom-left {
-            border: 1.5px solid #000;
-            padding: 10px;
-            font-size: 10px;
-            font-weight: 800;
-            text-align: center;
-            line-height: 1.6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          
-          /* Sections */
-          .section { margin-bottom: 10px; }
+          .cs-box { padding: 6px 12px; border-left: 1px solid #000; }
+          .cs-box:last-child { border-left: none; }
+          .cs-row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; margin-bottom: 2px; }
+          .cs-row .val { font-weight: 900; color: #0f172a; }
+          .cs-legal { font-size: 9px; font-weight: 700; text-align: center; color: #475569; display: flex; align-items: center; justify-content: center; line-height: 1.5; }
+
+          /* ===== SECTIONS ===== */
+          .section { margin-bottom: 9px; }
           .section-title {
-            background-color: #d1d5db;
-            color: #000;
-            font-weight: 900;
-            font-size: 12px;
-            text-align: center;
-            padding: 4px;
-            border: 1.5px solid #000;
-            margin-bottom: 8px;
+            background: #1e293b; color: #f8fafc;
+            font-weight: 900; font-size: 11px;
+            text-align: center; padding: 4px 8px;
+            margin-bottom: 0; letter-spacing: 0.3px;
           }
-          .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px 20px;
+          .section-body { border: 1.5px solid #1e293b; border-top: none; padding: 5px 8px; }
+
+          /* Grid layouts */
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 10px; }
+          .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px 10px; }
+
+          .field-row { display: flex; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 3px; padding-top: 3px; }
+          .field-row:last-child { border-bottom: none; }
+          .fl { font-weight: 800; font-size: 10px; width: 95px; flex-shrink: 0; color: #334155; }
+          .fv {
+            flex-grow: 1; font-weight: 700; font-size: 10.5px;
+            border: 1px solid #94a3b8; border-radius: 3px;
+            padding: 1px 6px; min-height: 17px;
+            background: #f8fafc; text-align: center;
+            display: flex; align-items: center; justify-content: center;
           }
-          .field-row {
-            display: flex;
-            align-items: center;
+          .fv.highlight { background: #ecfdf5; color: #065f46; font-weight: 900; }
+          .fv.accent { background: #eff6ff; color: #1e40af; }
+          .span-2 { grid-column: span 2; }
+          .span-3 { grid-column: span 3; }
+          .span-4 { grid-column: span 4; }
+
+          /* ===== SETTLEMENTS TABLE ===== */
+          .settlements-table {
+            width: 100%; border-collapse: collapse; font-size: 9.5px;
+            margin-top: 2px;
           }
-          .field-label {
-            width: 90px;
-            font-weight: 800;
-            font-size: 11px;
-            flex-shrink: 0;
+          .settlements-table th {
+            background: #0f172a; color: #fff; font-weight: 800;
+            padding: 4px 4px; text-align: center; border: 1px solid #334155;
           }
-          .field-input {
-            flex-grow: 1;
-            border: 1px solid #000;
-            padding: 2px 6px;
-            font-weight: 700;
-            font-size: 11px;
-            min-height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            background: #fff;
+          .settlements-table td {
+            padding: 3px 4px; text-align: center;
+            border: 1px solid #cbd5e1; font-weight: 700;
           }
-          .full-width { grid-column: span 2; }
-          .full-width .field-label { width: 90px; }
-          
-          /* Signatures */
-          .signature-area {
-            margin-top: 40px;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 40px;
+          .settlements-table tr:nth-child(even) td { background: #f8fafc; }
+          .settlements-table td.money { font-weight: 900; color: #0369a1; direction: ltr; }
+          .settlements-table td.lyd { color: #065f46; }
+          .no-settlements { text-align: center; color: #94a3b8; font-size: 10px; padding: 6px; margin: 0; }
+
+          /* ===== SIGNATURES ===== */
+          .sig-area {
+            display: flex; justify-content: space-between;
+            padding: 0 30px; margin-top: 20px;
           }
-          .sig-box {
-            width: 160px;
-            text-align: center;
-          }
-          .sig-box .box-outline {
-            border: 1px solid #000;
-            height: 60px;
-            margin-bottom: 8px;
-          }
-          .sig-box .label {
-            font-size: 11px;
-            font-weight: 900;
-          }
-          
-          /* Footer */
+          .sig-box { width: 160px; text-align: center; }
+          .sig-outline { border: 1px solid #000; height: 55px; margin-bottom: 6px; }
+          .sig-label { font-size: 11px; font-weight: 900; }
+
+          /* ===== FOOTER ===== */
           .footer-note {
-            text-align: right;
-            font-size: 10px;
-            font-weight: 800;
-            margin-top: 30px;
-            line-height: 1.5;
-            color: #333;
+            text-align: right; font-size: 9px; font-weight: 700;
+            margin-top: 14px; color: #475569; line-height: 1.5;
+            border-top: 1px solid #e2e8f0; padding-top: 5px;
           }
         </style>
       </head>
       <body onload="setTimeout(() => { window.print(); }, 500);">
-        <div class="a4-container">
-          
-          <div class="print-header-grid">
-            <!-- Top Right: Logo and Title -->
-            <div class="header-top-right">
-              <div class="main-title">ملخص المطالبة التأمينية</div>
-              <img src="/img/logo.png" class="eye-logo" onerror="this.style.display='none'" />
-            </div>
-            
-            <!-- Top Left: QR Code -->
-            <div class="header-top-left">
-              <div class="qr-wrapper">
-                <img src="${qrApiUrl}" class="qr-code" />
-              </div>
-            </div>
-            
-            <!-- Bottom Right: Company Info Box -->
-            <div class="header-bottom-right">
-              <div class="company-info-row"><span>الشركة المصدرة للوثيقة</span> <span class="val">المدار الليبي للتأمين</span></div>
-              <div class="company-info-row"><span>العنــــــــــــــوان</span> <span class="val">طرابلس</span></div>
-              <div class="company-info-row"><span>تاريــــخ التأسيس</span> <span class="val">29/01/2024</span></div>
-              <div class="company-info-row"><span>رأس المال المكتتب به</span> <span class="val">10,000,000.00</span></div>
-            </div>
-            
-            <!-- Bottom Left: Legal Text Box -->
-            <div class="header-bottom-left">
-              هذا المستند يمثل ملخصاً رسمياً<br/>
-              لبيانات المطالبة التأمينية<br/>
-              والمسجلة في نظام المدار الليبي للتأمين<br/>
-              وفقاً للإجراءات المعتمدة.
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">بيانات مقدم المطالبة / المشترك</div>
-            <div class="grid-container">
-              <div class="field-row"><div class="field-label">اسم مقدم المطالبة</div><div class="field-input">${fullClaim.claimant_name || '---'}</div></div>
-              <div class="field-row"><div class="field-label">الجنسيــــــــــــة</div><div class="field-input">${fullClaim.nationality || '---'}</div></div>
-              <div class="field-row"><div class="field-label">رقم الإثبات الشخصي</div><div class="field-input">${fullClaim.personal_id || '---'}</div></div>
-              <div class="field-row"><div class="field-label">صلـــــة القرابـــــة</div><div class="field-input">${fullClaim.kinship || '---'}</div></div>
-              <div class="field-row"><div class="field-label">رقم الهاتـــــــــــف</div><div class="field-input">${fullClaim.phone_number || '---'}</div></div>
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">بيانات المطالبة / الحادث</div>
-            <div class="grid-container">
-              <div class="field-row"><div class="field-label">رقم المطالبـــــــة</div><div class="field-input">${fullClaim.claim_number || '---'}</div></div>
-              <div class="field-row"><div class="field-label">تاريــــخ المطالبــــة</div><div class="field-input">${fullClaim.claim_date || '---'}</div></div>
-              <div class="field-row"><div class="field-label">تاريــــخ الحــــادث</div><div class="field-input">${fullClaim.accident_date || '---'}</div></div>
-              <div class="field-row"><div class="field-label">وقـــــت الحــــادث</div><div class="field-input">${fullClaim.accident_time || '---'}</div></div>
-              <div class="field-row"><div class="field-label">نـــوع الأضـــــرار</div><div class="field-input">${fullClaim.damage_type ? fullClaim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (fullClaim.other_damage_type || 'أخرى') : t).join('، ') : '---'}</div></div>
-              <div class="field-row"><div class="field-label">حـــالــة المطالبــــة</div><div class="field-input">${fullClaim.status || '---'}</div></div>
-              <div class="field-row full-width"><div class="field-label">مكـــان الحــــادث</div><div class="field-input">${fullClaim.accident_location || '---'}</div></div>
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">بيانات الوثيقة المربوطة</div>
-            <div class="grid-container">
-              <div class="field-row"><div class="field-label">رقــــم الوثيقــــة</div><div class="field-input">${fullClaim.document?.insurance_number || fullClaim.document_manual_data?.insurance_number || (fullClaim.additional_documents && fullClaim.additional_documents[0]?.insurance_number) || '---'}</div></div>
-              <div class="field-row"><div class="field-label">نــــوع التغطيــــة</div><div class="field-input">${fullClaim.document_coverage || fullClaim.document_manual_data?.document_coverage || (fullClaim.additional_documents && fullClaim.additional_documents[0]?.document_coverage) || '---'}</div></div>
-              <div class="field-row full-width"><div class="field-label">اسم المؤمـــن لـــه</div><div class="field-input">${fullClaim.document?.insured_name || fullClaim.document_manual_data?.insured_name || (fullClaim.additional_documents && fullClaim.additional_documents[0]?.insured_name) || '---'}</div></div>
-            </div>
-          </div>
 
-          ${fullClaim.additional_documents && fullClaim.additional_documents.length > 0 ? `
-          <div class="section">
-            <div class="section-title">وثائق التأمين الإضافية المرفقة</div>
+        <!-- Header -->
+        <div class="print-header">
+          <div class="hdr-logo">
+            <img src="/img/logo.png" onerror="this.style.display='none'" />
+          </div>
+          <div class="hdr-center">
+            <div class="hdr-title">نموذج المطالبة التأمينية</div>
+            <div class="hdr-subtitle">شركة المدار الليبي للتأمين المساهمة</div>
+            <div class="hdr-subtitle" style="color:#0369a1; font-size:10px;">إدارة المطالبات والحوادث</div>
+          </div>
+          <div class="hdr-qr">
+            <img src="${qrApiUrl}" />
+          </div>
+        </div>
+
+        <!-- Company Info Strip -->
+        <div class="company-strip">
+          <div class="cs-box">
+            <div class="cs-row"><span>الشركة المصدرة للوثيقة</span> <span class="val">المدار الليبي للتأمين</span></div>
+            <div class="cs-row"><span>العنـــوان</span> <span class="val">طرابلس — ليبيا</span></div>
+            <div class="cs-row"><span>تاريخ التأسيس</span> <span class="val">29/01/2024</span></div>
+            <div class="cs-row"><span>رأس المال المكتتب</span> <span class="val">10,000,000.00 د.ل</span></div>
+          </div>
+          <div class="cs-box">
+            <div class="cs-legal">
+              هذا النموذج يمثل وثيقة رسمية معتمدة<br/>
+              لبيانات المطالبة التأمينية المسجلة<br/>
+              في نظام المدار الليبي للتأمين<br/>
+              وفقاً للإجراءات والأنظمة المعتمدة.
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: بيانات مقدم المطالبة -->
+        <div class="section">
+          <div class="section-title">📋 بيانات مقدم المطالبة / المشترك</div>
+          <div class="section-body">
+            <div class="grid-3">
+              <div class="field-row"><div class="fl">اسم مقدم المطالبة</div><div class="fv accent">${fullClaim.claimant_name || '---'}</div></div>
+              <div class="field-row"><div class="fl">الجنسيـــة</div><div class="fv">${fullClaim.nationality || '---'}</div></div>
+              <div class="field-row"><div class="fl">رقم الإثبات</div><div class="fv">${fullClaim.personal_id || '---'}</div></div>
+              <div class="field-row"><div class="fl">صلة القرابة</div><div class="fv">${fullClaim.kinship || '---'}</div></div>
+              <div class="field-row"><div class="fl">رقم الهاتف</div><div class="fv">${fullClaim.phone_number || '---'}</div></div>
+              ${fullClaim.claimant_check_number ? `<div class="field-row"><div class="fl">رقم الشيك/الإيصال</div><div class="fv">${fullClaim.claimant_check_number}</div></div>` : '<div></div>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: بيانات المطالبة / الحادث -->
+        <div class="section">
+          <div class="section-title">🚨 بيانات المطالبة / الحادث</div>
+          <div class="section-body">
+            <div class="grid-4">
+              <div class="field-row"><div class="fl">رقم المطالبة</div><div class="fv highlight">${fullClaim.claim_number || '---'}</div></div>
+              <div class="field-row"><div class="fl">تاريخ المطالبة</div><div class="fv">${fullClaim.claim_date || '---'}</div></div>
+              <div class="field-row"><div class="fl">تاريخ الحادث</div><div class="fv">${fullClaim.accident_date || '---'}</div></div>
+              <div class="field-row"><div class="fl">وقت الحادث</div><div class="fv">${fullClaim.accident_time || '---'}</div></div>
+              <div class="field-row"><div class="fl">نوع الأضرار</div><div class="fv">${fullClaim.damage_type ? fullClaim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (fullClaim.other_damage_type || 'أخرى') : t).join('، ') : '---'}</div></div>
+              <div class="field-row"><div class="fl">حالة المطالبة</div><div class="fv">${fullClaim.status || '---'}</div></div>
+              <div class="field-row span-2"><div class="fl">مكان الحادث</div><div class="fv">${fullClaim.accident_location || '---'}</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: بيانات الوثيقة المربوطة -->
+        <div class="section">
+          <div class="section-title">📄 بيانات الوثيقة المربوطة</div>
+          <div class="section-body">
+            <div class="grid-4">
+              <div class="field-row"><div class="fl">رقم الوثيقة</div><div class="fv accent">${policyNum}</div></div>
+              <div class="field-row"><div class="fl">نوع التأمين</div><div class="fv">${insuranceType}</div></div>
+              <div class="field-row"><div class="fl">نوع التغطية</div><div class="fv">${coverage}</div></div>
+              <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv">${plateNum}</div></div>
+              <div class="field-row span-2"><div class="fl">اسم المؤمن له</div><div class="fv accent">${insuredName}</div></div>
+              <div class="field-row"><div class="fl">تاريخ الإصدار</div><div class="fv">${issueDate !== '---' ? new Date(String(issueDate).replace(' ', 'T')).toLocaleDateString('en-GB') : '---'}</div></div>
+              <div class="field-row"><div class="fl">تاريخ الانتهاء</div><div class="fv">${endDate !== '---' ? new Date(String(endDate).replace(' ', 'T')).toLocaleDateString('en-GB') : '---'}</div></div>
+            </div>
+          </div>
+        </div>
+
+        ${fullClaim.additional_documents && fullClaim.additional_documents.length > 0 ? `
+        <!-- Section 3b: وثائق إضافية -->
+        <div class="section">
+          <div class="section-title">📎 وثائق التأمين الإضافية المرفقة</div>
+          <div class="section-body">
             ${fullClaim.additional_documents.map((doc: any, index: number) => `
-              <div style="margin-bottom: 5px; border-bottom: ${index === fullClaim.additional_documents.length - 1 ? 'none' : '1px dashed #000'}; padding-bottom: 5px;">
-                <div style="font-weight: 800; font-size: 11px;">وثيقة إضافية #${index + 1}</div>
-                <div class="grid-container">
-                  <div class="field-row"><div class="field-label">رقــــم الوثيقــــة</div><div class="field-input">${doc.insurance_number || '---'}</div></div>
-                  <div class="field-row"><div class="field-label">اسم المؤمن له</div><div class="field-input">${doc.insured_name || '---'}</div></div>
-                  <div class="field-row"><div class="field-label">نوع السيارة</div><div class="field-input">${doc.vehicle_type || '---'}</div></div>
-                  <div class="field-row"><div class="field-label">رقم اللوحة</div><div class="field-input">${doc.plate_number || '---'}</div></div>
-                  <div class="field-row"><div class="field-label">تاريخ الإصدار</div><div class="field-input">${doc.issue_date || '---'}</div></div>
-                  <div class="field-row"><div class="field-label">تاريخ الانتهاء</div><div class="field-input">${doc.end_date || '---'}</div></div>
+              <div style="margin-bottom:${index < fullClaim.additional_documents.length - 1 ? '6px' : '0'}; border-bottom:${index < fullClaim.additional_documents.length - 1 ? '1px dashed #cbd5e1' : 'none'}; padding-bottom:${index < fullClaim.additional_documents.length - 1 ? '6px' : '0'}">
+                <div style="font-weight:800; font-size:10px; color:#0369a1; margin-bottom:3px;">وثيقة إضافية #${index + 1}</div>
+                <div class="grid-4">
+                  <div class="field-row"><div class="fl">رقم الوثيقة</div><div class="fv">${doc.insurance_number || '---'}</div></div>
+                  <div class="field-row"><div class="fl">اسم المؤمن له</div><div class="fv">${doc.insured_name || '---'}</div></div>
+                  <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv">${doc.plate_number || '---'}</div></div>
+                  <div class="field-row"><div class="fl">نوع السيارة</div><div class="fv">${doc.vehicle_type || '---'}</div></div>
+                  <div class="field-row"><div class="fl">تاريخ الإصدار</div><div class="fv">${doc.issue_date || '---'}</div></div>
+                  <div class="field-row"><div class="fl">تاريخ الانتهاء</div><div class="fv">${doc.end_date || '---'}</div></div>
                 </div>
               </div>
             `).join('')}
           </div>
-          ` : ''}
-          
-          ${fullClaim.damaged_body_type === 'سيارة' ? `
-          <div class="section">
-            <div class="section-title">بيانات المركبة المتضررة</div>
-            <div class="grid-container">
-              <div class="field-row"><div class="field-label">نــــوع المركبــــة</div><div class="field-input">${fullClaim.damaged_vehicle_model || '---'}</div></div>
-              <div class="field-row"><div class="field-label">رقــــم اللوحـــــة</div><div class="field-input">${fullClaim.damaged_vehicle_plate || '---'}</div></div>
-              <div class="field-row"><div class="field-label">مبلغ الأضرار المقدر</div><div class="field-input">${fullClaim.damaged_vehicle_amount ? fullClaim.damaged_vehicle_amount + ' د.ل' : '---'}</div></div>
-            </div>
-          </div>
-          ` : ''}
-
-          ${fullClaim.driver_name ? `
-          <div class="section">
-            <div class="section-title">بيانات السائق المسبب</div>
-            <div class="grid-container">
-              <div class="field-row"><div class="field-label">اســـم السائـــــق</div><div class="field-input">${fullClaim.driver_name || '---'}</div></div>
-              <div class="field-row"><div class="field-label">رقــــم الرخصــــة</div><div class="field-input">${fullClaim.driver_license_number || '---'}</div></div>
-            </div>
-          </div>
-          ` : ''}
-          
-          <div class="section">
-            <div class="section-title">بيانات التقييم المالي</div>
-            <div class="grid-container">
-              <div class="field-row"><div class="field-label">مقــــدر الأضــــرار</div><div class="field-input">${fullClaim.assessor_name || '---'}</div></div>
-              <div class="field-row">
-                <div class="field-label">قيمــــة التقييـــــم</div>
-                <div class="field-input">
-                  ${fullClaim.assessor_amount_dinar ? Number(fullClaim.assessor_amount_dinar).toLocaleString('en-US') + ' د.ل' : '---'}
-                  ${fullClaim.assessor_other_amount ? ` (ما يعادل ${fullClaim.assessor_other_amount})` : ''}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="signature-area">
-            <div class="sig-box">
-              <div class="box-outline"></div>
-              <div class="label">ختم وإعتماد الشركة</div>
-            </div>
-            <div class="sig-box">
-              <div class="box-outline"></div>
-              <div class="label">توقيع المستلم / مقدم المطالبة</div>
-            </div>
-          </div>
-          
-          <div class="footer-note">
-            أي كشط أو تعديل يلغي هذه الوثيقة<br/>
-            طبع بواسطة نظام المدار الليبي للتأمين - ${new Date().toLocaleString('en-GB')}
-          </div>
-          
         </div>
+        ` : ''}
+
+        ${fullClaim.damaged_body_type === 'سيارة' ? `
+        <!-- Section 4: بيانات المركبة المتضررة -->
+        <div class="section">
+          <div class="section-title">🚗 بيانات المركبة المتضررة</div>
+          <div class="section-body">
+            <div class="grid-4">
+              <div class="field-row"><div class="fl">نوع المركبة</div><div class="fv">${fullClaim.damaged_vehicle_type || '---'}</div></div>
+              <div class="field-row"><div class="fl">الموديل</div><div class="fv">${fullClaim.damaged_vehicle_model || '---'}</div></div>
+              <div class="field-row"><div class="fl">اللون</div><div class="fv">${fullClaim.damaged_vehicle_color || '---'}</div></div>
+              <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv">${fullClaim.damaged_vehicle_plate || '---'}</div></div>
+              ${fullClaim.damaged_vehicle_repair_shop ? `<div class="field-row span-2"><div class="fl">ورشة التصليح</div><div class="fv">${fullClaim.damaged_vehicle_repair_shop}</div></div>` : ''}
+              ${fullClaim.damaged_vehicle_details ? `<div class="field-row span-2"><div class="fl">بيانات الأضرار</div><div class="fv">${fullClaim.damaged_vehicle_details}</div></div>` : ''}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${fullClaim.driver_name ? `
+        <!-- Section 5: بيانات السائق المسبب -->
+        <div class="section">
+          <div class="section-title">👤 بيانات السائق المسبب</div>
+          <div class="section-body">
+            <div class="grid-3">
+              <div class="field-row"><div class="fl">اسم السائق</div><div class="fv">${fullClaim.driver_name}</div></div>
+              <div class="field-row"><div class="fl">رقم الرخصة</div><div class="fv">${fullClaim.driver_license_number || '---'}</div></div>
+              <div class="field-row"><div class="fl">الجنسية</div><div class="fv">${fullClaim.driver_nationality || '---'}</div></div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Section 6: بيانات التقييم المالي -->
+        <div class="section">
+          <div class="section-title">💰 بيانات التقييم المالي</div>
+          <div class="section-body">
+            <div class="grid-2">
+              <div class="field-row">
+                <div class="fl">مبلغ الأضرار (بالتونسي)</div>
+                <div class="fv" style="color:#0369a1; font-weight:900;">${tndAmount}</div>
+              </div>
+              <div class="field-row">
+                <div class="fl">قيمة التقييم (بالليبي)</div>
+                <div class="fv highlight">${lydAmount}</div>
+              </div>
+              ${fullClaim.assessor_date ? `<div class="field-row"><div class="fl">تاريخ التقييم</div><div class="fv">${fullClaim.assessor_date}</div></div>` : ''}
+              ${fullClaim.assessor_percentage ? `<div class="field-row"><div class="fl">نسبة المقدر</div><div class="fv">${fullClaim.assessor_percentage}</div></div>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 7: بيانات التسويات -->
+        <div class="section">
+          <div class="section-title">🤝 بيانات التسويات الودية</div>
+          <div class="section-body" style="padding:6px;">
+            ${settlementsHtml}
+          </div>
+        </div>
+
+        <!-- Signatures -->
+        <div class="sig-area">
+          <div class="sig-box">
+            <div class="sig-outline"></div>
+            <div class="sig-label">ختم وإعتماد الشركة</div>
+          </div>
+          <div class="sig-box" style="text-align:center;">
+            <div style="font-size:9px; font-weight:700; color:#64748b; margin-bottom:8px;">رقم المطالبة: ${fullClaim.claim_number}</div>
+            <div style="font-size:9px; font-weight:700; color:#64748b;">التاريخ: ${new Date().toLocaleDateString('en-GB')}</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-outline"></div>
+            <div class="sig-label">توقيع المستلم / مقدم المطالبة</div>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          أي كشط أو تعديل يلغي هذا النموذج &nbsp;|&nbsp;
+          طبع بواسطة نظام المدار الليبي للتأمين — ${new Date().toLocaleString('en-GB')}
+        </div>
+
       </body>
       </html>
     `);
@@ -1824,6 +1926,14 @@ export default function ClaimsList() {
                         >
                           <i className="fa-solid fa-print"></i>
                         </button>
+                        <button
+                          className="action-btn"
+                          title="+ إضافة تسوية جديدة"
+                          onClick={() => handleOpenSettlementModal(claim.id)}
+                          style={{ color: '#0369a1', background: '#e0f2fe' }}
+                        >
+                          <i className="fa-solid fa-handshake"></i>
+                        </button>
                         <Link to={`/claims/${claim.id}`} className="action-btn view" title="عرض التفاصيل">
                           <i className="fa-solid fa-eye"></i>
                         </Link>
@@ -1937,6 +2047,77 @@ export default function ClaimsList() {
         )}
       </div>
 
+            {showSettlementModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--panel, #fff)', borderRadius: '16px', width: '100%', maxWidth: '560px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', direction: 'rtl', fontFamily: 'Cairo, sans-serif' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.2rem', color: '#0f172a' }}>
+                <i className="fa-solid fa-handshake me-2" style={{ color: '#0ea5e9' }}></i>
+                إضافة تسوية جديدة
+              </h3>
+              <button onClick={() => setShowSettlementModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8' }}>×</button>
+            </div>
+            <form onSubmit={handleSubmitSettlement}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#334155' }}>تاريخ التسوية</label>
+                  <input type="date" required className="premium-field" value={settlementData.settlement_date}
+                    onChange={e => setSettlementData({ ...settlementData, settlement_date: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif' }} />
+                </div>
+                <div>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#334155' }}>رقم التسوية</label>
+                  <input type="text" required className="premium-field" placeholder="رقم التسوية..." value={settlementData.settlement_number}
+                    onChange={e => setSettlementData({ ...settlementData, settlement_number: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif' }} />
+                </div>
+                <div>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#334155' }}>مقدم التسوية</label>
+                  <input type="text" className="premium-field" placeholder="اسم مقدم التسوية..." value={settlementData.settlement_presenter}
+                    onChange={e => setSettlementData({ ...settlementData, settlement_presenter: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif' }} />
+                </div>
+                <div>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#334155' }}>مدير اللجنة</label>
+                  <input type="text" className="premium-field" placeholder="اسم مدير اللجنة..." value={settlementData.committee_manager}
+                    onChange={e => setSettlementData({ ...settlementData, committee_manager: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif' }} />
+                </div>
+                <div>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#0369a1' }}>مبلغ الأضرار (د.ت)</label>
+                  <input type="text" className="premium-field" placeholder="المبلغ بالدينار التونسي..." value={settlementData.tnd_amount}
+                    onChange={e => setSettlementData({ ...settlementData, tnd_amount: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #7dd3fc', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif', background: '#f0f9ff' }} />
+                </div>
+                <div>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#059669' }}>قيمة التقييم (د.ل)</label>
+                  <input type="text" className="premium-field" placeholder="القيمة بالدينار الليبي..." value={settlementData.lyd_amount}
+                    onChange={e => setSettlementData({ ...settlementData, lyd_amount: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #6ee7b7', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif', background: '#ecfdf5' }} />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#334155' }}>تقرير / ملاحظات التسوية</label>
+                  <textarea className="premium-field" placeholder="تفاصيل التسوية وأي ملاحظات..." value={settlementData.manager_report}
+                    onChange={e => setSettlementData({ ...settlementData, manager_report: e.target.value })}
+                    rows={3}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif', resize: 'vertical' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button type="button" onClick={() => setShowSettlementModal(false)}
+                  style={{ padding: '10px 24px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#f8fafc', fontFamily: 'Cairo, sans-serif', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>
+                  إلغاء
+                </button>
+                <button type="submit" disabled={settlementLoading}
+                  style={{ padding: '10px 28px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #0369a1)', color: '#fff', fontFamily: 'Cairo, sans-serif', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-handshake"></i>
+                  {settlementLoading ? 'جاري الحفظ...' : 'حفظ التسوية'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {showAddModal && (
         <CreateClaimModal
           claim={editingClaim}
@@ -1954,3 +2135,8 @@ export default function ClaimsList() {
     </section>
   );
 }
+
+
+
+
+
