@@ -82,6 +82,37 @@ export default function FinanceClaimsList() {
     }
   };
 
+  const handleCancelPayment = async (id: number) => {
+    const reason = window.prompt('يرجى تأكيد سبب إلغاء التسديد وإرجاع الملف غير مسدد:', 'إلغاء التسديد بسبب خطأ في الإدخال');
+    if (reason === null) return;
+
+    setProcessingId(id);
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(`${API_BASE_URL}/claims/${id}/cancel-payment?user_id=${user.id || ''}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        showToast('تم إلغاء التسديد وإعادة الملف كغير مسدد بنجاح', 'success');
+        fetchClaims();
+      } else {
+        const err = await response.json().catch(() => ({}));
+        showToast(err.message || 'حدث خطأ أثناء إلغاء التسديد', 'error');
+      }
+    } catch (error) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectReason) {
@@ -464,22 +495,42 @@ export default function FinanceClaimsList() {
                       <td style={{ fontWeight: 'bold', color: '#139625' }}>{c.total_paid ? `${parseFloat(c.total_paid).toLocaleString()} ${c.currency === 'TND' ? 'د.ت' : (c.currency === 'USD' ? '$' : 'د.ل')}` : '—'}</td>
                       <td>{c.updated_at ? c.updated_at.split('T')[0] : '—'}</td>
                       <td className="no-print">
-                        {activeTab === 'pending' ? (
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => handleApprove(c.id)} disabled={processingId === c.id} style={{ background: '#139625', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                              {processingId === c.id ? 'جاري...' : '✅ قبول وصرف'}
-                            </button>
-                            <button onClick={() => setRejectingClaimId(c.id)} disabled={processingId === c.id} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                              ❌ رفض وإرجاع
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => handlePrintVoucher(c)} style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                              🖨️ طباعة وصل الصرف
-                            </button>
-                          </div>
-                        )}
+                        {(() => {
+                          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                          const canCancelPayment = currentUser.is_admin || 
+                            (currentUser.authorized_documents && (
+                              currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
+                              currentUser.authorized_documents.includes('تسديد التعويضات') || 
+                              currentUser.authorized_documents.includes('المحاسب المالي')
+                            ));
+
+                          return activeTab === 'pending' ? (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button onClick={() => handleApprove(c.id)} disabled={processingId === c.id} style={{ background: '#139625', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                {processingId === c.id ? 'جاري...' : '✅ قبول وصرف'}
+                              </button>
+                              <button onClick={() => setRejectingClaimId(c.id)} disabled={processingId === c.id} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                ❌ رفض وإرجاع
+                              </button>
+                              {canCancelPayment && (
+                                <button onClick={() => handleCancelPayment(c.id)} disabled={processingId === c.id} style={{ background: '#6b7280', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }} title="إلغاء التسديد وإعادة الملف للتعويضات">
+                                  ↩️ إلغاء
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button onClick={() => handlePrintVoucher(c)} style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                🖨️ طباعة وصل الصرف
+                              </button>
+                              {canCancelPayment && (
+                                <button onClick={() => handleCancelPayment(c.id)} disabled={processingId === c.id} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }} title="إلغاء التسديد وحذف قيد المصروف وإعادة الملف كغير مسدد">
+                                  {processingId === c.id ? 'جاري...' : '↩️ إلغاء التسديد'}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))

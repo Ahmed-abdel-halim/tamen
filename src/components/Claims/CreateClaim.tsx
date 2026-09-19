@@ -126,16 +126,49 @@ const SearchableSelect = ({
   );
 };
 
-const safeFormatDate = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return 'غير متوفر';
-  try {
-    // Convert MySQL datetime (space separator) to ISO format (T separator)
-    const d = new Date(String(dateStr).replace(' ', 'T'));
-    if (isNaN(d.getTime())) return String(dateStr);
-    return d.toLocaleDateString('en-GB');
-  } catch {
-    return String(dateStr);
+const formatDateForInput = (dateStr: any): string => {
+  if (!dateStr || dateStr === 'غير متوفر' || dateStr === 'null' || dateStr === 'undefined') return '';
+  if (dateStr instanceof Date) {
+    if (isNaN(dateStr.getTime())) return '';
+    const year = dateStr.getFullYear();
+    const month = String(dateStr.getMonth() + 1).padStart(2, '0');
+    const day = String(dateStr.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
+  const str = String(dateStr).trim();
+  if (!str) return '';
+
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return str;
+  }
+
+  // YYYY-MM-DD followed by time (e.g. 2026-09-19 12:00:00 or 2026-09-19T12:00:00.000Z)
+  if (/^\d{4}-\d{2}-\d{2}[ T]/.test(str)) {
+    return str.substring(0, 10);
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY (e.g. 19/09/2026 or 19-09-2026)
+  const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Fallback: Date parse
+  try {
+    const d = new Date(str.replace(' ', 'T'));
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch {}
+
+  return '';
 };
 
 export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
@@ -149,17 +182,51 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
   const [documentData, setDocumentData] = useState<any>(null);
 
   const [documentManualData, setDocumentManualData] = useState<any>(() => {
-    const data = claim?.document_manual_data || {
+    let data = claim?.document_manual_data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch {}
+    }
+    const defaultData = {
       insurance_number: '', issue_date: '', vehicle_type: '', plate_number: '',
       insured_name: '', end_date: '', year: '', chassis_number: '',
       purpose: '', insurance_type: '', document_coverage: '', phone: '', notes: ''
     };
-    if (claim?.document_coverage && !data.document_coverage) {
-      data.document_coverage = claim.document_coverage;
+    const merged = { ...defaultData, ...(data || {}) };
+    if (claim?.document_coverage && !merged.document_coverage) {
+      merged.document_coverage = claim.document_coverage;
     }
-    return data;
+    if (claim?.document) {
+      if (!merged.insurance_number && claim.document.insurance_number) merged.insurance_number = claim.document.insurance_number;
+      if (!merged.insured_name && claim.document.insured_name) merged.insured_name = claim.document.insured_name;
+      if (!merged.issue_date && claim.document.issue_date) merged.issue_date = formatDateForInput(claim.document.issue_date);
+      if (!merged.end_date && claim.document.end_date) merged.end_date = formatDateForInput(claim.document.end_date);
+      if (!merged.vehicle_type && (claim.document.vehicleType?.name || claim.document.vehicle_type)) {
+        merged.vehicle_type = claim.document.vehicleType?.name || (typeof claim.document.vehicle_type === 'object' ? claim.document.vehicle_type?.name : claim.document.vehicle_type);
+      }
+      if (!merged.plate_number && (claim.document.plate?.plate_number || claim.document.plate_number)) {
+        merged.plate_number = claim.document.plate?.plate_number || claim.document.plate_number;
+      }
+      if (!merged.year && (claim.document.year || claim.document.manufacture_year)) merged.year = claim.document.year || claim.document.manufacture_year;
+      if (!merged.chassis_number && claim.document.chassis_number) merged.chassis_number = claim.document.chassis_number;
+      if (!merged.purpose && (claim.document.purpose_of_license || claim.document.purpose)) merged.purpose = claim.document.purpose_of_license || claim.document.purpose;
+      if (!merged.phone && (claim.document.phone_number || claim.document.phone)) merged.phone = claim.document.phone_number || claim.document.phone;
+    }
+    merged.issue_date = formatDateForInput(merged.issue_date);
+    merged.end_date = formatDateForInput(merged.end_date);
+    return merged;
   });
-  const [additionalDocuments, setAdditionalDocuments] = useState<any[]>(claim?.additional_documents || []);
+  const [additionalDocuments, setAdditionalDocuments] = useState<any[]>(() => {
+    let docs = claim?.additional_documents || [];
+    if (typeof docs === 'string') {
+      try { docs = JSON.parse(docs); } catch {}
+    }
+    if (!Array.isArray(docs)) docs = [];
+    return docs.map((d: any) => ({
+      ...d,
+      issue_date: formatDateForInput(d.issue_date),
+      end_date: formatDateForInput(d.end_date)
+    }));
+  });
 
   // Claim Data
   const [claimData, setClaimData] = useState({
@@ -167,8 +234,8 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     claim_number_auto: !claim?.claim_number,
     reference_number: claim?.reference_number || '',
     admin_number: claim?.admin_number || '',
-    claim_date: claim?.claim_date || new Date().toISOString().split('T')[0],
-    accident_date: claim?.accident_date || '',
+    claim_date: formatDateForInput(claim?.claim_date) || new Date().toISOString().split('T')[0],
+    accident_date: formatDateForInput(claim?.accident_date) || '',
     accident_type: claim?.accident_type || '',
     accident_location: claim?.accident_location || '',
     accident_time: claim?.accident_time || '',
@@ -187,8 +254,8 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     driver_nationality: claim?.driver_nationality || '',
     driver_id_number: claim?.driver_id_number || '',
     driver_license_number: claim?.driver_license_number || '',
-    driver_license_issue_date: claim?.driver_license_issue_date || '',
-    driver_license_expiry_date: claim?.driver_license_expiry_date || '',
+    driver_license_issue_date: formatDateForInput(claim?.driver_license_issue_date) || '',
+    driver_license_expiry_date: formatDateForInput(claim?.driver_license_expiry_date) || '',
     // Damaged body
     damaged_body_type: claim?.damaged_body_type || 'سيارة',
     damaged_vehicle_model: claim?.damaged_vehicle_model || '',
@@ -206,12 +273,12 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
     victim_insurance_number: claim?.victim_insurance_number || '',
     victim_insurance_type: claim?.victim_insurance_type || '',
     victim_insurance_coverage: claim?.victim_insurance_coverage || '',
-    victim_insurance_issue_date: claim?.victim_insurance_issue_date || '',
-    victim_insurance_expiry_date: claim?.victim_insurance_expiry_date || '',
+    victim_insurance_issue_date: formatDateForInput(claim?.victim_insurance_issue_date) || '',
+    victim_insurance_expiry_date: formatDateForInput(claim?.victim_insurance_expiry_date) || '',
     // Assessor
     assessor_name: claim?.assessor_name || '',
     assessor_phone: claim?.assessor_phone || '',
-    assessor_date: claim?.assessor_date || '',
+    assessor_date: formatDateForInput(claim?.assessor_date) || '',
     assessor_amount_dinar: claim?.assessor_amount_dinar || '',
     assessor_amount_dollar: claim?.assessor_amount_dollar || '',
     assessor_percentage: claim?.assessor_percentage || '',
@@ -323,9 +390,25 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
   ]);
 
   useEffect(() => {
-    if (claim && claim.document) {
-      setInsuranceNumber(claim.document.insurance_number);
-      setDocumentData(claim.document);
+    if (claim) {
+      if (claim.document) {
+        setInsuranceNumber(claim.document.insurance_number);
+        setDocumentData(claim.document);
+      }
+      if (claim.document_manual_data) {
+        let manual = claim.document_manual_data;
+        if (typeof manual === 'string') {
+          try { manual = JSON.parse(manual); } catch {}
+        }
+        if (manual && typeof manual === 'object') {
+          setDocumentManualData((prev: any) => ({
+            ...prev,
+            ...manual,
+            issue_date: formatDateForInput(manual.issue_date || prev.issue_date),
+            end_date: formatDateForInput(manual.end_date || prev.end_date)
+          }));
+        }
+      }
     }
   }, [claim]);
 
@@ -406,11 +489,11 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
       setDocumentManualData({
         ...documentManualData,
         insurance_number: data.insurance_number || searchNumber,
-        issue_date: data.issue_date || '',
+        issue_date: formatDateForInput(data.issue_date),
         vehicle_type: data.vehicleType?.name || (typeof data.vehicle_type === 'object' ? data.vehicle_type?.name : data.vehicle_type) || '',
         plate_number: data.plate?.plate_number || data.plate_number || '',
         insured_name: data.insured_name || '',
-        end_date: data.end_date || '',
+        end_date: formatDateForInput(data.end_date),
         year: data.year || data.manufacture_year || '',
         chassis_number: data.chassis_number || '',
         purpose: data.purpose_of_license || data.purpose || '',
@@ -855,7 +938,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                       </td>
                       <td className="label-cell">تاريخ الاصدار</td>
                       <td className="value-cell">
-                        <input type="date" value={safeFormatDate(documentManualData.issue_date)} onChange={e => setDocumentManualData({...documentManualData, issue_date: e.target.value})} disabled={documentData && documentType !== 'InternationalInsuranceDocument'} />
+                        <input type="date" value={formatDateForInput(documentManualData.issue_date)} onChange={e => setDocumentManualData({...documentManualData, issue_date: e.target.value})} disabled={documentData && documentType !== 'InternationalInsuranceDocument'} />
                       </td>
                       <td className="label-cell">نوع السيارة</td>
                       <td className="value-cell">
@@ -869,7 +952,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                       </td>
                       <td className="label-cell">تاريخ الانتهاء</td>
                       <td className="value-cell">
-                        <input type="date" value={safeFormatDate(documentManualData.end_date)} onChange={e => setDocumentManualData({...documentManualData, end_date: e.target.value})} disabled={documentData && documentType !== 'InternationalInsuranceDocument'} />
+                        <input type="date" value={formatDateForInput(documentManualData.end_date)} onChange={e => setDocumentManualData({...documentManualData, end_date: e.target.value})} disabled={documentData && documentType !== 'InternationalInsuranceDocument'} />
                       </td>
                       <td className="label-cell">سنة الصنع</td>
                       <td className="value-cell">
@@ -939,7 +1022,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                       <td className="label-cell">رقم الوثيقة</td>
                       <td className="value-cell"><input type="text" value={doc.insurance_number} onChange={e => { const nd = [...additionalDocuments]; nd[index].insurance_number = e.target.value; setAdditionalDocuments(nd); }} /></td>
                       <td className="label-cell">تاريخ الاصدار</td>
-                      <td className="value-cell"><input type="date" value={doc.issue_date} onChange={e => { const nd = [...additionalDocuments]; nd[index].issue_date = e.target.value; setAdditionalDocuments(nd); }} /></td>
+                      <td className="value-cell"><input type="date" value={formatDateForInput(doc.issue_date)} onChange={e => { const nd = [...additionalDocuments]; nd[index].issue_date = e.target.value; setAdditionalDocuments(nd); }} /></td>
                       <td className="label-cell">نوع السيارة</td>
                       <td className="value-cell"><input type="text" value={doc.vehicle_type} onChange={e => { const nd = [...additionalDocuments]; nd[index].vehicle_type = e.target.value; setAdditionalDocuments(nd); }} /></td>
                     </tr>
@@ -947,7 +1030,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                       <td className="label-cell">اسم المؤمن له</td>
                       <td className="value-cell"><input type="text" value={doc.insured_name} onChange={e => { const nd = [...additionalDocuments]; nd[index].insured_name = e.target.value; setAdditionalDocuments(nd); }} /></td>
                       <td className="label-cell">تاريخ الانتهاء</td>
-                      <td className="value-cell"><input type="date" value={doc.end_date} onChange={e => { const nd = [...additionalDocuments]; nd[index].end_date = e.target.value; setAdditionalDocuments(nd); }} /></td>
+                      <td className="value-cell"><input type="date" value={formatDateForInput(doc.end_date)} onChange={e => { const nd = [...additionalDocuments]; nd[index].end_date = e.target.value; setAdditionalDocuments(nd); }} /></td>
                       <td className="label-cell">سنة الصنع</td>
                       <td className="value-cell"><input type="text" value={doc.year} onChange={e => { const nd = [...additionalDocuments]; nd[index].year = e.target.value; setAdditionalDocuments(nd); }} /></td>
                     </tr>
@@ -1028,7 +1111,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 <div className="field-group">
                   <label className="premium-label">تاريخ المطالبة</label>
                   <input type="date" className="premium-field" required
-                    value={claimData.claim_date}
+                    value={formatDateForInput(claimData.claim_date)}
                     onChange={(e) => setClaimData({ ...claimData, claim_date: e.target.value })}
                   />
                 </div>
@@ -1036,7 +1119,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 <div className="field-group">
                   <label className="premium-label">تاريخ الحادث</label>
                   <input type="date" className="premium-field" required
-                    value={claimData.accident_date}
+                    value={formatDateForInput(claimData.accident_date)}
                     onChange={(e) => setClaimData({ ...claimData, accident_date: e.target.value })}
                   />
                 </div>
@@ -1205,8 +1288,8 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 <div className="field-group"><label className="premium-label">الجنسية</label><input className="premium-field" value={claimData.driver_nationality} onChange={e => setClaimData({ ...claimData, driver_nationality: e.target.value })} placeholder="الجنسية..." /></div>
                 <div className="field-group"><label className="premium-label">رقم الهوية</label><input className="premium-field" value={claimData.driver_id_number} onChange={e => setClaimData({ ...claimData, driver_id_number: e.target.value })} placeholder="رقم الهوية..." /></div>
                 <div className="field-group"><label className="premium-label">رقم رخصة القيادة</label><input className="premium-field" value={claimData.driver_license_number} onChange={e => setClaimData({ ...claimData, driver_license_number: e.target.value })} placeholder="رقم الرخصة..." /></div>
-                <div className="field-group"><label className="premium-label">تاريخ إصدار الرخصة</label><input type="date" className="premium-field" value={claimData.driver_license_issue_date} onChange={e => setClaimData({ ...claimData, driver_license_issue_date: e.target.value })} /></div>
-                <div className="field-group"><label className="premium-label">تاريخ انتهاء الرخصة</label><input type="date" className="premium-field" value={claimData.driver_license_expiry_date} onChange={e => setClaimData({ ...claimData, driver_license_expiry_date: e.target.value })} /></div>
+                <div className="field-group"><label className="premium-label">تاريخ إصدار الرخصة</label><input type="date" className="premium-field" value={formatDateForInput(claimData.driver_license_issue_date)} onChange={e => setClaimData({ ...claimData, driver_license_issue_date: e.target.value })} /></div>
+                <div className="field-group"><label className="premium-label">تاريخ انتهاء الرخصة</label><input type="date" className="premium-field" value={formatDateForInput(claimData.driver_license_expiry_date)} onChange={e => setClaimData({ ...claimData, driver_license_expiry_date: e.target.value })} /></div>
                 <div className="field-group"><label className="premium-label">صورة السائق</label><input type="file" accept="image/*" className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDriverPhoto(e.target.files?.[0] || null)} /></div>
                 <div className="field-group"><label className="premium-label">صورة رخصة القيادة</label><input type="file" accept="image/*" className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setDriverLicensePhoto(e.target.files?.[0] || null)} /></div>
               </div>
@@ -1262,8 +1345,8 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                 <div className="field-group"><label className="premium-label">رقم الوثيقة</label><input className="premium-field" value={claimData.victim_insurance_number} onChange={e => setClaimData({ ...claimData, victim_insurance_number: e.target.value })} placeholder="رقم الوثيقة..." /></div>
                 <div className="field-group"><label className="premium-label">نوع الوثيقة</label><input className="premium-field" value={claimData.victim_insurance_type} onChange={e => setClaimData({ ...claimData, victim_insurance_type: e.target.value })} placeholder="شامل / طرف ثالث..." /></div>
                 <div className="field-group"><label className="premium-label">تغطية الوثيقة</label><input className="premium-field" value={claimData.victim_insurance_coverage} onChange={e => setClaimData({ ...claimData, victim_insurance_coverage: e.target.value })} placeholder="المسؤولية المدنية..." /></div>
-                <div className="field-group"><label className="premium-label">تاريخ إصدار الوثيقة</label><input type="date" className="premium-field" value={claimData.victim_insurance_issue_date} onChange={e => setClaimData({ ...claimData, victim_insurance_issue_date: e.target.value })} /></div>
-                <div className="field-group"><label className="premium-label">تاريخ انتهاء الوثيقة</label><input type="date" className="premium-field" value={claimData.victim_insurance_expiry_date} onChange={e => setClaimData({ ...claimData, victim_insurance_expiry_date: e.target.value })} /></div>
+                <div className="field-group"><label className="premium-label">تاريخ إصدار الوثيقة</label><input type="date" className="premium-field" value={formatDateForInput(claimData.victim_insurance_issue_date)} onChange={e => setClaimData({ ...claimData, victim_insurance_issue_date: e.target.value })} /></div>
+                <div className="field-group"><label className="premium-label">تاريخ انتهاء الوثيقة</label><input type="date" className="premium-field" value={formatDateForInput(claimData.victim_insurance_expiry_date)} onChange={e => setClaimData({ ...claimData, victim_insurance_expiry_date: e.target.value })} /></div>
                 <div className="field-group"><label className="premium-label">صورة الوثيقة</label><input type="file" accept="image/*" className="premium-field" style={{ fontSize: '0.8rem' }} onChange={e => setVictimInsurancePhoto(e.target.files?.[0] || null)} /></div>
               </div>
             </div>
@@ -1274,7 +1357,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                 <div className="field-group"><label className="premium-label">اسم مقدر الأضرار</label><input className="premium-field" value={claimData.assessor_name} onChange={e => setClaimData({ ...claimData, assessor_name: e.target.value })} placeholder="الاسم..." /></div>
                 <div className="field-group"><label className="premium-label">رقم الهاتف</label><input className="premium-field" value={claimData.assessor_phone} onChange={e => setClaimData({ ...claimData, assessor_phone: e.target.value })} placeholder="091..." /></div>
-                <div className="field-group"><label className="premium-label">تاريخ التقييم</label><input type="date" className="premium-field" value={claimData.assessor_date} onChange={e => setClaimData({ ...claimData, assessor_date: e.target.value })} /></div>
+                <div className="field-group"><label className="premium-label">تاريخ التقييم</label><input type="date" className="premium-field" value={formatDateForInput(claimData.assessor_date)} onChange={e => setClaimData({ ...claimData, assessor_date: e.target.value })} /></div>
                 <div className="field-group"><label className="premium-label">نسبة تقدير الأضرار</label><input className="premium-field" value={claimData.assessor_percentage} onChange={e => setClaimData({ ...claimData, assessor_percentage: e.target.value })} placeholder="%75" /></div>
                 
                 <div className="field-group">
@@ -1453,7 +1536,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
                     </div>
                     <div>
                       <input type="date" className="premium-field py-1"
-                        value={report.report_date}
+                        value={formatDateForInput(report.report_date)}
                         onChange={(e) => handleReportChange(index, 'report_date', e.target.value)}
                       />
                     </div>

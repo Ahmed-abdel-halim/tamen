@@ -191,6 +191,34 @@ export default function ClaimsList() {
     }
   };
 
+  const handleCancelPayment = async (id: number) => {
+    const reason = window.prompt('يرجى تأكيد سبب إلغاء التسديد وإرجاع الملف غير مسدد:', 'إلغاء التسديد بسبب خطأ في الإدخال');
+    if (reason === null) return;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(`${API_BASE_URL}/claims/${id}/cancel-payment?user_id=${user.id || ''}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        showToast('تم إلغاء التسديد وإعادة الملف كغير مسدد بنجاح', 'success');
+        fetchClaims();
+      } else {
+        const err = await response.json().catch(() => ({}));
+        showToast(err.message || 'حدث خطأ أثناء إلغاء التسديد', 'error');
+      }
+    } catch (error) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
@@ -1799,6 +1827,34 @@ export default function ClaimsList() {
                         <Link to={`/claims/${claim.id}`} className="action-btn view" title="عرض التفاصيل">
                           <i className="fa-solid fa-eye"></i>
                         </Link>
+                        {(() => {
+                          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                          const canCancelPayment = currentUser.is_admin || 
+                            (currentUser.authorized_documents && (
+                              currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
+                              currentUser.authorized_documents.includes('التعويضات') || 
+                              currentUser.authorized_documents.includes('تسديد التعويضات') || 
+                              currentUser.authorized_documents.includes('المحاسب المالي') || 
+                              currentUser.authorized_documents.includes('الشؤون الفنية')
+                            ));
+
+                          const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية' || t.transfer_type === 'تم التسديد');
+                          const isPaid = claim.status === 'مدفوع' || claim.status === 'للتسديد - الشؤون المالية' || paymentTransfer || claim.total_paid;
+
+                          if (isPaid && canCancelPayment) {
+                            return (
+                              <button
+                                className="action-btn"
+                                title="إلغاء التسديد وإعادة الملف كغير مسدد"
+                                onClick={() => handleCancelPayment(claim.id)}
+                                style={{ color: '#dc2626', background: '#fee2e2' }}
+                              >
+                                <i className="fa-solid fa-rotate-left"></i>
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
                         <button
                           className="action-btn edit"
                           title="تعديل"

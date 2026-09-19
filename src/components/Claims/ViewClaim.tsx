@@ -118,6 +118,34 @@ export default function ViewClaim() {
     }
   };
 
+  const handleCancelPayment = async () => {
+    const reason = window.prompt('يرجى كتابة سبب إلغاء التسديد وإرجاع الملف غير مسدد:', 'إلغاء التسديد والصرف المالي');
+    if (reason === null) return;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(`${API_BASE_URL}/claims/${id}/cancel-payment?user_id=${user.id || ''}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        showToast('تم إلغاء التسديد وإعادة الملف بنجاح', 'success');
+        fetchClaim();
+      } else {
+        const err = await response.json().catch(() => ({}));
+        showToast(err.message || 'حدث خطأ أثناء إلغاء التسديد', 'error');
+      }
+    } catch (error) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
   const handlePrint = () => {
     const printWindow = window.open('', '', 'width=1200,height=900');
     if (!printWindow) return;
@@ -589,6 +617,27 @@ export default function ViewClaim() {
           </div>
 
           <div className="button-group">
+            {(() => {
+              const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+              const canCancelPayment = currentUser.is_admin || 
+                (currentUser.authorized_documents && (
+                  currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
+                  currentUser.authorized_documents.includes('التعويضات') || 
+                  currentUser.authorized_documents.includes('تسديد التعويضات') || 
+                  currentUser.authorized_documents.includes('المحاسب المالي') || 
+                  currentUser.authorized_documents.includes('الشؤون الفنية')
+                ));
+
+              if ((claim.status === 'مدفوع' || claim.status === 'للتسديد - الشؤون المالية' || claim.compensation_value) && canCancelPayment) {
+                return (
+                  <button className="btn-cancel-payment" onClick={handleCancelPayment} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }} title="إلغاء التسديد وإرجاع الملف غير مسدد">
+                    <i className="fa-solid fa-rotate-left"></i>
+                    إلغاء التسديد
+                  </button>
+                );
+              }
+              return null;
+            })()}
             <button className="btn-transfer" onClick={() => setShowTransferForm(!showTransferForm)}>
               <i className="fa-solid fa-share-nodes"></i>
               تحويل المطالبة
@@ -647,9 +696,32 @@ export default function ViewClaim() {
 
           {claim.compensation_value && (
             <section className="dashboard-card" style={{ border: '2px solid #139625' }}>
-              <div className="card-header" style={{ borderBottom: '1px solid #139625', paddingBottom: '10px' }}>
-                <i className="fa-solid fa-money-bill-wave text-success"></i>
-                <h3 style={{ color: '#139625' }}>البيانات المالية للتعويض</h3>
+              <div className="card-header" style={{ borderBottom: '1px solid #139625', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-money-bill-wave text-success"></i>
+                  <h3 style={{ color: '#139625', margin: 0 }}>البيانات المالية للتعويض</h3>
+                </div>
+                {(() => {
+                  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                  const canCancelPayment = currentUser.is_admin || 
+                    (currentUser.authorized_documents && (
+                      currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
+                      currentUser.authorized_documents.includes('التعويضات') || 
+                      currentUser.authorized_documents.includes('تسديد التعويضات') || 
+                      currentUser.authorized_documents.includes('المحاسب المالي') || 
+                      currentUser.authorized_documents.includes('الشؤون الفنية')
+                    ));
+
+                  if (canCancelPayment) {
+                    return (
+                      <button onClick={handleCancelPayment} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }} title="إلغاء التسديد والصرف المالي وحذف قيد المصروف">
+                        <i className="fa-solid fa-rotate-left"></i>
+                        إلغاء التسديد والصرف
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div className="details-grid">
                 <div className="detail-item">

@@ -209,6 +209,34 @@ export default function CompensationsList() {
     }
   };
 
+  const handleCancelPayment = async (id: number) => {
+    const reason = window.prompt('يرجى كتابة سبب إلغاء التسديد وإعادة فتح ملف التعويض:', 'إلغاء التسديد بسبب خطأ في الإدخال');
+    if (reason === null) return;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(`${API_BASE_URL}/claims/${id}/cancel-payment?user_id=${user.id || ''}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        showToast('تم إلغاء التسديد وإعادة الملف كغير مسدد بنجاح', 'success');
+        fetchClaims();
+      } else {
+        const err = await response.json().catch(() => ({}));
+        showToast(err.message || 'حدث خطأ أثناء إلغاء التسديد', 'error');
+      }
+    } catch (error) {
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    }
+  };
+
   // Transition claim to compensations workflow
   const handleImportClaim = async (claimId: number) => {
     try {
@@ -764,6 +792,24 @@ export default function CompensationsList() {
                                 <i className="fa-solid fa-calculator" style={{ color: '#d97706' }}></i>
                               </button>
                             )}
+                            {(() => {
+                              const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                              const canCancelPayment = currentUser.is_admin || 
+                                (currentUser.authorized_documents && (
+                                  currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
+                                  currentUser.authorized_documents.includes('التعويضات') || 
+                                  currentUser.authorized_documents.includes('الشؤون الفنية')
+                                ));
+
+                              if ((c.status === 'مدفوع' || c.status === 'للتسديد - الشؤون المالية') && canCancelPayment) {
+                                return (
+                                  <button onClick={() => handleCancelPayment(c.id)} style={{ background: '#fee2e2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }} title="إلغاء التسديد وإعادة فتح ملف التعويض">
+                                    <i className="fa-solid fa-rotate-left" style={{ color: '#dc2626' }}></i>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                             <button onClick={() => handleDeleteClick(c.id)} style={{ background: '#fee2e2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }} title="حذف">
                               <i className="fa-solid fa-trash-can" style={{ color: '#ef4444' }}></i>
                             </button>
