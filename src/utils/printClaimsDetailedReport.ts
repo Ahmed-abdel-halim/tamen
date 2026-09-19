@@ -1,4 +1,4 @@
-﻿// src/utils/printClaimsDetailedReport.ts
+// src/utils/printClaimsDetailedReport.ts
 
 export interface ExchangeRates {
   usd_to_lyd: number;
@@ -158,9 +158,17 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
     const settlementTransfer = allSettlementTransfers[0];
     const latestSettlement = allSettlementTransfers[allSettlementTransfers.length - 1];
     const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
-    // Last settlement TND and LYD
     const lastSettlementTND = latestSettlement?.details?.tnd_amount || latestSettlement?.details?.total_value || '';
-    const lastSettlementLYD = latestSettlement?.details?.lyd_amount || '';
+    let lastSettlementLYD = latestSettlement?.details?.lyd_amount || '';
+    if (!lastSettlementLYD && latestSettlement?.details?.total_value && latestSettlement?.details?.total_value !== latestSettlement?.details?.tnd_amount) {
+      lastSettlementLYD = latestSettlement?.details?.total_value;
+    }
+    if (!lastSettlementLYD && lastSettlementTND) {
+      const tndVal = parseFloat(lastSettlementTND) || 0;
+      if (tndVal > 0) {
+        lastSettlementLYD = (tndVal * (options.rates?.tnd_to_lyd || 2.30)).toFixed(3);
+      }
+    }
 
     if (claim.total_paid && Number(claim.total_paid) > 0) {
       settlementLYD = Number(claim.total_paid);

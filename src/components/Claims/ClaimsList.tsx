@@ -38,6 +38,7 @@ export default function ClaimsList() {
   const [showSettlementModal, setShowSettlementModal] = useState(false);
   const [settlementClaimId, setSettlementClaimId] = useState<number | null>(null);
   const [settlementLoading, setSettlementLoading] = useState(false);
+  const [settlementImage, setSettlementImage] = useState<File | null>(null);
   const [settlementData, setSettlementData] = useState({
     settlement_number: '',
     settlement_presenter: '',
@@ -234,6 +235,7 @@ export default function ClaimsList() {
 
   const handleOpenSettlementModal = (claimId: number) => {
     setSettlementClaimId(claimId);
+    setSettlementImage(null);
     setSettlementData({
       settlement_number: '',
       settlement_presenter: '',
@@ -260,6 +262,9 @@ export default function ClaimsList() {
       formData.append('detail_lyd_amount', settlementData.lyd_amount);
       formData.append('detail_committee_manager', settlementData.committee_manager);
       formData.append('detail_manager_report', settlementData.manager_report);
+      if (settlementImage) {
+        formData.append('detail_image', settlementImage);
+      }
       const response = await fetch(`${API_BASE_URL}/claims/${settlementClaimId}/transfers`, {
         method: 'POST',
         headers: {
@@ -827,8 +832,30 @@ export default function ClaimsList() {
     const plateNum      = fullClaim.document?.plate?.plate_number || fullClaim.document?.plate_number || fullClaim.document_manual_data?.plate_number || '---';
 
     // --- Financial ---
-    const tndAmount = fullClaim.assessor_other_amount || '---';
-    const lydAmount = fullClaim.assessor_amount_dinar ? (Number(fullClaim.assessor_amount_dinar).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
+    let tndAmount = fullClaim.assessor_other_amount || '---';
+    let rawLyd: any = fullClaim.assessor_amount_dinar;
+
+    if (!rawLyd && fullClaim.damaged_vehicle_amount && Number(fullClaim.damaged_vehicle_amount) > 0) {
+      rawLyd = fullClaim.damaged_vehicle_amount;
+    }
+    if (!rawLyd && fullClaim.assessor_other_amount) {
+      const match = String(fullClaim.assessor_other_amount).match(/^([\d.]+)\s*(.*)$/);
+      if (match) {
+        const amt = parseFloat(match[1]) || 0;
+        const curr = match[2]?.trim() || '';
+        if (curr.includes('تونس') || curr.toUpperCase().includes('TND')) {
+          rawLyd = amt * (exchangeRates.tnd_to_lyd || 2.30);
+        } else if (curr.includes('دولار') || curr.toUpperCase().includes('USD')) {
+          rawLyd = amt * (exchangeRates.usd_to_lyd || 7.15);
+        } else if (curr.includes('يورو') || curr.toUpperCase().includes('EUR')) {
+          rawLyd = amt * (exchangeRates.eur_to_lyd || 7.65);
+        }
+      }
+    }
+    if (!rawLyd && fullClaim.compensation_value) {
+      rawLyd = fullClaim.compensation_value;
+    }
+    const lydAmount = rawLyd ? (Number(rawLyd).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
 
     // --- Settlements ---
     const settlements = (fullClaim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
@@ -847,15 +874,31 @@ export default function ClaimsList() {
             </tr>
           </thead>
           <tbody>
-            ${settlements.map((t: any, i: number) => `<tr>
-              <td>${i + 1}</td>
-              <td>${t.details?.settlement_date || new Date(t.created_at).toLocaleDateString('en-GB')}</td>
-              <td>${t.details?.settlement_presenter || t.details?.committee_manager || '---'}</td>
-              <td>${t.details?.settlement_number || '---'}</td>
-              <td class="money">${t.details?.tnd_amount || t.details?.total_value || '---'}</td>
-              <td class="money lyd">${t.details?.lyd_amount || '---'}</td>
-              <td>${t.details?.committee_manager || '---'}</td>
-            </tr>`).join('')}
+            ${settlements.map((t: any, i: number) => {
+              const rowTnd = t.details?.tnd_amount || t.details?.total_value || '';
+              let rowLyd = t.details?.lyd_amount || '';
+              if (!rowLyd && t.details?.total_value && t.details?.total_value !== t.details?.tnd_amount) {
+                rowLyd = t.details?.total_value;
+              }
+              if (!rowLyd && rowTnd) {
+                const tndVal = parseFloat(rowTnd) || 0;
+                if (tndVal > 0) {
+                  rowLyd = (tndVal * (exchangeRates.tnd_to_lyd || 2.30)).toFixed(3);
+                }
+              }
+              const displayRowLyd = rowLyd ? (Number(rowLyd).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
+              const displayRowTnd = rowTnd ? (isNaN(Number(rowTnd)) ? rowTnd : (Number(rowTnd).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' د.ت')) : '---';
+
+              return `<tr>
+                <td>${i + 1}</td>
+                <td>${t.details?.settlement_date || new Date(t.created_at).toLocaleDateString('en-GB')}</td>
+                <td>${t.details?.settlement_presenter || t.details?.committee_manager || '---'}</td>
+                <td>${t.details?.settlement_number || '---'}</td>
+                <td class="money">${displayRowTnd}</td>
+                <td class="money lyd">${displayRowLyd}</td>
+                <td>${t.details?.committee_manager || '---'}</td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>`
       : '<p class="no-settlements">لا توجد تسويات مسجلة</p>';
@@ -2086,7 +2129,12 @@ export default function ClaimsList() {
                 <div>
                   <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#0369a1' }}>مبلغ الأضرار (د.ت)</label>
                   <input type="text" className="premium-field" placeholder="المبلغ بالدينار التونسي..." value={settlementData.tnd_amount}
-                    onChange={e => setSettlementData({ ...settlementData, tnd_amount: e.target.value })}
+                    onChange={e => {
+                      const val = e.target.value;
+                      const num = parseFloat(val);
+                      const autoLyd = !isNaN(num) && num > 0 ? (num * (exchangeRates.tnd_to_lyd || 2.30)).toFixed(3) : settlementData.lyd_amount;
+                      setSettlementData({ ...settlementData, tnd_amount: val, lyd_amount: autoLyd });
+                    }}
                     style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #7dd3fc', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif', background: '#f0f9ff' }} />
                 </div>
                 <div>
@@ -2094,6 +2142,21 @@ export default function ClaimsList() {
                   <input type="text" className="premium-field" placeholder="القيمة بالدينار الليبي..." value={settlementData.lyd_amount}
                     onChange={e => setSettlementData({ ...settlementData, lyd_amount: e.target.value })}
                     style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #6ee7b7', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'Cairo, sans-serif', background: '#ecfdf5' }} />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#0369a1' }}>
+                    <i className="fa-solid fa-paperclip me-1"></i>
+                    إرفاق صورة / مستند التسوية (مطلوب للتوثيق)
+                  </label>
+                  <input type="file" accept="image/*,.pdf" className="premium-field"
+                    onChange={e => setSettlementImage(e.target.files?.[0] || null)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px dashed #38bdf8', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'Cairo, sans-serif', background: '#f0f9ff' }} />
+                  {settlementImage && (
+                    <div style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '4px', fontWeight: 700 }}>
+                      <i className="fa-solid fa-check-circle me-1"></i>
+                      تم اختيار الملف: {settlementImage.name}
+                    </div>
+                  )}
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ fontWeight: 800, fontSize: '0.85rem', display: 'block', marginBottom: '4px', color: '#334155' }}>تقرير / ملاحظات التسوية</label>

@@ -174,9 +174,34 @@ export default function ViewClaim() {
     const endDate       = claim.document?.end_date || claim.document_manual_data?.end_date || '---';
     const plateNum      = claim.document?.plate?.plate_number || claim.document?.plate_number || claim.document_manual_data?.plate_number || '---';
 
+    const cachedRates = localStorage.getItem('mli_exchange_rates');
+    const exchangeRates = cachedRates ? JSON.parse(cachedRates) : { usd_to_lyd: 7.15, tnd_to_lyd: 2.30, eur_to_lyd: 7.65 };
+
     // --- Financial ---
-    const tndAmount = claim.assessor_other_amount || '---';
-    const lydAmount = claim.assessor_amount_dinar ? (Number(claim.assessor_amount_dinar).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
+    let tndAmount = claim.assessor_other_amount || '---';
+    let rawLyd: any = claim.assessor_amount_dinar;
+
+    if (!rawLyd && claim.damaged_vehicle_amount && Number(claim.damaged_vehicle_amount) > 0) {
+      rawLyd = claim.damaged_vehicle_amount;
+    }
+    if (!rawLyd && claim.assessor_other_amount) {
+      const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s*(.*)$/);
+      if (match) {
+        const amt = parseFloat(match[1]) || 0;
+        const curr = match[2]?.trim() || '';
+        if (curr.includes('تونس') || curr.toUpperCase().includes('TND')) {
+          rawLyd = amt * (exchangeRates.tnd_to_lyd || 2.30);
+        } else if (curr.includes('دولار') || curr.toUpperCase().includes('USD')) {
+          rawLyd = amt * (exchangeRates.usd_to_lyd || 7.15);
+        } else if (curr.includes('يورو') || curr.toUpperCase().includes('EUR')) {
+          rawLyd = amt * (exchangeRates.eur_to_lyd || 7.65);
+        }
+      }
+    }
+    if (!rawLyd && claim.compensation_value) {
+      rawLyd = claim.compensation_value;
+    }
+    const lydAmount = rawLyd ? (Number(rawLyd).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
 
     // --- Settlements ---
     const settlements = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
@@ -195,15 +220,31 @@ export default function ViewClaim() {
             </tr>
           </thead>
           <tbody>
-            ${settlements.map((t: any, i: number) => `<tr>
-              <td>${i + 1}</td>
-              <td>${t.details?.settlement_date || new Date(t.created_at).toLocaleDateString('en-GB')}</td>
-              <td>${t.details?.settlement_presenter || t.details?.committee_manager || '---'}</td>
-              <td>${t.details?.settlement_number || '---'}</td>
-              <td class="money">${t.details?.tnd_amount || t.details?.total_value || '---'}</td>
-              <td class="money lyd">${t.details?.lyd_amount || '---'}</td>
-              <td>${t.details?.committee_manager || '---'}</td>
-            </tr>`).join('')}
+            ${settlements.map((t: any, i: number) => {
+              const rowTnd = t.details?.tnd_amount || t.details?.total_value || '';
+              let rowLyd = t.details?.lyd_amount || '';
+              if (!rowLyd && t.details?.total_value && t.details?.total_value !== t.details?.tnd_amount) {
+                rowLyd = t.details?.total_value;
+              }
+              if (!rowLyd && rowTnd) {
+                const tndVal = parseFloat(rowTnd) || 0;
+                if (tndVal > 0) {
+                  rowLyd = (tndVal * (exchangeRates.tnd_to_lyd || 2.30)).toFixed(3);
+                }
+              }
+              const displayRowLyd = rowLyd ? (Number(rowLyd).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
+              const displayRowTnd = rowTnd ? (isNaN(Number(rowTnd)) ? rowTnd : (Number(rowTnd).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' د.ت')) : '---';
+
+              return `<tr>
+                <td>${i + 1}</td>
+                <td>${t.details?.settlement_date || new Date(t.created_at).toLocaleDateString('en-GB')}</td>
+                <td>${t.details?.settlement_presenter || t.details?.committee_manager || '---'}</td>
+                <td>${t.details?.settlement_number || '---'}</td>
+                <td class="money">${displayRowTnd}</td>
+                <td class="money lyd">${displayRowLyd}</td>
+                <td>${t.details?.committee_manager || '---'}</td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>`
       : '<p class="no-settlements">لا توجد تسويات مسجلة</p>';
