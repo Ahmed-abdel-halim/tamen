@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { showToast } from '../Toast';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL, BACKEND_URL } from '../../config/api';
 import CreateClaimModal from './CreateClaim';
+import { MediaPreviewModal } from '../Common/MediaPreviewModal';
 // @ts-ignore
 import { saveAs } from 'file-saver';
 import { generatePremiumExcel } from '../../utils/excelGenerator';
@@ -39,6 +40,8 @@ export default function ClaimsList() {
   const [settlementClaimId, setSettlementClaimId] = useState<number | null>(null);
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [settlementImage, setSettlementImage] = useState<File | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; title: string; subtitle?: string } | null>(null);
+  const [viewSettlementsClaim, setViewSettlementsClaim] = useState<any | null>(null);
   const [settlementData, setSettlementData] = useState({
     settlement_number: '',
     settlement_presenter: '',
@@ -48,6 +51,25 @@ export default function ClaimsList() {
     committee_manager: '',
     manager_report: '',
   });
+
+  const handleOpenViewSettlements = async (claim: any) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/claims/${claim.id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const full = await res.json();
+        setViewSettlementsClaim(full);
+      } else {
+        setViewSettlementsClaim(claim);
+      }
+    } catch {
+      setViewSettlementsClaim(claim);
+    }
+  };
 
 
   useEffect(() => {
@@ -2000,6 +2022,16 @@ export default function ClaimsList() {
                         >
                           <i className="fa-solid fa-handshake"></i>
                         </button>
+                        {claim.transfers?.some((t: any) => t.transfer_type === 'تسويه وديه') && (
+                          <button
+                            className="action-btn"
+                            title="معاينة تسويات ومستندات المطالبة فورياً"
+                            onClick={() => handleOpenViewSettlements(claim)}
+                            style={{ color: '#7c3aed', background: '#f5f3ff' }}
+                          >
+                            <i className="fa-solid fa-file-invoice-dollar"></i>
+                          </button>
+                        )}
                         <Link to={`/claims/${claim.id}`} className="action-btn view" title="عرض التفاصيل">
                           <i className="fa-solid fa-eye"></i>
                         </Link>
@@ -2175,9 +2207,71 @@ export default function ClaimsList() {
                     onChange={e => setSettlementImage(e.target.files?.[0] || null)}
                     style={{ width: '100%', padding: '8px 12px', border: '1.5px dashed #38bdf8', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'Cairo, sans-serif', background: '#f0f9ff' }} />
                   {settlementImage && (
-                    <div style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '4px', fontWeight: 700 }}>
-                      <i className="fa-solid fa-check-circle me-1"></i>
-                      تم اختيار الملف: {settlementImage.name}
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      background: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                        {settlementImage.type.startsWith('image/') ? (
+                          <img
+                            src={URL.createObjectURL(settlementImage)}
+                            alt="معاينة"
+                            style={{ width: '48px', height: '38px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #94a3b8', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div style={{ width: '40px', height: '38px', borderRadius: '6px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                            <i className="fa-solid fa-file-pdf"></i>
+                          </div>
+                        )}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{settlementImage.name}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{(settlementImage.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewMedia({ url: URL.createObjectURL(settlementImage), title: 'معاينة المستند المختار قبل الحفظ', subtitle: settlementImage.name })}
+                          style={{
+                            background: '#0284c7',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '5px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <i className="fa-solid fa-eye"></i> معاينة فورية
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettlementImage(null)}
+                          style={{
+                            background: '#fee2e2',
+                            color: '#dc2626',
+                            border: 'none',
+                            padding: '5px 8px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem'
+                          }}
+                          title="إلغاء الملف"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2218,6 +2312,204 @@ export default function ClaimsList() {
           }}
         />
       )}
+
+      {/* Settlements & Attachments Modal */}
+      {viewSettlementsClaim && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '750px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.3)', direction: 'rtl', fontFamily: 'Cairo, sans-serif' }}>
+            {/* Modal Header */}
+            <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(14, 165, 233, 0.2)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                  <i className="fa-solid fa-handshake"></i>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>
+                    تسويات ومستندات المطالبة: {viewSettlementsClaim.claim_number}
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    مقدم المطالبة: {viewSettlementsClaim.claimant_name || '---'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewSettlementsClaim(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: '#f8fafc' }}>
+              {(() => {
+                const settlements = (viewSettlementsClaim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
+                if (settlements.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                      <i className="fa-solid fa-folder-open" style={{ fontSize: '3rem', color: '#cbd5e1', marginBottom: '12px' }}></i>
+                      <p style={{ fontWeight: 700, margin: 0 }}>لا توجد تسويات ودية مسجلة لهذه المطالبة بعد.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {settlements.map((s: any, idx: number) => {
+                      const d = s.details || {};
+                      const tndAmt = d.tnd_amount || d.total_value || '';
+                      const rawLyd = d.lyd_amount || (tndAmt && !isNaN(parseFloat(tndAmt)) ? (parseFloat(tndAmt) * (exchangeRates.tnd_to_lyd || 2.30)).toFixed(2) : '');
+                      const fileKey = Object.keys(d).find(k => typeof d[k] === 'string' && (d[k].includes('claim_transfers/') || d[k].match(/\.(jpg|jpeg|png|pdf)$/i)));
+                      const filePath = fileKey ? d[fileKey] : null;
+                      const isImage = filePath && filePath.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+                      const isPdf = filePath && filePath.match(/\.pdf$/i);
+
+                      return (
+                        <div
+                          key={s.id || idx}
+                          style={{
+                            background: '#ffffff',
+                            borderRadius: '12px',
+                            border: '1.5px solid #e2e8f0',
+                            padding: '16px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '12px' }}>
+                            <span style={{ fontWeight: 900, color: '#0369a1', fontSize: '0.95rem' }}>
+                              <i className="fa-solid fa-file-contract me-1"></i> تسوية #{d.settlement_number || idx + 1}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                              <i className="fa-regular fa-calendar me-1"></i>
+                              {d.settlement_date || (s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB') : '---')}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+                            <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>مقدم التسوية:</div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>{d.settlement_presenter || d.committee_manager || '---'}</div>
+                            </div>
+                            <div style={{ background: '#f0f9ff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                              <div style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: 700 }}>مبلغ الأضرار (د.ت):</div>
+                              <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0284c7' }}>{tndAmt ? `${Number(tndAmt).toLocaleString('en-US')} د.ت` : '---'}</div>
+                            </div>
+                            <div style={{ background: '#ecfdf5', padding: '8px 12px', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
+                              <div style={{ fontSize: '0.75rem', color: '#065f46', fontWeight: 700 }}>قيمة التقييم (د.ل):</div>
+                              <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#059669' }}>{rawLyd ? `${Number(rawLyd).toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ل` : '---'}</div>
+                            </div>
+                          </div>
+
+                          {d.manager_report && (
+                            <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.85rem', color: '#334155', border: '1px dashed #cbd5e1' }}>
+                              <strong style={{ color: '#0f172a' }}>تقرير / ملاحظات: </strong>
+                              {d.manager_report}
+                            </div>
+                          )}
+
+                          {/* Attachment preview trigger */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>مستند وصورة التسوية:</span>
+                            {filePath ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {isImage && (
+                                  <div
+                                    onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${filePath}`, title: `مستند تسوية رقم ${d.settlement_number || idx + 1}`, subtitle: viewSettlementsClaim.claim_number })}
+                                    style={{ width: '50px', height: '38px', borderRadius: '6px', overflow: 'hidden', border: '1.5px solid #0284c7', cursor: 'pointer', background: '#0f172a' }}
+                                    title="انقر للمعاينة الفورية"
+                                  >
+                                    <img src={`${BACKEND_URL}/storage/${filePath}`} alt="مستند" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${filePath}`, title: `مستند تسوية رقم ${d.settlement_number || idx + 1}`, subtitle: viewSettlementsClaim.claim_number })}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: isPdf ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                    color: '#fff',
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 800
+                                  }}
+                                >
+                                  <i className={isPdf ? 'fa-solid fa-file-pdf' : 'fa-solid fa-image'}></i>
+                                  <span>معاينة فورية {isPdf ? '(PDF)' : '(صورة)'}</span>
+                                  <i className="fa-solid fa-eye me-1"></i>
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>لا توجد صورة أو مستند مرفق</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '14px 20px', background: '#f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = viewSettlementsClaim.id;
+                  setViewSettlementsClaim(null);
+                  handleOpenSettlementModal(id);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className="fa-solid fa-plus"></i> إضافة تسوية جديدة
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewSettlementsClaim(null)}
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  color: '#475569',
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Media / Document Lightbox Modal */}
+      <MediaPreviewModal
+        isOpen={Boolean(previewMedia)}
+        onClose={() => setPreviewMedia(null)}
+        url={previewMedia?.url || null}
+        title={previewMedia?.title}
+        subtitle={previewMedia?.subtitle}
+      />
     </section>
   );
 }

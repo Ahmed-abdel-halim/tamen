@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { showToast } from '../Toast';
 import { API_BASE_URL, BACKEND_URL } from '../../config/api';
+import { MediaPreviewModal } from '../Common/MediaPreviewModal';
 
 export default function ViewClaim() {
   const { id } = useParams();
@@ -10,6 +11,7 @@ export default function ViewClaim() {
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [transfering, setTransfering] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; title: string; subtitle?: string } | null>(null);
   const navigate = useNavigate();
 
   const isDamagedBodyType = (type: string) => {
@@ -993,14 +995,24 @@ export default function ViewClaim() {
               </div>
               <div className="d-flex gap-3 mt-2">
                 {claim.driver_photo && (
-                  <a href={`${BACKEND_URL}/storage/${claim.driver_photo}`} target="_blank" rel="noreferrer" className="attachment-btn">
-                    <i className="fa-solid fa-user"></i> صورة السائق
-                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${claim.driver_photo}`, title: 'صورة السائق', subtitle: claim.driver_name })}
+                    className="attachment-btn"
+                    style={{ cursor: 'pointer', border: 'none' }}
+                  >
+                    <i className="fa-solid fa-user"></i> معاينة صورة السائق فورياً
+                  </button>
                 )}
                 {claim.driver_license_photo && (
-                  <a href={`${BACKEND_URL}/storage/${claim.driver_license_photo}`} target="_blank" rel="noreferrer" className="attachment-btn">
-                    <i className="fa-solid fa-id-card"></i> صورة الرخصة
-                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${claim.driver_license_photo}`, title: 'صورة رخصة القيادة', subtitle: `رقم الرخصة: ${claim.driver_license_number || '---'}` })}
+                    className="attachment-btn"
+                    style={{ cursor: 'pointer', border: 'none' }}
+                  >
+                    <i className="fa-solid fa-id-card"></i> معاينة صورة الرخصة فورياً
+                  </button>
                 )}
               </div>
             </section>
@@ -1051,9 +1063,14 @@ export default function ViewClaim() {
                 return photoArr.length > 0 ? (
                   <div className="photos-strip mt-3" style={{ borderTop: '1px dashed var(--border)', paddingTop: '15px' }}>
                     {photoArr.map((p: string, i: number) => (
-                      <a key={i} href={`${BACKEND_URL}/storage/${p}`} target="_blank" rel="noreferrer">
+                      <div
+                        key={i}
+                        onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${p}`, title: `صورة أضرار الحادث #${i + 1}`, subtitle: `المطالبة رقم: ${claim.claim_number}` })}
+                        style={{ cursor: 'pointer', display: 'inline-block' }}
+                        title="انقر للمعاينة الفورية للصورة"
+                      >
                         <img src={`${BACKEND_URL}/storage/${p}`} alt={`ضرر ${i + 1}`} className="damage-thumb" />
-                      </a>
+                      </div>
                     ))}
                   </div>
                 ) : null;
@@ -1076,9 +1093,15 @@ export default function ViewClaim() {
                 {claim.victim_insurance_expiry_date && <div className="detail-item"><span className="label">تاريخ الانتهاء</span><span className="value">{claim.victim_insurance_expiry_date}</span></div>}
               </div>
               {claim.victim_insurance_photo && (
-                <a href={`${BACKEND_URL}/storage/${claim.victim_insurance_photo}`} target="_blank" rel="noreferrer" className="attachment-btn mt-2">
-                  <i className="fa-solid fa-file-image"></i> صورة الوثيقة
-                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${claim.victim_insurance_photo}`, title: 'صورة وثيقة تأمين المتضرر', subtitle: `شركة: ${claim.victim_insurance_company || ''} - رقم: ${claim.victim_insurance_number || ''}` })}
+                  className="attachment-btn mt-2"
+                  style={{ cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <i className="fa-solid fa-file-image"></i>
+                  <span>معاينة وثيقة المتضرر فورياً</span>
+                </button>
               )}
             </section>
           )}
@@ -1099,9 +1122,15 @@ export default function ViewClaim() {
                 {!claim.assessor_other_amount && claim.assessor_amount_dollar && <div className="detail-item"><span className="label">القيمة (دولار)</span><span className="value fw-bold" style={{ color: '#059669' }}>${Number(claim.assessor_amount_dollar).toLocaleString()}</span></div>}
               </div>
               {claim.assessor_report_photo && (
-                <a href={`${BACKEND_URL}/storage/${claim.assessor_report_photo}`} target="_blank" rel="noreferrer" className="attachment-btn mt-2">
-                  <i className="fa-solid fa-file-pdf"></i> تقرير المقدر
-                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${claim.assessor_report_photo}`, title: 'تقرير مقدر الأضرار', subtitle: `مقدر الأضرار: ${claim.assessor_name || ''} - تاريخ: ${claim.assessor_date || ''}` })}
+                  className="attachment-btn mt-2"
+                  style={{ cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff' }}
+                >
+                  <i className="fa-solid fa-file-pdf"></i>
+                  <span>معاينة تقرير المقدر فورياً</span>
+                </button>
               )}
             </section>
           )}
@@ -1232,16 +1261,71 @@ export default function ViewClaim() {
                                                                       k === 'transfer_image' ? 'صورة الإحالة' :
                                                                         k === 'court_file_image' ? 'ملف القضية' :
                                                                           k === 'previous_judgment_image' ? 'الحكم السابق' :
-                                                                            k === 'image' ? 'الصورة المرفقة' :
+                                                                            k === 'image' || k === 'settlement_image' ? 'صورة / مستند التسوية' :
                                                                               k.replace(/_/g, ' ');
 
+                            const isImage = typeof v === 'string' && v.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+                            const isPdf = typeof v === 'string' && v.match(/\.pdf$/i);
+
                             return (
-                              <div key={k} className="tiny-detail">
-                                <span className="k">{label}:</span>
+                              <div key={k} className="tiny-detail" style={isFile ? { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', margin: '6px 0', width: '100%' } : {}}>
+                                <span className="k" style={isFile ? { fontWeight: 800, color: '#38bdf8', marginBottom: '6px', fontSize: '0.85rem' } : {}}>{label}:</span>
                                 {isFile ? (
-                                  <a href={`${BACKEND_URL}/storage/${v}`} target="_blank" rel="noreferrer" className="attachment-link-inline">
-                                    <i className="fa-solid fa-paperclip"></i> عرض المرفق
-                                  </a>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', width: '100%' }}>
+                                    {isImage && (
+                                      <div
+                                        onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${v}`, title: label, subtitle: `${t.transfer_type} — ${new Date(t.created_at).toLocaleDateString('en-GB')}` })}
+                                        style={{
+                                          width: '70px',
+                                          height: '52px',
+                                          borderRadius: '8px',
+                                          overflow: 'hidden',
+                                          border: '2px solid #38bdf8',
+                                          cursor: 'pointer',
+                                          position: 'relative',
+                                          boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                                          background: '#020617',
+                                          flexShrink: 0
+                                        }}
+                                        title="انقر للمعاينة الفورية"
+                                      >
+                                        <img src={`${BACKEND_URL}/storage/${v}`} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                                          <i className="fa-solid fa-eye" style={{ fontSize: '0.85rem' }}></i>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${v}`, title: label, subtitle: `${t.transfer_type} — ${new Date(t.created_at).toLocaleDateString('en-GB')}` })}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        background: isPdf ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                        color: '#fff',
+                                        padding: '7px 14px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '0.82rem',
+                                        fontWeight: 800,
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                      }}
+                                    >
+                                      <i className={isPdf ? 'fa-solid fa-file-pdf' : 'fa-solid fa-image'}></i>
+                                      <span>معاينة فورية {isPdf ? '(مستند PDF)' : '(صورة)'}</span>
+                                      <i className="fa-solid fa-eye me-1"></i>
+                                    </button>
+                                    <a
+                                      href={`${BACKEND_URL}/storage/${v}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                      <i className="fa-solid fa-arrow-up-right-from-square"></i> فتح خارجياً
+                                    </a>
+                                  </div>
                                 ) : (
                                   <span className="v">{v || '-'}</span>
                                 )}
@@ -1673,6 +1757,15 @@ export default function ViewClaim() {
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
       `}</style>
+
+      {/* Modern Media / Document Lightbox Modal */}
+      <MediaPreviewModal
+        isOpen={Boolean(previewMedia)}
+        onClose={() => setPreviewMedia(null)}
+        url={previewMedia?.url || null}
+        title={previewMedia?.title}
+        subtitle={previewMedia?.subtitle}
+      />
     </div>
   );
 }
