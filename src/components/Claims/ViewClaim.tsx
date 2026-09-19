@@ -181,9 +181,6 @@ export default function ViewClaim() {
     let tndAmount = claim.assessor_other_amount || '---';
     let rawLyd: any = claim.assessor_amount_dinar;
 
-    if (!rawLyd && claim.damaged_vehicle_amount && Number(claim.damaged_vehicle_amount) > 0) {
-      rawLyd = claim.damaged_vehicle_amount;
-    }
     if (!rawLyd && claim.assessor_other_amount) {
       const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s*(.*)$/);
       if (match) {
@@ -198,6 +195,9 @@ export default function ViewClaim() {
         }
       }
     }
+    if (!rawLyd && claim.damaged_vehicle_amount && Number(claim.damaged_vehicle_amount) > 0) {
+      rawLyd = claim.damaged_vehicle_amount;
+    }
     if (!rawLyd && claim.compensation_value) {
       rawLyd = claim.compensation_value;
     }
@@ -205,6 +205,10 @@ export default function ViewClaim() {
 
     // --- Settlements ---
     const settlements = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
+    const isClaimTnd = Boolean(
+      (claim.assessor_other_amount && /تونس|tnd/i.test(claim.assessor_other_amount)) ||
+      claim.document_type === 'InternationalInsuranceDocument'
+    );
 
     const settlementsHtml = settlements.length > 0
       ? `<table class="settlements-table">
@@ -221,19 +225,38 @@ export default function ViewClaim() {
           </thead>
           <tbody>
             ${settlements.map((t: any, i: number) => {
-              const rowTnd = t.details?.tnd_amount || t.details?.total_value || '';
-              let rowLyd = t.details?.lyd_amount || '';
-              if (!rowLyd && t.details?.total_value && t.details?.total_value !== t.details?.tnd_amount) {
-                rowLyd = t.details?.total_value;
-              }
-              if (!rowLyd && rowTnd) {
-                const tndVal = parseFloat(rowTnd) || 0;
+              const isTransferTnd = isClaimTnd || Boolean(
+                t.details?.tnd_amount ||
+                (t.details?.manager_report && /تونسي|تونس/i.test(t.details.manager_report))
+              );
+
+              let rowTnd = '';
+              let rowLyd = '';
+
+              if (isTransferTnd) {
+                const rawTnd = t.details?.tnd_amount || t.details?.total_value || '';
+                const tndVal = parseFloat(rawTnd) || 0;
                 if (tndVal > 0) {
+                  rowTnd = tndVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+                } else if (rawTnd) {
+                  rowTnd = String(rawTnd);
+                }
+
+                if (t.details?.lyd_amount && Number(t.details.lyd_amount) > 0) {
+                  rowLyd = Number(t.details.lyd_amount).toFixed(3);
+                } else if (tndVal > 0) {
                   rowLyd = (tndVal * (exchangeRates.tnd_to_lyd || 2.30)).toFixed(3);
                 }
+              } else {
+                if (t.details?.lyd_amount && Number(t.details.lyd_amount) > 0) {
+                  rowLyd = Number(t.details.lyd_amount).toFixed(3);
+                } else if (t.details?.total_value) {
+                  rowLyd = String(t.details.total_value);
+                }
               }
+
               const displayRowLyd = rowLyd ? (Number(rowLyd).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
-              const displayRowTnd = rowTnd ? (isNaN(Number(rowTnd)) ? rowTnd : (Number(rowTnd).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' د.ت')) : '---';
+              const displayRowTnd = rowTnd ? (isNaN(Number(rowTnd.replace(/,/g, ''))) ? rowTnd : (Number(rowTnd.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' د.ت')) : '---';
 
               return `<tr>
                 <td>${i + 1}</td>

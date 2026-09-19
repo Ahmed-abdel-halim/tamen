@@ -158,15 +158,39 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
     const settlementTransfer = allSettlementTransfers[0];
     const latestSettlement = allSettlementTransfers[allSettlementTransfers.length - 1];
     const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
-    const lastSettlementTND = latestSettlement?.details?.tnd_amount || latestSettlement?.details?.total_value || '';
-    let lastSettlementLYD = latestSettlement?.details?.lyd_amount || '';
-    if (!lastSettlementLYD && latestSettlement?.details?.total_value && latestSettlement?.details?.total_value !== latestSettlement?.details?.tnd_amount) {
-      lastSettlementLYD = latestSettlement?.details?.total_value;
-    }
-    if (!lastSettlementLYD && lastSettlementTND) {
-      const tndVal = parseFloat(lastSettlementTND) || 0;
-      if (tndVal > 0) {
-        lastSettlementLYD = (tndVal * (options.rates?.tnd_to_lyd || 2.30)).toFixed(3);
+
+    const isTnd = Boolean(
+      (claim.assessor_other_amount && /تونس|tnd/i.test(claim.assessor_other_amount)) ||
+      latestSettlement?.details?.tnd_amount ||
+      (latestSettlement?.details?.manager_report && /تونسي|تونس/i.test(latestSettlement.details.manager_report)) ||
+      claim.document_type === 'InternationalInsuranceDocument'
+    );
+
+    let lastSettlementTND = '';
+    let lastSettlementLYD = '';
+
+    if (latestSettlement) {
+      const details = latestSettlement.details || {};
+      if (isTnd) {
+        const rawTnd = details.tnd_amount || details.total_value || '';
+        const tndVal = parseFloat(rawTnd) || 0;
+        if (tndVal > 0) {
+          lastSettlementTND = tndVal % 1 !== 0 ? tndVal.toFixed(3) : tndVal.toLocaleString('en-US');
+        } else if (rawTnd) {
+          lastSettlementTND = String(rawTnd);
+        }
+
+        if (details.lyd_amount && Number(details.lyd_amount) > 0) {
+          lastSettlementLYD = Number(details.lyd_amount).toFixed(2);
+        } else if (tndVal > 0) {
+          lastSettlementLYD = (tndVal * tndRate).toFixed(2);
+        }
+      } else {
+        if (details.lyd_amount && Number(details.lyd_amount) > 0) {
+          lastSettlementLYD = Number(details.lyd_amount).toFixed(2);
+        } else if (details.total_value && Number(details.total_value) > 0) {
+          lastSettlementLYD = Number(details.total_value).toFixed(2);
+        }
       }
     }
 
@@ -174,10 +198,13 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
       settlementLYD = Number(claim.total_paid);
     } else if (claim.compensation_value && Number(claim.compensation_value) > 0) {
       settlementLYD = Number(claim.compensation_value) + (Number(claim.additional_expenses) || 0);
-    } else if (paymentTransfer?.details?.financial_value) {
+    } else if (paymentTransfer?.details?.financial_value && Number(paymentTransfer.details.financial_value) > 0) {
       settlementLYD = Number(paymentTransfer.details.financial_value);
+    } else if (lastSettlementLYD && Number(lastSettlementLYD) > 0) {
+      settlementLYD = Number(lastSettlementLYD);
     } else if (settlementTransfer?.details?.total_value) {
-      settlementLYD = Number(settlementTransfer.details.total_value);
+      const tv = parseFloat(settlementTransfer.details.total_value) || 0;
+      settlementLYD = isTnd ? (tv * tndRate) : tv;
     }
 
     totalSettlementLYD += settlementLYD;
@@ -845,7 +872,8 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <td style="font-size: 7pt; color: #cbd5e1;">${claimsWithForeignCount} عملة أجنبية</td>
               <td style="color: #cbd5e1; font-size: 7pt;">—</td>
               <td class="total-val">${formatMoney(totalReserveLYD)} د.ل</td>
-              <td colspan="2" style="font-size: 7pt; color: #cbd5e1;">—</td>
+              <td style="font-size: 7pt; color: #cbd5e1;">—</td>
+              <td class="total-val" style="color: #38bdf8 !important;">${formatMoney(totalSettlementLYD)} د.ل</td>
               <td class="total-paid">${formatMoney(totalSettlementLYD)} د.ل</td>
               <td colspan="2" style="font-size: 7pt; color: #cbd5e1;">—</td>
             </tr>
