@@ -173,32 +173,64 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
 
     if (latestSettlement) {
       const details = latestSettlement.details || {};
-      if (isTnd) {
-        const rawTnd = details.tnd_amount || details.total_value || '';
-        const tndVal = parseFloat(rawTnd) || 0;
-        if (tndVal > 0) {
-          lastSettlementForeignStr = `${tndVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ت`;
-          settlementRateLabel = `${tndRate.toFixed(2)}`;
-          lastSettlementLYD = tndVal * tndRate;
-          claimsWithSettlementForeignCount++;
-        } else if (rawTnd) {
-          lastSettlementForeignStr = String(rawTnd);
-          settlementRateLabel = `${tndRate.toFixed(2)}`;
+
+      // ─── أولوية الحساب (من الأعلى إلى الأدنى) ───────────────────────────
+      // 1️⃣ lyd_amount مُدخَل يدوياً وقت التسوية → يحمل السعر الحقيقي (يحل البيانات القديمة)
+      // 2️⃣ tnd_rate مثبَّت محفوظ مع التسوية الجديدة → tnd_amount × tnd_rate_مثبَّت
+      // 3️⃣ احتياط أخير → tnd_amount × سعر التقرير الحالي
+      // ─────────────────────────────────────────────────────────────────────
+
+      const manualLyd = parseFloat(details.lyd_amount) || 0;
+      const rawTnd    = details.tnd_amount || '';
+      const tndVal    = parseFloat(rawTnd) || 0;
+      const rawUsd    = details.usd_amount || '';
+      const usdVal    = parseFloat(rawUsd) || 0;
+
+      // السعر المثبَّت (محفوظ وقت التسوية) أو السعر الحالي كاحتياط
+      const lockedTndRate = details.tnd_rate ? Number(details.tnd_rate) : tndRate;
+      const lockedUsdRate = details.usd_rate ? Number(details.usd_rate) : usdRate;
+
+      if (isTnd && tndVal > 0) {
+        // عملة تونسية — أظهر المبلغ الأجنبي
+        lastSettlementForeignStr = `${tndVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ت`;
+        claimsWithSettlementForeignCount++;
+
+        if (manualLyd > 0) {
+          // ✅ الأفضل: استخدم lyd_amount المُدخَل يدوياً — ثابت ودقيق للبيانات القديمة والجديدة
+          lastSettlementLYD = manualLyd;
+          // احسب السعر المستخدم فعلياً لعرضه (للمعلومية فقط)
+          const impliedRate = tndVal > 0 ? manualLyd / tndVal : lockedTndRate;
+          settlementRateLabel = impliedRate.toFixed(2);
+        } else {
+          // استخدم السعر المثبَّت أو الحالي إذا لم يُدخَل lyd_amount
+          lastSettlementLYD = tndVal * lockedTndRate;
+          settlementRateLabel = lockedTndRate.toFixed(2);
         }
-      } else if (details.usd_amount || (claim.assessor_amount_dollar && Number(claim.assessor_amount_dollar) > 0)) {
-        const rawUsd = details.usd_amount || details.total_value || '';
-        const usdVal = parseFloat(rawUsd) || 0;
-        if (usdVal > 0) {
-          lastSettlementForeignStr = `${usdVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} $`;
-          settlementRateLabel = `${usdRate.toFixed(2)}`;
-          lastSettlementLYD = usdVal * usdRate;
-          claimsWithSettlementForeignCount++;
+
+      } else if (!isTnd && usdVal > 0) {
+        // عملة دولار
+        lastSettlementForeignStr = `${usdVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} $`;
+        claimsWithSettlementForeignCount++;
+
+        if (manualLyd > 0) {
+          lastSettlementLYD = manualLyd;
+          const impliedRate = usdVal > 0 ? manualLyd / usdVal : lockedUsdRate;
+          settlementRateLabel = impliedRate.toFixed(2);
+        } else {
+          lastSettlementLYD = usdVal * lockedUsdRate;
+          settlementRateLabel = lockedUsdRate.toFixed(2);
         }
-      } else {
-        const val = parseFloat(details.lyd_amount || details.total_value) || 0;
-        if (val > 0) {
-          lastSettlementLYD = val;
-          settlementRateLabel = '1.00';
+
+      } else if (manualLyd > 0) {
+        // دينار ليبي مباشرة
+        lastSettlementLYD = manualLyd;
+        settlementRateLabel = '1.00';
+
+      } else if (details.total_value) {
+        const totalVal = parseFloat(details.total_value) || 0;
+        if (totalVal > 0) {
+          lastSettlementLYD = isTnd ? totalVal * lockedTndRate : totalVal;
+          settlementRateLabel = isTnd ? lockedTndRate.toFixed(2) : '1.00';
         }
       }
     }

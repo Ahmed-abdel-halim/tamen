@@ -685,6 +685,21 @@ export default function ViewClaim() {
             <div className="field-group"><label>الإجمالي القيمة المالية</label><input type="number" placeholder="0.000" onChange={e => handleDetailChange('total_value', e.target.value)} /></div>
             <div className="field-group full"><label>تقرير مدير اللجنة</label><input type="text" placeholder="ملاحظات وتقرير التسوية..." onChange={e => handleDetailChange('manager_report', e.target.value)} /></div>
             <div className="field-group full"><label>إضافة صورة / مستند التسوية</label><input type="file" onChange={e => handleDetailChange('image', e.target.files?.[0])} /></div>
+            {/* حقل مخفي لتثبيت سعر الصرف وقت التسوية — يُحفظ تلقائياً ولا يظهر للمستخدم */}
+            {(() => {
+              const cachedRates = localStorage.getItem('mli_exchange_rates');
+              const rates = cachedRates ? JSON.parse(cachedRates) : { usd_to_lyd: 7.15, tnd_to_lyd: 2.30, eur_to_lyd: 7.65 };
+              const lockedTndRate = Number(rates.tnd_to_lyd) || 2.30;
+              const lockedUsdRate = Number(rates.usd_to_lyd) || 7.15;
+              if (transferDetails.tnd_rate === undefined) {
+                // تعيين الأسعار عند أول فتح نموذج التسوية
+                setTimeout(() => {
+                  handleDetailChange('tnd_rate', lockedTndRate);
+                  handleDetailChange('usd_rate', lockedUsdRate);
+                }, 0);
+              }
+              return null;
+            })()}
           </>
         );
       case 'تحويل الى مركز الشرطة':
