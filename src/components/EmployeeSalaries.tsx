@@ -314,7 +314,12 @@ export default function EmployeeSalaries() {
 
       const filtered = list.filter((p) => {
         const pPeriod = Number(p.year) * 100 + Number(p.month);
-        return pPeriod >= fromPeriod && pPeriod <= toPeriod;
+        if (pPeriod < fromPeriod || pPeriod > toPeriod) return false;
+        const emp = p.user || employees.find((e) => e.id === p.user_id);
+        if (emp && !isEmployeeActiveInPeriod(emp, Number(p.year), Number(p.month))) {
+          return false;
+        }
+        return true;
       });
 
       filtered.sort((a, b) => {

@@ -245,6 +245,36 @@ export default function EmployeeManagement() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+
+  // فلترة مسيرات وسجل الرواتب ليقتصر حصراً على الأشهر التي عمل فيها الموظف فعلياً (بين تاريخ التعيين وتاريخ الاستقالة)
+  const activePayrolls = useMemo(() => {
+    if (!payrolls || payrolls.length === 0) return [];
+    if (!employee) return payrolls;
+
+    const effectiveStart = employee.work_start_date || employee.hire_date || employee.start_date;
+    const stopDates: number[] = [];
+    if (employee.resignation_date) stopDates.push(new Date(employee.resignation_date).getTime());
+    if (employee.end_date) stopDates.push(new Date(employee.end_date).getTime());
+
+    return payrolls.filter((p) => {
+      const pYear = Number(p.year);
+      const pMonth = Number(p.month);
+      const monthStart = new Date(pYear, pMonth - 1, 1, 0, 0, 0);
+      const monthEnd = new Date(pYear, pMonth, 0, 23, 59, 59);
+
+      if (effectiveStart) {
+        const sDate = new Date(effectiveStart);
+        if (sDate > monthEnd) return false;
+      }
+
+      if (stopDates.length > 0) {
+        const earliestStop = Math.min(...stopDates);
+        if (earliestStop < monthStart.getTime()) return false;
+      }
+
+      return true;
+    });
+  }, [payrolls, employee]);
   const [payFormData, setPayFormData] = useState<null | {
     id?: number;
     year: number;
@@ -737,13 +767,27 @@ export default function EmployeeManagement() {
     if (!employee) return;
     setSavingEdit(true);
     try {
-      // تنظيف البيانات وتحويل النصوص الفارغة إلى null
+      // تنظيف البيانات وتحويل النصوص الفارغة إلى null ومزامنة تواريخ التعيين والاستقالة
       const cleanEditData: any = {};
       for (const [k, v] of Object.entries(editFormData)) {
         if (typeof v === "string" && v.trim() === "") {
           cleanEditData[k] = null;
         } else {
           cleanEditData[k] = v;
+        }
+      }
+
+      if (cleanEditData.hire_date) {
+        if (!cleanEditData.start_date || cleanEditData.start_date < cleanEditData.hire_date) {
+          cleanEditData.start_date = cleanEditData.hire_date;
+        }
+        if (!cleanEditData.work_start_date) {
+          cleanEditData.work_start_date = cleanEditData.hire_date;
+        }
+      }
+      if (cleanEditData.resignation_date) {
+        if (!cleanEditData.end_date || cleanEditData.end_date > cleanEditData.resignation_date) {
+          cleanEditData.end_date = cleanEditData.resignation_date;
         }
       }
 
@@ -770,6 +814,7 @@ export default function EmployeeManagement() {
       setEmployeesList((prev) => prev.map((e) => (e.id === employee.id ? { ...e, ...updated } : e)));
       showToast("تم تحديث بيانات الموظف بنجاح", "success");
       setShowEditModal(false);
+      await loadEmployeeData(employee.id);
     } catch (err: any) {
       showToast(err.message || "حدث خطأ أثناء الحفظ", "error");
     } finally {
@@ -1062,7 +1107,7 @@ export default function EmployeeManagement() {
         { header: "تاريخ الصرف", key: "paid_at", width: 16 },
       ];
 
-      const data = payrolls.map((p) => ({
+      const data = activePayrolls.map((p) => ({
         period: `${String(p.month).padStart(2, '0')}/${p.year}`,
         base: Number(p.base_salary || 0).toFixed(2),
         allowances: (
@@ -3132,13 +3177,13 @@ export default function EmployeeManagement() {
 
   // ─── Period Filtered Payrolls & Totals for Custom Range Report (1/1/2025 to 1/12/2026) ───
   const periodFilteredPayrolls = useMemo(() => {
-    if (!payrolls || payrolls.length === 0) return [];
+    if (!activePayrolls || activePayrolls.length === 0) return [];
     const fromParts = (reportFromDate || "2025-01-01").split("-");
     const toParts = (reportToDate || "2026-12-01").split("-");
     const fromYm = fromParts.length >= 2 ? parseInt(fromParts[0], 10) * 100 + parseInt(fromParts[1], 10) : 202501;
     const toYm = toParts.length >= 2 ? parseInt(toParts[0], 10) * 100 + parseInt(toParts[1], 10) : 202612;
 
-    return payrolls
+    return activePayrolls
       .filter((p) => {
         const pYm = Number(p.year) * 100 + Number(p.month);
         if (pYm < fromYm || pYm > toYm) return false;
@@ -3150,7 +3195,7 @@ export default function EmployeeManagement() {
         const ymB = Number(b.year) * 100 + Number(b.month);
         return ymA - ymB;
       });
-  }, [payrolls, reportFromDate, reportToDate, reportStatusFilter]);
+  }, [activePayrolls, reportFromDate, reportToDate, reportStatusFilter]);
 
   const periodReportTotals = useMemo(() => {
     return (periodFilteredPayrolls as any[]).reduce(
@@ -3254,7 +3299,7 @@ export default function EmployeeManagement() {
           <button
             className="pill-btn green"
             onClick={exportPayrollExcel}
-            disabled={!employee || payrolls.length === 0}
+            disabled={!employee || activePayrolls.length === 0}
             title="تصدير كشف مسيرات الرواتب إلى ملف إكسيل"
           >
             <i className="fa-solid fa-file-excel" />
@@ -3709,7 +3754,7 @@ export default function EmployeeManagement() {
             >
               <i className="fa-solid fa-money-check-dollar" />
               <span>سجل الرواتب والمسيرات</span>
-              {payrolls.length > 0 && <span className="tab-chip">{payrolls.length}</span>}
+              {activePayrolls.length > 0 && <span className="tab-chip">{activePayrolls.length}</span>}
             </button>
 
             <button
@@ -3847,7 +3892,7 @@ export default function EmployeeManagement() {
                 </div>
               </div>
 
-              {payrolls.length === 0 ? (
+              {activePayrolls.length === 0 ? (
                 <div className="pane-empty">
                   <i className="fa-solid fa-calendar-xmark" />
                   <p>لا يوجد سجل رواتب مسجل حتى الآن لهذا الموظف.</p>
@@ -3869,7 +3914,7 @@ export default function EmployeeManagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {payrolls.map((p) => {
+                      {activePayrolls.map((p) => {
                         const adds =
                           Number(p.housing_allowance || 0) +
                           Number(p.transportation_allowance || 0) +
