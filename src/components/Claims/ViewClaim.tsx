@@ -46,12 +46,74 @@ export default function ViewClaim() {
     fetchClaim();
   }, [id]);
 
+  useEffect(() => {
+    if (transferType === 'للتسديد - الشؤون المالية' && claim) {
+      const cachedRates = localStorage.getItem('mli_exchange_rates');
+      const rates = cachedRates ? JSON.parse(cachedRates) : { usd_to_lyd: 7.15, tnd_to_lyd: 2.30, eur_to_lyd: 7.65 };
+      const tndRate = Number(rates.tnd_to_lyd) || 2.30;
+
+      // Find latest settlement
+      const settlements = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
+      const latestSettlement = settlements[settlements.length - 1];
+
+      const isTnd = Boolean(
+        (claim.assessor_other_amount && /تونس|tnd/i.test(claim.assessor_other_amount)) ||
+        latestSettlement?.details?.tnd_amount ||
+        (latestSettlement?.details?.manager_report && /تونسي|تونس/i.test(latestSettlement.details.manager_report)) ||
+        claim.document_type === 'InternationalInsuranceDocument'
+      );
+
+      let defaultComp: number | string = '';
+
+      if (latestSettlement) {
+        const rawTnd = latestSettlement.details?.tnd_amount || latestSettlement.details?.total_value || '';
+        const tndVal = parseFloat(rawTnd) || 0;
+        if (isTnd && tndVal > 0) {
+          defaultComp = Number((tndVal * tndRate).toFixed(3));
+        } else if (latestSettlement.details?.lyd_amount && Number(latestSettlement.details.lyd_amount) > 0) {
+          defaultComp = Number(Number(latestSettlement.details.lyd_amount).toFixed(3));
+        } else if (latestSettlement.details?.total_value && Number(latestSettlement.details.total_value) > 0) {
+          defaultComp = Number(Number(latestSettlement.details.total_value).toFixed(3));
+        }
+      } else if (claim.assessor_other_amount) {
+        const match = String(claim.assessor_other_amount).match(/^([\d.]+)/);
+        if (match) {
+          const amt = parseFloat(match[1]) || 0;
+          defaultComp = Number((amt * tndRate).toFixed(3));
+        }
+      } else if (claim.compensation_value) {
+        defaultComp = Number(claim.compensation_value);
+      } else if (claim.damaged_vehicle_amount) {
+        defaultComp = Number(claim.damaged_vehicle_amount);
+      } else if (claim.assessor_amount_dinar) {
+        defaultComp = Number(claim.assessor_amount_dinar);
+      }
+
+      setTransferDetails((prev: any) => {
+        const comp = prev.compensation_value !== undefined ? prev.compensation_value : defaultComp;
+        const add = prev.additional_expenses !== undefined ? prev.additional_expenses : 0;
+        const fin = prev.financial_value !== undefined ? prev.financial_value : ((Number(comp) || 0) + (Number(add) || 0));
+
+        return {
+          book_number: prev.book_number !== undefined ? prev.book_number : '0000',
+          payment_method: prev.payment_method || 'خصم من وديعة',
+          document_number: prev.document_number !== undefined ? prev.document_number : '0000',
+          recipient_name: prev.recipient_name || 'الاتحاد الليبي لشركات التأمين',
+          compensation_value: comp,
+          additional_expenses: add,
+          financial_value: fin,
+          ...prev
+        };
+      });
+    }
+  }, [transferType, claim]);
+
   const handleDetailChange = (key: string, value: any) => {
     setTransferDetails((prev: any) => {
       const updated = { ...prev, [key]: value };
       if (key === 'compensation_value' || key === 'additional_expenses') {
-        const comp = Number(key === 'compensation_value' ? value : updated.compensation_value) || 0;
-        const add = Number(key === 'additional_expenses' ? value : updated.additional_expenses) || 0;
+        const comp = Number(key === 'compensation_value' ? value : (updated.compensation_value ?? 0)) || 0;
+        const add = Number(key === 'additional_expenses' ? value : (updated.additional_expenses ?? 0)) || 0;
         updated.financial_value = comp + add;
       }
       return updated;
@@ -69,11 +131,18 @@ export default function ViewClaim() {
         formData.append('other_transfer_type', otherTransferType);
       }
 
+      if (transferType === 'للتسديد - الشؤون المالية') {
+        if (!transferDetails.book_number) formData.append('detail_book_number', '0000');
+        if (!transferDetails.payment_method) formData.append('detail_payment_method', 'خصم من وديعة');
+        if (!transferDetails.document_number) formData.append('detail_document_number', '0000');
+        if (!transferDetails.recipient_name) formData.append('detail_recipient_name', 'الاتحاد الليبي لشركات التأمين');
+      }
+
       Object.keys(transferDetails).forEach(key => {
         const val = transferDetails[key];
         if (val instanceof File) {
           formData.append(`detail_${key}`, val);
-        } else if (val) {
+        } else if (val !== undefined && val !== null && val !== '') {
           formData.append(`detail_${key}`, val);
         }
       });
@@ -630,23 +699,137 @@ export default function ViewClaim() {
       case 'للتسديد - الشؤون المالية':
         return (
           <>
-            <div className="field-group"><label>رقم الكتاب</label><input type="text" onChange={e => handleDetailChange('book_number', e.target.value)} /></div>
+            <div className="field-group">
+              <label>رقم الكتاب</label>
+              <input
+                type="text"
+                value={transferDetails.book_number !== undefined ? transferDetails.book_number : '0000'}
+                onChange={e => handleDetailChange('book_number', e.target.value)}
+                placeholder="0000"
+              />
+            </div>
             <div className="field-group">
               <label>طريقة السداد</label>
-              <select onChange={e => handleDetailChange('payment_method', e.target.value)}>
-                <option value="">اختر طريقة السداد...</option>
+              <select
+                value={transferDetails.payment_method || 'خصم من وديعة'}
+                onChange={e => handleDetailChange('payment_method', e.target.value)}
+              >
                 <option value="خصم من وديعة">خصم من وديعة</option>
                 <option value="شيك (صك)">شيك (صك)</option>
                 <option value="كاش">كاش</option>
                 <option value="حوالة مصرفية">حوالة مصرفية</option>
               </select>
             </div>
-            <div className="field-group"><label>رقم المستند المالي (صك-حوالة)</label><input type="text" onChange={e => handleDetailChange('document_number', e.target.value)} /></div>
-            <div className="field-group"><label>اسم مستلم التعويض</label><input type="text" onChange={e => handleDetailChange('recipient_name', e.target.value)} /></div>
-            <div className="field-group"><label>قيمة التعويض</label><input type="number" step="any" onChange={e => handleDetailChange('compensation_value', Number(e.target.value))} /></div>
-            <div className="field-group"><label>مصاريف إضافية (إدارية - ضرائب - إلخ)</label><input type="number" step="any" onChange={e => handleDetailChange('additional_expenses', Number(e.target.value))} /></div>
-            <div className="field-group"><label>إجمالي القيمة المسددة</label><input type="number" step="any" value={transferDetails.financial_value || ''} readOnly /></div>
-            <div className="field-group full"><label>إثبات القيمة (صورة)</label><input type="file" onChange={e => handleDetailChange('financial_value_image', e.target.files?.[0])} /></div>
+            <div className="field-group">
+              <label>رقم المستند المالي (صك-حوالة)</label>
+              <input
+                type="text"
+                value={transferDetails.document_number !== undefined ? transferDetails.document_number : '0000'}
+                onChange={e => handleDetailChange('document_number', e.target.value)}
+                placeholder="0000"
+              />
+            </div>
+            <div className="field-group">
+              <label>اسم مستلم التعويض</label>
+              <input
+                type="text"
+                value={transferDetails.recipient_name !== undefined ? transferDetails.recipient_name : 'الاتحاد الليبي لشركات التأمين'}
+                onChange={e => handleDetailChange('recipient_name', e.target.value)}
+                placeholder="الاتحاد الليبي لشركات التأمين"
+              />
+            </div>
+            <div className="field-group">
+              <label style={{ color: '#0369a1', fontWeight: 800 }}>قيمة التعويض</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.compensation_value !== undefined ? transferDetails.compensation_value : ''}
+                onChange={e => handleDetailChange('compensation_value', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0.000"
+              />
+            </div>
+            <div className="field-group">
+              <label>مصاريف إضافية (إدارية - ضرائب - إلخ)</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.additional_expenses !== undefined ? transferDetails.additional_expenses : ''}
+                onChange={e => handleDetailChange('additional_expenses', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0.000"
+              />
+            </div>
+            <div className="field-group full">
+              <label style={{ color: '#166534', fontWeight: 800 }}>إجمالي القيمة المسددة</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.financial_value !== undefined ? transferDetails.financial_value : ''}
+                readOnly
+                style={{ background: '#f0fdf4', color: '#166534', fontWeight: 900 }}
+              />
+            </div>
+
+            {/* الثلاث صور المطلوبة للخصم والتسديد */}
+            <div className="field-group full" style={{ marginTop: '12px', borderTop: '1.5px dashed #cbd5e1', paddingTop: '12px' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-images" style={{ color: '#0284c7' }}></i>
+                المستندات والصور المطلوبة لعملية التسديد والخصم:
+              </div>
+            </div>
+
+            {/* 1. صوره أمر تسديد المطالبه */}
+            <div className="field-group full" style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', marginBottom: '8px' }}>
+              <label style={{ fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '1.1rem' }}></i>
+                صورة أمر تسديد المطالبة
+              </label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={e => handleDetailChange('payment_order_image', e.target.files?.[0])}
+              />
+              {transferDetails.payment_order_image instanceof File && (
+                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
+                  <i className="fa-solid fa-circle-check me-1"></i> تم اختيار: {transferDetails.payment_order_image.name}
+                </div>
+              )}
+            </div>
+
+            {/* 2. صورة تفاصيل عمليه الخصم من الوديعه */}
+            <div className="field-group full" style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', marginBottom: '8px' }}>
+              <label style={{ fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <i className="fa-solid fa-receipt" style={{ fontSize: '1.1rem' }}></i>
+                صورة تفاصيل عملية الخصم من الوديعة
+              </label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={e => handleDetailChange('deduction_details_image', e.target.files?.[0])}
+              />
+              {transferDetails.deduction_details_image instanceof File && (
+                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
+                  <i className="fa-solid fa-circle-check me-1"></i> تم اختيار: {transferDetails.deduction_details_image.name}
+                </div>
+              )}
+            </div>
+
+            {/* 3. صوره من الخصم من الوديعه المصرفيه */}
+            <div className="field-group full" style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}>
+              <label style={{ fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <i className="fa-solid fa-building-columns" style={{ fontSize: '1.1rem' }}></i>
+                صورة من الخصم من الوديعة المصرفية
+              </label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={e => handleDetailChange('bank_deduction_image', e.target.files?.[0])}
+              />
+              {transferDetails.bank_deduction_image instanceof File && (
+                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
+                  <i className="fa-solid fa-circle-check me-1"></i> تم اختيار: {transferDetails.bank_deduction_image.name}
+                </div>
+              )}
+            </div>
           </>
         );
       case 'تحويل الى النيابة':
@@ -817,79 +1000,174 @@ export default function ViewClaim() {
         {/* Left Column: Data Sections */}
         <div className="dashboard-main-col">
 
-          {claim.compensation_value && (
-            <section className="dashboard-card" style={{ border: '2px solid #139625' }}>
-              <div className="card-header" style={{ borderBottom: '1px solid #139625', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <i className="fa-solid fa-money-bill-wave text-success"></i>
-                  <h3 style={{ color: '#139625', margin: 0 }}>البيانات المالية للتعويض</h3>
-                </div>
-                {(() => {
-                  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                  const canCancelPayment = currentUser.is_admin || 
-                    (currentUser.authorized_documents && (
-                      currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
-                      currentUser.authorized_documents.includes('التعويضات') || 
-                      currentUser.authorized_documents.includes('تسديد التعويضات') || 
-                      currentUser.authorized_documents.includes('المحاسب المالي') || 
-                      currentUser.authorized_documents.includes('الشؤون الفنية')
-                    ));
+          {(() => {
+            const paymentTransfer = (claim.transfers || []).slice().reverse().find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
+            const hasFinancial = Boolean(claim.compensation_value || paymentTransfer || claim.total_paid);
+            if (!hasFinancial) return null;
 
-                  if (canCancelPayment) {
-                    return (
-                      <button onClick={handleCancelPayment} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }} title="إلغاء التسديد والصرف المالي وحذف قيد المصروف">
-                        <i className="fa-solid fa-rotate-left"></i>
-                        إلغاء التسديد والصرف
-                      </button>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-              <div className="details-grid">
-                <div className="detail-item">
-                  <span className="label">اسم مستلم التعويض</span>
-                  <span className="value fw-bold">{claim.recipient_name}</span>
+            const pDetails = paymentTransfer?.details || {};
+            const compVal = claim.compensation_value ?? pDetails.compensation_value;
+            const addExp = claim.additional_expenses ?? pDetails.additional_expenses ?? 0;
+            const totPaid = claim.total_paid ?? pDetails.financial_value ?? ((Number(compVal) || 0) + (Number(addExp) || 0));
+            const recName = claim.recipient_name || pDetails.recipient_name || 'الاتحاد الليبي لشركات التأمين';
+            const payMethod = claim.payment_method || pDetails.payment_method || 'خصم من وديعة';
+            const docNum = claim.document_number || pDetails.document_number || '0000';
+            const bookNum = claim.book_number || pDetails.book_number;
+
+            // Photos from details
+            const orderImg = pDetails.payment_order_image || claim.financial_value_image;
+            const deductImg = pDetails.deduction_details_image;
+            const bankImg = pDetails.bank_deduction_image;
+            const legacyFinImg = !pDetails.payment_order_image && pDetails.financial_value_image ? pDetails.financial_value_image : null;
+
+            return (
+              <section className="dashboard-card" style={{ border: '2px solid #139625' }}>
+                <div className="card-header" style={{ borderBottom: '1px solid #139625', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-money-bill-wave text-success"></i>
+                    <h3 style={{ color: '#139625', margin: 0 }}>البيانات المالية للتعويض والتسديد</h3>
+                  </div>
+                  {(() => {
+                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    const canCancelPayment = currentUser.is_admin || 
+                      (currentUser.authorized_documents && (
+                        currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
+                        currentUser.authorized_documents.includes('التعويضات') || 
+                        currentUser.authorized_documents.includes('تسديد التعويضات') || 
+                        currentUser.authorized_documents.includes('المحاسب المالي') || 
+                        currentUser.authorized_documents.includes('الشؤون الفنية')
+                      ));
+
+                    if (canCancelPayment) {
+                      return (
+                        <button onClick={handleCancelPayment} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }} title="إلغاء التسديد والصرف المالي وحذف قيد المصروف">
+                          <i className="fa-solid fa-rotate-left"></i>
+                          إلغاء التسديد والصرف
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
-                <div className="detail-item">
-                  <span className="label">طريقة السداد</span>
-                  <span className="value">{claim.payment_method}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">رقم المستند المالي</span>
-                  <span className="value">{claim.document_number || '---'}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">قيمة التعويض</span>
-                  <span className="value fw-bold" style={{ color: '#014cb1' }}>{Number(claim.compensation_value).toLocaleString()} {claim.currency === 'TND' ? 'د.ت (دينار تونسي)' : (claim.currency === 'USD' ? '$' : 'د.ل (دينار ليبي)')}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">مصاريف إضافية</span>
-                  <span className="value">{Number(claim.additional_expenses).toLocaleString()} {claim.currency === 'TND' ? 'د.ت' : 'د.ل'}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">إجمالي القيمة المسددة</span>
-                  <span className="value fw-bold" style={{ color: '#139625', fontSize: '1.1rem' }}>{Number(claim.total_paid).toLocaleString()} {claim.currency === 'TND' ? 'د.ت (دينار تونسي)' : (claim.currency === 'USD' ? '$' : 'د.ل (دينار ليبي)')}</span>
-                </div>
-                {claim.finance_status && (
+                <div className="details-grid">
                   <div className="detail-item">
-                    <span className="label">حالة الصرف بالمالية</span>
-                    <span className="value fw-bold" style={{ 
-                      color: claim.finance_status === 'approved' ? '#139625' : (claim.finance_status === 'rejected' ? '#ef4444' : '#d97706') 
-                    }}>
-                      {claim.finance_status === 'approved' ? 'تم الصرف والقبول المالي ✅' : (claim.finance_status === 'rejected' ? 'مرفوض ماليًا ❌' : 'قيد التدقيق المالي ⏳')}
-                    </span>
+                    <span className="label">اسم مستلم التعويض</span>
+                    <span className="value fw-bold">{recName}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">طريقة السداد</span>
+                    <span className="value">{payMethod}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">رقم المستند المالي</span>
+                    <span className="value">{docNum}</span>
+                  </div>
+                  {bookNum && (
+                    <div className="detail-item">
+                      <span className="label">رقم الكتاب</span>
+                      <span className="value">{bookNum}</span>
+                    </div>
+                  )}
+                  <div className="detail-item">
+                    <span className="label">قيمة التعويض</span>
+                    <span className="value fw-bold" style={{ color: '#014cb1' }}>{Number(compVal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} د.ل</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">مصاريف إضافية</span>
+                    <span className="value">{Number(addExp || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} د.ل</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">إجمالي القيمة المسددة</span>
+                    <span className="value fw-bold" style={{ color: '#139625', fontSize: '1.1rem' }}>{Number(totPaid || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} د.ل</span>
+                  </div>
+                  {claim.finance_status && (
+                    <div className="detail-item">
+                      <span className="label">حالة الصرف بالمالية</span>
+                      <span className="value fw-bold" style={{ 
+                        color: claim.finance_status === 'approved' ? '#139625' : (claim.finance_status === 'rejected' ? '#ef4444' : '#d97706') 
+                      }}>
+                        {claim.finance_status === 'approved' ? 'تم الصرف والقبول المالي ✅' : (claim.finance_status === 'rejected' ? 'مرفوض ماليًا ❌' : 'قيد التدقيق المالي ⏳')}
+                      </span>
+                    </div>
+                  )}
+                  {claim.finance_notes && (
+                    <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                      <span className="label">ملاحظات المالية / سبب الرفض</span>
+                      <span className="value" style={{ color: '#ef4444' }}>{claim.finance_notes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Attachments Section */}
+                {(orderImg || deductImg || bankImg || legacyFinImg) && (
+                  <div style={{ marginTop: '16px', borderTop: '1px dashed #cbd5e1', paddingTop: '14px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e293b', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-paperclip" style={{ color: '#0284c7' }}></i>
+                      المستندات والصور المرفقة لعملية الخصم والتسديد:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                      {orderImg && (
+                        <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0369a1' }}>
+                            <i className="fa-solid fa-file-invoice-dollar me-1"></i> صورة أمر تسديد المطالبة
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${orderImg}`, title: 'صورة أمر تسديد المطالبة', subtitle: `مطالبة #${claim.claim_number}` })}
+                            style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                          >
+                            <i className="fa-solid fa-eye"></i> معاينة المستند
+                          </button>
+                        </div>
+                      )}
+                      {deductImg && (
+                        <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0369a1' }}>
+                            <i className="fa-solid fa-receipt me-1"></i> صورة تفاصيل عملية الخصم
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${deductImg}`, title: 'صورة تفاصيل عملية الخصم من الوديعة', subtitle: `مطالبة #${claim.claim_number}` })}
+                            style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                          >
+                            <i className="fa-solid fa-eye"></i> معاينة المستند
+                          </button>
+                        </div>
+                      )}
+                      {bankImg && (
+                        <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0369a1' }}>
+                            <i className="fa-solid fa-building-columns me-1"></i> صورة الخصم المصرفي
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${bankImg}`, title: 'صورة من الخصم من الوديعة المصرفية', subtitle: `مطالبة #${claim.claim_number}` })}
+                            style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                          >
+                            <i className="fa-solid fa-eye"></i> معاينة المستند
+                          </button>
+                        </div>
+                      )}
+                      {legacyFinImg && (
+                        <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0369a1' }}>
+                            <i className="fa-solid fa-file-lines me-1"></i> إثبات القيمة
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMedia({ url: `${BACKEND_URL}/storage/${legacyFinImg}`, title: 'إثبات القيمة المالية', subtitle: `مطالبة #${claim.claim_number}` })}
+                            style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                          >
+                            <i className="fa-solid fa-eye"></i> معاينة المستند
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-                {claim.finance_notes && (
-                  <div className="detail-item" style={{ gridColumn: 'span 2' }}>
-                    <span className="label">ملاحظات المالية / سبب الرفض</span>
-                    <span className="value" style={{ color: '#ef4444' }}>{claim.finance_notes}</span>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+              </section>
+            );
+          })()}
 
           {/* Section 1: Claim Info */}
           <section className="dashboard-card">
@@ -1237,32 +1515,42 @@ export default function ViewClaim() {
                         <div className="details-inline">
                           {t.details && Object.entries(t.details).map(([k, v]: [string, any]) => {
                             const isFile = typeof v === 'string' && (v.includes('claim_transfers/') || v.match(/\.(jpg|jpeg|png|pdf)$/i));
-                            const label = k === 'case_number' ? 'رقم القضية' :
-                              k === 'transfer_date' ? 'تاريخ الإحالة' :
-                                k === 'prosecution_name' ? 'النيابة' :
-                                  k === 'committee_manager' ? 'مدير اللجنة' :
-                                    k === 'deputy_manager' ? 'نائب المدير' :
-                                      k === 'total_value' ? 'إجمالي القيمة' :
-                                        k === 'manager_report' ? 'تقرير المدير' :
-                                          k === 'report_number' ? 'رقم البلاغ' :
-                                            k === 'report_date' ? 'تاريخ البلاغ' :
-                                              k === 'police_station' ? 'مركز الشرطة' :
-                                                k === 'book_number' ? 'رقم الكتاب' :
-                                                  k === 'financial_value' ? 'القيمة المالية' :
-                                                    k === 'recipient_name' ? 'اسم المستلم' :
-                                                      k === 'session_date' ? 'تاريخ الجلسة' :
-                                                        k === 'court_name' ? 'المحكمة' :
-                                                          k === 'appeal_case_number' ? 'رقم الاستئناف' :
-                                                            k === 'appeal_date' ? 'تاريخ الاستئناف' :
-                                                              k === 'appeal_court' ? 'محكمة الاستئناف' :
-                                                                k === 'notes' ? 'ملاحظات' :
-                                                                  k === 'report_image' ? 'صورة البلاغ' :
-                                                                    k === 'financial_value_image' ? 'إثبات القيمة' :
-                                                                      k === 'transfer_image' ? 'صورة الإحالة' :
-                                                                        k === 'court_file_image' ? 'ملف القضية' :
-                                                                          k === 'previous_judgment_image' ? 'الحكم السابق' :
-                                                                            k === 'image' || k === 'settlement_image' ? 'صورة / مستند التسوية' :
-                                                                              k.replace(/_/g, ' ');
+                            const labelMap: Record<string, string> = {
+                              case_number: 'رقم القضية',
+                              transfer_date: 'تاريخ الإحالة',
+                              prosecution_name: 'النيابة',
+                              committee_manager: 'مدير اللجنة',
+                              deputy_manager: 'نائب المدير',
+                              total_value: 'إجمالي القيمة',
+                              manager_report: 'تقرير المدير',
+                              report_number: 'رقم البلاغ',
+                              report_date: 'تاريخ البلاغ',
+                              police_station: 'مركز الشرطة',
+                              book_number: 'رقم الكتاب',
+                              financial_value: 'إجمالي القيمة المسددة',
+                              compensation_value: 'قيمة التعويض',
+                              additional_expenses: 'مصاريف إضافية',
+                              document_number: 'رقم المستند المالي',
+                              payment_method: 'طريقة السداد',
+                              recipient_name: 'اسم المستلم',
+                              payment_order_image: 'صورة أمر تسديد المطالبة',
+                              deduction_details_image: 'صورة تفاصيل عملية الخصم من الوديعة',
+                              bank_deduction_image: 'صورة من الخصم من الوديعة المصرفية',
+                              financial_value_image: 'إثبات القيمة',
+                              session_date: 'تاريخ الجلسة',
+                              court_name: 'المحكمة',
+                              appeal_case_number: 'رقم الاستئناف',
+                              appeal_date: 'تاريخ الاستئناف',
+                              appeal_court: 'محكمة الاستئناف',
+                              notes: 'ملاحظات',
+                              report_image: 'صورة البلاغ',
+                              transfer_image: 'صورة الإحالة',
+                              court_file_image: 'ملف القضية',
+                              previous_judgment_image: 'الحكم السابق',
+                              image: 'صورة / مستند التسوية',
+                              settlement_image: 'صورة / مستند التسوية',
+                            };
+                            const label = labelMap[k] || k.replace(/_/g, ' ');
 
                             const isImage = typeof v === 'string' && v.match(/\.(jpg|jpeg|png|webp|gif)$/i);
                             const isPdf = typeof v === 'string' && v.match(/\.pdf$/i);

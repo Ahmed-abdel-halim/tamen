@@ -95,7 +95,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
   // Process and compute values dynamically
   let totalReserveLYD = 0;
   let totalSettlementLYD = 0;
+  let totalLastSettlementLYD = 0;
   let claimsWithForeignCount = 0;
+  let claimsWithSettlementForeignCount = 0;
 
   const processedRows = claims.map((claim, idx) => {
     let foreignAmountStr = '—';
@@ -155,9 +157,8 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
     // Settlement amount
     let settlementLYD = 0;
     const allSettlementTransfers = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
-    const settlementTransfer = allSettlementTransfers[0];
     const latestSettlement = allSettlementTransfers[allSettlementTransfers.length - 1];
-    const paymentTransfer = claim.transfers?.find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
+    const paymentTransfer = (claim.transfers || []).slice().reverse().find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
 
     const isTnd = Boolean(
       (claim.assessor_other_amount && /تونس|tnd/i.test(claim.assessor_other_amount)) ||
@@ -166,8 +167,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
       claim.document_type === 'InternationalInsuranceDocument'
     );
 
-    let lastSettlementTND = '';
-    let lastSettlementLYD = '';
+    let lastSettlementForeignStr = '—';
+    let settlementRateLabel = '—';
+    let lastSettlementLYD = 0;
 
     if (latestSettlement) {
       const details = latestSettlement.details || {};
@@ -175,36 +177,65 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
         const rawTnd = details.tnd_amount || details.total_value || '';
         const tndVal = parseFloat(rawTnd) || 0;
         if (tndVal > 0) {
-          lastSettlementTND = tndVal % 1 !== 0 ? tndVal.toFixed(3) : tndVal.toLocaleString('en-US');
+          lastSettlementForeignStr = `${tndVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ت`;
+          settlementRateLabel = `${tndRate.toFixed(2)}`;
+          lastSettlementLYD = tndVal * tndRate;
+          claimsWithSettlementForeignCount++;
         } else if (rawTnd) {
-          lastSettlementTND = String(rawTnd);
+          lastSettlementForeignStr = String(rawTnd);
+          settlementRateLabel = `${tndRate.toFixed(2)}`;
         }
-
-        if (details.lyd_amount && Number(details.lyd_amount) > 0) {
-          lastSettlementLYD = Number(details.lyd_amount).toFixed(2);
-        } else if (tndVal > 0) {
-          lastSettlementLYD = (tndVal * tndRate).toFixed(2);
+      } else if (details.usd_amount || (claim.assessor_amount_dollar && Number(claim.assessor_amount_dollar) > 0)) {
+        const rawUsd = details.usd_amount || details.total_value || '';
+        const usdVal = parseFloat(rawUsd) || 0;
+        if (usdVal > 0) {
+          lastSettlementForeignStr = `${usdVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} $`;
+          settlementRateLabel = `${usdRate.toFixed(2)}`;
+          lastSettlementLYD = usdVal * usdRate;
+          claimsWithSettlementForeignCount++;
         }
       } else {
-        if (details.lyd_amount && Number(details.lyd_amount) > 0) {
-          lastSettlementLYD = Number(details.lyd_amount).toFixed(2);
-        } else if (details.total_value && Number(details.total_value) > 0) {
-          lastSettlementLYD = Number(details.total_value).toFixed(2);
+        const val = parseFloat(details.lyd_amount || details.total_value) || 0;
+        if (val > 0) {
+          lastSettlementLYD = val;
+          settlementRateLabel = '1.00';
         }
       }
     }
 
-    if (claim.total_paid && Number(claim.total_paid) > 0) {
-      settlementLYD = Number(claim.total_paid);
+    totalLastSettlementLYD += lastSettlementLYD;
+
+    // Compute paid / settlement amount in LYD
+    if (claim.status === 'مدفوع') {
+      if (claim.currency === 'TND' && claim.total_paid) {
+        settlementLYD = Number(claim.total_paid) * tndRate;
+      } else if (claim.total_paid && Number(claim.total_paid) > 0) {
+        settlementLYD = Number(claim.total_paid);
+      } else if (lastSettlementLYD > 0) {
+        settlementLYD = lastSettlementLYD;
+      }
+    } else if (claim.status === 'للتسديد - الشؤون المالية') {
+      const rawComp = claim.compensation_value ?? paymentTransfer?.details?.compensation_value;
+      const rawAdd = claim.additional_expenses ?? paymentTransfer?.details?.additional_expenses;
+      const rawTot = claim.total_paid ?? paymentTransfer?.details?.financial_value;
+
+      let candidate = 0;
+      if (rawTot && Number(rawTot) > 0) {
+        candidate = Number(rawTot);
+      } else if (rawComp && Number(rawComp) > 0) {
+        candidate = Number(rawComp) + (Number(rawAdd) || 0);
+      }
+
+      const rawTndNum = parseFloat(latestSettlement?.details?.tnd_amount || latestSettlement?.details?.total_value) || 0;
+      if (isTnd && candidate > 0 && Math.abs(candidate - rawTndNum) < 0.05) {
+        settlementLYD = candidate * tndRate;
+      } else if (candidate > 0) {
+        settlementLYD = candidate;
+      } else if (lastSettlementLYD > 0) {
+        settlementLYD = lastSettlementLYD;
+      }
     } else if (claim.compensation_value && Number(claim.compensation_value) > 0) {
       settlementLYD = Number(claim.compensation_value) + (Number(claim.additional_expenses) || 0);
-    } else if (paymentTransfer?.details?.financial_value && Number(paymentTransfer.details.financial_value) > 0) {
-      settlementLYD = Number(paymentTransfer.details.financial_value);
-    } else if (lastSettlementLYD && Number(lastSettlementLYD) > 0) {
-      settlementLYD = Number(lastSettlementLYD);
-    } else if (settlementTransfer?.details?.total_value) {
-      const tv = parseFloat(settlementTransfer.details.total_value) || 0;
-      settlementLYD = isTnd ? (tv * tndRate) : tv;
     }
 
     totalSettlementLYD += settlementLYD;
@@ -232,8 +263,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
       settlementLYD,
       statusLabel: getStatusLabel(claim.status),
       statusBadge: getStatusBadgeClass(claim.status),
-      paymentMethod: claim.payment_method || (settlementLYD > 0 ? 'معتمد' : '—'),
-      lastSettlementTND,
+      paymentMethod: claim.payment_method || paymentTransfer?.details?.payment_method || (claim.status === 'مدفوع' || claim.status === 'للتسديد - الشؤون المالية' ? 'معتمد' : (settlementLYD > 0 ? 'معتمد' : '—')),
+      lastSettlementForeignStr,
+      settlementRateLabel,
       lastSettlementLYD
     };
   });
@@ -801,7 +833,7 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <th colspan="3" class="group-accident">بيانات الحادث والأضرار</th>
               <th colspan="3" class="group-policy">بيانات الوثيقة والمؤمن له</th>
               <th colspan="3" class="group-finance">التقييم والاحتياطي المرصود</th>
-              <th colspan="4" class="group-settlement">التسوية والسداد</th>
+              <th colspan="5" class="group-settlement">التسوية والسداد</th>
               <th rowspan="2" style="width: 58px; background: #0f172a; border-color: #334155;">الحالة</th>
             </tr>
             <tr>
@@ -821,8 +853,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <th style="width: 38px;">سعر التحويل</th>
               <th style="width: 76px;">المرصود (د.ل)</th>
 
-              <th style="width: 72px;">آخر تسوية (د.ت)</th>
-              <th style="width: 72px;">آخر تسوية (د.ل)</th>
+              <th style="width: 72px;">آخر تسوية (أجنبي)</th>
+              <th style="width: 38px;">سعر التحويل</th>
+              <th style="width: 76px;">آخر تسوية (د.ل)</th>
               <th style="width: 72px;">المسدد (د.ل)</th>
               <th style="width: 58px;">طريقة السداد</th>
             </tr>
@@ -830,7 +863,7 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
           <tbody>
             ${processedRows.length === 0 ? `
               <tr>
-                <td colspan="15" style="padding: 25px; color: #64748b; font-size: 9pt; font-weight: 700;">
+                <td colspan="19" style="padding: 25px; color: #64748b; font-size: 9pt; font-weight: 700;">
                   لا توجد مطالبات مسجلة مطابقة لخيارات التصفية المحددة.
                 </td>
               </tr>
@@ -853,9 +886,10 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
                 <td style="color: #64748b; font-weight: 700; font-size: 6.8pt;">${row.rateLabel}</td>
                 <td class="col-lyd-reserve">${formatMoney(row.reserveLYD)}</td>
 
-                <td class="col-foreign-money" style="color: #0369a1;">${row.lastSettlementTND ? escapeHtml(row.lastSettlementTND) : '—'}</td>
-                <td class="col-settlement" style="color: #065f46;">${row.lastSettlementLYD ? formatMoney(row.lastSettlementLYD) : '—'}</td>
-                <td class="col-settlement">${formatMoney(row.settlementLYD)}</td>
+                <td class="col-foreign-money" style="color: #0369a1;">${escapeHtml(row.lastSettlementForeignStr)}</td>
+                <td style="color: #64748b; font-weight: 700; font-size: 6.8pt;">${row.settlementRateLabel}</td>
+                <td class="col-settlement" style="color: #065f46;">${row.lastSettlementLYD > 0 ? formatMoney(row.lastSettlementLYD) : '—'}</td>
+                <td class="col-settlement">${row.settlementLYD > 0 ? formatMoney(row.settlementLYD) : '—'}</td>
                 <td style="font-size: 6.8pt; color: #475569;">${escapeHtml(row.paymentMethod)}</td>
 
                 <td>
@@ -872,8 +906,9 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <td style="font-size: 7pt; color: #cbd5e1;">${claimsWithForeignCount} عملة أجنبية</td>
               <td style="color: #cbd5e1; font-size: 7pt;">—</td>
               <td class="total-val">${formatMoney(totalReserveLYD)} د.ل</td>
-              <td style="font-size: 7pt; color: #cbd5e1;">—</td>
-              <td class="total-val" style="color: #38bdf8 !important;">${formatMoney(totalSettlementLYD)} د.ل</td>
+              <td style="font-size: 7pt; color: #cbd5e1;">${claimsWithSettlementForeignCount > 0 ? `${claimsWithSettlementForeignCount} عملة أجنبية` : '—'}</td>
+              <td style="color: #cbd5e1; font-size: 7pt;">—</td>
+              <td class="total-val" style="color: #38bdf8 !important;">${formatMoney(totalLastSettlementLYD)} د.ل</td>
               <td class="total-paid">${formatMoney(totalSettlementLYD)} د.ل</td>
               <td colspan="2" style="font-size: 7pt; color: #cbd5e1;">—</td>
             </tr>
