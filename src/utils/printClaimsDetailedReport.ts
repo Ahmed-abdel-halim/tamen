@@ -156,13 +156,19 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
 
     // Settlement amount
     let settlementLYD = 0;
-    const allSettlementTransfers = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه');
-    const latestSettlement = allSettlementTransfers[allSettlementTransfers.length - 1];
+    const allSettlementTransfers = (claim.transfers || []).filter((t: any) => t.transfer_type === 'تسويه وديه' || t.transfer_type === 'تسوية ودية');
+    let latestSettlement = allSettlementTransfers[allSettlementTransfers.length - 1];
     const paymentTransfer = (claim.transfers || []).slice().reverse().find((t: any) => t.transfer_type === 'للتسديد - الشؤون المالية');
+
+    if (!latestSettlement && paymentTransfer && (paymentTransfer.details?.tnd_settlement_amount || paymentTransfer.details?.final_tnd_value || paymentTransfer.details?.final_lyd_value)) {
+      latestSettlement = paymentTransfer;
+    }
 
     const isTnd = Boolean(
       (claim.assessor_other_amount && /تونس|tnd/i.test(claim.assessor_other_amount)) ||
       latestSettlement?.details?.tnd_amount ||
+      latestSettlement?.details?.final_tnd_value ||
+      latestSettlement?.details?.tnd_settlement_amount ||
       (latestSettlement?.details?.manager_report && /تونسي|تونس/i.test(latestSettlement.details.manager_report)) ||
       claim.document_type === 'InternationalInsuranceDocument'
     );
@@ -180,8 +186,8 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
       // 3️⃣ احتياط أخير → tnd_amount × سعر التقرير الحالي
       // ─────────────────────────────────────────────────────────────────────
 
-      const manualLyd = parseFloat(details.lyd_amount) || 0;
-      const rawTnd    = details.tnd_amount || '';
+      const manualLyd = parseFloat(details.lyd_amount || details.final_lyd_value || (details === paymentTransfer?.details ? details.financial_value : 0)) || 0;
+      const rawTnd    = details.tnd_amount || details.final_tnd_value || details.tnd_settlement_amount || '';
       const tndVal    = parseFloat(rawTnd) || 0;
       const rawUsd    = details.usd_amount || '';
       const usdVal    = parseFloat(rawUsd) || 0;
@@ -239,27 +245,35 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
 
     // Compute paid / settlement amount in LYD
     if (claim.status === 'مدفوع') {
+      const paymentLyd = parseFloat(paymentTransfer?.details?.final_lyd_value || paymentTransfer?.details?.financial_value || 0);
       if (claim.currency === 'TND' && claim.total_paid) {
         settlementLYD = Number(claim.total_paid) * tndRate;
       } else if (claim.total_paid && Number(claim.total_paid) > 0) {
         settlementLYD = Number(claim.total_paid);
+      } else if (paymentLyd > 0) {
+        settlementLYD = paymentLyd;
       } else if (lastSettlementLYD > 0) {
         settlementLYD = lastSettlementLYD;
       }
     } else if (claim.status === 'للتسديد - الشؤون المالية') {
+      const paymentLyd = parseFloat(paymentTransfer?.details?.final_lyd_value || paymentTransfer?.details?.financial_value || 0);
       const rawComp = claim.compensation_value ?? paymentTransfer?.details?.compensation_value;
       const rawAdd = claim.additional_expenses ?? paymentTransfer?.details?.additional_expenses;
       const rawTot = claim.total_paid ?? paymentTransfer?.details?.financial_value;
 
       let candidate = 0;
-      if (rawTot && Number(rawTot) > 0) {
+      if (paymentLyd > 0) {
+        candidate = paymentLyd;
+      } else if (rawTot && Number(rawTot) > 0) {
         candidate = Number(rawTot);
       } else if (rawComp && Number(rawComp) > 0) {
         candidate = Number(rawComp) + (Number(rawAdd) || 0);
       }
 
-      const rawTndNum = parseFloat(latestSettlement?.details?.tnd_amount || latestSettlement?.details?.total_value) || 0;
-      if (isTnd && candidate > 0 && Math.abs(candidate - rawTndNum) < 0.05) {
+      const rawTndNum = parseFloat(latestSettlement?.details?.tnd_amount || latestSettlement?.details?.total_value || latestSettlement?.details?.final_tnd_value) || 0;
+      if (paymentLyd > 0) {
+        settlementLYD = paymentLyd;
+      } else if (isTnd && candidate > 0 && Math.abs(candidate - rawTndNum) < 0.05) {
         settlementLYD = candidate * tndRate;
       } else if (candidate > 0) {
         settlementLYD = candidate;

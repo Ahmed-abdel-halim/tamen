@@ -64,11 +64,13 @@ export default function ViewClaim() {
       );
 
       let defaultComp: number | string = '';
+      let defaultTnd: number | string = '';
 
       if (latestSettlement) {
         const rawTnd = latestSettlement.details?.tnd_amount || latestSettlement.details?.total_value || '';
         const tndVal = parseFloat(rawTnd) || 0;
         if (isTnd && tndVal > 0) {
+          defaultTnd = tndVal;
           defaultComp = Number((tndVal * tndRate).toFixed(3));
         } else if (latestSettlement.details?.lyd_amount && Number(latestSettlement.details.lyd_amount) > 0) {
           defaultComp = Number(Number(latestSettlement.details.lyd_amount).toFixed(3));
@@ -79,6 +81,7 @@ export default function ViewClaim() {
         const match = String(claim.assessor_other_amount).match(/^([\d.]+)/);
         if (match) {
           const amt = parseFloat(match[1]) || 0;
+          defaultTnd = amt;
           defaultComp = Number((amt * tndRate).toFixed(3));
         }
       } else if (claim.compensation_value) {
@@ -90,7 +93,14 @@ export default function ViewClaim() {
       }
 
       setTransferDetails((prev: any) => {
-        const comp = prev.compensation_value !== undefined ? prev.compensation_value : defaultComp;
+        const tndBase = prev.tnd_settlement_amount !== undefined ? prev.tnd_settlement_amount : defaultTnd;
+        const adminExp = prev.admin_expenses !== undefined ? prev.admin_expenses : '';
+        const transferExp = prev.transfer_expenses !== undefined ? prev.transfer_expenses : '';
+        const calcFinalTnd = (Number(tndBase) || 0) + (Number(adminExp) || 0) + (Number(transferExp) || 0);
+        const finalTnd = prev.final_tnd_value !== undefined ? prev.final_tnd_value : (calcFinalTnd > 0 ? Number(calcFinalTnd.toFixed(3)) : '');
+        const finalLyd = prev.final_lyd_value !== undefined ? prev.final_lyd_value : (finalTnd > 0 ? Number((Number(finalTnd) * tndRate).toFixed(3)) : defaultComp);
+
+        const comp = prev.compensation_value !== undefined ? prev.compensation_value : (finalLyd !== '' ? finalLyd : defaultComp);
         const add = prev.additional_expenses !== undefined ? prev.additional_expenses : 0;
         const fin = prev.financial_value !== undefined ? prev.financial_value : ((Number(comp) || 0) + (Number(add) || 0));
 
@@ -99,6 +109,12 @@ export default function ViewClaim() {
           payment_method: prev.payment_method || 'خصم من وديعة',
           document_number: prev.document_number !== undefined ? prev.document_number : '0000',
           recipient_name: prev.recipient_name || 'الاتحاد الليبي لشركات التأمين',
+          tnd_settlement_amount: tndBase,
+          admin_expenses: adminExp,
+          transfer_expenses: transferExp,
+          final_tnd_value: finalTnd,
+          final_lyd_value: finalLyd,
+          tnd_rate: prev.tnd_rate !== undefined ? prev.tnd_rate : tndRate,
           compensation_value: comp,
           additional_expenses: add,
           financial_value: fin,
@@ -111,9 +127,42 @@ export default function ViewClaim() {
   const handleDetailChange = (key: string, value: any) => {
     setTransferDetails((prev: any) => {
       const updated = { ...prev, [key]: value };
+
+      // ─── الحسابات التلقائية لنموذج "للتسديد - الشؤون المالية" ───
+      // القيمة النهائية بالتونسي = المبلغ + مصاريف إدارية + مصاريف التحويل
+      // القيمة النهائية بالليبي = القيمة النهائية بالتونسي × سعر الصرف
+      if (['tnd_settlement_amount', 'admin_expenses', 'transfer_expenses'].includes(key)) {
+        const tndBase    = Number(key === 'tnd_settlement_amount' ? value : (updated.tnd_settlement_amount ?? 0)) || 0;
+        const adminExp   = Number(key === 'admin_expenses'        ? value : (updated.admin_expenses ?? 0))        || 0;
+        const transferExp= Number(key === 'transfer_expenses'     ? value : (updated.transfer_expenses ?? 0))     || 0;
+        const finalTnd   = tndBase + adminExp + transferExp;
+        updated.final_tnd_value = finalTnd > 0 ? Number(finalTnd.toFixed(3)) : '';
+
+        const cachedRates = localStorage.getItem('mli_exchange_rates');
+        const rates = cachedRates ? JSON.parse(cachedRates) : { tnd_to_lyd: 2.30 };
+        const tndRate = Number(rates.tnd_to_lyd) || 2.30;
+        updated.tnd_rate = tndRate;
+        const finalLyd = finalTnd > 0 ? Number((finalTnd * tndRate).toFixed(3)) : '';
+        updated.final_lyd_value = finalLyd;
+        // تحديث قيمة التعويض الليبي وإجمالي المسدد ليعكس القيمة النهائية
+        if (finalTnd > 0) {
+          updated.compensation_value = finalLyd;
+          updated.financial_value    = (Number(finalLyd) || 0) + (Number(updated.additional_expenses) || 0);
+        }
+      }
+
+      // إتاحة تعديل القيمة النهائية بالدينار الليبي مباشرة إذا كان هناك كشف خصم دقيق
+      if (key === 'final_lyd_value') {
+        const val = value === '' ? '' : Number(value);
+        updated.final_lyd_value = val;
+        updated.compensation_value = val;
+        updated.financial_value = (Number(val) || 0) + (Number(updated.additional_expenses) || 0);
+      }
+
+      // الحساب القديم: قيمة التعويض + مصاريف إضافية = الإجمالي المسدد
       if (key === 'compensation_value' || key === 'additional_expenses') {
         const comp = Number(key === 'compensation_value' ? value : (updated.compensation_value ?? 0)) || 0;
-        const add = Number(key === 'additional_expenses' ? value : (updated.additional_expenses ?? 0)) || 0;
+        const add  = Number(key === 'additional_expenses' ? value : (updated.additional_expenses ?? 0)) || 0;
         updated.financial_value = comp + add;
       }
       return updated;
@@ -714,6 +763,7 @@ export default function ViewClaim() {
       case 'للتسديد - الشؤون المالية':
         return (
           <>
+            {/* ─── بيانات المستند ─── */}
             <div className="field-group">
               <label>رقم الكتاب</label>
               <input
@@ -753,38 +803,113 @@ export default function ViewClaim() {
                 placeholder="الاتحاد الليبي لشركات التأمين"
               />
             </div>
+
+            {/* ─── القسم المالي بالتونسي ─── */}
+            <div className="field-group full" style={{ marginTop: '10px', borderTop: '1.5px dashed #bae6fd', paddingTop: '10px' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0369a1', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-coins" style={{ color: '#0284c7' }}></i>
+                القيم المالية بالدينار التونسي (د.ت)
+              </div>
+            </div>
+
             <div className="field-group">
-              <label style={{ color: '#0369a1', fontWeight: 800 }}>قيمة التعويض</label>
+              <label style={{ color: '#0369a1', fontWeight: 800 }}>مبلغ التسوية (د.ت)</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.tnd_settlement_amount !== undefined ? transferDetails.tnd_settlement_amount : ''}
+                onChange={e => handleDetailChange('tnd_settlement_amount', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0.000"
+                style={{ borderColor: '#bae6fd' }}
+              />
+            </div>
+            <div className="field-group">
+              <label style={{ color: '#0369a1' }}>مصاريف إدارية (د.ت)</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.admin_expenses !== undefined ? transferDetails.admin_expenses : ''}
+                onChange={e => handleDetailChange('admin_expenses', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0.000"
+                style={{ borderColor: '#bae6fd' }}
+              />
+            </div>
+            <div className="field-group">
+              <label style={{ color: '#0369a1' }}>مصاريف التحويل (د.ت)</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.transfer_expenses !== undefined ? transferDetails.transfer_expenses : ''}
+                onChange={e => handleDetailChange('transfer_expenses', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0.000"
+                style={{ borderColor: '#bae6fd' }}
+              />
+            </div>
+            <div className="field-group">
+              <label style={{ color: '#0369a1', fontWeight: 900 }}>القيمة النهائية (د.ت) ✦</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.final_tnd_value !== undefined ? transferDetails.final_tnd_value : ''}
+                readOnly
+                placeholder="محسوبة تلقائياً"
+                style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: 900, borderColor: '#93c5fd' }}
+              />
+            </div>
+
+            {/* ─── القسم المالي بالليبي ─── */}
+            <div className="field-group full" style={{ marginTop: '10px', borderTop: '1.5px dashed #bbf7d0', paddingTop: '10px' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#166534', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-money-bill-wave" style={{ color: '#16a34a' }}></i>
+                القيم المالية بالدينار الليبي (د.ل)
+              </div>
+            </div>
+
+            <div className="field-group">
+              <label style={{ color: '#166534', fontWeight: 800 }}>قيمة التعويض (د.ل)</label>
               <input
                 type="number"
                 step="any"
                 value={transferDetails.compensation_value !== undefined ? transferDetails.compensation_value : ''}
                 onChange={e => handleDetailChange('compensation_value', e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="0.000"
+                style={{ borderColor: '#bbf7d0' }}
               />
             </div>
             <div className="field-group">
-              <label>مصاريف إضافية (إدارية - ضرائب - إلخ)</label>
+              <label style={{ color: '#166534' }}>مصاريف إضافية (د.ل)</label>
               <input
                 type="number"
                 step="any"
                 value={transferDetails.additional_expenses !== undefined ? transferDetails.additional_expenses : ''}
                 onChange={e => handleDetailChange('additional_expenses', e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="0.000"
+                style={{ borderColor: '#bbf7d0' }}
               />
             </div>
-            <div className="field-group full">
-              <label style={{ color: '#166534', fontWeight: 800 }}>إجمالي القيمة المسددة</label>
+            <div className="field-group">
+              <label style={{ color: '#166534', fontWeight: 900 }}>القيمة النهائية (د.ل) ✦</label>
+              <input
+                type="number"
+                step="any"
+                value={transferDetails.final_lyd_value !== undefined ? transferDetails.final_lyd_value : ''}
+                onChange={e => handleDetailChange('final_lyd_value', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="محسوبة تلقائياً (قابلة للتعديل)"
+                style={{ background: '#f0fdf4', color: '#166534', fontWeight: 900, borderColor: '#86efac' }}
+              />
+            </div>
+            <div className="field-group">
+              <label style={{ color: '#166534', fontWeight: 900, fontSize: '0.95rem' }}>إجمالي القيمة المسددة (د.ل)</label>
               <input
                 type="number"
                 step="any"
                 value={transferDetails.financial_value !== undefined ? transferDetails.financial_value : ''}
                 readOnly
-                style={{ background: '#f0fdf4', color: '#166534', fontWeight: 900 }}
+                style={{ background: '#dcfce7', color: '#14532d', fontWeight: 900, fontSize: '1.05rem', borderColor: '#4ade80' }}
               />
             </div>
 
-            {/* الثلاث صور المطلوبة للخصم والتسديد */}
+            {/* ─── المستندات والصور ─── */}
             <div className="field-group full" style={{ marginTop: '12px', borderTop: '1.5px dashed #cbd5e1', paddingTop: '12px' }}>
               <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-solid fa-images" style={{ color: '#0284c7' }}></i>
@@ -798,11 +923,7 @@ export default function ViewClaim() {
                 <i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '1.1rem' }}></i>
                 صورة أمر تسديد المطالبة
               </label>
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={e => handleDetailChange('payment_order_image', e.target.files?.[0])}
-              />
+              <input type="file" accept="image/*,application/pdf" onChange={e => handleDetailChange('payment_order_image', e.target.files?.[0])} />
               {transferDetails.payment_order_image instanceof File && (
                 <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
                   <i className="fa-solid fa-circle-check me-1"></i> تم اختيار: {transferDetails.payment_order_image.name}
@@ -816,11 +937,7 @@ export default function ViewClaim() {
                 <i className="fa-solid fa-receipt" style={{ fontSize: '1.1rem' }}></i>
                 صورة تفاصيل عملية الخصم من الوديعة
               </label>
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={e => handleDetailChange('deduction_details_image', e.target.files?.[0])}
-              />
+              <input type="file" accept="image/*,application/pdf" onChange={e => handleDetailChange('deduction_details_image', e.target.files?.[0])} />
               {transferDetails.deduction_details_image instanceof File && (
                 <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
                   <i className="fa-solid fa-circle-check me-1"></i> تم اختيار: {transferDetails.deduction_details_image.name}
@@ -834,11 +951,7 @@ export default function ViewClaim() {
                 <i className="fa-solid fa-building-columns" style={{ fontSize: '1.1rem' }}></i>
                 صورة من الخصم من الوديعة المصرفية
               </label>
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={e => handleDetailChange('bank_deduction_image', e.target.files?.[0])}
-              />
+              <input type="file" accept="image/*,application/pdf" onChange={e => handleDetailChange('bank_deduction_image', e.target.files?.[0])} />
               {transferDetails.bank_deduction_image instanceof File && (
                 <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
                   <i className="fa-solid fa-circle-check me-1"></i> تم اختيار: {transferDetails.bank_deduction_image.name}
@@ -1542,12 +1655,19 @@ export default function ViewClaim() {
                               report_date: 'تاريخ البلاغ',
                               police_station: 'مركز الشرطة',
                               book_number: 'رقم الكتاب',
-                              financial_value: 'إجمالي القيمة المسددة',
-                              compensation_value: 'قيمة التعويض',
-                              additional_expenses: 'مصاريف إضافية',
+                              financial_value: 'إجمالي القيمة المسددة (د.ل)',
+                              compensation_value: 'قيمة التعويض (د.ل)',
+                              additional_expenses: 'مصاريف إضافية (د.ل)',
                               document_number: 'رقم المستند المالي',
                               payment_method: 'طريقة السداد',
                               recipient_name: 'اسم المستلم',
+                              // ── الحقول الجديدة بالتونسي والليبي ──
+                              tnd_settlement_amount: 'مبلغ التسوية (د.ت)',
+                              admin_expenses: 'مصاريف إدارية (د.ت)',
+                              transfer_expenses: 'مصاريف التحويل (د.ت)',
+                              final_tnd_value: 'القيمة النهائية (د.ت)',
+                              final_lyd_value: 'القيمة النهائية (د.ل)',
+                              // ── الصور ──
                               payment_order_image: 'صورة أمر تسديد المطالبة',
                               deduction_details_image: 'صورة تفاصيل عملية الخصم من الوديعة',
                               bank_deduction_image: 'صورة من الخصم من الوديعة المصرفية',
@@ -1564,6 +1684,8 @@ export default function ViewClaim() {
                               previous_judgment_image: 'الحكم السابق',
                               image: 'صورة / مستند التسوية',
                               settlement_image: 'صورة / مستند التسوية',
+                              tnd_rate: 'سعر التونسي وقت التسوية',
+                              usd_rate: 'سعر الدولار وقت التسوية',
                             };
                             const label = labelMap[k] || k.replace(/_/g, ' ');
 
