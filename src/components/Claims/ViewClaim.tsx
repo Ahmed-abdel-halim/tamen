@@ -3,6 +3,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { showToast } from '../Toast';
 import { API_BASE_URL, BACKEND_URL } from '../../config/api';
 import { MediaPreviewModal } from '../Common/MediaPreviewModal';
+import {
+  printVerificationLetter,
+  printSettlementLetter,
+  printPaymentOrderLetter,
+  printObjectionLetter
+} from '../../utils/printClaimOfficialLetters';
 
 export default function ViewClaim() {
   const { id } = useParams();
@@ -13,6 +19,66 @@ export default function ViewClaim() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{ url: string; title: string; subtitle?: string } | null>(null);
   const navigate = useNavigate();
+
+  // ─── المراسلات والنماذج الرسمية الأربعة للاتحاد ───
+  const [showOfficialLettersModal, setShowOfficialLettersModal] = useState(false);
+  const [showObjectionModal, setShowObjectionModal] = useState(false);
+  const [rejectionReasons, setRejectionReasons] = useState<string[]>([
+    'انعدام وقصور المستندات الإثباتية القانونية (عدم إرفاق تقرير المرور الصادر عن جهات الاختصاص).',
+    'عدم ثبوت مسؤولية الوسيلة المؤمن عليها عن وقوع الحادث بموجب مخطط مروري معتمد.',
+    'المبالغة غير المبررة في تكاليف قطع الغيار والإصلاح دون تقديم الفواتير الضريبية الأصلية المؤيدة.'
+  ]);
+  const [rejectionDetails, setRejectionDetails] = useState('');
+  const [submittingObjection, setSubmittingObjection] = useState(false);
+
+  const handleToggleRejectionReason = (reason: string) => {
+    setRejectionReasons(prev =>
+      prev.includes(reason) ? prev.filter(r => r !== reason) : [...prev, reason]
+    );
+  };
+
+  const handleSubmitObjection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claim) return;
+    if (rejectionReasons.length === 0 && !rejectionDetails.trim()) {
+      showToast('يرجى تحديد سبب واحد على الأقل للاعتراض', 'error');
+      return;
+    }
+    setSubmittingObjection(true);
+    try {
+      const formData = new FormData();
+      formData.append('transfer_type', 'تم الاعتراض');
+      formData.append('detail_rejection_reasons', rejectionReasons.join(' | '));
+      formData.append('detail_rejection_details', rejectionDetails);
+      formData.append('detail_objection_date', new Date().toISOString().split('T')[0]);
+
+      const response = await fetch(`${API_BASE_URL}/claims/${claim.id}/transfers`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('فشل تسجيل الاعتراض');
+
+      showToast('تم تسجيل الاعتراض وتجميد الملف بنجاح', 'success');
+
+      printObjectionLetter(claim, {
+        rejectionReasons,
+        rejectionDetails
+      });
+
+      setShowObjectionModal(false);
+      setShowOfficialLettersModal(false);
+      fetchClaim();
+    } catch {
+      showToast('خطأ في تسجيل الاعتراض', 'error');
+    } finally {
+      setSubmittingObjection(false);
+    }
+  };
 
   const isDamagedBodyType = (type: string) => {
     if (!claim || !claim.damaged_body_type) return false;
@@ -187,6 +253,14 @@ export default function ViewClaim() {
         if (!transferDetails.recipient_name) formData.append('detail_recipient_name', 'الاتحاد الليبي لشركات التأمين');
       }
 
+      if (transferType === 'تم الاعتراض') {
+        formData.append('detail_rejection_reasons', rejectionReasons.join(' | '));
+        if (rejectionDetails) {
+          formData.append('detail_rejection_details', rejectionDetails);
+        }
+        formData.append('detail_objection_date', new Date().toISOString().split('T')[0]);
+      }
+
       Object.keys(transferDetails).forEach(key => {
         const val = transferDetails[key];
         if (val instanceof File) {
@@ -207,6 +281,11 @@ export default function ViewClaim() {
       if (!response.ok) throw new Error('Failed to transfer claim');
 
       showToast('تم تحويل المطالبة بنجاح', 'success');
+
+      if (transferType === 'تم الاعتراض') {
+        printObjectionLetter(claim, { rejectionReasons, rejectionDetails });
+      }
+
       setShowTransferForm(false);
       setTransferDetails({});
       fetchClaim();
@@ -715,6 +794,9 @@ export default function ViewClaim() {
       case 'التعويضات': return { bg: '#fdf2f8', color: '#db2777', text: 'معلق بالتعويضات' };
       case 'مدفوع': return { bg: '#dcfce7', color: '#166534', text: 'تم الدفع والقبول المالي' };
       case 'للتسديد - الشؤون المالية': return { bg: '#ecfdf5', color: '#059669', text: 'جاهزة للتسديد' };
+      case 'تم الاعتراض':
+      case 'معترض عليها':
+      case 'اعتراض': return { bg: '#fee2e2', color: '#dc2626', text: 'تم الاعتراض 🚫' };
       default: return { bg: '#eff6ff', color: '#2563eb', text: status };
     }
   };
@@ -993,6 +1075,48 @@ export default function ViewClaim() {
             سيتم تحويل هذا الملف إلى قسم التعويضات للتسوية المالية وإدخال التكاليف.
           </div>
         );
+      case 'تم الاعتراض':
+        return (
+          <>
+            <div className="field-group full" style={{ background: '#fef2f2', border: '1.5px solid #fecaca', padding: '14px', borderRadius: '10px' }}>
+              <div style={{ color: '#991b1b', fontWeight: 800, fontSize: '0.88rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                الأسباب الفنية والقانونية للاعتراض (تطبيقاً لتعميم الاتحاد رقم 2026/160):
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  'انتهاء مدة سريان التأمين وقت وقوع الحادث (وقوع الحادث خارج فترة الصلاحية).',
+                  'البطاقة العربية الموحدة غير مفعلة، موقوفة أو ملغاة بسجلات الشركة وقت وقوع الحادث.',
+                  'وقوع الحادث في دولة أو منطقة لا يشملها نطاق التغطية الجغرافية للبطاقة العربية الموحدة.',
+                  'انعدام وقصور المستندات الإثباتية القانونية (عدم إرفاق تقرير المرور الصادر عن جهات الاختصاص).',
+                  'عدم ثبوت مسؤولية الوسيلة المؤمن عليها عن وقوع الحادث بموجب مخطط مروري معتمد.',
+                  'المبالغة غير المبررة في تكاليف قطع الغيار والإصلاح دون تقديم الفواتير الضريبية الأصلية المؤيدة.'
+                ].map((reason, idx) => (
+                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.82rem', color: '#7f1d1d', cursor: 'pointer', lineHeight: 1.4 }}>
+                    <input
+                      type="checkbox"
+                      checked={rejectionReasons.includes(reason)}
+                      onChange={() => handleToggleRejectionReason(reason)}
+                      style={{ marginTop: '2px', accentColor: '#dc2626' }}
+                    />
+                    <span>{reason}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="field-group full">
+              <label>تفاصيل وملاحظات إضافية على سبب الاعتراض (اختياري)</label>
+              <textarea
+                rows={2}
+                value={rejectionDetails}
+                onChange={e => setRejectionDetails(e.target.value)}
+                placeholder="اكتب أي ملاحظات أو تفاصيل إضافية ليتم تضمينها في كتاب الاعتراض الرسمي..."
+                style={{ width: '100%', borderRadius: '8px', padding: '8px 12px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
+              />
+            </div>
+          </>
+        );
       case 'اخر':
         return (
           <>
@@ -1072,6 +1196,15 @@ export default function ViewClaim() {
               }
               return null;
             })()}
+            <button
+              className="btn-transfer"
+              style={{ background: '#0284c7', borderColor: '#0284c7', color: '#fff' }}
+              onClick={() => setShowOfficialLettersModal(true)}
+              title="المراسلات والكتب الرسمية للاتحاد (الأربعة نماذج)"
+            >
+              <i className="fa-solid fa-folder-tree"></i>
+              المراسلات الرسمية 📑
+            </button>
             <button className="btn-transfer" onClick={() => setShowTransferForm(!showTransferForm)}>
               <i className="fa-solid fa-share-nodes"></i>
               تحويل المطالبة
@@ -1104,6 +1237,7 @@ export default function ViewClaim() {
                     <option value="تحويل الى المحكمة">تحويل الى المحكمة</option>
                     <option value="استئناف في حكم المحكمة">استئناف في حكم المحكمة</option>
                     <option value="للتسديد - الشؤون المالية">للتسديد - الشؤون المالية</option>
+                    <option value="تم الاعتراض">اعتراض رسمي على المطالبة (أسباب الرفض)</option>
                     <option value="اخر">إضافة نوع آخر</option>
                   </select>
                 </div>
@@ -2182,6 +2316,256 @@ export default function ViewClaim() {
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
       `}</style>
+
+      {/* نافذة المراسلات والنماذج الرسمية الأربعة للاتحاد والمطالبات */}
+      {showOfficialLettersModal && claim && (
+        <div className="transfer-overlay" onClick={(e) => e.target === e.currentTarget && setShowOfficialLettersModal(false)}>
+          <div className="transfer-modal" style={{ maxWidth: '680px', borderRadius: '18px', overflow: 'hidden' }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)', color: '#fff', padding: '16px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <i className="fa-solid fa-folder-tree" style={{ color: '#38bdf8', fontSize: '1.25rem' }}></i>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
+                    المراسلات والكتب الرسمية المعتمدة للمطالبة
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
+                    مطالبة رقم: <strong style={{ color: '#38bdf8' }}>{claim.claim_number || claim.id}</strong> | 
+                    البطاقة: <strong style={{ direction: 'ltr', display: 'inline-block', color: '#fff' }}>{claim.document?.insurance_number || claim.document_manual_data?.insurance_number || (claim.additional_documents && claim.additional_documents[0]?.insurance_number) || 'LBY/------'}</strong>
+                  </div>
+                </div>
+              </div>
+              <button className="close-btn" style={{ color: '#94a3b8' }} onClick={() => setShowOfficialLettersModal(false)}>&times;</button>
+            </div>
+
+            <div className="form-body" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
+              
+              {/* شريط تعميم الاتحاد التوضيحي */}
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '10px 14px', borderRadius: '10px', fontSize: '0.8rem', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-scale-balanced" style={{ fontSize: '1.1rem' }}></i>
+                <span>نماذج مراسلات A4 رسمية متوافقة مع تعليمات وضوابط تعميم الاتحاد الليبي للتأمين رقم 2026/160 ومطبوعة بشعار شركة المدار.</span>
+              </div>
+
+              {/* بطاقة 1: رد صحة بيانات وثيقة التأمين */}
+              <div style={{ border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                    <i className="fa-solid fa-file-circle-check"></i>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>1. رد بشأن صحة بيانات وثيقة التأمين</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', lineHeight: 1.5 }}>
+                      خطاب تأكيد سريان البطاقة الموحدة والتغطية التأمينية رداً على إخطار الحادث الوارد من المكتب الموحد.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => printVerificationLetter(claim)}
+                  style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <i className="fa-solid fa-print"></i> طباعة A4
+                </button>
+              </div>
+
+              {/* بطاقة 2: طلب تسوية وسداد المطالبة */}
+              <div style={{ border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                    <i className="fa-solid fa-handshake"></i>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>2. محضر وإفادة طلب تسوية وسداد المطالبة</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', lineHeight: 1.5 }}>
+                      محضر اعتماد التسوية الودية وتوثيق مبالغ الأضرار بالدينار التونسي والأجنبي وما يعادلها بالدينار الليبي.
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => printSettlementLetter(claim)}
+                    style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <i className="fa-solid fa-print"></i> طباعة A4
+                  </button>
+                </div>
+              </div>
+
+              {/* بطاقة 3: أمر وإفادة التسديد والصرف */}
+              <div style={{ border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                    <i className="fa-solid fa-money-bill-transfer"></i>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>3. أمر وإفادة بتسديد وصرف تعويض مطالبة</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', lineHeight: 1.5 }}>
+                      إفادة الموافقة على خصم كامل التعويض من الوديعة النظامية لدى الاتحاد وسداد المستحقات.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => printPaymentOrderLetter(claim)}
+                  style={{ background: '#059669', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <i className="fa-solid fa-print"></i> طباعة A4
+                </button>
+              </div>
+
+              {/* بطاقة 4: اعتراض رسمي على مطالبة (أسباب الرفض) */}
+              <div style={{ border: '1.5px solid #fecaca', borderRadius: '12px', padding: '14px 16px', background: '#fff5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                    <i className="fa-solid fa-ban"></i>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>4. اعتراض رسمي على المطالبة (أسباب الرفض)</span>
+                      {(claim.status === 'تم الاعتراض' || claim.status === 'معترض عليها' || claim.status === 'اعتراض') && (
+                        <span style={{ fontSize: '0.72rem', background: '#dc2626', color: '#fff', padding: '1px 6px', borderRadius: '10px' }}>تم الاعتراض</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#7f1d1d', marginTop: '2px', lineHeight: 1.5 }}>
+                      خطاب رسمي لتجميد الملف ورفض التسوية الودية وتوضيح الأسباب الفنية والقانونية وفق التعميم.
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowObjectionModal(true);
+                    }}
+                    style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <i className="fa-solid fa-triangle-exclamation"></i>
+                    {(claim.status === 'تم الاعتراض' || claim.status === 'معترض عليها' || claim.status === 'اعتراض') ? 'تعديل / طباعة الخطاب' : 'تسجيل اعتراض وطباعة'}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="modal-footer" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" className="btn-cancel" onClick={() => setShowOfficialLettersModal(false)}>إغلاق</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تسجيل الاعتراض الرسمي وتحديد الأسباب الفنية والقانونية */}
+      {showObjectionModal && claim && (
+        <div className="transfer-overlay" onClick={(e) => e.target === e.currentTarget && setShowObjectionModal(false)}>
+          <div className="transfer-modal" style={{ maxWidth: '640px', borderRadius: '18px', overflow: 'hidden' }}>
+            <div className="modal-header" style={{ background: '#dc2626', color: '#fff', padding: '16px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '1.25rem' }}></i>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
+                    اعتراض رسمي على مطالبة رقم: {claim.claim_number || claim.id}
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#fecaca', marginTop: '2px' }}>
+                    تجميد إجراءات الملف ورفض التسوية الودية وفق تعميم الاتحاد الليبي للتأمين رقم 2026/160
+                  </div>
+                </div>
+              </div>
+              <button className="close-btn" style={{ color: '#fecaca' }} onClick={() => setShowObjectionModal(false)}>&times;</button>
+            </div>
+
+            <form onSubmit={handleSubmitObjection}>
+              <div className="form-body" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
+                
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 14px', fontSize: '0.82rem', color: '#991b1b', lineHeight: 1.6 }}>
+                  <strong>⚠️ تنبيه قانوني:</strong> سيتم تسجيل هذا الاعتراض رسمياً وتغيير حالة المطالبة إلى <span style={{ textDecoration: 'underline', fontWeight: 800 }}>"تم الاعتراض"</span> وإصدار كتاب الاعتراض المعتمد للمكتب الموحد الليبي متضمناً الأسباب المحددة أدناه.
+                </div>
+
+                <div className="field-group full">
+                  <label style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', marginBottom: '8px', display: 'block' }}>
+                    حدد الأسباب الفنية و/أو القانونية للاعتراض:
+                  </label>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      'انتهاء مدة سريان التأمين وقت وقوع الحادث (وقوع الحادث خارج فترة الصلاحية).',
+                      'البطاقة العربية الموحدة غير مفعلة، موقوفة أو ملغاة بسجلات الشركة وقت وقوع الحادث.',
+                      'وقوع الحادث في دولة أو منطقة لا يشملها نطاق التغطية الجغرافية للبطاقة العربية الموحدة.',
+                      'انعدام وقصور المستندات الإثباتية القانونية (عدم إرفاق تقرير المرور الصادر عن جهات الاختصاص).',
+                      'عدم ثبوت مسؤولية الوسيلة المؤمن عليها عن وقوع الحادث بموجب مخطط مروري معتمد.',
+                      'المبالغة غير المبررة في تكاليف قطع الغيار والإصلاح دون تقديم الفواتير الضريبية الأصلية المؤيدة.'
+                    ].map((reason, idx) => (
+                      <label
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                          background: rejectionReasons.includes(reason) ? '#fef2f2' : '#f8fafc',
+                          border: `1.5px solid ${rejectionReasons.includes(reason) ? '#f87171' : '#e2e8f0'}`,
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.83rem',
+                          color: rejectionReasons.includes(reason) ? '#991b1b' : '#334155',
+                          fontWeight: rejectionReasons.includes(reason) ? 700 : 500,
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={rejectionReasons.includes(reason)}
+                          onChange={() => handleToggleRejectionReason(reason)}
+                          style={{ marginTop: '3px', accentColor: '#dc2626' }}
+                        />
+                        <span>{reason}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="field-group full">
+                  <label style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', marginBottom: '6px' }}>
+                    تفاصيل وملاحظات إضافية على الاعتراض (اختياري):
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="premium-field"
+                    value={rejectionDetails}
+                    onChange={(e) => setRejectionDetails(e.target.value)}
+                    placeholder="اكتب أي ملاحظات فنية أو تفاصيل حول نقص المستندات أو سبب الرفض ليتم إدراجها بالخطاب..."
+                    style={{ width: '100%', borderRadius: '8px', padding: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem' }}
+                  ></textarea>
+                </div>
+
+              </div>
+
+              <div className="modal-footer" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowObjectionModal(false)}>إلغاء</button>
+                <button
+                  type="submit"
+                  disabled={submittingObjection}
+                  style={{
+                    background: '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px 22px',
+                    borderRadius: '8px',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {submittingObjection ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-print"></i>}
+                  <span>تأكيد الاعتراض وتجميد الملف وطباعة الخطاب (A4)</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modern Media / Document Lightbox Modal */}
       <MediaPreviewModal
