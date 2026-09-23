@@ -129,7 +129,7 @@ function generateOfficialLetterHtml({
           margin: 0;
           padding: 20px 0;
           color: #0f172a;
-          line-height: 1.6;
+          line-height: 1.5;
         }
         
         /* شريط التحكم العلوي خارج الطباعة */
@@ -141,22 +141,22 @@ function generateOfficialLetterHtml({
           align-items: center;
           background: #0f172a;
           color: #fff;
-          padding: 12px 24px;
-          border-radius: 12px;
+          padding: 10px 20px;
+          border-radius: 10px;
           box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
         .toolbar-title {
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 700;
           display: flex;
           align-items: center;
           gap: 10px;
         }
         .btn-action {
-          padding: 9px 20px;
+          padding: 8px 18px;
           border-radius: 8px;
           font-family: inherit;
-          font-size: 13.5px;
+          font-size: 13px;
           font-weight: 700;
           cursor: pointer;
           border: none;
@@ -183,7 +183,7 @@ function generateOfficialLetterHtml({
           min-height: 297mm;
           margin: 0 auto;
           background: #fff;
-          padding: 12mm 16mm;
+          padding: 10mm 14mm 8mm 14mm;
           position: relative;
           box-shadow: 0 5px 25px rgba(0,0,0,0.08);
           display: flex;
@@ -195,22 +195,22 @@ function generateOfficialLetterHtml({
         /* الإطار الرسمي الدقيق */
         .sheet-border {
           position: absolute;
-          top: 5mm;
-          bottom: 5mm;
-          left: 5mm;
-          right: 5mm;
+          top: 4.5mm;
+          bottom: 4.5mm;
+          left: 4.5mm;
+          right: 4.5mm;
           border: 1.5px solid #0284c7;
-          border-radius: 6px;
+          border-radius: 5px;
           pointer-events: none;
         }
         .sheet-border-inner {
           position: absolute;
-          top: 6.5mm;
-          bottom: 6.5mm;
-          left: 6.5mm;
-          right: 6.5mm;
+          top: 6mm;
+          bottom: 6mm;
+          left: 6mm;
+          right: 6mm;
           border: 0.5px solid #cbd5e1;
-          border-radius: 4px;
+          border-radius: 3px;
           pointer-events: none;
         }
 
@@ -220,8 +220,8 @@ function generateOfficialLetterHtml({
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 400px;
-          opacity: 0.045;
+          width: 360px;
+          opacity: 0.04;
           pointer-events: none;
           z-index: 0;
         }
@@ -245,47 +245,47 @@ function generateOfficialLetterHtml({
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-bottom: 12px;
-          border-bottom: 2.5px solid #0284c7;
-          margin-bottom: 16px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #0284c7;
+          margin-bottom: 12px;
         }
         .header-logo-box {
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 12px;
         }
         .header-logo-box img.logo {
-          height: 80px;
+          height: 70px;
           width: auto;
           object-fit: contain;
         }
         .company-info-titles h1 {
           margin: 0;
-          font-size: 19px;
+          font-size: 16px;
           font-weight: 900;
           color: #0f172a;
-          letter-spacing: -0.3px;
+          letter-spacing: -0.2px;
         }
         .company-info-titles .en-name {
-          font-size: 10.5px;
+          font-size: 10px;
           font-weight: 700;
           color: #0284c7;
           letter-spacing: 0.5px;
           margin-top: 2px;
         }
         .company-info-titles .sub-dept {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
           color: #475569;
-          margin-top: 4px;
+          margin-top: 3px;
         }
         
         .header-meta-box {
           text-align: left;
-          font-size: 11.5px;
+          font-size: 11px;
           color: #334155;
-          line-height: 1.8;
-          min-width: 180px;
+          line-height: 1.6;
+          min-width: 170px;
         }
         .meta-row {
           display: flex;
@@ -306,70 +306,70 @@ function generateOfficialLetterHtml({
         .subject-box {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-right: 5px solid #0284c7;
-          border-radius: 8px;
-          padding: 12px 18px;
-          margin-bottom: 16px;
+          border-right: 4.5px solid #0284c7;
+          border-radius: 7px;
+          padding: 9px 14px;
+          margin-bottom: 11px;
         }
         .recipient-line {
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 900;
           color: #0f172a;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
         .greeting-line {
-          font-size: 13px;
+          font-size: 12px;
           color: #475569;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           font-weight: 600;
         }
         .subject-line {
-          font-size: 14.5px;
+          font-size: 13.5px;
           font-weight: 900;
           color: #0369a1;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
         /* جدول بيانات الحادث والبطاقة الموحدة */
         .info-strip {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
+          gap: 8px;
           background: #f0f9ff;
           border: 1.5px solid #bae6fd;
-          border-radius: 8px;
-          padding: 10px 16px;
-          margin-bottom: 18px;
+          border-radius: 7px;
+          padding: 8px 12px;
+          margin-bottom: 12px;
         }
         .info-cell {
-          font-size: 12px;
+          font-size: 11px;
         }
         .info-cell .lbl {
           color: #0284c7;
           font-weight: 700;
           display: block;
-          font-size: 11px;
-          margin-bottom: 2px;
+          font-size: 10px;
+          margin-bottom: 1px;
         }
         .info-cell .val {
           color: #0f172a;
           font-weight: 800;
-          font-size: 13.5px;
+          font-size: 12px;
         }
 
         /* جسم الخطاب */
         .letter-body {
-          font-size: 14.5px;
-          line-height: 2.15;
+          font-size: 13.5px;
+          line-height: 1.9;
           color: #1e293b;
           text-align: justify;
-          margin-bottom: 18px;
+          margin-bottom: 12px;
         }
         .letter-body p {
-          margin: 0 0 14px 0;
-          text-indent: 14px;
+          margin: 0 0 8px 0;
+          text-indent: 12px;
         }
         .letter-body p:last-child {
           margin-bottom: 0;
@@ -383,46 +383,46 @@ function generateOfficialLetterHtml({
         .rejection-box {
           background: #fef2f2;
           border: 1.5px solid #fecaca;
-          border-right: 5px solid #dc2626;
-          border-radius: 8px;
-          padding: 14px 18px;
-          margin: 14px 0 16px 0;
+          border-right: 4.5px solid #dc2626;
+          border-radius: 7px;
+          padding: 10px 14px;
+          margin: 10px 0 12px 0;
         }
         .rejection-title {
-          font-size: 13.5px;
+          font-size: 12.5px;
           font-weight: 900;
           color: #991b1b;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
         .rejection-list {
           margin: 0;
-          padding-right: 22px;
-          font-size: 13px;
+          padding-right: 20px;
+          font-size: 12px;
           color: #7f1d1d;
-          line-height: 2.0;
+          line-height: 1.8;
         }
         .rejection-list li {
-          margin-bottom: 6px;
+          margin-bottom: 4px;
         }
 
         /* جدول التفاصيل المالية أو التسوية */
         .table-data {
           width: 100%;
           border-collapse: collapse;
-          margin: 14px 0 16px 0;
-          font-size: 13px;
+          margin: 10px 0 12px 0;
+          font-size: 11.5px;
         }
         .table-data th {
           background: #0284c7;
           color: #fff;
           font-weight: 800;
-          padding: 9px 12px;
+          padding: 6px 8px;
           border: 1px solid #0284c7;
           text-align: center;
-          font-size: 13px;
+          font-size: 11.5px;
         }
         .table-data td {
-          padding: 9px 12px;
+          padding: 6px 8px;
           border: 1px solid #cbd5e1;
           color: #0f172a;
           font-weight: 700;
@@ -439,7 +439,7 @@ function generateOfficialLetterHtml({
         /* قسم التواقيع والاعتمادات الرسمية */
         .signatures-section {
           margin-top: auto;
-          padding-top: 14px;
+          padding-top: 10px;
           border-top: 1.5px dashed #cbd5e1;
           display: flex;
           justify-content: space-between;
@@ -448,53 +448,53 @@ function generateOfficialLetterHtml({
         }
         .sig-box {
           flex: 1;
-          padding: 0 10px;
+          padding: 0 8px;
         }
         .sig-role {
-          font-size: 13px;
+          font-size: 11.5px;
           font-weight: 800;
           color: #334155;
-          margin-bottom: 45px;
+          margin-bottom: 30px;
         }
         .sig-name {
-          font-size: 13.5px;
+          font-size: 12.5px;
           font-weight: 900;
           color: #0f172a;
         }
         .sig-stamp-placeholder {
-          font-size: 10px;
+          font-size: 9px;
           font-weight: 700;
           color: #94a3b8;
           border: 1px dashed #cbd5e1;
           border-radius: 50%;
-          width: 78px;
-          height: 78px;
+          width: 65px;
+          height: 65px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: -35px auto 6px auto;
+          margin: -22px auto 4px auto;
           background: rgba(248, 250, 252, 0.6);
         }
 
         /* التذييل الرسمي ومعلومات الاتصال */
         .footer-strip {
-          margin-top: 12px;
-          padding-top: 10px;
+          margin-top: 8px;
+          padding-top: 6px;
           border-top: 1.5px solid #0284c7;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 10px;
+          font-size: 9.5px;
           color: #64748b;
         }
         .footer-contacts {
           display: flex;
-          gap: 14px;
+          gap: 12px;
           font-weight: 600;
         }
         .footer-qr {
-          width: 42px;
-          height: 42px;
+          width: 36px;
+          height: 36px;
           border: 1px solid #cbd5e1;
           border-radius: 4px;
         }
@@ -513,11 +513,11 @@ function generateOfficialLetterHtml({
           }
           .official-sheet {
             width: 100% !important;
-            height: 276mm !important;
-            max-height: 276mm !important;
-            min-height: 276mm !important;
+            height: 275mm !important;
+            max-height: 275mm !important;
+            min-height: 275mm !important;
             margin: 0 !important;
-            padding: 8mm 12mm 6mm 12mm !important;
+            padding: 6mm 10mm 5mm 10mm !important;
             box-shadow: none !important;
             box-sizing: border-box !important;
             display: flex !important;
@@ -580,7 +580,7 @@ function generateOfficialLetterHtml({
                 <img src="/img/logo.png" onerror="this.src='/img/official_logo.PNG'" class="logo" alt="شركة المدار الليبي للتأمين" />
                 <div class="company-info-titles">
                   <h1>شركة المدار الليبي للتأمين المساهمة</h1>
-                  <div class="en-name">AL MADAR LIBYAN INSURANCE COMPANY S.A.O.G</div>
+                  <div class="en-name">AL MADAR LIBYAN INSURANCE COMPANY</div>
                   <div class="sub-dept">إدارة تأمينات السيارات — قسم التعويضات والمطالبات</div>
                 </div>
               </div>
@@ -640,19 +640,19 @@ function generateOfficialLetterHtml({
           <!-- قسم التواقيع والاعتمادات -->
           <div class="signatures-section">
             <div class="sig-box">
-              <div class="sig-role">رئيس قسم تعويضات السيارات</div>
+              <div class="sig-role">مدير إدارة المطالبات</div>
               <div class="sig-stamp-placeholder">توقيع واعتماد</div>
-              <div class="sig-name">علي أحمد البكوش</div>
+              <div class="sig-name">اشرف محمد عبد الرحيم</div>
             </div>
             <div class="sig-box">
               <div class="sig-role">مدير إدارة تأمينات السيارات</div>
               <div class="sig-stamp-placeholder">توقيع واعتماد</div>
-              <div class="sig-name">إبراهيم سالم الترهوني</div>
+              <div class="sig-name">محمد علي ادريس</div>
             </div>
             <div class="sig-box">
               <div class="sig-role">اعتماد المدير العام</div>
               <div class="sig-stamp-placeholder">ختم الإدارة العامة</div>
-              <div class="sig-name">سكينه محمد رمضان</div>
+              <div class="sig-name">سكينه رمضان محمد</div>
             </div>
           </div>
         </div>
@@ -660,12 +660,12 @@ function generateOfficialLetterHtml({
         <!-- تذييل الصفحة الرسمي -->
         <div class="footer-strip">
           <div>
-            <strong>شركة المدار الليبي للتأمين</strong> — قيد سجل تجاري: 28456 | رأس المال المصرح به: 10,000,000 د.ل
+            <strong>شركة المدار الليبي للتأمين</strong> — العنوان: ليبيا، طرابلس، صلاح الدين
           </div>
           <div class="footer-contacts">
-            <span>طرابلس - ليبيا</span>
-            <span>هاتف: 021-3602518</span>
-            <span>info@almadarins.ly</span>
+            <span>هاتف: 0920003366</span>
+            <span>info@mli.ly</span>
+            <span>www.mli.ly</span>
           </div>
           <img src="${qrApiUrl}" class="footer-qr" alt="QR Code" />
         </div>
@@ -730,9 +730,9 @@ export function printVerificationLetter(claim: ClaimData, params: LetterParams =
       </tbody>
     </table>
 
-    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-right: 5px solid #16a34a; border-radius: 8px; padding: 12px 16px; margin: 14px 0;">
-      <div style="font-weight: 800; font-size: 13.5px; color: #166534; margin-bottom: 4px;">✓ إفادة السريان والمسؤولية التأمينية:</div>
-      <div style="font-size: 13px; color: #14532d; line-height: 1.9;">
+    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-right: 4px solid #16a34a; border-radius: 7px; padding: 8px 12px; margin: 10px 0;">
+      <div style="font-weight: 800; font-size: 12px; color: #166534; margin-bottom: 2px;">✓ إفادة السريان والمسؤولية التأمينية:</div>
+      <div style="font-size: 11.5px; color: #14532d; line-height: 1.7;">
         تُقر شركة المدار الليبي للتأمين بأن البطاقة الموحدة الصادرة من طرفها تغطي المسؤولية المدنية المترتبة عن حوادث المرور وفق الشروط والأحكام المنصوص عليها في اتفاقية بطاقة التأمين الموحدة عن سير السيارات عبر البلاد العربية، والشركة ملتزمة بكافة الالتزامات والضمانات النظامية المترتبة عليها قانوناً.
       </div>
     </div>
@@ -742,7 +742,7 @@ export function printVerificationLetter(claim: ClaimData, params: LetterParams =
       وموافاتنا بأي تطورات أو مستندات ترد إليكم بالخصوص ليتسنى لنا فتح ملف التعويض ومتابعته بانتظام.
     </p>
 
-    <p style="font-weight: 800; color: #0284c7; margin-top: 18px; font-size: 15px; text-align: center;">
+    <p style="font-weight: 800; color: #0284c7; margin-top: 10px; font-size: 13.5px; text-align: center;">
       شاكرين لكم حسن تعاونكم الدائم،،، والسلام عليكم ورحمة الله وبركاته.
     </p>
   `;
@@ -807,12 +807,12 @@ export function printSettlementLetter(claim: ClaimData, params: LetterParams = {
       </tbody>
     </table>
 
-    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-right: 5px solid #0284c7; border-radius: 8px; padding: 12px 16px; margin: 12px 0;">
-      <div style="font-weight: 800; font-size: 13.5px; color: #0369a1; margin-bottom: 4px;">تقرير وملاحظات لجنة التسوية:</div>
-      <div style="font-size: 13px; color: #334155; line-height: 1.8;">${escapeHtml(reportText)}</div>
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-right: 4px solid #0284c7; border-radius: 7px; padding: 8px 12px; margin: 8px 0;">
+      <div style="font-weight: 800; font-size: 12px; color: #0369a1; margin-bottom: 2px;">تقرير وملاحظات لجنة التسوية:</div>
+      <div style="font-size: 11.5px; color: #334155; line-height: 1.7;">${escapeHtml(reportText)}</div>
     </div>
 
-    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-right: 5px solid #16a34a; border-radius: 8px; padding: 10px 16px; margin: 12px 0; font-size: 12.5px; color: #166534; font-weight: 700;">
+    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-right: 4px solid #16a34a; border-radius: 7px; padding: 7px 12px; margin: 8px 0; font-size: 11.5px; color: #166534; font-weight: 700;">
       ✓ تعتبر هذه التسوية نهائية ومبرئة لذمة الشركة والمؤمن له عن كافة الأضرار المادية الناشئة عن هذا الحادث بعد استلام مخالصة الإبراء والتنازل الرسمية.
     </div>
 
@@ -820,7 +820,7 @@ export function printSettlementLetter(claim: ClaimData, params: LetterParams = {
       نرجو منكم استكمال الإجراءات الإدارية اللازمة وإفادة الطرف الآخر باعتماد التسوية ليتسنى لنا إحالة أذونات الصرف المالي،،،
     </p>
 
-    <p style="font-weight: 800; color: #0284c7; margin-top: 18px; font-size: 15px; text-align: center;">
+    <p style="font-weight: 800; color: #0284c7; margin-top: 10px; font-size: 13.5px; text-align: center;">
       وتفضلوا بقبول وافر الاحترام والتقدير،،،
     </p>
   `;
@@ -887,14 +887,14 @@ export function printPaymentOrderLetter(claim: ClaimData, params: LetterParams =
           <td class="accent-cell">${escapeHtml(tndFinal)} د.ت</td>
           <td class="accent-cell">${escapeHtml(compValue)} د.ل</td>
           <td>${escapeHtml(addExpenses)} د.ل</td>
-          <td style="background: #e0f2fe; color: #0369a1; font-weight: 900; font-size: 13.5px;">${escapeHtml(totalPaid)} د.ل</td>
+          <td style="background: #e0f2fe; color: #0369a1; font-weight: 900; font-size: 12.5px;">${escapeHtml(totalPaid)} د.ل</td>
         </tr>
       </tbody>
     </table>
 
-    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-right: 5px solid #16a34a; border-radius: 8px; padding: 12px 16px; margin: 14px 0;">
-      <div style="font-weight: 800; font-size: 13px; color: #166534; margin-bottom: 4px;">✓ إذن وصلاحية الخصم من الوديعة:</div>
-      <div style="font-size: 12.5px; color: #14532d; line-height: 1.8;">
+    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-right: 4px solid #16a34a; border-radius: 7px; padding: 8px 12px; margin: 8px 0;">
+      <div style="font-weight: 800; font-size: 12px; color: #166534; margin-bottom: 2px;">✓ إذن وصلاحية الخصم من الوديعة:</div>
+      <div style="font-size: 11.5px; color: #14532d; line-height: 1.7;">
         يُعد هذا الخطاب إذناً رسمياً وصريحاً لا رجعة فيه بالموافقة على إجراء قيد الخصم من وديعة شركة المدار الليبي للتأمين المودعة طرفكم، ونأمل منكم التكرم بموافاتنا بإشعار الخصم المصرفي المعتمد لإقفال قيود ملف التعويض دفترياً.
       </div>
     </div>
@@ -903,7 +903,7 @@ export function printPaymentOrderLetter(claim: ClaimData, params: LetterParams =
       شاكرين لكم حسن التعاون وتسهيل إجراءات التسديد وفق الضوابط المعمول بها.
     </p>
 
-    <p style="font-weight: 800; color: #0284c7; margin-top: 18px; font-size: 15px; text-align: center;">
+    <p style="font-weight: 800; color: #0284c7; margin-top: 10px; font-size: 13.5px; text-align: center;">
       وتفضلوا بقبول وافر الاحترام والتقدير،،،
     </p>
   `;
@@ -936,7 +936,7 @@ export function printObjectionLetter(claim: ClaimData, params: LetterParams = {}
         'المبالغة غير المبررة في تكاليف قطع الغيار وأجور الإصلاح دون تقديم الفواتير الضريبية الأصلية المؤيدة للصرف.'
       ];
 
-  const additionalNotes = params.rejectionDetails ? `<p style="margin-top: 8px;"><strong>تفاصيل وملاحظات إضافية:</strong> ${escapeHtml(params.rejectionDetails)}</p>` : '';
+  const additionalNotes = params.rejectionDetails ? `<p style="margin-top: 6px;"><strong>تفاصيل وملاحظات إضافية:</strong> ${escapeHtml(params.rejectionDetails)}</p>` : '';
 
   const bodyHtml = `
     <p>
@@ -964,11 +964,11 @@ export function printObjectionLetter(claim: ClaimData, params: LetterParams = {}
       لحين تقديم المستندات القانونية والأصلية المؤيدة لصحة المطالبة وثبوت المسؤولية المدنية بشكل لا يدع مجالاً للشك.
     </p>
 
-    <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-right: 5px solid #e11d48; border-radius: 8px; padding: 10px 16px; margin: 10px 0; font-weight: 700; color: #be123c; font-size: 12px; line-height: 1.8;">
+    <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-right: 4px solid #e11d48; border-radius: 7px; padding: 7px 12px; margin: 8px 0; font-weight: 700; color: #be123c; font-size: 11.5px; line-height: 1.7;">
       تأكيداً على رغبة الشركة بعدم تسوية هذه المطالبة ودياً وإحالتها إلى القضاء التونسي المختص للفصل فيها قضائياً طبقاً لأحكام اتفاقية المكاتب العربية الموحدة.
     </div>
 
-    <p style="font-weight: 800; color: #0f172a; margin-top: 14px; font-size: 14.5px; text-align: center;">
+    <p style="font-weight: 800; color: #0f172a; margin-top: 10px; font-size: 13.5px; text-align: center;">
       وتفضلوا بقبول فائق الاحترام والتقدير،،،
     </p>
   `;

@@ -80,6 +80,57 @@ export default function ViewClaim() {
     }
   };
 
+  const handleCancelObjection = async () => {
+    if (!claim) return;
+    const confirmCancel = window.confirm(
+      `هل أنت متأكد من إلغاء الاعتراض الرسمي على المطالبة رقم (${claim.claim_number || claim.id}) وإعادة تنشيط الملف؟`
+    );
+    if (!confirmCancel) return;
+
+    try {
+      // البحث عن آخر تحويل فعال قبل الاعتراض
+      const prevTransfers = (claim.transfers || []).filter(
+        (t: any) => t.transfer_type !== 'تم الاعتراض' && t.transfer_type !== 'معترض عليها' && t.transfer_type !== 'اعتراض'
+      );
+      const lastTransfer = prevTransfers[prevTransfers.length - 1];
+      const targetStatus = lastTransfer?.transfer_type || 'قيد الانتظار';
+
+      const formData = new FormData();
+      formData.append('transfer_type', targetStatus);
+      formData.append('detail_cancel_reason', 'تم إلغاء الاعتراض الرسمي وإعادة فتح الملف');
+      formData.append('detail_cancel_date', new Date().toISOString().split('T')[0]);
+
+      const response = await fetch(`${API_BASE_URL}/claims/${claim.id}/transfers`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('فشل إلغاء الاعتراض');
+
+      // تحديث حالة المطالبة في قاعدة البيانات
+      await fetch(`${API_BASE_URL}/claims/${claim.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ status: targetStatus })
+      });
+
+      showToast('تم إلغاء الاعتراض الرسمي وتنشيط ملف المطالبة بنجاح ✅', 'success');
+      setShowObjectionModal(false);
+      setShowOfficialLettersModal(false);
+      fetchClaim();
+    } catch {
+      showToast('خطأ أثناء إلغاء الاعتراض', 'error');
+    }
+  };
+
   const isDamagedBodyType = (type: string) => {
     if (!claim || !claim.damaged_body_type) return false;
     return claim.damaged_body_type.split(/[،,]\s*/).includes(type);
@@ -1191,6 +1242,20 @@ export default function ViewClaim() {
                   <button className="btn-cancel-payment" onClick={handleCancelPayment} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }} title="إلغاء التسديد وإرجاع الملف غير مسدد">
                     <i className="fa-solid fa-rotate-left"></i>
                     إلغاء التسديد
+                  </button>
+                );
+              }
+
+              if (claim.status === 'تم الاعتراض' || claim.status === 'معترض عليها' || claim.status === 'اعتراض') {
+                return (
+                  <button 
+                    className="btn-cancel-objection" 
+                    onClick={handleCancelObjection} 
+                    style={{ background: '#fef2f2', color: '#dc2626', border: '1.5px solid #f87171', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }} 
+                    title="إلغاء الاعتراض الرسمي وتنشيط ملف المطالبة"
+                  >
+                    <i className="fa-solid fa-rotate-left"></i>
+                    إلغاء الاعتراض وتفعيل الملف
                   </button>
                 );
               }
@@ -2432,6 +2497,17 @@ export default function ViewClaim() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  {(claim.status === 'تم الاعتراض' || claim.status === 'معترض عليها' || claim.status === 'اعتراض') && (
+                    <button
+                      type="button"
+                      onClick={handleCancelObjection}
+                      style={{ background: '#fff', color: '#dc2626', border: '1.5px solid #dc2626', padding: '8px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      title="إلغاء الاعتراض وتنشيط ملف المطالبة"
+                    >
+                      <i className="fa-solid fa-rotate-left"></i>
+                      إلغاء الاعتراض
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -2539,28 +2615,42 @@ export default function ViewClaim() {
 
               </div>
 
-              <div className="modal-footer" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn-cancel" onClick={() => setShowObjectionModal(false)}>إلغاء</button>
-                <button
-                  type="submit"
-                  disabled={submittingObjection}
-                  style={{
-                    background: '#dc2626',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '10px 22px',
-                    borderRadius: '8px',
-                    fontSize: '0.88rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  {submittingObjection ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-print"></i>}
-                  <span>تأكيد الاعتراض وتجميد الملف وطباعة الخطاب (A4)</span>
-                </button>
+              <div className="modal-footer" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  {(claim.status === 'تم الاعتراض' || claim.status === 'معترض عليها' || claim.status === 'اعتراض') && (
+                    <button
+                      type="button"
+                      onClick={handleCancelObjection}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: '1.5px solid #f87171', padding: '8px 16px', borderRadius: '8px', fontSize: '0.83rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <i className="fa-solid fa-rotate-left"></i>
+                      إلغاء الاعتراض وتفعيل الملف
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button type="button" className="btn-cancel" onClick={() => setShowObjectionModal(false)}>إلغاء</button>
+                  <button
+                    type="submit"
+                    disabled={submittingObjection}
+                    style={{
+                      background: '#dc2626',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '10px 22px',
+                      borderRadius: '8px',
+                      fontSize: '0.88rem',
+                      fontWeight: 800,
+                      cursor: submittingObjection ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {submittingObjection ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-print"></i>}
+                    <span>تأكيد الاعتراض وتجميد الملف وطباعة الخطاب (A4)</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
