@@ -405,7 +405,7 @@ function generateOfficialLetterHtml({
           margin-bottom: 4px;
         }
 
-        /* جدول التفاصيل المالية أو التسوية */
+        /* جدول التفاصيل المالية أو التسوية - تصميم موفر للحبر رسمي */
         .table-data {
           width: 100%;
           border-collapse: collapse;
@@ -413,27 +413,27 @@ function generateOfficialLetterHtml({
           font-size: 11.5px;
         }
         .table-data th {
-          background: #0284c7;
-          color: #fff;
+          background: #f8fafc;
+          color: #0f172a;
           font-weight: 800;
           padding: 6px 8px;
-          border: 1px solid #0284c7;
+          border: 1.5px solid #475569;
           text-align: center;
           font-size: 11.5px;
         }
         .table-data td {
           padding: 6px 8px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid #94a3b8;
           color: #0f172a;
           font-weight: 700;
           text-align: center;
         }
         .table-data tr:nth-child(even) td {
-          background: #f8fafc;
+          background: #ffffff;
         }
         .table-data td.accent-cell {
           font-weight: 900;
-          color: #0369a1;
+          color: #0f172a;
         }
 
         /* قسم التواقيع والاعتمادات الرسمية */
@@ -549,6 +549,16 @@ function generateOfficialLetterHtml({
             flex: 1 !important;
             justify-content: space-between !important;
           }
+          .table-data th {
+            background: #f1f5f9 !important;
+            color: #000000 !important;
+            border: 1.5px solid #000000 !important;
+            font-weight: 800 !important;
+          }
+          .table-data td {
+            border: 1px solid #475569 !important;
+            color: #000000 !important;
+          }
         }
       </style>
     </head>
@@ -608,26 +618,6 @@ function generateOfficialLetterHtml({
               <div class="subject-line">
                 <span>الموضوع:</span>
                 <span>${escapeHtml(subject)}</span>
-              </div>
-            </div>
-
-            <!-- شريط البيانات الأساسية الموحدة -->
-            <div class="info-strip">
-              <div class="info-cell">
-                <span class="lbl">رقم البطاقة العربية الموحدة:</span>
-                <span class="val" style="color: #0284c7; direction: ltr; display: inline-block;">${escapeHtml(cardNumber)}</span>
-              </div>
-              <div class="info-cell">
-                <span class="lbl">تاريخ وقوع الحادث:</span>
-                <span class="val">${escapeHtml(accidentDate)}</span>
-              </div>
-              <div class="info-cell">
-                <span class="lbl">اسم المؤمن له:</span>
-                <span class="val">${escapeHtml(getClaimInsuredName(claim))}</span>
-              </div>
-              <div class="info-cell">
-                <span class="lbl">نوع ورقم المركبة:</span>
-                <span class="val">${escapeHtml(getClaimVehicleType(claim))} — (${escapeHtml(getClaimPlateNumber(claim))})</span>
               </div>
             </div>
 
@@ -742,7 +732,7 @@ export function printVerificationLetter(claim: ClaimData, params: LetterParams =
       وموافاتنا بأي تطورات أو مستندات ترد إليكم بالخصوص ليتسنى لنا فتح ملف التعويض ومتابعته بانتظام.
     </p>
 
-    <p style="font-weight: 800; color: #0284c7; margin-top: 10px; font-size: 13.5px; text-align: center;">
+    <p style="font-weight: 800; color: #0f172a; margin-top: 10px; font-size: 13.5px; text-align: center;">
       شاكرين لكم حسن تعاونكم الدائم،،، والسلام عليكم ورحمة الله وبركاته.
     </p>
   `;
@@ -778,7 +768,8 @@ export function printSettlementLetter(claim: ClaimData, params: LetterParams = {
   const bodyHtml = `
     <p>
       بالإشارة إلى كتابكم الإشاري <strong>(2025/748 م.م)</strong> وإخطار المكتب الموحد بدولة الحادث بشأن طلب التسوية الودية 
-      للأضرار المادية الناجمة عن الحادث المذكور أعلاه لملف تعويض رقم <strong>(${escapeHtml(claim.claim_number || '2025/2')})</strong>.
+      للأضرار المادية الناجمة عن الحادث المذكور أعلاه لملف تعويض رقم <strong>(${escapeHtml(claim.claim_number || '2025/2')})</strong> 
+      للبطاقة العربية الموحدة رقم <strong>(${escapeHtml(cardNumber)})</strong> للمركبة (${escapeHtml(getClaimVehicleType(claim))} - ${escapeHtml(getClaimPlateNumber(claim))}).
     </p>
 
     <p>
@@ -820,7 +811,7 @@ export function printSettlementLetter(claim: ClaimData, params: LetterParams = {
       نرجو منكم استكمال الإجراءات الإدارية اللازمة وإفادة الطرف الآخر باعتماد التسوية ليتسنى لنا إحالة أذونات الصرف المالي،،،
     </p>
 
-    <p style="font-weight: 800; color: #0284c7; margin-top: 10px; font-size: 13.5px; text-align: center;">
+    <p style="font-weight: 800; color: #0f172a; margin-top: 10px; font-size: 13.5px; text-align: center;">
       وتفضلوا بقبول وافر الاحترام والتقدير،،،
     </p>
   `;
@@ -887,7 +878,7 @@ export function printPaymentOrderLetter(claim: ClaimData, params: LetterParams =
           <td class="accent-cell">${escapeHtml(tndFinal)} د.ت</td>
           <td class="accent-cell">${escapeHtml(compValue)} د.ل</td>
           <td>${escapeHtml(addExpenses)} د.ل</td>
-          <td style="background: #e0f2fe; color: #0369a1; font-weight: 900; font-size: 12.5px;">${escapeHtml(totalPaid)} د.ل</td>
+          <td style="background: #f8fafc; color: #0f172a; font-weight: 900; font-size: 12px; border: 1.5px solid #475569;">${escapeHtml(totalPaid)} د.ل</td>
         </tr>
       </tbody>
     </table>
@@ -903,7 +894,7 @@ export function printPaymentOrderLetter(claim: ClaimData, params: LetterParams =
       شاكرين لكم حسن التعاون وتسهيل إجراءات التسديد وفق الضوابط المعمول بها.
     </p>
 
-    <p style="font-weight: 800; color: #0284c7; margin-top: 10px; font-size: 13.5px; text-align: center;">
+    <p style="font-weight: 800; color: #0f172a; margin-top: 10px; font-size: 13.5px; text-align: center;">
       وتفضلوا بقبول وافر الاحترام والتقدير،،،
     </p>
   `;
