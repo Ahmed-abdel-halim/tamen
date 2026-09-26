@@ -264,12 +264,14 @@ export default function CreateInternationalInsurance() {
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [hasIssuePermission, setHasIssuePermission] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const currentUser = JSON.parse(userStr);
+        setIsAdmin(currentUser.is_admin || false);
         const isSubUser = currentUser.lifo_user_id ? true : false;
         if (isSubUser) {
           const permissions = currentUser.lifo_permissions || [];
@@ -1025,17 +1027,14 @@ export default function CreateInternationalInsurance() {
     e.preventDefault();
     if (!validateForm()) return;
 
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('📝 بدء عملية إنشاء وثيقة تأمين دولي');
-    console.log('═══════════════════════════════════════════════════════');
-
     setSubmitting(true);
     setSyncingExternal(false);
-    
+
     try {
       const userStr = localStorage.getItem('user');
       const userId = userStr ? JSON.parse(userStr).id : null;
-      
+      const currentUserAdmin = userStr ? (JSON.parse(userStr).is_admin || false) : false;
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -1043,7 +1042,7 @@ export default function CreateInternationalInsurance() {
       if (userId) {
         headers['X-User-Id'] = userId.toString();
       }
-      
+
       const documentData = {
         ...formData,
         vehicle_type_id: formData.vehicle_type_id ? parseInt(formData.vehicle_type_id) : null,
@@ -1055,64 +1054,36 @@ export default function CreateInternationalInsurance() {
         number_of_countries: 1,
       };
 
-      console.log('📋 بيانات الوثيقة قبل الإرسال:');
-      console.table({
-        'اسم المؤمن': documentData.insured_name,
-        'عنوان المؤمن': documentData.insured_address,
-        'الهاتف': documentData.phone,
-        'واتساب': documentData.whatsapp_number,
-        'رقم الهيكل': documentData.chassis_number,
-        'رقم اللوحة': documentData.plate_number,
-        'رقم المحرك': documentData.motor_number,
-        'نوع السيارة (محلي)': documentData.vehicle_type_id,
-        'معرف السيارة (خارجي)': documentData.external_car_id,
-        'السنة': documentData.year,
-        'جنسية المركبة': documentData.vehicle_nationality,
-        'معرف جنسية المركبة (خارجي)': documentData.external_vehicle_nationality_id,
-        'الدولة المزارة': documentData.visited_country,
-        'معرف الدولة (خارجي)': documentData.external_country_id,
-        'تاريخ البدء': documentData.start_date,
-        'تاريخ الانتهاء': documentData.end_date,
-        'عدد الأيام': documentData.number_of_days,
-        'نوع البند': documentData.item_type,
-        'القيمة': documentData.premium,
-        'الضريبة': documentData.tax,
-        'المجموع': documentData.total,
-      });
-
-      // 1. إرسال الوثيقة إلى النظام الخارجي (الاتحاد) أولاً للتحقق والمزامنة
-      setSyncingExternal(true);
       let policyNumber = '';
-      try {
-        console.log('📡 جاري إرسال الوثيقة إلى النظام الخارجي أولاً...');
-        const externalResponse = await sendDocumentToExternalAPI(documentData, 0);
-        let extractedNumber = externalResponse?.policyNumber || externalResponse?.data?.policyNumber || externalResponse?.data || '';
-        if (extractedNumber && typeof extractedNumber === 'object') {
-          extractedNumber = extractedNumber.policyNumber || '';
-        }
-        policyNumber = typeof extractedNumber === 'string' ? extractedNumber.trim() : '';
 
-        if (!policyNumber) {
-          throw new Error('لم يتم إرجاع رقم وثيقة صالح من خادم الاتحاد.');
+      if (currentUserAdmin) {
+        // ======= الأدمن: يرسل للاتحاد أولاً ثم يحفظ محلياً =======
+        setSyncingExternal(true);
+        try {
+          const externalResponse = await sendDocumentToExternalAPI(documentData, 0);
+          let extractedNumber = externalResponse?.policyNumber || externalResponse?.data?.policyNumber || externalResponse?.data || '';
+          if (extractedNumber && typeof extractedNumber === 'object') {
+            extractedNumber = extractedNumber.policyNumber || '';
+          }
+          policyNumber = typeof extractedNumber === 'string' ? extractedNumber.trim() : '';
+          if (!policyNumber) {
+            throw new Error('لم يتم إرجاع رقم وثيقة صالح من خادم الاتحاد.');
+          }
+        } catch (externalError: any) {
+          const errorMsg = externalError.message || '';
+          showToast(translateLifoError(errorMsg) || 'فشلت المزامنة مع الاتحاد، تم إلغاء العملية.', 'error');
+          setSubmitting(false);
+          setSyncingExternal(false);
+          return;
+        } finally {
+          setSyncingExternal(false);
         }
-
-        console.log('✅ تم إرسال الوثيقة بنجاح إلى النظام الخارجي! رقم الوثيقة:', policyNumber);
-      } catch (externalError: any) {
-        const errorMsg = externalError.message || '';
-        console.error('❌ فشلت المزامنة مع الاتحاد، لن يتم حفظ الوثيقة محلياً:', errorMsg);
-        showToast(translateLifoError(errorMsg) || 'فشلت المزامنة مع الاتحاد، تم إلغاء العملية ولم تُحفظ الوثيقة محلياً.', 'error');
-        setSubmitting(false);
-        setSyncingExternal(false);
-        return; // خروج فوري لمنع حفظ الوثيقة محلياً
-      } finally {
-        setSyncingExternal(false);
       }
+      // ======= الوكيل: يحفظ مباشرة بدون إرسال للاتحاد =======
 
-      // 2. حفظ الوثيقة في النظام المحلي مع رقم وثيقة الاتحاد المكتسبة
-      console.log('💾 جاري حفظ الوثيقة في النظام المحلي...');
       const localDocumentPayload = {
         ...documentData,
-        external_policy_number: policyNumber
+        external_policy_number: policyNumber || null,
       };
 
       const res = await fetch(`${API_BASE_URL}/international-insurance-documents`, {
@@ -1124,35 +1095,24 @@ export default function CreateInternationalInsurance() {
       const data = await res.json();
 
       if (!res.ok) {
-        console.error('❌ خطأ في حفظ الوثيقة محلياً:');
-        console.error('Validation errors:', data.errors);
-        
         if (data.errors) {
           setFormErrors(data.errors);
           const errorMessages = Object.values(data.errors).flat().join(', ');
-          throw new Error(`خطأ في التحقق من البيانات المحلية: ${errorMessages}`);
+          throw new Error(`خطأ في البيانات: ${errorMessages}`);
         }
-        throw new Error(data.message || 'حدث خطأ أثناء حفظ الوثيقة محلياً');
+        throw new Error(data.message || 'حدث خطأ أثناء حفظ الوثيقة');
       }
 
-      console.log('✅ تم حفظ الوثيقة في النظام المحلي بنجاح');
-      console.log('📄 رقم الوثيقة المحلية:', data.id || data.data?.id);
+      const successMessage = policyNumber
+        ? `تم إنشاء الوثيقة بنجاح ومزامنتها مع الاتحاد. رقم الوثيقة: ${policyNumber}`
+        : 'تم إنشاء الوثيقة بنجاح';
 
-      const successMessage = policyNumber 
-        ? `تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي. رقم الوثيقة: ${policyNumber}`
-        : 'تم إنشاء الوثيقة بنجاح ومزامنتها مع النظام الخارجي';
-      
       showToast(successMessage, 'success');
-      
+
       setTimeout(() => {
         navigate('/international-insurance-documents');
       }, 1500);
     } catch (error: any) {
-      console.error('═══════════════════════════════════════════════════════');
-      console.error('❌ فشلت العملية');
-      console.error('خطأ:', error.message);
-      console.error('═══════════════════════════════════════════════════════');
-      
       showToast(translateLifoError(error.message) || 'حدث خطأ أثناء إنشاء الوثيقة', 'error');
     } finally {
       setSubmitting(false);

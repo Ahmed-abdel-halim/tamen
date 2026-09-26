@@ -636,15 +636,7 @@ const createMenuSections = (
     'تأمين سيارة جمرك': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات أجنبية': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين طرف ثالث سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين سيارات دولي': {
-      label: 'تأمين السيارات الدولي',
-      icon: 'fa-solid fa-globe',
-      to: '/international-insurance-documents',
-      children: [
-        { label: 'وثائق التأمين الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
-        { label: 'بوابة الاتحاد (LIFO)', icon: 'fa-solid fa-chart-pie', to: '/international-insurance-documents/lifo-dashboard' }
-      ]
-    },
+    'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
     'تأمين المسافرين': { label: 'وثائق تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
     'تأمين الهياكل البحرية': { label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', to: '/marine-structure-insurance-documents' },
     'تأمين زائرين ليبيا': { label: 'وثائق تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
@@ -1695,7 +1687,7 @@ export default function App() {
                   <Route path="/insurance-documents/:id/transfer-ownership" element={<AuthorizedRoute requiredPath="/insurance-documents"><TransferOwnershipInsuranceDocument /></AuthorizedRoute>} />
                   {/* إدارة تأمين السيارات الدولي */}
                   <Route path="/international-insurance-documents" element={<AuthorizedRoute requiredPath="/international-insurance-documents"><InternationalInsuranceList /></AuthorizedRoute>} />
-                  <Route path="/international-insurance-documents/lifo-dashboard" element={<AuthorizedRoute requiredPath="/international-insurance-documents"><LifoReportsDashboard /></AuthorizedRoute>} />
+                  <Route path="/international-insurance-documents/lifo-dashboard" element={isAdmin ? <LifoReportsDashboard /> : <Navigate to="/dashboard" />} />
                   <Route path="/international-insurance-documents/create" element={<AuthorizedRoute requiredPath="/international-insurance-documents"><CreateInternationalInsurance /></AuthorizedRoute>} />
                   <Route path="/international-insurance-documents/:id" element={<AuthorizedRoute requiredPath="/international-insurance-documents"><ViewInternationalInsurance /></AuthorizedRoute>} />
                   <Route path="/international-insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/international-insurance-documents"><EditInternationalInsurance /></AuthorizedRoute>} />
