@@ -295,7 +295,8 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
         if (filters.year) params.append('year', filters.year);
         if (filters.month) params.append('month', filters.month);
         if (filters.day) params.append('day', filters.day);
-        params.append('per_page', '10000');
+        params.append('per_page', '100000');
+        params.append('all', 'true');
 
         const url = `${API_BASE_URL}/international-insurance-documents?${params.toString()}`;
         const res = await fetch(url, { headers });

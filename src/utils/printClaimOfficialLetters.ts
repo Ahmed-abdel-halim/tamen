@@ -705,7 +705,6 @@ export function printVerificationLetter(claim: ClaimData, params: LetterParams =
           <th>رقم اللوحة</th>
           <th>نوع المركبة</th>
           <th>فترة السريان</th>
-          <th>الاحتياطي المرصود</th>
         </tr>
       </thead>
       <tbody>
@@ -715,7 +714,6 @@ export function printVerificationLetter(claim: ClaimData, params: LetterParams =
           <td>${escapeHtml(getClaimPlateNumber(claim))}</td>
           <td>${escapeHtml(getClaimVehicleType(claim))}</td>
           <td>سارية ومفعلة</td>
-          <td class="accent-cell">${escapeHtml(claim.reserved_amount || '2,600 د.ت')}</td>
         </tr>
       </tbody>
     </table>

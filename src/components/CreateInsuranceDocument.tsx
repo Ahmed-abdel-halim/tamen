@@ -99,14 +99,14 @@ const LIBYAN_CITIES = [
 // خيارات رقم المحرك
 const ENGINE_NUMBERS = ['123456'];
 
-// خيارات قوة المحرك بالحصان (1 إلى 100)
-const ENGINE_POWERS_LIST = Array.from({ length: 100 }, (_, i) => (i + 1).toString());
+// خيارات قوة المحرك بالحصان (0 إلى 100)
+const ENGINE_POWERS_LIST = Array.from({ length: 101 }, (_, i) => i.toString());
 
 // خيارات سعة المحرك (1000 إلى 10000) بتدرج 500
 const ENGINE_CC_LIST = Array.from({ length: 19 }, (_, i) => (1000 + (i * 500)).toString());
 
-// خيارات عدد الركاب (1 إلى 100)
-const PASSENGER_COUNTS = Array.from({ length: 100 }, (_, i) => (i + 1).toString());
+// خيارات عدد الركاب (0 إلى 100)
+const PASSENGER_COUNTS = Array.from({ length: 101 }, (_, i) => i.toString());
 
 // خيارات وزن المركبة
 const VEHICLE_WEIGHTS = [
@@ -130,7 +130,8 @@ const POPULAR_BRANDS = [
   'دايو',
   'داف',
   'جاكوار',
-  'جي ام سي (GMC)'
+  'جي ام سي (GMC)',
+  'مقطورة'
 ];
 
 // دالة لتوحيد وتصحيح أسماء الماركات وتجميع المكرر منها
@@ -138,6 +139,7 @@ const normalizeBrand = (brand: string): string => {
   if (!brand) return '';
   const b = brand.trim().toLowerCase();
   
+  if (b.includes('مقطور') && !b.includes('حافلة') && !b.includes('حافله')) return 'مقطورة';
   if (b.includes('هيونداي') || b.includes('هونداي') || b.includes('هواندي')) return 'هونداي';
   if (b.includes('تويوتا') || b.includes('تيوتا') || b.includes('taiyota') || b.includes('تايوتا')) return 'تويوتا';
   if (b.includes('كيا')) return 'كيا';
@@ -184,6 +186,26 @@ const normalizeBrand = (brand: string): string => {
   return brand.trim();
 };
 
+// دالة لتنظيف وتوحيد الحروف العربية للبحث المرن
+export const normalizeArabicSearch = (text?: string | null): string => {
+  if (!text) return '';
+  return text
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[\u064B-\u065F]/g, '')
+    .trim()
+    .toLowerCase();
+};
+
+// فحص ما إذا كان النص أو النوع يشير إلى مقطورة
+export const isTrailerVehicle = (name?: string | null): boolean => {
+  if (!name) return false;
+  const clean = name.trim();
+  if (clean.includes('حافلة') || clean.includes('حافله')) return false;
+  return clean.includes('مقطور') || clean.toLowerCase().includes('trailer');
+};
+
 /**
  * مكون Combobox يسمح بالاختيار من قائمة أو إدخال قيمة جديدة
  */
@@ -208,7 +230,7 @@ const Combobox = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isManual, setIsManual] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(value || "");
+  const [searchTerm, setSearchTerm] = useState(value !== undefined && value !== null ? String(value) : "");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -216,7 +238,7 @@ const Combobox = ({
   // or when the dropdown is closed.
   useEffect(() => {
     if (!isOpen) {
-      setSearchTerm(value || "");
+      setSearchTerm(value !== undefined && value !== null ? String(value) : "");
     }
   }, [value, isOpen]);
 
@@ -237,14 +259,14 @@ const Combobox = ({
       return options;
     }
     
-    // Filter options that contain the search term
-    const cleanSearch = searchTerm.trim().toLowerCase();
+    // Filter options that contain the search term with flexible Arabic matching
+    const cleanSearch = normalizeArabicSearch(searchTerm);
     
     return options.filter(opt => {
       // Always filter out header options if we are searching
       const isHeader = opt.startsWith('--') && opt.endsWith('--');
       if (isHeader) return false;
-      return opt.toLowerCase().includes(cleanSearch);
+      return normalizeArabicSearch(opt).includes(cleanSearch);
     });
   }, [options, searchTerm, value]);
 
@@ -886,8 +908,8 @@ export default function CreateInsuranceDocument() {
 
         DayOfCarType: EidcApiServiceMapping.mapDurationToDays(formData.duration),
         PurposeLicense: EidcApiServiceMapping.mapPurposeLicense(formData.license_purpose),
-        PassengersNo: Math.min(100, Math.max(0, parseInt(formData.authorized_passengers) || 4)),
-        EngineHp: parseInt(formData.engine_power) || 4,
+        PassengersNo: Math.min(100, Math.max(0, isNaN(parseInt(formData.authorized_passengers)) ? 0 : parseInt(formData.authorized_passengers))),
+        EngineHp: isNaN(parseInt(formData.engine_power)) ? 0 : parseInt(formData.engine_power),
         // EIDC system allows Tonnage between 0 and 1000
         Tonnage: Math.min(1000, Math.max(0, parseFloat(formData.load_capacity) || 0)),
         IssuingFeesOptions: 2  // يجب أن تكون 2 (رسوم الإصدار الافتراضية)
@@ -1279,11 +1301,10 @@ export default function CreateInsuranceDocument() {
             authorizedPassengers = '1';
             break;
           case 'مقطورة':
+          case 'مقطورة سيارة خاصة':
+          case '0':
             authorizedPassengers = '0';
             // لا يوجد ركاب للمقطورة
-            break;
-          case 'مقطورة سيارة خاصة':
-            authorizedPassengers = '0'; // 0 ركاب
             break;
           case 'سيارة نقل موتى':
             authorizedPassengers = '1'; // 1 راكب
@@ -1320,10 +1341,9 @@ export default function CreateInsuranceDocument() {
             loadCapacity = '0';
             break;
           case 'مقطورة':
-            loadCapacity = '0';
-            break;
           case 'مقطورة سيارة خاصة':
-            loadCapacity = '0'; // 0 طن (لا يوجد حمولة)
+          case '0':
+            loadCapacity = '0';
             break;
           case 'سيارة نقل موتى':
             loadCapacity = '0'; // 0 طن (لا يوجد حمولة)
@@ -2216,6 +2236,7 @@ export default function CreateInsuranceDocument() {
   const uniqueBrands = useMemo(() => {
     const brandsSet = new Set(normalizedVehicleTypes.map(vt => vt.normalizedBrand));
     brandsSet.delete('');
+    brandsSet.add('مقطورة');
     const allBrands = Array.from(brandsSet);
     const popular = POPULAR_BRANDS.filter(pb => brandsSet.has(pb));
     const others = allBrands.filter(b => !POPULAR_BRANDS.includes(b)).sort();
@@ -2231,6 +2252,43 @@ export default function CreateInsuranceDocument() {
   const selectedVehicleType = normalizedVehicleTypes.find(vt => vt.id === parseInt(formData.vehicle_type_id));
   const selectedBrand = selectedVehicleType ? selectedVehicleType.normalizedBrand : '';
   const [_selectedCategory, setSelectedCategory] = useState('');
+
+  // عند اختيار مقطورة في نوع المركبة، ضبط عدد الركاب 0 وقوة المحرك 0 تلقائياً
+  useEffect(() => {
+    const isTrailer = isTrailerVehicle(selectedBrand) || 
+                      isTrailerVehicle(selectedVehicleType?.brand) || 
+                      isTrailerVehicle(selectedVehicleType?.category);
+    if (isTrailer) {
+      setFormData(prev => {
+        if (prev.authorized_passengers === '0' && prev.engine_power === '0') return prev;
+        return {
+          ...prev,
+          authorized_passengers: '0',
+          engine_power: '0'
+        };
+      });
+    }
+  }, [selectedBrand, selectedVehicleType]);
+
+  // مراقبة اختيار مقطورة من تصنيف الهيئة أيضاً لضبط الركاب والمحرك
+  useEffect(() => {
+    if (!isMandatoryInsurance) return;
+    const selectedEidcType = eidcVehicleTypes.find(t => t.id === formData.eidc_vehicle_type_id);
+    const selectedEidcSpec = eidcVehicleSpecs.find(s => s.id === formData.eidc_vehicle_spec_id);
+    const typeName = selectedEidcType?.typeVehicle || selectedEidcType?.name;
+    const specName = selectedEidcSpec?.specVehicle || selectedEidcSpec?.name;
+    
+    if (isTrailerVehicle(typeName) || isTrailerVehicle(specName)) {
+      setFormData(prev => {
+        if (prev.authorized_passengers === '0' && prev.engine_power === '0') return prev;
+        return {
+          ...prev,
+          authorized_passengers: '0',
+          engine_power: '0'
+        };
+      });
+    }
+  }, [formData.eidc_vehicle_type_id, formData.eidc_vehicle_spec_id, eidcVehicleTypes, eidcVehicleSpecs, isMandatoryInsurance]);
 
   // عرض الفئات الخاصة بالعلامة التجارية المختارة
   const filteredCategories = selectedBrand
@@ -2422,7 +2480,7 @@ export default function CreateInsuranceDocument() {
         errors.foreign_car_purpose = 'الغرض من السيارة مطلوب';
       }
     }
-    if (!isThirdPartyInsurance && !isForeignCarInsurance && !formData.engine_power) {
+    if (!isThirdPartyInsurance && !isForeignCarInsurance && (formData.engine_power === undefined || formData.engine_power === null || formData.engine_power.trim() === '')) {
       errors.engine_power = 'قوة المحرك مطلوبة';
     }
 
@@ -2444,9 +2502,9 @@ export default function CreateInsuranceDocument() {
     if (!isForeignCarInsurance && !formData.license_purpose) {
       errors.license_purpose = 'الغرض من الترخيص مطلوب';
     }
-    if (formData.engine_power) {
-      if (!(isTransportPurpose && formData.engine_power === 'مقطورة')) {
-        if (!formData.authorized_passengers || !formData.authorized_passengers.trim()) {
+    if (formData.engine_power !== undefined && formData.engine_power !== null && formData.engine_power.trim() !== '') {
+      if (!(isTransportPurpose && formData.engine_power === 'مقطورة') && !isTrailerVehicle(selectedBrand)) {
+        if (formData.authorized_passengers === undefined || formData.authorized_passengers === null || formData.authorized_passengers.trim() === '') {
           errors.authorized_passengers = 'عدد الركاب مطلوب';
         }
       }
@@ -2455,7 +2513,7 @@ export default function CreateInsuranceDocument() {
       }
     }
     if (isForeignCarInsurance && formData.foreign_car_purpose) {
-      if (!formData.authorized_passengers || !formData.authorized_passengers.trim()) {
+      if (formData.authorized_passengers === undefined || formData.authorized_passengers === null || formData.authorized_passengers.trim() === '') {
         errors.authorized_passengers = 'عدد الركاب مطلوب';
       }
       if (!formData.load_capacity || formData.load_capacity.trim() === '') {
@@ -3140,12 +3198,25 @@ export default function CreateInsuranceDocument() {
                     value={selectedBrand} 
                     options={uniqueBrands} 
                     onChange={(val) => {
-                      const firstOfType = normalizedVehicleTypes.find(vt => vt.normalizedBrand === val);
+                      const firstOfType = normalizedVehicleTypes.find(vt => 
+                        vt.normalizedBrand === val || 
+                        normalizeArabicSearch(vt.normalizedBrand) === normalizeArabicSearch(val) ||
+                        normalizeArabicSearch(vt.brand) === normalizeArabicSearch(val)
+                      );
+                      const isTrailer = isTrailerVehicle(val);
                       if (firstOfType) { 
-                        setFormData({ ...formData, vehicle_type_id: firstOfType.id.toString() }); 
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          vehicle_type_id: firstOfType.id.toString(),
+                          ...(isTrailer ? { authorized_passengers: '0', engine_power: '0' } : {})
+                        })); 
                         setSelectedCategory(firstOfType.category); 
                       } else {
-                        setFormData({ ...formData, vehicle_type_id: '' }); 
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          vehicle_type_id: '',
+                          ...(isTrailer ? { authorized_passengers: '0', engine_power: '0' } : {})
+                        })); 
                         setSelectedCategory(''); 
                       }
                     }} 

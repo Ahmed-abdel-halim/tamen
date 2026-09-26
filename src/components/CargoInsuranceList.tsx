@@ -29,6 +29,7 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 10;
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number | null; isOpen: boolean }>({ id: null, isOpen: false });
   const [isDeleting, setIsDeleting] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -170,10 +171,56 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
     }
   };
   const handleExportExcel = async () => {
-    if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+    if (totalDocuments === 0 && documents.length === 0) {
+      showToast('لا توجد بيانات لتصديرها', 'error');
+      return;
+    }
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    setExportingExcel(true);
     
     try {
+      showToast('جاري استخراج وتحضير تقرير Excel بالكامل...', 'success');
+      let allDocs: any[] = [...documents];
+
+      try {
+        const userStr = localStorage.getItem('user');
+        const userId = userStr ? JSON.parse(userStr).id : null;
+        const token = localStorage.getItem('token');
+
+        const headers: HeadersInit = { 'Accept': 'application/json' };
+        if (userId) headers['X-User-Id'] = userId.toString();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const params = new URLSearchParams();
+        if (isArchive) {
+          params.append('archived', 'true');
+        } else if (statusFilter) {
+          params.append('status', statusFilter);
+        }
+        if (searchQuery) params.append('search', searchQuery);
+        if (filters.agentId) params.append('branch_agent_id', filters.agentId);
+        if (filters.year) params.append('year', filters.year);
+        if (filters.month) params.append('month', filters.month);
+        if (filters.day) params.append('day', filters.day);
+        params.append('per_page', '100000');
+        params.append('all', 'true');
+
+        const res = await fetch(`${API_BASE_URL}/cargo-insurance?${params.toString()}`, { headers });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            allDocs = json.data;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch all records for Excel, falling back to loaded records:', fetchErr);
+      }
+
+      if (!allDocs || allDocs.length === 0) {
+        showToast('لا توجد بيانات لتصديرها', 'error');
+        return;
+      }
+
       const columns = [
         { header: 'رقم الوثيقة', key: 'policy_number', width: 25 },
         { header: 'تاريخ الإصدار', key: 'created_at', width: 20 },
@@ -184,7 +231,7 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
         { header: 'الوكالة', key: 'agency_name', width: 25 },
       ];
 
-      const data = documents.map(doc => ({
+      const data = allDocs.map(doc => ({
         policy_number: doc.policy_number,
         created_at: new Date(doc.created_at).toLocaleDateString('ar-LY'),
         insured_name: doc.insured_name,
@@ -196,16 +243,18 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير تأمين شحن البضائع',
-        subtitle: `عدد الوثائق: ${totalDocuments} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        subtitle: `إجمالي الوثائق المصدرة: ${data.length} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
         fileName: 'تقرير_شحن_البضائع',
-        qrData: `تقرير شحن البضائع - شركة المدار الليبي\nعدد الوثائق: ${totalDocuments}\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `تقرير شحن البضائع - شركة المدار الليبي\nعدد الوثائق: ${data.length}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
-      showToast('تم تصدير التقرير بنجاح', 'success');
+      showToast(`تم تصدير ${data.length} وثيقة بنجاح`, 'success');
     } catch (error) {
       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -258,10 +307,11 @@ export default function CargoInsuranceList({ isArchive = false }: { isArchive?: 
           <button
             className="primary add-user-btn"
             onClick={handleExportExcel}
+            disabled={exportingExcel}
             style={{ background: '#166534', marginRight: '10px' }}
           >
-            <i className="fa-solid fa-file-excel"></i>
-            تصدير إكسل
+            {exportingExcel ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-file-excel"></i>}
+            {exportingExcel ? ' جاري التصدير...' : ' تصدير إكسل'}
           </button>
         </div>
 

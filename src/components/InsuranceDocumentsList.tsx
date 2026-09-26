@@ -75,6 +75,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   const [currentPage, setCurrentPage] = useState(1);
   const [syncing, setSyncing] = useState(false);
   const perPage = 15;
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAgentCancelled, setIsAgentCancelled] = useState(false);
   const [agents, setAgents] = useState<{id: number, agency_name: string}[]>([]);
@@ -386,10 +387,91 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   };
 
   const handleExportExcel = async () => {
-    if (documents.length === 0) { showToast('لا توجد بيانات لتصديرها', 'error'); return; }
+    if (totalDocuments === 0 && documents.length === 0) {
+      showToast('لا توجد بيانات لتصديرها', 'error');
+      return;
+    }
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    
+    setExportingExcel(true);
+
     try {
+      showToast('جاري استخراج وتحضير تقرير Excel بالكامل...', 'success');
+      let allDocs: InsuranceDocument[] = [...documents];
+
+      try {
+        const userStr = localStorage.getItem('user');
+        const userId = userStr ? JSON.parse(userStr).id : null;
+        const token = localStorage.getItem('token');
+
+        const headers: HeadersInit = { 'Accept': 'application/json' };
+        if (userId) headers['X-User-Id'] = userId.toString();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        if (statusFilter === 'cancelled') {
+          const cancelParams = new URLSearchParams();
+          cancelParams.append('type', 'insurance_documents');
+          if (searchQuery) cancelParams.append('search', searchQuery);
+          if (filters.agentId) cancelParams.append('branch_agent_id', filters.agentId);
+          if (filters.year) cancelParams.append('year', filters.year);
+          if (filters.month) cancelParams.append('month', filters.month);
+          if (filters.day) cancelParams.append('day', filters.day);
+          if (userId) cancelParams.append('user_id', userId.toString());
+          cancelParams.append('per_page', '100000');
+          cancelParams.append('all', 'true');
+
+          const cancelUrl = `${API_BASE_URL}/canceled-documents?${cancelParams.toString()}`;
+          const res = await fetch(cancelUrl, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            allDocs = (data.data || []).map((doc: any) => ({
+              id: doc.id,
+              insurance_number: doc.insurance_number,
+              insurance_type: doc.insurance_type || 'تأمين إجباري سيارات',
+              issue_date: doc.issue_date || doc.start_date || doc.canceled_at,
+              insured_name: doc.insured_name,
+              phone: doc.phone || '-',
+              premium: doc.premium || 0,
+              total: doc.total || 0,
+              agency_name: doc.agency_name,
+              branch_agent_id: doc.branch_agent_id,
+              is_canceled: true,
+              canceled_at: doc.canceled_at,
+              cancel_reason: doc.cancel_reason,
+              status: 'cancelled',
+            }));
+          }
+        } else {
+          const params = new URLSearchParams();
+          if (isArchive) {
+            params.append('archived', 'true');
+          } else if (statusFilter) {
+            params.append('status', statusFilter);
+          }
+          if (searchQuery) params.append('search', searchQuery);
+          if (filters.agentId && filters.agentId.trim() !== '') params.append('branch_agent_id', filters.agentId.trim());
+          if (filters.year && filters.year.trim() !== '') params.append('year', filters.year.trim());
+          if (filters.month && filters.month.trim() !== '') params.append('month', filters.month.trim());
+          if (filters.day && filters.day.trim() !== '') params.append('day', filters.day.trim());
+          params.append('per_page', '100000');
+          params.append('all', 'true');
+
+          const url = `${API_BASE_URL}/insurance-documents?${params.toString()}`;
+          const res = await fetch(url, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            const rawDocs: InsuranceDocument[] = data.data || [];
+            allDocs = rawDocs.filter((d: any) => !isCanceledDocument(d));
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch all records for Excel export, falling back to loaded records:', fetchErr);
+      }
+
+      if (!allDocs || allDocs.length === 0) {
+        showToast('لا توجد بيانات لتصديرها', 'error');
+        return;
+      }
+
       const columns = [
         { header: 'رقم التأمين', key: 'insurance_number', width: 25 },
         { header: 'تاريخ الإصدار', key: 'issue_date', width: 25 },
@@ -401,7 +483,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         { header: 'الوكالة', key: 'agency_name', width: 25 },
       ];
 
-      const data = documents.map(doc => {
+      const data = allDocs.map(doc => {
         const isCanceled = doc.is_canceled || doc.status === 'cancelled';
         const isExpired = doc.status === 'expired' || doc.status === 'archived';
         const statusLabel = isCanceled ? 'ملغية' : isExpired ? 'منتهية' : 'نشطة';
@@ -420,16 +502,18 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير وثائق تأمين السيارات',
-        subtitle: `إجمالي الوثائق المعروضة: ${totalDocuments} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        subtitle: `إجمالي الوثائق المصدرة: ${data.length} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
         fileName: 'تقرير_تأمين_السيارات',
-        qrData: `تقرير وثائق السيارات - شركة المدار الليبي\nعدد الوثائق: ${totalDocuments}\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `تقرير وثائق السيارات - شركة المدار الليبي\nعدد الوثائق: ${data.length}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
-      showToast('تم تصدير التقرير بنجاح', 'success');
+      showToast(`تم تصدير ${data.length} وثيقة بنجاح`, 'success');
     } catch (error) {
       showToast('حدث خطأ أثناء تصدير التقرير', 'error');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -519,10 +603,11 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
           <button
             className="primary add-user-btn"
             onClick={handleExportExcel}
+            disabled={exportingExcel}
             style={{ background: '#166534', marginRight: '10px' }}
           >
-            <i className="fa-solid fa-file-excel"></i>
-            تصدير إكسل
+            {exportingExcel ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-file-excel"></i>}
+            {exportingExcel ? ' جاري التصدير...' : ' تصدير إكسل'}
           </button>
           {isAdmin && (
             <button
