@@ -1033,7 +1033,7 @@ export default function CreateInternationalInsurance() {
     try {
       const userStr = localStorage.getItem('user');
       const userId = userStr ? JSON.parse(userStr).id : null;
-      const currentUserAdmin = userStr ? (JSON.parse(userStr).is_admin || false) : false;
+      const isUserAdmin = isAdmin || (userStr ? Boolean(JSON.parse(userStr).is_admin) : false);
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -1056,7 +1056,7 @@ export default function CreateInternationalInsurance() {
 
       let policyNumber = '';
 
-      if (currentUserAdmin) {
+      if (isUserAdmin) {
         // ======= الأدمن: يرسل للاتحاد أولاً ثم يحفظ محلياً =======
         setSyncingExternal(true);
         try {
