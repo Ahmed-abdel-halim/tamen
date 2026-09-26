@@ -408,6 +408,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
         if (statusFilter === 'cancelled') {
+          // ======= جلب الوثائق الملغية بالتقسيم (1000 في كل صفحة) =======
           const cancelParams = new URLSearchParams();
           cancelParams.append('type', 'insurance_documents');
           if (searchQuery) cancelParams.append('search', searchQuery);
@@ -416,31 +417,49 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
           if (filters.month) cancelParams.append('month', filters.month);
           if (filters.day) cancelParams.append('day', filters.day);
           if (userId) cancelParams.append('user_id', userId.toString());
-          cancelParams.append('per_page', '100000');
-          cancelParams.append('all', 'true');
+          cancelParams.append('per_page', '1000');
 
-          const cancelUrl = `${API_BASE_URL}/canceled-documents?${cancelParams.toString()}`;
-          const res = await fetch(cancelUrl, { headers });
-          if (res.ok) {
+          let cancelPage = 1;
+          let cancelTotal = 0;
+          let cancelLastPage = 1;
+          const cancelledDocs: InsuranceDocument[] = [];
+
+          do {
+            cancelParams.set('page', String(cancelPage));
+            const cancelUrl = `${API_BASE_URL}/canceled-documents?${cancelParams.toString()}`;
+            const res = await fetch(cancelUrl, { headers });
+            if (!res.ok) break;
             const data = await res.json();
-            allDocs = (data.data || []).map((doc: any) => ({
-              id: doc.id,
-              insurance_number: doc.insurance_number,
-              insurance_type: doc.insurance_type || 'تأمين إجباري سيارات',
-              issue_date: doc.issue_date || doc.start_date || doc.canceled_at,
-              insured_name: doc.insured_name,
-              phone: doc.phone || '-',
-              premium: doc.premium || 0,
-              total: doc.total || 0,
-              agency_name: doc.agency_name,
-              branch_agent_id: doc.branch_agent_id,
-              is_canceled: true,
-              canceled_at: doc.canceled_at,
-              cancel_reason: doc.cancel_reason,
-              status: 'cancelled',
-            }));
-          }
+            cancelTotal = data.total ?? cancelTotal;
+            cancelLastPage = data.last_page ?? cancelLastPage;
+            const rows = data.data || [];
+            for (const doc of rows) {
+              cancelledDocs.push({
+                id: doc.id,
+                insurance_number: doc.insurance_number,
+                insurance_type: doc.insurance_type || 'تأمين إجباري سيارات',
+                issue_date: doc.issue_date || doc.start_date || doc.canceled_at,
+                insured_name: doc.insured_name,
+                phone: doc.phone || '-',
+                premium: doc.premium || 0,
+                total: doc.total || 0,
+                agency_name: doc.agency_name,
+                branch_agent_id: doc.branch_agent_id,
+                is_canceled: true,
+                canceled_at: doc.canceled_at,
+                cancel_reason: doc.cancel_reason,
+                status: 'cancelled',
+              } as InsuranceDocument);
+            }
+            if (cancelledDocs.length > 0 && cancelLastPage > 1) {
+              showToast(`جاري تحميل الوثائق الملغية: ${cancelledDocs.length} من ${cancelTotal}...`, 'success');
+            }
+            cancelPage++;
+          } while (cancelPage <= cancelLastPage);
+
+          allDocs = cancelledDocs;
         } else {
+          // ======= جلب كل الوثائق بالتقسيم (1000 في كل صفحة) =======
           const params = new URLSearchParams();
           if (isArchive) {
             params.append('archived', 'true');
@@ -452,16 +471,30 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
           if (filters.year && filters.year.trim() !== '') params.append('year', filters.year.trim());
           if (filters.month && filters.month.trim() !== '') params.append('month', filters.month.trim());
           if (filters.day && filters.day.trim() !== '') params.append('day', filters.day.trim());
-          params.append('per_page', '100000');
-          params.append('all', 'true');
+          params.append('per_page', '1000');
 
-          const url = `${API_BASE_URL}/insurance-documents?${params.toString()}`;
-          const res = await fetch(url, { headers });
-          if (res.ok) {
+          let page = 1;
+          let total = 0;
+          let lastPage = 1;
+          const fetchedDocs: InsuranceDocument[] = [];
+
+          do {
+            params.set('page', String(page));
+            const url = `${API_BASE_URL}/insurance-documents?${params.toString()}`;
+            const res = await fetch(url, { headers });
+            if (!res.ok) break;
             const data = await res.json();
-            const rawDocs: InsuranceDocument[] = data.data || [];
-            allDocs = rawDocs.filter((d: any) => !isCanceledDocument(d));
-          }
+            total = data.total ?? total;
+            lastPage = data.last_page ?? lastPage;
+            const rows: InsuranceDocument[] = (data.data || []).filter((d: any) => !isCanceledDocument(d));
+            fetchedDocs.push(...rows);
+            if (lastPage > 1) {
+              showToast(`جاري تحميل الوثائق: ${fetchedDocs.length} من ${total}...`, 'success');
+            }
+            page++;
+          } while (page <= lastPage);
+
+          allDocs = fetchedDocs;
         }
       } catch (fetchErr) {
         console.warn('Could not fetch all records for Excel export, falling back to loaded records:', fetchErr);

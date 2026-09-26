@@ -1161,14 +1161,15 @@ export default function ExpenseManagement({
         { header: 'ملاحظات', key: 'notes', width: 30 },
       ];
 
-      const data = expenses.map((e) => ({
+      const filteredTotal = filteredExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+      const data = filteredExpenses.map((e) => ({
         name: e.name,
         voucher_number: e.voucher_number || '-',
         expense_type: e.expense_type || '-',
         recipient: e.recipient || '-',
         category: e.category,
         sub_category: (e as any).sub_category || '-',
-        amount: e.amount.toLocaleString(),
+        amount: Number(e.amount || 0).toLocaleString(),
         currency: e.currency === 'USD' ? 'دولار' : 'دينار',
         expense_date: e.expense_date,
         status: e.status,
@@ -1177,22 +1178,22 @@ export default function ExpenseManagement({
 
       // Summary row
       data.push({
-        name: 'الإجمالي الكلي',
+        name: 'الإجمالي المفلتر',
         voucher_number: '',
         expense_type: '',
         recipient: '',
         category: '',
         sub_category: '',
-        amount: statistics.monthly_total.toLocaleString(),
+        amount: filteredTotal.toLocaleString(),
         currency: '',
         expense_date: '',
-        status: `${statistics.monthly_count} عملية`,
+        status: `${filteredExpenses.length} عملية`,
         notes: '',
       });
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير المصروفات التشغيلية',
-        subtitle: `إجمالي المصروفات: ${statistics.monthly_total.toLocaleString()} د.ل - عدد العمليات: ${statistics.monthly_count}`,
+        subtitle: `إجمالي المصروفات المصدرة: ${filteredTotal.toLocaleString()} د.ل - عدد العمليات: ${filteredExpenses.length}`,
         columns,
         data,
         fileName: 'تقرير_المصروفات',

@@ -182,9 +182,59 @@ export default function CanceledDocumentsList() {
     setTimeout(() => fetchDocs(), 50);
   };
 
-  const exportExcel = async () => {
-    if (!docs.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+  const fetchAllCanceledDocs = async (): Promise<CanceledDoc[]> => {
     try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const currentUser = userStr ? JSON.parse(userStr) : null;
+      const userId = currentUser?.id ? String(currentUser.id) : (localStorage.getItem('user_id') || localStorage.getItem('userId'));
+
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (filterType) params.set('type', filterType);
+      if (filterAgentId) params.set('branch_agent_id', filterAgentId);
+      if (filterYear) params.set('year', filterYear);
+      if (filterMonth) params.set('month', filterMonth);
+      if (filterDay) params.set('day', filterDay);
+      if (userId) params.set('user_id', userId);
+      params.set('per_page', '1000');
+
+      const headers: HeadersInit = {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { 'X-User-Id': userId } : {}),
+      };
+
+      let page = 1;
+      let lastPage = 1;
+      const allFetched: CanceledDoc[] = [];
+
+      do {
+        params.set('page', String(page));
+        const res = await fetch(`${API_BASE_URL}/canceled-documents?${params.toString()}`, { headers });
+        if (!res.ok) break;
+        const data = await res.json();
+        lastPage = data.last_page ?? lastPage;
+        const rows: CanceledDoc[] = data.data || [];
+        allFetched.push(...rows);
+        page++;
+      } while (page <= lastPage);
+
+      if (allFetched.length > 0) return allFetched;
+    } catch (e) {
+      console.warn('Could not fetch all canceled docs:', e);
+    }
+    return docs;
+  };
+
+
+  const exportExcel = async () => {
+    if (!total && !docs.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+    showToast('جاري استخراج وتحضير تقرير Excel بالكامل...', 'success');
+    try {
+      const allDocs = await fetchAllCanceledDocs();
+      if (!allDocs.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+
       const columns = [
         { header: 'رقم الوثيقة', key: 'insurance_number', width: 20 },
         { header: 'نوع التأمين', key: 'doc_type_label', width: 22 },
@@ -197,7 +247,7 @@ export default function CanceledDocumentsList() {
         { header: 'سبب الإلغاء', key: 'cancel_reason', width: 35 },
       ];
 
-      const data = docs.map(d => ({
+      const data = allDocs.map(d => ({
         insurance_number: d.insurance_number || '-',
         doc_type_label: d.doc_type_label || '-',
         insured_name: d.insured_name || '-',
@@ -211,22 +261,26 @@ export default function CanceledDocumentsList() {
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير الوثائق الملغية',
-        subtitle: `إجمالي الوثائق: ${total} - القيمة الإجمالية: ${fmt(summary?.total_value || 0)} د.ل - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
+        subtitle: `إجمالي الوثائق المصدرة: ${data.length} - القيمة الإجمالية: ${fmt(summary?.total_value || 0)} د.ل - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
         fileName: `تقرير_الوثائق_الملغية_${new Date().toISOString().split('T')[0]}`,
-        qrData: `مستخرج من منظومة المدار - تقرير الوثائق الملغية\nالعدد: ${total}\nالإجمالي: ${fmt(summary?.total_value || 0)} د.ل`
+        qrData: `مستخرج من منظومة المدار - تقرير الوثائق الملغية\nالعدد: ${data.length}\nالإجمالي: ${fmt(summary?.total_value || 0)} د.ل`
       });
-      showToast('تم تصدير ملف الإكسيل بنجاح', 'success');
+      showToast(`تم تصدير ${data.length} وثيقة ملغية بنجاح`, 'success');
     } catch {
       showToast('حدث خطأ أثناء تصدير الإكسيل', 'error');
     }
   };
 
-  const exportWord = () => {
-    if (!docs.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+  const exportWord = async () => {
+    if (!total && !docs.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+    showToast('جاري استخراج وتحضير تقرير Word بالكامل...', 'success');
     try {
-      const rows = docs.map((d, i) => `
+      const allDocs = await fetchAllCanceledDocs();
+      if (!allDocs.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+
+      const rows = allDocs.map((d, i) => `
         <tr>
           <td>${i + 1}</td>
           <td style="font-weight: bold;">${d.insurance_number}</td>
@@ -258,7 +312,7 @@ export default function CanceledDocumentsList() {
         </head>
         <body>
           <h2>شركة المدار الليبي للتأمين</h2>
-          <p class="sub">تقرير الوثائق والبطاقات الملغية | تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')} | عدد الوثائق: ${total}</p>
+          <p class="sub">تقرير الوثائق الملغية | الإجمالي: ${allDocs.length} وثيقة | المستخرج: ${new Date().toLocaleDateString('ar-LY')}</p>
           <table>
             <thead>
               <tr>
@@ -289,7 +343,7 @@ export default function CanceledDocumentsList() {
       a.download = `تقرير_الوثائق_الملغية_${new Date().toISOString().split('T')[0]}.doc`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('تم تصدير ملف الوورد بنجاح', 'success');
+      showToast(`تم تصدير ملف الوورد بنجاح (${allDocs.length} وثيقة)`, 'success');
     } catch {
       showToast('حدث خطأ أثناء تصدير الوورد', 'error');
     }

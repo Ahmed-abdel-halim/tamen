@@ -197,15 +197,30 @@ export default function SchoolStudentInsuranceList({ isArchive = false }: { isAr
         if (filters.year) params.append('year', filters.year);
         if (filters.month) params.append('month', filters.month);
         if (filters.day) params.append('day', filters.day);
-        params.append('per_page', '100000');
-        params.append('all', 'true');
+        params.append('per_page', '1000');
 
-        const res = await fetch(`${API_BASE_URL}/school-student-insurance?${params.toString()}`, { headers });
-        if (res.ok) {
+        let page = 1;
+        let total = 0;
+        let lastPage = 1;
+        const fetchedDocs: typeof allDocs = [];
+
+        do {
+          params.set('page', String(page));
+          const res = await fetch(`${API_BASE_URL}/school-student-insurance?${params.toString()}`, { headers });
+          if (!res.ok) break;
           const json = await res.json();
-          if (Array.isArray(json.data) && json.data.length > 0) {
-            allDocs = json.data;
+          total = json.total ?? total;
+          lastPage = json.last_page ?? lastPage;
+          const rows = json.data || [];
+          fetchedDocs.push(...rows);
+          if (lastPage > 1) {
+            showToast(`جاري تحميل الوثائق: ${fetchedDocs.length} من ${total}...`, 'success');
           }
+          page++;
+        } while (page <= lastPage);
+
+        if (fetchedDocs.length > 0) {
+          allDocs = fetchedDocs;
         }
       } catch (fetchErr) {
         console.warn('Could not fetch all records for Excel, falling back to loaded records:', fetchErr);
