@@ -250,7 +250,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
     executePrint(mode, false);
   };
 
-  const executePrint = (mode: 'summary' | 'detailed', forceAll = false, chunk: number | null = null) => {
+  const executePrint = (mode: 'summary' | 'detailed', forceAll = false, chunk: number | null = null, noAutoPrint = false) => {
     const params = new URLSearchParams();
     if (selectedAgentId && selectedAgentId !== 'all') {
       params.append('agent_id', selectedAgentId);
@@ -279,6 +279,9 @@ export const ComprehensiveProductionReport: React.FC = () => {
     if (chunk) {
       params.append('chunk', chunk.toString());
       params.append('chunk_size', '2000');
+    }
+    if (noAutoPrint) {
+      params.append('no_auto_print', '1');
     }
 
     const printUrl = `${API_BASE_URL}/financial-statistics/comprehensive-production-portfolio/print?${params.toString()}`;
@@ -986,29 +989,19 @@ export const ComprehensiveProductionReport: React.FC = () => {
       {/* Detailed Print Warning Modal for Large Datasets */}
       {showDetailedPrintModal && (
         <div className="cpr-modal-overlay" onClick={() => setShowDetailedPrintModal(false)}>
-          <div className="cpr-modal-box" onClick={(e) => e.stopPropagation()}>
+          <div className="cpr-modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '660px' }}>
             <div className="cpr-modal-icon-warn">
               <i className="fa-solid fa-triangle-exclamation" />
             </div>
-            <h3 className="cpr-modal-title">تنبيه حجم الطباعة الضخم</h3>
+            <h3 className="cpr-modal-title">تنبيه حجم التقرير الضخم ({grandTotals.documents_count.toLocaleString('ar-LY')} وثيقة)</h3>
             <p className="cpr-modal-text">
-              التقرير يحتوي على <strong>{grandTotals.documents_count} وثيقة</strong> (ما يقارب {Math.ceil(grandTotals.documents_count / 24)} صفحة طباعة).<br />
-              طباعة هذا العدد الكبير مباشرة من المتصفح قد يستغرق وقتاً طويلاً ويؤدي إلى بطء أو تجمّد المتصفح ونفاذ الورق.<br />
-              <strong>ما هو الإجراء الذي تفضله؟</strong>
+              يحتوي التقرير على <strong>{grandTotals.documents_count.toLocaleString('ar-LY')} وثيقة</strong> (ما يعادل {Math.ceil(grandTotals.documents_count / 38)} صفحة طباعة).<br />
+              محاولة فتح نافذة الطباعة لكافة الصفحات دفعة واحدة يتسبب في تجمّد محرك المتصفح Chrome أثناء إعداد المعاينة.<br />
+              <strong>يُرجى اختيار الطريقة السريعة المناسبة للحصول على التقرير فوراً:</strong>
             </p>
 
             <div className="cpr-modal-options">
-              <button
-                className="cpr-modal-opt-btn cpr-opt-summary"
-                onClick={() => executePrint('summary')}
-              >
-                <i className="fa-solid fa-file-invoice-dollar" />
-                <div>
-                  <strong>طباعة الملخص المالي المعتمد (موصى به)</strong>
-                  <span>كشف رسمي من صفحة واحدة يضم كافة المجاميع والتوقيعات والختم المعتمد</span>
-                </div>
-              </button>
-
+              {/* Option 1: Excel Export */}
               <button
                 className="cpr-modal-opt-btn cpr-opt-excel"
                 onClick={() => {
@@ -1018,30 +1011,73 @@ export const ComprehensiveProductionReport: React.FC = () => {
               >
                 <i className="fa-solid fa-file-excel" />
                 <div>
-                  <strong>تصدير الكشف إلى ملف Excel</strong>
-                  <span>تصدير سريع لكافة الـ {grandTotals.documents_count} وثيقة بجميع بياناتها</span>
+                  <strong>تصدير كشف كافة الـ {grandTotals.documents_count.toLocaleString('ar-LY')} وثيقة إلى Excel (فوري في ثانية)</strong>
+                  <span>الخيار الأسرع والأنسب: تنزيل ملف إكسيل مجمع يحتوي على جميع الوثائق ببياناتها الكاملة دون انتظار</span>
                 </div>
               </button>
 
+              {/* Option 2: Certified Summary */}
               <button
-                className="cpr-modal-opt-btn cpr-opt-chunk"
-                onClick={() => executePrint('detailed', true, 1)}
+                className="cpr-modal-opt-btn cpr-opt-summary"
+                onClick={() => executePrint('summary')}
               >
-                <i className="fa-solid fa-bolt" />
+                <i className="fa-solid fa-file-invoice-dollar" />
                 <div>
-                  <strong>طباعة سريعة بالحزم (جزء 1: من 1 إلى 2,000 وثيقة)</strong>
-                  <span>توليد فوري لمعاينة الطباعة في ثانيتين فقط للسرعة الفائقة</span>
+                  <strong>طباعة الملخص المالي المعتمد (صفحة واحدة - فوري)</strong>
+                  <span>كشف رسمي معتمد يضم كافة الأقساط والضرائب والرسوم ومربعات التوقيع والاعتماد</span>
                 </div>
               </button>
 
+              {/* Option 3: Chunks Grid */}
+              <div style={{ background: '#f8fafc', border: '1.5px solid #7dd3fc', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#0369a1', marginBottom: '8px' }}>
+                  <i className="fa-solid fa-bolt" />
+                  <span>طباعة بالحزم السريعة (PDF فوري بدون تجمّد - 2,000 وثيقة لكل جزء):</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '6px' }}>
+                  {Array.from({ length: Math.ceil(grandTotals.documents_count / 2000) }).map((_, i) => {
+                    const fromNum = i * 2000 + 1;
+                    const toNum = Math.min((i + 1) * 2000, grandTotals.documents_count);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        style={{
+                          background: '#fff',
+                          border: '1.5px solid #0284c7',
+                          color: '#0284c7',
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          fontWeight: 800,
+                          fontSize: '11.5px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#0284c7'; e.currentTarget.style.color = '#fff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#0284c7'; }}
+                        onClick={() => executePrint('detailed', true, i + 1)}
+                      >
+                        <i className="fa-solid fa-print" />
+                        جزء {i + 1} ({fromNum}-{toNum})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Option 4: Web view without auto print */}
               <button
                 className="cpr-modal-opt-btn cpr-opt-force"
-                onClick={() => executePrint('detailed', true)}
+                onClick={() => executePrint('detailed', true, null, true)}
               >
-                <i className="fa-solid fa-print" />
+                <i className="fa-solid fa-table-list" />
                 <div>
-                  <strong>متابعة طباعة الكشف التفصيلي بالكامل</strong>
-                  <span>فتح نافذة الطباعة لجميع الوثائق بالتنسيق فائق السرعة (~{Math.ceil(grandTotals.documents_count / 40)} صفحة)</span>
+                  <strong>استعراض الكشف الكامل في صفحة ويب ({grandTotals.documents_count.toLocaleString('ar-LY')} وثيقة)</strong>
+                  <span>فتح كافة الوثائق والصفحات للاستعراض والتصفح بدون فتح نافذة الطباعة التلقائية المتجمدة</span>
                 </div>
               </button>
             </div>
