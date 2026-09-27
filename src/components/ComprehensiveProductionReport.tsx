@@ -250,7 +250,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
     executePrint(mode, false);
   };
 
-  const executePrint = (mode: 'summary' | 'detailed', forceAll = false) => {
+  const executePrint = (mode: 'summary' | 'detailed', forceAll = false, chunk: number | null = null) => {
     const params = new URLSearchParams();
     if (selectedAgentId && selectedAgentId !== 'all') {
       params.append('agent_id', selectedAgentId);
@@ -275,6 +275,10 @@ export const ComprehensiveProductionReport: React.FC = () => {
     params.append('print_mode', mode);
     if (forceAll) {
       params.append('force_all', '1');
+    }
+    if (chunk) {
+      params.append('chunk', chunk.toString());
+      params.append('chunk_size', '2000');
     }
 
     const printUrl = `${API_BASE_URL}/financial-statistics/comprehensive-production-portfolio/print?${params.toString()}`;
@@ -1020,13 +1024,24 @@ export const ComprehensiveProductionReport: React.FC = () => {
               </button>
 
               <button
+                className="cpr-modal-opt-btn cpr-opt-chunk"
+                onClick={() => executePrint('detailed', true, 1)}
+              >
+                <i className="fa-solid fa-bolt" />
+                <div>
+                  <strong>طباعة سريعة بالحزم (جزء 1: من 1 إلى 2,000 وثيقة)</strong>
+                  <span>توليد فوري لمعاينة الطباعة في ثانيتين فقط للسرعة الفائقة</span>
+                </div>
+              </button>
+
+              <button
                 className="cpr-modal-opt-btn cpr-opt-force"
                 onClick={() => executePrint('detailed', true)}
               >
                 <i className="fa-solid fa-print" />
                 <div>
                   <strong>متابعة طباعة الكشف التفصيلي بالكامل</strong>
-                  <span>فتح نافذة الطباعة لجميع الوثائق (~{Math.ceil(grandTotals.documents_count / 24)} صفحة)</span>
+                  <span>فتح نافذة الطباعة لجميع الوثائق بالتنسيق فائق السرعة (~{Math.ceil(grandTotals.documents_count / 40)} صفحة)</span>
                 </div>
               </button>
             </div>

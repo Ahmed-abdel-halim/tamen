@@ -913,6 +913,18 @@
   border-color: #4ade80;
 }
 
+.cpr-opt-chunk {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.cpr-opt-chunk:hover {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #0284c7;
+}
+
 .cpr-opt-force {
   background: #f8fafc;
   border-color: #cbd5e1;
