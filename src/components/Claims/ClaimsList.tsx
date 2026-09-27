@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { showToast } from '../Toast';
 import { API_BASE_URL, BACKEND_URL } from '../../config/api';
@@ -22,8 +22,12 @@ export default function ClaimsList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const [statusFilter, setStatusFilter] = useState('');
-  const [damageTypeFilter, setDamageTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [damageTypeFilter, setDamageTypeFilter] = useState<string[]>([]);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [damageDropdownOpen, setDamageDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const damageDropdownRef = useRef<HTMLDivElement>(null);
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
   const [sortBy, setSortBy] = useState('date_desc');
@@ -309,15 +313,32 @@ export default function ClaimsList() {
     fetchClaims();
   }, [statusFilter, damageTypeFilter]);
 
+  // Close multi-select dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+      if (damageDropdownRef.current && !damageDropdownRef.current.contains(e.target as Node)) {
+        setDamageDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const fetchClaims = async () => {
     setLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const params = new URLSearchParams({
-        user_id: user.id || '',
-        status: statusFilter,
-        damage_type: damageTypeFilter
-      });
+      const params = new URLSearchParams();
+      params.set('user_id', user.id || '');
+      if (statusFilter.length > 0) {
+        params.set('status', statusFilter.join(','));
+      }
+      if (damageTypeFilter.length > 0) {
+        params.set('damage_type', damageTypeFilter.join(','));
+      }
       const response = await fetch(`${API_BASE_URL}/claims?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -460,8 +481,8 @@ export default function ClaimsList() {
 
   const handleResetFilters = () => {
     setSearchQuery('');
-    setStatusFilter('');
-    setDamageTypeFilter('');
+    setStatusFilter([]);
+    setDamageTypeFilter([]);
     setStartDateFilter('');
     setEndDateFilter('');
     setYearFilter('');
@@ -617,6 +638,16 @@ export default function ClaimsList() {
     
     if (!matchesSearch) return false;
 
+    // Multi-select status filter
+    if (statusFilter.length > 0) {
+      if (!statusFilter.includes(c.status)) return false;
+    }
+
+    // Multi-select damage type filter
+    if (damageTypeFilter.length > 0) {
+      if (!damageTypeFilter.includes(c.damage_type)) return false;
+    }
+
     if (yearFilter) {
       const yearAcc = c.accident_date ? new Date(String(c.accident_date).replace(' ', 'T')).getFullYear().toString() : '';
       const yearClm = c.claim_date ? new Date(String(c.claim_date).replace(' ', 'T')).getFullYear().toString() : '';
@@ -672,7 +703,7 @@ export default function ClaimsList() {
       ? `الفترة من: ${startDateFilter || 'البداية'} إلى: ${endDateFilter || 'النهاية'}`
       : 'كل التواريخ';
 
-    const statusText = statusFilter ? getStatusLabel(statusFilter) : 'كل الحالات';
+    const statusText = statusFilter.length > 0 ? statusFilter.map(s => getStatusLabel(s)).join(' + ') : 'كل الحالات';
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     printClaimsDetailedReport(filteredClaims, {
@@ -694,7 +725,7 @@ export default function ClaimsList() {
       ? `الفترة من: ${startDateFilter || 'البداية'} إلى: ${endDateFilter || 'النهاية'}`
       : 'كل التواريخ';
 
-    const statusText = statusFilter ? `حسب الحالة: ${getStatusLabel(statusFilter)}` : 'كل الحالات';
+    const statusText = statusFilter.length > 0 ? `حسب الحالة: ${statusFilter.map(s => getStatusLabel(s)).join(' + ')}` : 'كل الحالات';
 
     const qrData = `تقرير تعويضات الحوادث - شركة المدار الليبي\nالتاريخ: ${new Date().toLocaleString('en-GB')}\nالفترة: ${dateText}\nعدد الحالات: ${filteredClaims.length}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
@@ -1568,36 +1599,260 @@ export default function ClaimsList() {
               </select>
             </div>
 
-            <div className="filter-group" style={{ minWidth: '160px' }}>
+            <div ref={statusDropdownRef} className="filter-group" style={{ minWidth: '160px', position: 'relative' }}>
               <label>تصفية حسب الحالة</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+              <div
+                onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setDamageDropdownOpen(false); }}
+                style={{
+                  width: '100%',
+                  minHeight: '42px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  border: `1.5px solid ${statusFilter.length > 0 ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '6px',
+                  flexWrap: 'wrap',
+                  transition: 'border-color 0.2s',
+                }}
               >
-                <option value="">كل الحالات</option>
-                <option value="pending">قيد الانتظار</option>
-                <option value="تسويه وديه">تسوية ودية</option>
-                <option value="تحويل الى مركز الشرطة">مركز الشرطة</option>
-                <option value="للتسديد - الشؤون المالية">للتسديد</option>
-                <option value="تم الاعتراض">تم الاعتراض (مرفوضة)</option>
-              </select>
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', flex: 1 }}>
+                  {statusFilter.length === 0 ? (
+                    <span style={{ color: 'var(--text-muted, #999)' }}>كل الحالات</span>
+                  ) : (
+                    statusFilter.map(s => (
+                      <span key={s} style={{
+                        background: 'var(--accent-cyan)',
+                        color: '#fff',
+                        padding: '2px 10px',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {getStatusLabel(s)}
+                        <i className="fa-solid fa-xmark" style={{ cursor: 'pointer', fontSize: '0.7rem' }}
+                          onClick={(e) => { e.stopPropagation(); setStatusFilter(prev => prev.filter(x => x !== s)); }}
+                        />
+                      </span>
+                    ))
+                  )}
+                </span>
+                <i className={`fa-solid fa-chevron-${statusDropdownOpen ? 'up' : 'down'}`} style={{ fontSize: '0.75rem', color: 'var(--text-muted, #999)' }} />
+              </div>
+              {statusDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  left: 0,
+                  zIndex: 999,
+                  background: 'var(--panel)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '10px',
+                  marginTop: '4px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  padding: '6px 0',
+                }}>
+                  {[
+                    { value: 'pending', label: 'قيد الانتظار' },
+                    { value: 'تسويه وديه', label: 'تسوية ودية' },
+                    { value: 'تحويل الى مركز الشرطة', label: 'مركز الشرطة' },
+                    { value: 'تحويل الى النيابة', label: 'النيابة' },
+                    { value: 'تحويل الى المحكمة', label: 'المحكمة' },
+                    { value: 'استئناف في حكم المحكمة', label: 'استئناف' },
+                    { value: 'للتسديد - الشؤون المالية', label: 'للتسديد' },
+                    { value: 'تم التسديد', label: 'تم التسديد' },
+                    { value: 'تم الاعتراض', label: 'تم الاعتراض (مرفوضة)' },
+                  ].map(opt => (
+                    <label key={opt.value} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 14px',
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      fontWeight: statusFilter.includes(opt.value) ? 600 : 400,
+                      color: statusFilter.includes(opt.value) ? 'var(--accent-cyan)' : 'var(--text)',
+                      background: statusFilter.includes(opt.value) ? 'rgba(14,165,233,0.06)' : 'transparent',
+                      transition: 'background 0.15s',
+                    }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(14,165,233,0.1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = statusFilter.includes(opt.value) ? 'rgba(14,165,233,0.06)' : 'transparent')}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={statusFilter.includes(opt.value)}
+                        onChange={() => {
+                          setStatusFilter(prev =>
+                            prev.includes(opt.value)
+                              ? prev.filter(x => x !== opt.value)
+                              : [...prev, opt.value]
+                          );
+                        }}
+                        style={{ accentColor: 'var(--accent-cyan)', width: '16px', height: '16px', cursor: 'pointer' }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                  {statusFilter.length > 0 && (
+                    <div style={{ borderTop: '1px solid var(--border)', padding: '6px 14px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setStatusFilter([]); }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          padding: '4px 0',
+                        }}
+                      >
+                        <i className="fa-solid fa-xmark" style={{ marginLeft: '4px' }} /> مسح الكل
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="filter-group" style={{ minWidth: '160px' }}>
+            <div ref={damageDropdownRef} className="filter-group" style={{ minWidth: '160px', position: 'relative' }}>
               <label>نوع الأضرار</label>
-              <select
-                value={damageTypeFilter}
-                onChange={(e) => setDamageTypeFilter(e.target.value)}
+              <div
+                onClick={() => { setDamageDropdownOpen(!damageDropdownOpen); setStatusDropdownOpen(false); }}
+                style={{
+                  width: '100%',
+                  minHeight: '42px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  border: `1.5px solid ${damageTypeFilter.length > 0 ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '6px',
+                  flexWrap: 'wrap',
+                  transition: 'border-color 0.2s',
+                }}
               >
-                <option value="">كل أنواع الأضرار</option>
-                <option value="مادي">مادي</option>
-                <option value="بدني">بدني</option>
-                <option value="وفاة">وفاة</option>
-                <option value="معنوي">معنوي</option>
-                <option value="كلي">كلي</option>
-                <option value="جزئي">جزئي</option>
-                <option value="اخر">أخرى</option>
-              </select>
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', flex: 1 }}>
+                  {damageTypeFilter.length === 0 ? (
+                    <span style={{ color: 'var(--text-muted, #999)' }}>كل أنواع الأضرار</span>
+                  ) : (
+                    damageTypeFilter.map(d => (
+                      <span key={d} style={{
+                        background: '#f59e0b',
+                        color: '#fff',
+                        padding: '2px 10px',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {d === 'اخر' ? 'أخرى' : d}
+                        <i className="fa-solid fa-xmark" style={{ cursor: 'pointer', fontSize: '0.7rem' }}
+                          onClick={(e) => { e.stopPropagation(); setDamageTypeFilter(prev => prev.filter(x => x !== d)); }}
+                        />
+                      </span>
+                    ))
+                  )}
+                </span>
+                <i className={`fa-solid fa-chevron-${damageDropdownOpen ? 'up' : 'down'}`} style={{ fontSize: '0.75rem', color: 'var(--text-muted, #999)' }} />
+              </div>
+              {damageDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  left: 0,
+                  zIndex: 999,
+                  background: 'var(--panel)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '10px',
+                  marginTop: '4px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  padding: '6px 0',
+                }}>
+                  {[
+                    { value: 'مادي', label: 'مادي' },
+                    { value: 'بدني', label: 'بدني' },
+                    { value: 'وفاة', label: 'وفاة' },
+                    { value: 'معنوي', label: 'معنوي' },
+                    { value: 'كلي', label: 'كلي' },
+                    { value: 'جزئي', label: 'جزئي' },
+                    { value: 'اخر', label: 'أخرى' },
+                  ].map(opt => (
+                    <label key={opt.value} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 14px',
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      fontWeight: damageTypeFilter.includes(opt.value) ? 600 : 400,
+                      color: damageTypeFilter.includes(opt.value) ? '#f59e0b' : 'var(--text)',
+                      background: damageTypeFilter.includes(opt.value) ? 'rgba(245,158,11,0.06)' : 'transparent',
+                      transition: 'background 0.15s',
+                    }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(245,158,11,0.1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = damageTypeFilter.includes(opt.value) ? 'rgba(245,158,11,0.06)' : 'transparent')}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={damageTypeFilter.includes(opt.value)}
+                        onChange={() => {
+                          setDamageTypeFilter(prev =>
+                            prev.includes(opt.value)
+                              ? prev.filter(x => x !== opt.value)
+                              : [...prev, opt.value]
+                          );
+                        }}
+                        style={{ accentColor: '#f59e0b', width: '16px', height: '16px', cursor: 'pointer' }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                  {damageTypeFilter.length > 0 && (
+                    <div style={{ borderTop: '1px solid var(--border)', padding: '6px 14px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDamageTypeFilter([]); }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          padding: '4px 0',
+                        }}
+                      >
+                        <i className="fa-solid fa-xmark" style={{ marginLeft: '4px' }} /> مسح الكل
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="filter-group" style={{ minWidth: '140px' }}>
@@ -2123,7 +2378,7 @@ export default function ClaimsList() {
           <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
             <i className="fa-solid fa-scale-balanced" style={{ fontSize: '3rem', color: '#ccc', marginBottom: '1rem' }}></i>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
-              {searchQuery || statusFilter || damageTypeFilter ? 'لا توجد نتائج للبحث' : 'لا توجد مطالبات مسجلة'}
+              {searchQuery || statusFilter.length > 0 || damageTypeFilter.length > 0 ? 'لا توجد نتائج للبحث' : 'لا توجد مطالبات مسجلة'}
             </p>
           </div>
         ) : (
