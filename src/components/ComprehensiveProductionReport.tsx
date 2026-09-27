@@ -89,6 +89,12 @@ export const ComprehensiveProductionReport: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [exportingExcel, setExportingExcel] = useState<boolean>(false);
 
+  // Section Pagination & Search States
+  const [sectionSearch, setSectionSearch] = useState<Record<string, string>>({});
+  const [sectionPages, setSectionPages] = useState<Record<string, number>>({});
+  const [sectionPageSizes, setSectionPageSizes] = useState<Record<string, number>>({});
+  const [showDetailedPrintModal, setShowDetailedPrintModal] = useState<boolean>(false);
+
   const DOCUMENT_TYPE_OPTIONS = [
     { key: 'all', label: 'جميع أنواع التأمين (الكل)' },
     { key: 'compulsory', label: 'تأمين إجباري سيارات' },
@@ -224,11 +230,27 @@ export const ComprehensiveProductionReport: React.FC = () => {
   };
 
   useEffect(() => {
+    setSectionPages({});
+    setSectionSearch({});
     fetchReportData();
   }, [periodType, selectedYear, selectedMonth, fromDate, toDate, selectedDocType, selectedAgentId, excludeCanceled]);
 
-  // Handle Direct A4 Print
-  const handlePrintA4 = () => {
+  // Handle Direct A4 Print with support for summary vs detailed modes
+  const handlePrintA4 = (mode: 'summary' | 'detailed' = 'summary') => {
+    if (sections.length === 0 || grandTotals.documents_count === 0) {
+      showToast('لا توجد وثائق لتصديرها أو طباعتها في الفترة المحددة', 'error');
+      return;
+    }
+
+    if (mode === 'detailed' && grandTotals.documents_count > 300) {
+      setShowDetailedPrintModal(true);
+      return;
+    }
+
+    executePrint(mode, false);
+  };
+
+  const executePrint = (mode: 'summary' | 'detailed', forceAll = false) => {
     const params = new URLSearchParams();
     if (selectedAgentId && selectedAgentId !== 'all') {
       params.append('agent_id', selectedAgentId);
@@ -250,8 +272,14 @@ export const ComprehensiveProductionReport: React.FC = () => {
       params.append('to_date', toDate);
     }
 
+    params.append('print_mode', mode);
+    if (forceAll) {
+      params.append('force_all', '1');
+    }
+
     const printUrl = `${API_BASE_URL}/financial-statistics/comprehensive-production-portfolio/print?${params.toString()}`;
     window.open(printUrl, '_blank');
+    setShowDetailedPrintModal(false);
   };
 
   // Handle Excel Export
@@ -347,13 +375,23 @@ export const ComprehensiveProductionReport: React.FC = () => {
 
         <div className="cpr-actions-area">
           <button
-            onClick={handlePrintA4}
+            onClick={() => handlePrintA4('summary')}
+            disabled={loading || sections.length === 0}
+            className="cpr-btn cpr-btn-print-summary"
+            title="طباعة كشف الملخص المالي المعتمد لجميع الحوافظ (صفحة واحدة معتمدة للتوقيع والختم)"
+          >
+            <i className="fa-solid fa-file-invoice-dollar" />
+            طباعة كشف الملخص المعتمد (A4)
+          </button>
+
+          <button
+            onClick={() => handlePrintA4('detailed')}
             disabled={loading || sections.length === 0}
             className="cpr-btn cpr-btn-print"
-            title="طباعة تقرير الحوافظ بمقاس A4 أفقي"
+            title="طباعة كشف الوثائق التفصيلي"
           >
             <i className="fa-solid fa-print" />
-            طباعة تقرير الحوافظ (A4)
+            طباعة الكشف التفصيلي (A4)
           </button>
 
           <button
@@ -672,102 +710,236 @@ export const ComprehensiveProductionReport: React.FC = () => {
         </div>
       ) : (
         <div className="cpr-sections-container">
-          {sections.map((section) => (
-            <div key={section.key} className="cpr-section-card">
-              {/* Section Header */}
-              <div className="cpr-section-head">
-                <div className="cpr-section-title-group">
-                  <span className="cpr-badge-tag">قسم التأمين</span>
-                  <h2>{section.title}</h2>
-                </div>
-                <div className="cpr-section-metrics">
-                  <span>
-                    العدد: <strong>{section.documents.length} وثيقة</strong>
-                  </span>
-                  <span className="cpr-divider">|</span>
-                  <span>
-                    القيمة: <strong>{section.totals.total.toFixed(3)} د.ل</strong>
-                  </span>
-                </div>
-              </div>
+          {sections.map((section) => {
+            const query = (sectionSearch[section.key] || '').toLowerCase().trim();
+            const filteredDocs = query
+              ? section.documents.filter((doc) => {
+                  const docNum = (doc.document_number || '').toLowerCase();
+                  const name = (doc.insured_name || '').toLowerCase();
+                  const plate = (doc.plate_number || '').toLowerCase();
+                  const agency = (doc.agency_name || doc.user_name || '').toLowerCase();
+                  const detail = (doc.extra_detail || '').toLowerCase();
+                  return docNum.includes(query) || name.includes(query) || plate.includes(query) || agency.includes(query) || detail.includes(query);
+                })
+              : section.documents;
 
-              {/* Table of Documents */}
-              <div className="cpr-table-wrapper">
-                <table className="cpr-data-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40px' }}>#</th>
-                      <th style={{ width: '130px' }}>رقم الوثيقة</th>
-                      <th>اسم المؤمن له</th>
-                      <th style={{ width: '105px' }}>تاريخ الإصدار</th>
-                      <th style={{ width: '110px' }}>رقم اللوحة</th>
-                      <th style={{ width: '95px' }}>القسط الصافي</th>
-                      <th style={{ width: '80px' }}>الضريبة</th>
-                      <th style={{ width: '85px' }}>أ. ورقابة</th>
-                      <th style={{ width: '80px' }}>الدمغة</th>
-                      <th style={{ width: '85px' }}>م. الإصدار</th>
-                      <th style={{ width: '130px' }}>{section.detail_header || 'التفاصيل'}</th>
-                      <th style={{ width: '110px' }}>الإجمالي</th>
-                      <th style={{ width: '140px' }}>الوكالة / المستخدم</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {section.documents.map((doc, idx) => (
-                      <tr key={doc.id || idx}>
-                        <td>{idx + 1}</td>
-                        <td className="cpr-cell-docnum">{doc.document_number}</td>
-                        <td className="cpr-cell-name">{doc.insured_name}</td>
-                        <td>{doc.issue_date}</td>
-                        <td>{doc.plate_number || '-'}</td>
-                        <td className="cpr-num-cell">{Number(doc.premium || 0).toFixed(3)}</td>
-                        <td className="cpr-num-cell">{Number(doc.tax || 0).toFixed(3)}</td>
-                        <td className="cpr-num-cell">{Number(doc.supervision_fees || 0).toFixed(3)}</td>
-                        <td className="cpr-num-cell">{Number(doc.stamp || 0).toFixed(3)}</td>
-                        <td className="cpr-num-cell">{Number(doc.issue_fees || 0).toFixed(3)}</td>
-                        <td className="cpr-cell-details">{doc.extra_detail || '-'}</td>
-                        <td className="cpr-cell-total">{Number(doc.total || 0).toFixed(3)} د.ل</td>
-                        <td className="cpr-cell-agency">{doc.agency_name || doc.user_name || '-'}</td>
+            const pageSize = sectionPageSizes[section.key] || 50;
+            const totalPages = Math.max(1, Math.ceil(filteredDocs.length / pageSize));
+            const currentPage = Math.min(Math.max(1, sectionPages[section.key] || 1), totalPages);
+            const startIndex = (currentPage - 1) * pageSize;
+            const displayedDocs = filteredDocs.slice(startIndex, startIndex + pageSize);
+
+            return (
+              <div key={section.key} className="cpr-section-card">
+                {/* Section Header */}
+                <div className="cpr-section-head">
+                  <div className="cpr-section-title-group">
+                    <span className="cpr-badge-tag">قسم التأمين</span>
+                    <h2>{section.title}</h2>
+                  </div>
+                  <div className="cpr-section-metrics">
+                    <span>
+                      العدد الكلي: <strong>{section.documents.length} وثيقة</strong>
+                    </span>
+                    <span className="cpr-divider">|</span>
+                    <span>
+                      القيمة الإجمالية: <strong>{section.totals.total.toFixed(3)} د.ل</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section Toolbar: Fast Instant Search + Record Range + Page Size */}
+                <div className="cpr-section-toolbar">
+                  <div className="cpr-toolbar-search">
+                    <i className="fa-solid fa-magnifying-glass" />
+                    <input
+                      type="text"
+                      placeholder="بحث سريع برقم الوثيقة، اسم المؤمن له، اللوحة، الوكيل..."
+                      value={sectionSearch[section.key] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSectionSearch((prev) => ({ ...prev, [section.key]: val }));
+                        setSectionPages((prev) => ({ ...prev, [section.key]: 1 }));
+                      }}
+                    />
+                    {sectionSearch[section.key] && (
+                      <button
+                        className="cpr-btn-clear-search"
+                        onClick={() => {
+                          setSectionSearch((prev) => ({ ...prev, [section.key]: '' }));
+                          setSectionPages((prev) => ({ ...prev, [section.key]: 1 }));
+                        }}
+                        title="إلغاء البحث"
+                      >
+                        <i className="fa-solid fa-xmark" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="cpr-toolbar-info">
+                    <span className="cpr-record-count-badge">
+                      عرض <strong>{filteredDocs.length === 0 ? 0 : startIndex + 1}</strong> إلى <strong>{Math.min(startIndex + pageSize, filteredDocs.length)}</strong> من أصل <strong>{filteredDocs.length}</strong> وثيقة
+                      {query && section.documents.length !== filteredDocs.length && (
+                        <small className="cpr-filtered-from"> (مفلترة من إجمالي {section.documents.length})</small>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="cpr-toolbar-size">
+                    <span>عدد السجلات:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        const newSize = parseInt(e.target.value, 10);
+                        setSectionPageSizes((prev) => ({ ...prev, [section.key]: newSize }));
+                        setSectionPages((prev) => ({ ...prev, [section.key]: 1 }));
+                      }}
+                      className="cpr-size-select"
+                    >
+                      <option value={25}>25 بالصفحة</option>
+                      <option value={50}>50 بالصفحة</option>
+                      <option value={100}>100 بالصفحة</option>
+                      <option value={200}>200 بالصفحة</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Table of Documents (Smoothly Paged - Fast Instant DOM) */}
+                <div className="cpr-table-wrapper">
+                  <table className="cpr-data-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '45px' }}>#</th>
+                        <th style={{ width: '130px' }}>رقم الوثيقة</th>
+                        <th>اسم المؤمن له</th>
+                        <th style={{ width: '105px' }}>تاريخ الإصدار</th>
+                        <th style={{ width: '110px' }}>رقم اللوحة</th>
+                        <th style={{ width: '95px' }}>القسط الصافي</th>
+                        <th style={{ width: '80px' }}>الضريبة</th>
+                        <th style={{ width: '85px' }}>أ. ورقابة</th>
+                        <th style={{ width: '80px' }}>الدمغة</th>
+                        <th style={{ width: '85px' }}>م. الإصدار</th>
+                        <th style={{ width: '130px' }}>{section.detail_header || 'التفاصيل'}</th>
+                        <th style={{ width: '110px' }}>الإجمالي</th>
+                        <th style={{ width: '140px' }}>الوكالة / المستخدم</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {displayedDocs.length === 0 ? (
+                        <tr>
+                          <td colSpan={13} style={{ padding: '26px', color: '#94a3b8', fontSize: '13px' }}>
+                            {query ? 'لا توجد وثائق تطابق كلمة البحث المدخلة' : 'لا توجد وثائق مسجلة في هذا القسم'}
+                          </td>
+                        </tr>
+                      ) : (
+                        displayedDocs.map((doc, idx) => (
+                          <tr key={doc.id || `${section.key}-${startIndex + idx}`}>
+                            <td>{startIndex + idx + 1}</td>
+                            <td className="cpr-cell-docnum">{doc.document_number}</td>
+                            <td className="cpr-cell-name">{doc.insured_name}</td>
+                            <td>{doc.issue_date}</td>
+                            <td>{doc.plate_number || '-'}</td>
+                            <td className="cpr-num-cell">{Number(doc.premium || 0).toFixed(3)}</td>
+                            <td className="cpr-num-cell">{Number(doc.tax || 0).toFixed(3)}</td>
+                            <td className="cpr-num-cell">{Number(doc.supervision_fees || 0).toFixed(3)}</td>
+                            <td className="cpr-num-cell">{Number(doc.stamp || 0).toFixed(3)}</td>
+                            <td className="cpr-num-cell">{Number(doc.issue_fees || 0).toFixed(3)}</td>
+                            <td className="cpr-cell-details">{doc.extra_detail || '-'}</td>
+                            <td className="cpr-cell-total">{Number(doc.total || 0).toFixed(3)} د.ل</td>
+                            <td className="cpr-cell-agency">{doc.agency_name || doc.user_name || '-'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-              {/* Section Financial Summary (Matching the A4 report format) */}
-              <div className="cpr-summary-box-wrapper">
-                <table className="cpr-summary-table">
-                  <thead>
-                    <tr>
-                      <th>القسط الصافي</th>
-                      <th>الضريبة</th>
-                      <th>إشراف ورقابة</th>
-                      <th>الدمغة</th>
-                      <th>مصاريف الإصدار</th>
-                      <th className="cpr-total-header">الإجمالي</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{section.totals.premium.toFixed(3)} د.ل</td>
-                      <td>{section.totals.tax.toFixed(3)} د.ل</td>
-                      <td>{section.totals.supervision_fees.toFixed(3)} د.ل</td>
-                      <td>{section.totals.stamp.toFixed(3)} د.ل</td>
-                      <td>{section.totals.issue_fees.toFixed(3)} د.ل</td>
-                      <td className="cpr-total-val">{section.totals.total.toFixed(3)} د.ل</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                {/* Section Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="cpr-pagination-bar">
+                    <button
+                      className="cpr-page-nav-btn"
+                      disabled={currentPage <= 1}
+                      onClick={() => setSectionPages((prev) => ({ ...prev, [section.key]: 1 }))}
+                      title="الصفحة الأولى"
+                    >
+                      <i className="fa-solid fa-angles-right" />
+                      الأولى
+                    </button>
+                    <button
+                      className="cpr-page-nav-btn"
+                      disabled={currentPage <= 1}
+                      onClick={() => setSectionPages((prev) => ({ ...prev, [section.key]: Math.max(1, currentPage - 1) }))}
+                      title="الصفحة السابقة"
+                    >
+                      <i className="fa-solid fa-chevron-right" />
+                      السابقة
+                    </button>
 
-              {/* Signature and Stamp Box */}
-              <div className="cpr-signature-box-container">
-                <div className="cpr-signature-box">
-                  <div className="cpr-sig-header">التوقيع والختم المعتمد ({section.title}):</div>
-                  <div className="cpr-sig-body" />
+                    <div className="cpr-page-status">
+                      <span>الصفحة</span>
+                      <strong className="cpr-active-page-num">{currentPage}</strong>
+                      <span>من</span>
+                      <strong>{totalPages}</strong>
+                    </div>
+
+                    <button
+                      className="cpr-page-nav-btn"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setSectionPages((prev) => ({ ...prev, [section.key]: Math.min(totalPages, currentPage + 1) }))}
+                      title="الصفحة التالية"
+                    >
+                      التالية
+                      <i className="fa-solid fa-chevron-left" />
+                    </button>
+                    <button
+                      className="cpr-page-nav-btn"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setSectionPages((prev) => ({ ...prev, [section.key]: totalPages }))}
+                      title="الصفحة الأخيرة"
+                    >
+                      الأخيرة
+                      <i className="fa-solid fa-angles-left" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Section Financial Summary (Matching the A4 report format) */}
+                <div className="cpr-summary-box-wrapper">
+                  <table className="cpr-summary-table">
+                    <thead>
+                      <tr>
+                        <th>القسط الصافي</th>
+                        <th>الضريبة</th>
+                        <th>إشراف ورقابة</th>
+                        <th>الدمغة</th>
+                        <th>مصاريف الإصدار</th>
+                        <th className="cpr-total-header">الإجمالي</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{section.totals.premium.toFixed(3)} د.ل</td>
+                        <td>{section.totals.tax.toFixed(3)} د.ل</td>
+                        <td>{section.totals.supervision_fees.toFixed(3)} د.ل</td>
+                        <td>{section.totals.stamp.toFixed(3)} د.ل</td>
+                        <td>{section.totals.issue_fees.toFixed(3)} د.ل</td>
+                        <td className="cpr-total-val">{section.totals.total.toFixed(3)} د.ل</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Signature and Stamp Box */}
+                <div className="cpr-signature-box-container">
+                  <div className="cpr-signature-box">
+                    <div className="cpr-sig-header">التوقيع والختم المعتمد ({section.title}):</div>
+                    <div className="cpr-sig-body" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Grand Summary at Bottom */}
           {sections.length > 1 && (
@@ -804,6 +976,67 @@ export const ComprehensiveProductionReport: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Detailed Print Warning Modal for Large Datasets */}
+      {showDetailedPrintModal && (
+        <div className="cpr-modal-overlay" onClick={() => setShowDetailedPrintModal(false)}>
+          <div className="cpr-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="cpr-modal-icon-warn">
+              <i className="fa-solid fa-triangle-exclamation" />
+            </div>
+            <h3 className="cpr-modal-title">تنبيه حجم الطباعة الضخم</h3>
+            <p className="cpr-modal-text">
+              التقرير يحتوي على <strong>{grandTotals.documents_count} وثيقة</strong> (ما يقارب {Math.ceil(grandTotals.documents_count / 24)} صفحة طباعة).<br />
+              طباعة هذا العدد الكبير مباشرة من المتصفح قد يستغرق وقتاً طويلاً ويؤدي إلى بطء أو تجمّد المتصفح ونفاذ الورق.<br />
+              <strong>ما هو الإجراء الذي تفضله؟</strong>
+            </p>
+
+            <div className="cpr-modal-options">
+              <button
+                className="cpr-modal-opt-btn cpr-opt-summary"
+                onClick={() => executePrint('summary')}
+              >
+                <i className="fa-solid fa-file-invoice-dollar" />
+                <div>
+                  <strong>طباعة الملخص المالي المعتمد (موصى به)</strong>
+                  <span>كشف رسمي من صفحة واحدة يضم كافة المجاميع والتوقيعات والختم المعتمد</span>
+                </div>
+              </button>
+
+              <button
+                className="cpr-modal-opt-btn cpr-opt-excel"
+                onClick={() => {
+                  setShowDetailedPrintModal(false);
+                  handleExportExcel();
+                }}
+              >
+                <i className="fa-solid fa-file-excel" />
+                <div>
+                  <strong>تصدير الكشف إلى ملف Excel</strong>
+                  <span>تصدير سريع لكافة الـ {grandTotals.documents_count} وثيقة بجميع بياناتها</span>
+                </div>
+              </button>
+
+              <button
+                className="cpr-modal-opt-btn cpr-opt-force"
+                onClick={() => executePrint('detailed', true)}
+              >
+                <i className="fa-solid fa-print" />
+                <div>
+                  <strong>متابعة طباعة الكشف التفصيلي بالكامل</strong>
+                  <span>فتح نافذة الطباعة لجميع الوثائق (~{Math.ceil(grandTotals.documents_count / 24)} صفحة)</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="cpr-modal-footer">
+              <button className="cpr-modal-close-btn" onClick={() => setShowDetailedPrintModal(false)}>
+                إلغاء
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>
