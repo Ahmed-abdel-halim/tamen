@@ -279,6 +279,7 @@ export default function AgentMonthlyLedger() {
   ];
 
   const AGENT_INSURANCE_DOCS = [
+    'تأمين السيارات الإجباري',
     'تأمين سيارات إجباري',
     'تأمين سيارة جمرك',
     'تأمين سيارات أجنبية',
@@ -760,7 +761,7 @@ export default function AgentMonthlyLedger() {
 
   const LEDGER_DOC_TYPES = [
     { key: 'all', label: 'جميع أنواع التأمين (الكل)' },
-    { key: 'insurance_documents', label: 'تأمين سيارات' },
+    { key: 'insurance_documents', label: 'تأمين السيارات الإجباري' },
     { key: 'international_insurance_documents', label: 'تأمين سيارات دولي' },
     { key: 'travel_insurance_documents', label: 'تأمين المسافرين' },
     { key: 'resident_insurance_documents', label: 'تأمين الوافدين' },

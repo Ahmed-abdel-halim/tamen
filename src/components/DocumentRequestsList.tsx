@@ -4,7 +4,7 @@ import { showToast } from './Toast';
 import SearchableSelect from './SearchableSelect';
 
 const documentTypeOptions = [
-  { value: 'تأمين سيارات', label: 'تأمين سيارات' },
+  { value: 'تأمين سيارات', label: 'تأمين السيارات الإجباري' },
   { value: 'تأمين سيارات دولي', label: 'تأمين سيارات دولي' },
   { value: 'تأمين طبي (مسافرين)', label: 'تأمين طبي (مسافرين)' },
   { value: 'تأمين طبي (وافدين)', label: 'تأمين طبي (وافدين)' },

@@ -223,11 +223,13 @@ export function DashboardPanels({}: DashboardPanelsProps) {
 
   // خريطة أنواع التأمين إلى الروابط (مثل السايدبار)
   const insuranceTypeMap: Record<string, { label: string; icon: string; route: string; color: 'green' | 'blue'; statisticsKey?: string }> = {
-    'تأمين سيارات إجباري': { label: 'وثيقة تأمين سيارات', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين سيارات': { label: 'وثيقة تأمين سيارات', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين سيارة جمرك': { label: 'وثيقة تأمين سيارات', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين سيارات أجنبية': { label: 'وثيقة تأمين سيارات', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين طرف ثالث سيارات': { label: 'وثيقة تأمين سيارات', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين السيارات الإجباري': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين سيارات إجباري': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'وثائق تأمين السيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين سيارة جمرك': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين سيارات أجنبية': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين طرف ثالث سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', route: '/international-insurance-documents', color: 'green', statisticsKey: 'international_insurance_documents' },
     'تأمين المسافرين': { label: 'وثيقة تأمين مسافرين', icon: 'fa-solid fa-plane', route: '/travel-insurance-documents', color: 'green', statisticsKey: 'travel_insurance_documents' },
     'تأمين زائرين ليبيا': { label: 'وثيقة تأمين مسافرين', icon: 'fa-solid fa-plane', route: '/travel-insurance-documents', color: 'green', statisticsKey: 'travel_insurance_documents' },
@@ -254,7 +256,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
   // قائمة الخدمات الأساسية (للأدمن أو الخدمات العامة)
   const allServices: ServiceCard[] = [
     { 
-      label: 'وثيقة تأمين سيارات', 
+      label: 'تأمين السيارات الإجباري', 
       icon: 'fa-solid fa-car', 
       route: '/insurance-documents', 
       color: 'green', 

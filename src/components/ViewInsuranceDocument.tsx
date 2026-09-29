@@ -173,7 +173,7 @@ export default function ViewInsuranceDocument() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>الإعدادات / وثائق تأمين السيارات / عرض الوثيقة</span>
+        <span>الإعدادات / تأمين السيارات الإجباري / عرض الوثيقة</span>
       </div>
 
       <div className="users-card" style={{ padding: '0' }}>

@@ -250,7 +250,7 @@ export default function TransferOwnershipInsuranceDocument() {
     return (
       <section className="users-management">
         <div className="users-breadcrumb">
-          <span>وثائق تأمين السيارات / نقل ملكية</span>
+          <span>تأمين السيارات الإجباري / نقل ملكية</span>
         </div>
         <div className="users-card">
           <p style={{ textAlign: 'center', padding: '20px' }}>جار التحميل...</p>
@@ -263,7 +263,7 @@ export default function TransferOwnershipInsuranceDocument() {
     return (
       <section className="users-management">
         <div className="users-breadcrumb">
-          <span>وثائق تأمين السيارات / نقل ملكية</span>
+          <span>تأمين السيارات الإجباري / نقل ملكية</span>
         </div>
         <div className="users-card">
           <p style={{ textAlign: 'center', padding: '20px' }}>الوثيقة غير موجودة</p>
@@ -275,7 +275,7 @@ export default function TransferOwnershipInsuranceDocument() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>وثائق تأمين السيارات / نقل ملكية</span>
+        <span>تأمين السيارات الإجباري / نقل ملكية</span>
       </div>
 
       <div className="users-card">

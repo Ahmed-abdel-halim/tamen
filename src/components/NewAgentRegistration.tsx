@@ -19,7 +19,7 @@ const AGENT_ACTIVITIES = [
 ];
 
 const INSURANCE_TYPES = [
-  'تأمين سيارات إجباري', 'تأمين سيارة جمرك', 'تأمين سيارات أجنبية', 'تأمين طرف ثالث سيارات',
+  'تأمين السيارات الإجباري', 'تأمين سيارة جمرك', 'تأمين سيارات أجنبية', 'تأمين طرف ثالث سيارات',
   'تأمين سيارات دولي', 'تأمين المسافرين', 'تأمين الهياكل البحرية', 'تأمين زائرين ليبيا',
   'تأمين الوافدين', 'تأمين المسؤولية المهنية (الطبية)', 'تأمين الحوادث الشخصية',
   'تأمين حماية طلاب المدارس', 'تأمين نقل النقدية', 'تأمين شحن البضائع',
@@ -103,16 +103,22 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
   }, [formData.contract_date, formData.contract_end_date]);
 
   const handleDocumentToggle = (documentType: string) => {
-    const isSelected = formData.requested_documents.includes(documentType);
+    const isCarMandatory = (d: string) => d === 'تأمين السيارات الإجباري' || d === 'تأمين سيارات إجباري';
+    const isSelected = isCarMandatory(documentType)
+      ? (formData.requested_documents.includes('تأمين السيارات الإجباري') || formData.requested_documents.includes('تأمين سيارات إجباري'))
+      : formData.requested_documents.includes(documentType);
+
     if (isSelected) {
       setFormData(prev => ({
         ...prev,
-        requested_documents: prev.requested_documents.filter(d => d !== documentType),
+        requested_documents: prev.requested_documents.filter(d => isCarMandatory(documentType) ? !isCarMandatory(d) : d !== documentType),
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        requested_documents: [...prev.requested_documents, documentType],
+        requested_documents: isCarMandatory(documentType)
+          ? [...prev.requested_documents.filter(d => !isCarMandatory(d)), 'تأمين السيارات الإجباري', 'تأمين سيارات إجباري']
+          : [...prev.requested_documents, documentType],
       }));
     }
   };
@@ -386,7 +392,9 @@ export default function NewAgentRegistration({ onClose }: { onClose?: () => void
           <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>أنواع الوثائق المرغوب إصدارها</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
             {INSURANCE_TYPES.map((insuranceType) => {
-              const isSelected = formData.requested_documents.includes(insuranceType);
+              const isSelected = insuranceType === 'تأمين السيارات الإجباري' || insuranceType === 'تأمين سيارات إجباري'
+                ? (formData.requested_documents.includes('تأمين السيارات الإجباري') || formData.requested_documents.includes('تأمين سيارات إجباري'))
+                : formData.requested_documents.includes(insuranceType);
               return (
                 <div key={insuranceType} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input

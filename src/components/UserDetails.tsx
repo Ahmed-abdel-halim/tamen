@@ -170,7 +170,7 @@ export default function UserDetails() {
                     هذا المستخدم مدير نظام (Admin) ولديه صلاحيات كاملة.
                   </div>
                 ) : user.authorized_documents && user.authorized_documents.length > 0 ? (
-                  user.authorized_documents.map((doc, index) => (
+                  Array.from(new Set(user.authorized_documents.map(d => (d === 'تأمين سيارات إجباري' || d === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : d)))).map((doc, index) => (
                     <span key={index} style={{ 
                       padding: '8px 14px', 
                       background: '#f0f9ff', 

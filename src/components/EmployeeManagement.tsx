@@ -211,7 +211,7 @@ const DOCUMENT_ITEMS = [
 
 const LEDGER_DOC_TYPES = [
   { key: "all", label: "جميع أنواع التأمين (الكل)" },
-  { key: "insurance_documents", label: "تأمين سيارات" },
+  { key: "insurance_documents", label: "تأمين السيارات الإجباري" },
   { key: "international_insurance_documents", label: "تأمين سيارات دولي" },
   { key: "travel_insurance_documents", label: "تأمين المسافرين" },
   { key: "resident_insurance_documents", label: "تأمين الوافدين" },
@@ -4627,7 +4627,7 @@ export default function EmployeeManagement() {
                       </div>
                     </div>
                   ) : employee.authorized_documents && employee.authorized_documents.length > 0 ? (
-                    employee.authorized_documents.map((p, idx) => (
+                    Array.from(new Set(employee.authorized_documents.map(p => (p === 'تأمين سيارات إجباري' || p === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : p)))).map((p, idx) => (
                       <span key={idx} className="perm-chip">
                         <i className="fa-solid fa-circle-check text-green" /> {p}
                       </span>

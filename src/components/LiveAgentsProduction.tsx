@@ -44,7 +44,7 @@ type PresetType = 'today' | 'yesterday' | 'last7days' | 'thisMonth' | 'thisYear'
 
 const DOCUMENT_TYPE_OPTIONS = [
   { key: 'all', label: 'جميع أنواع الوثائق', icon: 'fa-solid fa-layer-group', color: '#1e40af' },
-  { key: 'تأمين سيارات', label: 'تأمين سيارات', icon: 'fa-solid fa-car', color: '#3b82f6' },
+  { key: 'تأمين سيارات', label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', color: '#3b82f6' },
   { key: 'تأمين سيارات دولي', label: 'تأمين سيارات دولي', icon: 'fa-solid fa-globe', color: '#0284c7' },
   { key: 'تأمين المسافرين', label: 'تأمين المسافرين', icon: 'fa-solid fa-plane-departure', color: '#0d9488' },
   { key: 'تأمين الوافدين', label: 'تأمين الوافدين', icon: 'fa-solid fa-user-shield', color: '#059669' },

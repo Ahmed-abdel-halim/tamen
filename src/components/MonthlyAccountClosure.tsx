@@ -212,6 +212,7 @@ export default function MonthlyAccountClosure() {
         const carInsuranceCategories = [
           'تأمين إجباري سيارات',
           'تأمين سيارات إجباري',
+          'تأمين السيارات الإجباري',
           'تأمين سيارة جمرك',
           'تأمين سيارات أجنبية',
           'تأمين طرف ثالث سيارات'
@@ -236,9 +237,9 @@ export default function MonthlyAccountClosure() {
             return true;
           }
           // معالجة الاختلافات في الأسماء لتأمين إجباري سيارات
-          if ((insuranceType === 'تأمين إجباري سيارات' || insuranceType === 'تأمين سيارات إجباري')) {
+          if ((insuranceType === 'تأمين إجباري سيارات' || insuranceType === 'تأمين سيارات إجباري' || insuranceType === 'تأمين السيارات الإجباري')) {
             if (doc.insurance_type === 'تأمين السيارات' && 
-                (doc.category === 'تأمين إجباري سيارات' || doc.category === 'تأمين سيارات إجباري')) {
+                (doc.category === 'تأمين إجباري سيارات' || doc.category === 'تأمين سيارات إجباري' || doc.category === 'تأمين السيارات الإجباري')) {
               return true;
             }
           }

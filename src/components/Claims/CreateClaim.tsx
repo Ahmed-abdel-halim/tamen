@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from '../Toast';
 import { API_BASE_URL } from '../../config/api';
 
@@ -415,7 +415,7 @@ export default function CreateClaimModal({ onClose, onSuccess, claim }: any) {
   }, [claim]);
 
   const documentTypes = [
-    { value: 'InsuranceDocument', label: 'وثائق تأمين السيارات' },
+    { value: 'InsuranceDocument', label: 'تأمين السيارات الإجباري' },
     { value: 'InternationalInsuranceDocument', label: 'تأمين السيارات الدولي' },
     { value: 'TravelInsuranceDocument', label: 'تأمين المسافرين' },
     { value: 'ResidentInsuranceDocument', label: 'تأمين الوافدين للمقيمين' },

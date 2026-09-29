@@ -192,7 +192,9 @@ function hasAccessToRoute(
 
   // خريطة أنواع التأمين إلى الروابط
   const insuranceTypeMap: Record<string, string[]> = {
+    'تأمين السيارات الإجباري': ['/insurance-documents'],
     'تأمين سيارات إجباري': ['/insurance-documents'],
+    'وثائق تأمين السيارات': ['/insurance-documents'],
     'تأمين سيارات': ['/insurance-documents'],
     'تأمين سيارة جمرك': ['/insurance-documents'],
     'تأمين سيارات أجنبية': ['/insurance-documents'],
@@ -403,7 +405,7 @@ const menuSections: SidebarSection[] = [
       {
         label: 'إدارة الوثائق', icon: 'fa-solid fa-folder-open', children: [
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
-          { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+          { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
           {
             label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', children: [
               { label: 'وثائق التأمين الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
@@ -631,11 +633,13 @@ const createMenuSections = (
   // خريطة الصلاحيات إلى العناصر الجانبية
   // يمكن أن تشير الصلاحية الواحدة إلى عنصر واحد أو مصفوفة عناصر
   const insuranceTypeMap: Record<string, SidebarItem | SidebarItem[]> = {
-    'تأمين سيارات إجباري': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين سيارة جمرك': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين سيارات أجنبية': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين طرف ثالث سيارات': { label: 'وثائق تأمين السيارات', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين السيارات الإجباري': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين سيارات إجباري': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'وثائق تأمين السيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين سيارة جمرك': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين سيارات أجنبية': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين طرف ثالث سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
     'تأمين المسافرين': { label: 'وثائق تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
     'تأمين الهياكل البحرية': { label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', to: '/marine-structure-insurance-documents' },
@@ -1678,7 +1682,7 @@ export default function App() {
                   <Route path="/settings/loyalty" element={isAdmin ? <LoyaltySettings /> : <Navigate to="/dashboard" />} />
                   <Route path="/website-settings" element={isAdmin ? <WebsiteSettingsManagement /> : <Navigate to="/dashboard" />} />
                   <Route path="/public-insurance-requests" element={isAdmin ? <PublicInsuranceRequestsList /> : <Navigate to="/dashboard" />} />
-                  {/* إدارة وثائق تأمين السيارات */}
+                  {/* إدارة تأمين السيارات الإجباري */}
                   <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList /></AuthorizedRoute>} />
                   <Route path="/canceled-documents" element={<AuthorizedRoute requiredPath="/canceled-documents"><CanceledDocumentsList /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument /></AuthorizedRoute>} />

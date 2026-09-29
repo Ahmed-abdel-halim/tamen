@@ -132,7 +132,7 @@ export const PERMISSION_GROUPS = [
     icon: 'fa-file-shield',
     color: '#3b82f6',
     permissions: [
-      { id: 'تأمين سيارات إجباري', label: 'تأمين سيارات إجباري' },
+      { id: 'تأمين سيارات إجباري', label: 'تأمين السيارات الإجباري' },
       { id: 'تأمين سيارات', label: 'تأمين سيارات' },
       { id: 'تأمين سيارة جمرك', label: 'تأمين سيارة جمرك' },
       { id: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' },
@@ -1519,12 +1519,12 @@ export default function UsersList() {
                             <span style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
                           ) : u.authorized_documents && u.authorized_documents.length > 0 ? (
                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                              {u.authorized_documents.slice(0, 2).map((doc, idx) => (
+                              {Array.from(new Set(u.authorized_documents.map(doc => (doc === 'تأمين سيارات إجباري' || doc === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : doc)))).slice(0, 2).map((doc, idx) => (
                                 <div key={idx} style={{ marginBottom: '0.25rem' }}>{doc}</div>
                               ))}
-                              {u.authorized_documents.length > 2 && (
+                              {Array.from(new Set(u.authorized_documents.map(doc => (doc === 'تأمين سيارات إجباري' || doc === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : doc)))).length > 2 && (
                                 <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
-                                  +{u.authorized_documents.length - 2} أكثر
+                                  +{Array.from(new Set(u.authorized_documents.map(doc => (doc === 'تأمين سيارات إجباري' || doc === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : doc)))).length - 2} أكثر
                                 </div>
                               )}
                             </div>
@@ -1687,12 +1687,12 @@ export default function UsersList() {
                             <span style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>جميع الصلاحيات</span>
                           ) : u.authorized_documents && u.authorized_documents.length > 0 ? (
                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                              {u.authorized_documents.slice(0, 3).map((doc, idx) => (
+                              {Array.from(new Set(u.authorized_documents.map(doc => (doc === 'تأمين سيارات إجباري' || doc === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : doc)))).slice(0, 3).map((doc, idx) => (
                                 <div key={idx} style={{ marginBottom: '0.25rem' }}>{doc}</div>
                               ))}
-                              {u.authorized_documents.length > 3 && (
+                              {Array.from(new Set(u.authorized_documents.map(doc => (doc === 'تأمين سيارات إجباري' || doc === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : doc)))).length > 3 && (
                                 <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
-                                  +{u.authorized_documents.length - 3} أكثر
+                                  +{Array.from(new Set(u.authorized_documents.map(doc => (doc === 'تأمين سيارات إجباري' || doc === 'تأمين سيارات' ? 'تأمين السيارات الإجباري' : doc)))).length - 3} أكثر
                                 </div>
                               )}
                             </div>
@@ -2410,7 +2410,11 @@ export default function UsersList() {
                   </p>
                   <div className="permissions-accordion-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     {PERMISSION_GROUPS.map((group) => {
-                      const groupActiveCount = group.permissions.filter(p => formData.authorized_documents.includes(p.id)).length;
+                      const groupActiveCount = group.permissions.filter(p => 
+                        p.id === 'تأمين سيارات إجباري' || p.id === 'تأمين السيارات الإجباري'
+                          ? (formData.authorized_documents.includes('تأمين سيارات إجباري') || formData.authorized_documents.includes('تأمين السيارات الإجباري'))
+                          : formData.authorized_documents.includes(p.id)
+                      ).length;
                       const totalGroupCount = group.permissions.length;
                       const isExpanded = !!expandedCategories[group.id];
                       const isAllSelected = groupActiveCount === totalGroupCount;
@@ -2421,12 +2425,15 @@ export default function UsersList() {
                         const groupPermIds = group.permissions.map(p => p.id);
                         if (isAllSelected) {
                           // إلغاء تحديد الكل في هذه المجموعة
-                          updatedList = updatedList.filter(d => !groupPermIds.includes(d));
+                          updatedList = updatedList.filter(d => !groupPermIds.includes(d) && !(groupPermIds.includes('تأمين سيارات إجباري') && (d === 'تأمين سيارات إجباري' || d === 'تأمين السيارات الإجباري')));
                         } else {
                           // تحديد الكل في هذه المجموعة
                           groupPermIds.forEach(id => {
                             if (!updatedList.includes(id)) {
                               updatedList.push(id);
+                            }
+                            if (id === 'تأمين سيارات إجباري' && !updatedList.includes('تأمين السيارات الإجباري')) {
+                              updatedList.push('تأمين السيارات الإجباري');
                             }
                           });
                         }
@@ -2528,36 +2535,52 @@ export default function UsersList() {
                                 gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
                                 gap: '10px'
                               }}>
-                                {group.permissions.map((p) => (
-                                  <label 
-                                    key={p.id} 
-                                    className={`perm-chk ${formData.authorized_documents.includes(p.id) ? 'active' : ''}`}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '10px',
-                                      padding: '10px 15px',
-                                      borderRadius: '8px',
-                                      border: '1px solid var(--border)',
-                                      background: formData.authorized_documents.includes(p.id) ? 'rgba(37, 99, 235, 0.08)' : 'var(--panel)',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s'
-                                    }}
-                                  >
-                                    <input 
-                                      type="checkbox" 
-                                      checked={formData.authorized_documents.includes(p.id)} 
-                                      onChange={(e) => {
-                                        const list = e.target.checked 
-                                          ? [...formData.authorized_documents, p.id] 
-                                          : formData.authorized_documents.filter(d => d !== p.id);
-                                        setFormData({ ...formData, authorized_documents: list });
+                                {group.permissions.map((p) => {
+                                  const isChecked = p.id === 'تأمين سيارات إجباري' || p.id === 'تأمين السيارات الإجباري'
+                                    ? (formData.authorized_documents.includes('تأمين سيارات إجباري') || formData.authorized_documents.includes('تأمين السيارات الإجباري'))
+                                    : formData.authorized_documents.includes(p.id);
+
+                                  return (
+                                    <label 
+                                      key={p.id} 
+                                      className={`perm-chk ${isChecked ? 'active' : ''}`}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '10px 15px',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)',
+                                        background: isChecked ? 'rgba(37, 99, 235, 0.08)' : 'var(--panel)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
                                       }}
-                                      style={{ cursor: 'pointer' }}
-                                    />
-                                    <span style={{ fontSize: '13px', fontWeight: '500' }}>{p.label}</span>
-                                  </label>
-                                ))}
+                                    >
+                                      <input 
+                                        type="checkbox" 
+                                        checked={isChecked} 
+                                        onChange={(e) => {
+                                          let list = [...formData.authorized_documents];
+                                          if (p.id === 'تأمين سيارات إجباري' || p.id === 'تأمين السيارات الإجباري') {
+                                            if (e.target.checked) {
+                                              if (!list.includes('تأمين سيارات إجباري')) list.push('تأمين سيارات إجباري');
+                                              if (!list.includes('تأمين السيارات الإجباري')) list.push('تأمين السيارات الإجباري');
+                                            } else {
+                                              list = list.filter(d => d !== 'تأمين سيارات إجباري' && d !== 'تأمين السيارات الإجباري');
+                                            }
+                                          } else {
+                                            list = e.target.checked 
+                                              ? [...list, p.id] 
+                                              : list.filter(d => d !== p.id);
+                                          }
+                                          setFormData({ ...formData, authorized_documents: list });
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                      />
+                                      <span style={{ fontSize: '13px', fontWeight: '500' }}>{p.label}</span>
+                                    </label>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}

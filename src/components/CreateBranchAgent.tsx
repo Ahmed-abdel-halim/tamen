@@ -44,7 +44,7 @@ const AGENT_ACTIVITIES = [
 ];
 
 const INSURANCE_TYPES = [
-  'تأمين سيارات إجباري',
+  'تأمين السيارات الإجباري',
   'تأمين سيارة جمرك',
   'تأمين سيارات أجنبية',
   'تأمين طرف ثالث سيارات',
@@ -233,16 +233,19 @@ export default function CreateBranchAgent() {
   }, []);
 
   const handleDocumentToggle = (documentType: string) => {
-    const isSelected = formData.authorized_documents.includes(documentType);
+    const isCarMandatory = (d: string) => d === 'تأمين السيارات الإجباري' || d === 'تأمين سيارات إجباري';
+    const isSelected = isCarMandatory(documentType)
+      ? (formData.authorized_documents.includes('تأمين السيارات الإجباري') || formData.authorized_documents.includes('تأمين سيارات إجباري'))
+      : formData.authorized_documents.includes(documentType);
+
     if (isSelected) {
       // إزالة الوثيقة
-      if (documentType === 'تأمين سيارات إجباري') {
-        // إذا كان "تأمين سيارات إجباري" يتم إزالته، أزل "تأمين سيارات" أيضاً
+      if (isCarMandatory(documentType)) {
         setFormData(prev => ({
           ...prev,
-          authorized_documents: prev.authorized_documents.filter(d => d !== documentType),
+          authorized_documents: prev.authorized_documents.filter(d => !isCarMandatory(d)),
           document_percentages: Object.fromEntries(
-            Object.entries(prev.document_percentages).filter(([key]) => key !== documentType && key !== 'تأمين سيارات')
+            Object.entries(prev.document_percentages).filter(([key]) => key !== 'تأمين السيارات الإجباري' && key !== 'تأمين سيارات إجباري' && key !== 'تأمين سيارات')
           ),
         }));
       } else {
@@ -256,17 +259,20 @@ export default function CreateBranchAgent() {
       }
     } else {
       // إضافة الوثيقة
-      if (documentType === 'تأمين سيارات إجباري') {
-        // عند اختيار "تأمين سيارات إجباري"، أضف "تأمين سيارات" تلقائياً
-        setFormData(prev => ({
-          ...prev,
-          authorized_documents: [...prev.authorized_documents, documentType],
-          document_percentages: {
-            ...prev.document_percentages,
-            [documentType]: 0,
-            'تأمين سيارات': prev.document_percentages['تأمين سيارات'] || 0,
-          },
-        }));
+      if (isCarMandatory(documentType)) {
+        setFormData(prev => {
+          const prevVal = prev.document_percentages['تأمين السيارات الإجباري'] || prev.document_percentages['تأمين سيارات'] || prev.document_percentages['تأمين سيارات إجباري'] || 0;
+          return {
+            ...prev,
+            authorized_documents: [...prev.authorized_documents.filter(d => !isCarMandatory(d)), 'تأمين السيارات الإجباري', 'تأمين سيارات إجباري'],
+            document_percentages: {
+              ...prev.document_percentages,
+              'تأمين السيارات الإجباري': prevVal,
+              'تأمين سيارات': prevVal,
+              'تأمين سيارات إجباري': prevVal,
+            },
+          };
+        });
       } else {
         setFormData(prev => ({
           ...prev,
@@ -929,7 +935,9 @@ export default function CreateBranchAgent() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
                 {INSURANCE_TYPES.map((insuranceType) => {
-                  const isSelected = formData.authorized_documents.includes(insuranceType);
+                  const isSelected = insuranceType === 'تأمين السيارات الإجباري' || insuranceType === 'تأمين سيارات إجباري'
+                    ? (formData.authorized_documents.includes('تأمين السيارات الإجباري') || formData.authorized_documents.includes('تأمين سيارات إجباري'))
+                    : formData.authorized_documents.includes(insuranceType);
                   
                   return (
                     <div key={insuranceType} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -993,13 +1001,18 @@ export default function CreateBranchAgent() {
                     النسب الخاصة بالوكيل/الفرع (من القسط المقرر)
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* عرض "تأمين سيارات" إذا كان "تأمين سيارات إجباري" محدد */}
-                    {formData.authorized_documents.includes('تأمين سيارات إجباري') && (
+                    {/* عرض "تأمين السيارات الإجباري" إذا كان "تأمين السيارات الإجباري" أو "تأمين سيارات إجباري" محدد */}
+                    {(formData.authorized_documents.includes('تأمين السيارات الإجباري') || formData.authorized_documents.includes('تأمين سيارات إجباري')) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <label style={{ minWidth: '200px', fontSize: '14px' }}>تأمين سيارات:</label>
+                        <label style={{ minWidth: '200px', fontSize: '14px' }}>تأمين السيارات الإجباري:</label>
                         <select
-                          value={formData.document_percentages['تأمين سيارات'] || 0}
-                          onChange={(e) => handlePercentageChange('تأمين سيارات', parseInt(e.target.value))}
+                          value={formData.document_percentages['تأمين السيارات الإجباري'] || formData.document_percentages['تأمين سيارات'] || formData.document_percentages['تأمين سيارات إجباري'] || 0}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            handlePercentageChange('تأمين السيارات الإجباري', val);
+                            handlePercentageChange('تأمين سيارات', val);
+                            handlePercentageChange('تأمين سيارات إجباري', val);
+                          }}
                           style={{
                             padding: '8px 12px',
                             border: '1px solid #d1d5db',
@@ -1016,8 +1029,8 @@ export default function CreateBranchAgent() {
                         </select>
                       </div>
                     )}
-                    {/* عرض باقي الوثائق المصرح بها (عدا "تأمين سيارات إجباري") */}
-                    {formData.authorized_documents.filter(doc => doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
+                    {/* عرض باقي الوثائق المصرح بها (عدا "تأمين السيارات الإجباري") */}
+                    {formData.authorized_documents.filter(doc => doc !== 'تأمين السيارات الإجباري' && doc !== 'تأمين سيارات إجباري' && INSURANCE_TYPES.includes(doc)).map((docType) => (
                       <div key={docType} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                         <label style={{ minWidth: '200px', fontSize: '14px' }}>{docType}:</label>
                         <select

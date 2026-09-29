@@ -534,12 +534,12 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
       });
 
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير وثائق تأمين السيارات',
+        title: 'شركة المدار الليبي للتأمين - تقرير تأمين السيارات الإجباري',
         subtitle: `إجمالي الوثائق المصدرة: ${data.length} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
-        fileName: 'تقرير_تأمين_السيارات',
-        qrData: `تقرير وثائق السيارات - شركة المدار الليبي\nعدد الوثائق: ${data.length}\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: 'تقرير_تأمين_السيارات_الإجباري',
+        qrData: `تقرير تأمين السيارات الإجباري - شركة المدار الليبي\nعدد الوثائق: ${data.length}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast(`تم تصدير ${data.length} وثيقة بنجاح`, 'success');
@@ -553,7 +553,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   return (
     <section className="users-management">
       <div className="users-breadcrumb" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
-        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / وثائق تأمين السيارات' : 'وثائق تأمين السيارات / قائمة الوثائق'}</span>
+        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين السيارات الإجباري' : 'تأمين السيارات الإجباري / قائمة الوثائق'}</span>
         {!isArchive && (
           <DocumentStatusFilter
             status={statusFilter}

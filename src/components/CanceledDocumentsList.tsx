@@ -36,7 +36,7 @@ interface Summary {
 
 const DOC_TYPES = [
   { key: '', label: 'جميع أنواع التأمين' },
-  { key: 'insurance_documents', label: 'تأمين السيارات' },
+  { key: 'insurance_documents', label: 'تأمين السيارات الإجباري' },
   { key: 'international_insurance_documents', label: 'التأمين الدولي (LIFO)' },
   { key: 'travel_insurance_documents', label: 'تأمين المسافرين' },
   { key: 'resident_insurance_documents', label: 'تأمين الوافدين' },

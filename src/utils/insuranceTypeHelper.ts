@@ -22,6 +22,7 @@ export const CAR_INSURANCE_TYPES: string[] = [
 const ALIASES: Record<string, string> = {
   'تأمين إجباري سيارات': INSURANCE_TYPES.CAR_MANDATORY,
   'تأمين سيارات إجباري': INSURANCE_TYPES.CAR_MANDATORY,
+  'تأمين السيارات الإجباري': INSURANCE_TYPES.CAR_MANDATORY,
   'تأمين سيارات اجباري': INSURANCE_TYPES.CAR_MANDATORY,
   'تأمين السيارات الدولي': INSURANCE_TYPES.CAR_INTERNATIONAL,
   'تأمين سيارات دولي': INSURANCE_TYPES.CAR_INTERNATIONAL,
@@ -101,6 +102,7 @@ export function enhanceAuthorizedDocuments(authorizedDocs: string[]): string[] {
   const carInsuranceTypes = [
     INSURANCE_TYPES.CAR_MANDATORY,
     'تأمين سيارات إجباري',
+    'تأمين السيارات الإجباري',
     INSURANCE_TYPES.CAR_CUSTOMS,
     INSURANCE_TYPES.CAR_FOREIGN,
     INSURANCE_TYPES.CAR_THIRD_PARTY,
