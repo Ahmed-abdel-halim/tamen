@@ -72,6 +72,26 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
     }
     return false;
   };
+
+  // فتح القوائم المنسدلة تلقائياً إذا كان المسار النشط بداخلها
+  useState(() => {
+    const initialOpen = new Set<string>();
+    sections.forEach(section => {
+      section.items.forEach(item => {
+        if (item.children && isActive(item)) {
+          initialOpen.add(item.label);
+          item.children.forEach(child => {
+            if (child.children && isActive(child)) {
+              initialOpen.add(child.label);
+            }
+          });
+        }
+      });
+    });
+    if (initialOpen.size > 0) {
+      setOpenDropdowns(initialOpen);
+    }
+  });
   
   const resolveImageUrl = (path: string) => {
     if (path.startsWith('http')) return path;
@@ -165,27 +185,36 @@ export function Sidebar({ sections, LinkTag, onLinkClick, onClose, showCloseButt
                               {child.children ? (
                                 <div>
                                   <button 
-                                    type="button"
+                                    type="button" 
                                     onClick={() => toggleDropdown(child.label)}
+                                    className={"sidebar-sublink" + (isActive(child) ? " active" : "")}
                                     style={{ 
                                       paddingRight: '16px',
-                                      paddingTop: '6px',
-                                      paddingBottom: '6px',
-                                      borderRadius: '4px',
-                                      margin: '0 4px',
-                                      width: '100%',
+                                      paddingLeft: '12px',
+                                      paddingTop: '7px',
+                                      paddingBottom: '7px',
+                                      borderRadius: '6px',
+                                      margin: '2px 4px',
+                                      width: 'calc(100% - 8px)',
                                       textAlign: 'right',
                                       fontSize: '13px',
                                       display: 'flex',
                                       alignItems: 'center',
-                                      justifyContent: 'space-between'
+                                      justifyContent: 'space-between',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      background: isActive(child) ? 'rgba(37, 99, 235, 0.12)' : (openDropdowns.has(child.label) ? 'rgba(0, 0, 0, 0.04)' : 'transparent'),
+                                      color: isActive(child) ? '#2563eb' : 'var(--text)',
+                                      fontWeight: isActive(child) || openDropdowns.has(child.label) ? 800 : 600,
+                                      fontFamily: "'Cairo', sans-serif",
+                                      transition: 'all 0.15s ease'
                                     }}
                                   >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <i className={`sidebar-icon ${child.icon}`} aria-hidden="true" style={{ fontSize: '14px' }} />
+                                      <i className={`sidebar-icon ${child.icon}`} aria-hidden="true" style={{ fontSize: '14px', color: isActive(child) ? '#2563eb' : 'inherit' }} />
                                       <span>{child.label}</span>
                                     </div>
-                                    <i className={`fa-solid fa-chevron-${openDropdowns.has(child.label) ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '8px' }}></i>
+                                    <i className={`fa-solid fa-chevron-${openDropdowns.has(child.label) ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '4px' }}></i>
                                   </button>
                                   {openDropdowns.has(child.label) && (
                                     <ul style={{ 

@@ -219,16 +219,24 @@ function hasAccessToRoute(
     'قائمة الفروع والوكلاء': ['/branches-agents'],
     'الوكلاء الجدد': ['/branches-agents'],
     'طلبات الوكلاء': ['/agent-requests'],
+    'طلبات الوكيل': ['/agent-requests'],
     'إلغاء الوكالات': ['/agency-cancellations'],
+    'إلغاء الوكيل': ['/agency-cancellations'],
+    'الغاء الوكيل': ['/agency-cancellations'],
     'طلبات تعديل بيانات الوكلاء': ['/profile-update-requests'],
+    'طلبات تعديل بيانات الوكيل': ['/profile-update-requests'],
+    'إدارة الوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
+    'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger'],
 
-    'إدارة الموظفين': ['/users', '/employee-requests', '/departments', '/employees', '/employees-management'],
+    'إدارة الموظفين': ['/users', '/employee-requests', '/departments', '/employees', '/employees-management', '/profile-update-requests'],
     // تفصيل صلاحيات الموظفين
-    'إدارة الموظف': ['/employees', '/employees-management'],
+    'إدارة الموظف': ['/employees', '/employees-management', '/employee-requests', '/profile-update-requests'],
     'قائمة الموظفين': ['/users', '/employees', '/employees-management'],
     'إدارة أقسام الشركة': ['/departments', '/management/department'],
     'طلبات الموظفين': ['/employee-requests'],
+    'طلبات الموظف': ['/employee-requests'],
     'طلبات تعديل بيانات الموظفين': ['/profile-update-requests'],
+    'طلب تعديل بيانات الموظف': ['/profile-update-requests'],
 
     'الشؤون الفنية': ['/claims', '/reports/indemnities'],
     'المطالبات': ['/claims'],
@@ -295,8 +303,6 @@ function hasAccessToRoute(
     'تسديد التعويضات': ['/reports/finance-claims'],
     'التحصيلات البنكية': ['/reports/bank-reconciliation'],
     'تقرير الإنتاجية المباشر': ['/reports/live-agents-production'],
-    'إدارة الوكيل': ['/reports/agent-monthly-ledger', '/old-documents'],
-    'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/old-documents'],
     'تقرير الحوافظ والإنتاجية الشامل': ['/reports/comprehensive-production'],
 
     'اجور ومرتبات ضرائب': ['/reports/tax'],
@@ -436,20 +442,33 @@ const menuSections: SidebarSection[] = [
         label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
           { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
           { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
-          { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
           { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
+          { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
           { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent' },
-          { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+          {
+            label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', children: [
+              { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
+              { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
+              { label: 'طلبات الوكيل', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
+              { label: 'طلبات تعديل بيانات الوكيل', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent' },
+            ]
+          },
           { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
         ]
       },
       {
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
-          { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
           { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
           { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee' },
+          {
+            label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', children: [
+              { label: 'ملف وإدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
+              { label: 'طلبات الموظف', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
+              { label: 'طلب تعديل بيانات الموظف', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee' },
+            ]
+          },
         ]
       },
       { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
@@ -656,42 +675,79 @@ const createMenuSections = (
     'إدارة الفروع والوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
       { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
-      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
-      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+      {
+        label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', children: [
+          { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
+          { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+          { label: 'طلبات الوكيل', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+          { label: 'طلبات تعديل بيانات الوكيل', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+        ]
+      },
       { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     ],
     'إدارة الوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
       { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
-      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
-      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+      {
+        label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', children: [
+          { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
+          { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+          { label: 'طلبات الوكيل', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+          { label: 'طلبات تعديل بيانات الوكيل', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+        ]
+      },
       { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     ],
     // تفصيل صلاحيات الفروع والوكلاء
     'قائمة الفروع والوكلاء': { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
     'الوكلاء الجدد': { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
     'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+    'طلبات الوكيل': { label: 'طلبات الوكيل', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
     'إلغاء الوكالات': { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+    'إلغاء الوكيل': { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+    'الغاء الوكيل': { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
     'طلبات تعديل بيانات الوكلاء': { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+    'طلبات تعديل بيانات الوكيل': { label: 'طلبات تعديل بيانات الوكيل', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+    'إدارة الوكيل': [
+      { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
+      { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+      { label: 'طلبات الوكيل', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+      { label: 'طلبات تعديل بيانات الوكيل', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+    ],
+    'كشف الحساب الشهري للوكيل': { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
     'صرف المرتبات والمسيرات': { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
 
     'إدارة الموظفين': [
-      { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
       { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
       { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
       { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
+      {
+        label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', children: [
+          { label: 'ملف وإدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
+          { label: 'طلبات الموظف', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
+          { label: 'طلب تعديل بيانات الموظف', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
+        ]
+      },
     ],
     // تفصيل صلاحيات الموظفين
-    'إدارة الموظف': { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
+    'إدارة الموظف': [
+      { label: 'ملف وإدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
+      { label: 'طلبات الموظف', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
+      { label: 'طلب تعديل بيانات الموظف', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
+    ],
     'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
     'إدارة أقسام الشركة': { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
     'طلبات الموظفين': { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
+    'طلبات الموظف': { label: 'طلبات الموظف', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
     'طلبات تعديل بيانات الموظفين': { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
+    'طلب تعديل بيانات الموظف': { label: 'طلب تعديل بيانات الموظف', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
 
     'دليل الجهات الخارجية': { label: 'دليل الجهات الخارجية', icon: 'fa-solid fa-address-book', to: '/external-entities' },
     'البريد الصادر والوارد': [
@@ -755,8 +811,6 @@ const createMenuSections = (
     'المطابقة والتحصيلات المالية': { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
     'تسديد التعويضات': { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
     'تقرير الإنتاجية المباشر': { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
-    'إدارة الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
-    'كشف الحساب الشهري للوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
     'تقرير الحوافظ والإنتاجية الشامل': { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
 
     'الشؤون الفنية': [
@@ -824,12 +878,14 @@ const createMenuSections = (
   const adminOrder: string[] = [
     '/branches-agents', 
     '/branches-agents?status=pending',
+    '/agency-cancellations', 
+    '/agent-requests', 
+    '/profile-update-requests?type=agent',
+    '/reports/agent-monthly-ledger',
+    '/employees',
     '/users', 
     '/departments',
     '/employee-requests', 
-    '/agent-requests', 
-    '/agency-cancellations', 
-    '/profile-update-requests?type=agent',
     '/profile-update-requests?type=employee',
     '/external-entities',
     '/mail/incoming',
@@ -991,6 +1047,7 @@ const createMenuSections = (
   // إضافة قسم الشؤون الإدارية إذا كان هناك عناصر مصرح بها
   if (adminItems.length > 0) {
     const hrOrder = [
+      '/employees',
       '/users',
       '/departments',
       '/employee-requests',
@@ -999,9 +1056,10 @@ const createMenuSections = (
     const agentsOrder = [
       '/branches-agents',
       '/branches-agents?status=pending',
-      '/agent-requests',
       '/agency-cancellations',
-      '/profile-update-requests?type=agent'
+      '/agent-requests',
+      '/profile-update-requests?type=agent',
+      '/reports/agent-monthly-ledger'
     ];
     const mailOrder = [
       '/mail/incoming',

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
 import { showToast } from "./Toast";
 import { generatePremiumExcel } from "../utils/excelGenerator";
@@ -584,7 +584,18 @@ export default function EmployeeManagement() {
     const u = localStorage.getItem("user");
     if (u) {
       try {
-        setIsAdmin(JSON.parse(u).is_admin);
+        const parsed = JSON.parse(u);
+        const docs = Array.isArray(parsed.authorized_documents)
+          ? parsed.authorized_documents
+          : (typeof parsed.authorized_documents === 'string' ? JSON.parse(parsed.authorized_documents) : []);
+        const canManage = Boolean(
+          parsed.is_admin ||
+          docs.includes("إدارة الموظفين") ||
+          docs.includes("إدارة الموظف") ||
+          docs.includes("طلبات الموظفين") ||
+          docs.includes("طلبات الموظف")
+        );
+        setIsAdmin(canManage);
       } catch {}
     }
     loadEmployees();
@@ -698,6 +709,8 @@ export default function EmployeeManagement() {
           setRequests(Array.isArray(d) ? d : d.data || []);
         }
       } catch {}
+
+
     } catch (e: any) {
       showToast(e.message || "خطأ أثناء جلب البيانات", "error");
     } finally {
@@ -3256,6 +3269,52 @@ export default function EmployeeManagement() {
           <div>
             <h1 className="header-title">إدارة الموظف</h1>
             <p className="header-subtitle">سجل إنتاجية وتصفية مرتبات وعهد ومستندات وشهادات الموظف شهراً بشهر</p>
+            {/* Quick shortcuts copied into إدارة الموظف */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+              <Link
+                to="/employee-requests"
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  color: '#2563eb',
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo', sans-serif",
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-paper-plane" />
+                <span>طلبات الموظف</span>
+              </Link>
+
+              <Link
+                to="/profile-update-requests?type=employee"
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  color: '#d97706',
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo', sans-serif",
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-user-pen" />
+                <span>طلب تعديل بيانات الموظف</span>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -3573,6 +3632,28 @@ export default function EmployeeManagement() {
                 <span>كارنيه الموظف CR80</span>
               </button>
 
+              {/* طلبات الموظف */}
+              <Link
+                to="/employee-requests"
+                className="action-btn-pill blue"
+                title="عرض وإدارة طلبات الموظفين"
+                style={{ textDecoration: 'none' }}
+              >
+                <i className="fa-solid fa-paper-plane" />
+                <span>طلبات الموظف</span>
+              </Link>
+
+              {/* طلب تعديل بيانات الموظف */}
+              <Link
+                to="/profile-update-requests?type=employee"
+                className="action-btn-pill amber"
+                title="عرض وإدارة طلبات تعديل بيانات الموظفين"
+                style={{ textDecoration: 'none' }}
+              >
+                <i className="fa-solid fa-user-pen" />
+                <span>طلب تعديل بيانات الموظف</span>
+              </Link>
+
               {/* 10. تقييم الأداء KPI (NEW WOW FEATURE) */}
               <button
                 className="action-btn-pill amber"
@@ -3721,6 +3802,22 @@ export default function EmployeeManagement() {
 
             {/* Quick Actions Shortcuts */}
             <div className="health-shortcuts">
+              <Link
+                to="/employee-requests"
+                className="shortcut-btn"
+                style={{ textDecoration: 'none' }}
+              >
+                <i className="fa-solid fa-paper-plane text-cyan" />
+                <span>طلبات الموظف</span>
+              </Link>
+              <Link
+                to="/profile-update-requests?type=employee"
+                className="shortcut-btn"
+                style={{ textDecoration: 'none' }}
+              >
+                <i className="fa-solid fa-user-pen text-amber" />
+                <span>طلب تعديل بيانات الموظف</span>
+              </Link>
               <button className="shortcut-btn" onClick={() => setActiveTab("performance")}>
                 <i className="fa-solid fa-star text-amber" />
                 <span>تقييم الأداء</span>
@@ -3788,9 +3885,11 @@ export default function EmployeeManagement() {
               onClick={() => setActiveTab("requests")}
             >
               <i className="fa-solid fa-paper-plane" />
-              <span>الطلبات والإجازات</span>
+              <span>طلبات الموظف</span>
               {pendingReqsCount > 0 && <span className="tab-chip amber">{pendingReqsCount} معلق</span>}
             </button>
+
+
 
             {/* NEW ENTERPRISE TAB: Performance & KPI Scorecard */}
             <button

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel, generateGroupedDocsExcel } from '../utils/excelGenerator';
@@ -1995,6 +1996,73 @@ export default function AgentMonthlyLedger() {
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif" }}>
               سجل إنتاجية وتصفية حسابات وعهد الوكلاء شهراً بشهر
             </p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
+              <Link
+                to="/agency-cancellations"
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  color: '#ef4444',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo', sans-serif",
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-user-slash" />
+                <span>إلغاء الوكيل</span>
+              </Link>
+
+              <Link
+                to="/agent-requests"
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  color: '#2563eb',
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo', sans-serif",
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-paper-plane" />
+                <span>طلبات الوكيل</span>
+              </Link>
+
+              <Link
+                to="/profile-update-requests?type=agent"
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  color: '#d97706',
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo', sans-serif",
+                  transition: 'all 0.2s',
+                }}
+              >
+                <i className="fa-solid fa-user-pen" />
+                <span>طلبات تعديل بيانات الوكيل</span>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -2512,6 +2580,84 @@ export default function AgentMonthlyLedger() {
                 <i className={`fa-solid ${agentCustodyLoading ? 'fa-circle-notch fa-spin' : 'fa-boxes-stacked'}`} />
                 <span>عهد الوكيل</span>
               </button>
+
+              <Link
+                to="/agency-cancellations"
+                title="إلغاء الوكالة وتوثيق إخلاء الطرف"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  textDecoration: 'none',
+                  background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo',sans-serif",
+                  boxShadow: '0 2px 10px rgba(239,68,68,0.35)',
+                  transition: 'all .2s',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <i className="fa-solid fa-user-slash" />
+                <span>إلغاء الوكيل</span>
+              </Link>
+
+              <Link
+                to="/agent-requests"
+                title="عرض ومتابعة طلبات الوكيل"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  textDecoration: 'none',
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo',sans-serif",
+                  boxShadow: '0 2px 10px rgba(37,99,235,0.35)',
+                  transition: 'all .2s',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <i className="fa-solid fa-paper-plane" />
+                <span>طلبات الوكيل</span>
+              </Link>
+
+              <Link
+                to="/profile-update-requests?type=agent"
+                title="عرض ومتابعة طلبات تعديل بيانات الوكيل"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  textDecoration: 'none',
+                  background: 'linear-gradient(135deg, #f59e0b, #b45309)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: "'Cairo',sans-serif",
+                  boxShadow: '0 2px 10px rgba(245,158,11,0.35)',
+                  transition: 'all .2s',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <i className="fa-solid fa-user-pen" />
+                <span>طلبات التعديل</span>
+              </Link>
 
               <button
                 onClick={handleToggleAgentBlock}
@@ -5361,7 +5507,7 @@ export default function AgentMonthlyLedger() {
                   </label>
                   <CustomDateInput
                     value={quickStartDate}
-                    onChange={(val) => {
+                    onChange={(val: string) => {
                       setQuickStartDate(val);
                       setQuickIssueDate(val);
                       if (val) {
@@ -5411,7 +5557,7 @@ export default function AgentMonthlyLedger() {
                   </label>
                   <CustomDateInput
                     value={quickEndDate}
-                    onChange={(val) => setQuickEndDate(val)}
+                    onChange={(val: string) => setQuickEndDate(val)}
                     style={{ borderRadius: '10px' }}
                   />
                   {quickEndDate && (
