@@ -167,7 +167,12 @@ export default function ViewInsuranceDocument() {
   );
 
   const isMandatory = document.insurance_type === 'تأمين إجباري سيارات';
-  const isAuthorityLinked = Boolean(document.eidc_pdf_url || document.eidc_policy_id);
+  const hasTransfer = Boolean(
+    document.has_ownership_transfer ||
+    (document.ownership_transfer_count && document.ownership_transfer_count > 0) ||
+    ownershipTransfers.length > 0
+  );
+  const isAuthorityLinked = Boolean((document.eidc_pdf_url || document.eidc_policy_id) && !hasTransfer);
   const vt = document.vehicleType || document.vehicle_type;
 
   return (
@@ -191,8 +196,8 @@ export default function ViewInsuranceDocument() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
               { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/insurance-documents') },
-              ...((!isMandatory || !isAuthorityLinked) ? [{ label: 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint }] : []),
-              ...(document.eidc_pdf_url ? [{
+              ...((!isMandatory || !isAuthorityLinked || hasTransfer) ? [{ label: hasTransfer ? 'طباعة الوثيقة (المنظومة - بعد نقل الملكية)' : 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint }] : []),
+              ...(document.eidc_pdf_url && !hasTransfer ? [{
                 label: isMandatory ? 'طباعة وثيقة الهيئة' : 'وثيقة الهيئة (PDF)',
                 icon: 'fa-print',
                 bg: '#0284c7',
@@ -230,6 +235,14 @@ export default function ViewInsuranceDocument() {
         </div>
 
         <div style={{ padding: '16px 20px' }}>
+          {hasTransfer && (
+            <div style={{ background: '#ecfdf5', border: '1.5px solid #10b981', borderRadius: '12px', padding: '12px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', color: '#065f46' }}>
+              <i className="fa-solid fa-exchange-alt" style={{ fontSize: '1.1rem', color: '#10b981' }}></i>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                تم نقل ملكية هذه الوثيقة: تم إيقاف وثيقة الهيئة تلقائياً واعتماد طابعة المنظومة لضمان ظهور بيانات المالك الجديد.
+              </span>
+            </div>
+          )}
           {document.is_canceled && (
             <div style={{ background: '#fef2f2', border: '1.5px solid #ef4444', borderRadius: '12px', padding: '14px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>

@@ -914,7 +914,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                         )}
                         <td>
                           <div className="action-buttons">
-                            {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id)) && (
+                            {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id) || doc.has_ownership_transfer || (doc.ownership_transfer_count && doc.ownership_transfer_count > 0)) && (
                               <button
                                 onClick={() => {
                                   window.open(`${API_BASE_URL}/insurance-documents/${doc.id}/print?t=${Date.now()}`, '_blank');
@@ -937,7 +937,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                                   <i className="fa-solid fa-rotate"></i>
                                 </button>
                               )}
-                              {doc.eidc_pdf_url && (
+                              {doc.eidc_pdf_url && !(doc.has_ownership_transfer || (doc.ownership_transfer_count && doc.ownership_transfer_count > 0)) && (
                                 <button
                                   onClick={() => {
                                     const iframe = document.createElement('iframe');
@@ -1109,7 +1109,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                           </div>
                         )}
                         <div className="user-mobile-actions">
-                          {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id)) && (
+                          {(doc.insurance_type !== 'تأمين إجباري سيارات' || (!doc.eidc_pdf_url && !doc.eidc_policy_id) || doc.has_ownership_transfer || (doc.ownership_transfer_count && doc.ownership_transfer_count > 0)) && (
                             <button
                               onClick={() => {
                                 const iframe = document.createElement('iframe');
@@ -1134,7 +1134,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
                               <i className="fa-solid fa-print"></i>
                             </button>
                           )}
-                          {doc.eidc_pdf_url && (
+                          {doc.eidc_pdf_url && !(doc.has_ownership_transfer || (doc.ownership_transfer_count && doc.ownership_transfer_count > 0)) && (
                             <button
                               onClick={() => {
                                 const iframe = document.createElement('iframe');
