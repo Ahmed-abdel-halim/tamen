@@ -26,6 +26,7 @@ type InsuranceDocument = {
   nationality?: string; nid_passport?: string; address?: string;
   email?: string; engine_number?: string; engine_cc?: string;
   vehicle_weight?: string; notes?: string; is_canceled?: boolean; canceled_at?: string; cancel_reason?: string;
+  has_ownership_transfer?: boolean; ownership_transfer_count?: number;
 };
 type OwnershipTransfer = {
   id: number; previous_plate_id?: number; previous_plate?: Plate;
