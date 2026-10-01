@@ -46,6 +46,7 @@ export default function CancelDocumentModal({
   const [submittedAt, setSubmittedAt] = useState<string>('');
   const [applicantName, setApplicantName] = useState<string>('');
   const [createdRequestId, setCreatedRequestId] = useState<number | null>(null);
+  const [requestStatus, setRequestStatus] = useState<'pending' | 'accepted'>('pending');
 
   // Reset state on open
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function CancelDocumentModal({
       setSubmitting(false);
       setRequestCode('');
       setCreatedRequestId(null);
+      setRequestStatus('pending');
 
       const userStr = localStorage.getItem('user');
       if (userStr) {
@@ -127,12 +129,18 @@ export default function CancelDocumentModal({
 
       const data = await res.json();
       const code = data.request_code || `AL-${String(data.id).padStart(6, '0')}`;
+      const status = data.status === 'accepted' ? 'accepted' : 'pending';
       setRequestCode(code);
       setCreatedRequestId(data.id);
+      setRequestStatus(status);
       setSubmittedAt(new Date().toLocaleString('ar-LY', { dateStyle: 'medium', timeStyle: 'short' }));
       setStep('success');
 
-      showToast('تم تقديم طلب الإلغاء بنجاح وسيتم إشعارك فور المراجعة', 'success');
+      if (status === 'accepted') {
+        showToast('تم إلغاء الوثيقة بنجاح واعتماد الإلغاء فوراً في المنظومة', 'success');
+      } else {
+        showToast('تم تقديم طلب الإلغاء بنجاح وسيتم إشعارك فور المراجعة', 'success');
+      }
       window.dispatchEvent(new CustomEvent('documentRequestsUpdated'));
 
       if (onSuccess) {
@@ -624,10 +632,12 @@ export default function CancelDocumentModal({
               </div>
 
               <h4 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#15803d', marginBottom: '6px' }}>
-                تم تقديم طلب إلغاء الوثيقة بنجاح
+                {requestStatus === 'accepted' ? 'تم إلغاء الوثيقة بنجاح واعتماد الإلغاء' : 'تم تقديم طلب إلغاء الوثيقة بنجاح'}
               </h4>
               <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '22px' }}>
-                تم إرسال الطلب إلى إدارة التأمين والعمليات، وستصلك إشعار بالنتيجة فور اعتمادها.
+                {requestStatus === 'accepted'
+                  ? 'تم إلغاء الوثيقة نهائياً في المنظومة وإيقاف سريانها المالي والقانوني بنجاح.'
+                  : 'تم إرسال الطلب إلى إدارة التأمين والعمليات، وستصلك إشعار بالنتيجة فور اعتمادها.'}
               </p>
 
               {/* Summary Card with Request Code */}
@@ -683,15 +693,16 @@ export default function CancelDocumentModal({
                   <span style={{ color: '#64748b', fontWeight: 600 }}>حالة الطلب:</span>
                   <span
                     style={{
-                      backgroundColor: '#fef3c7',
-                      color: '#92400e',
-                      padding: '3px 10px',
+                      backgroundColor: requestStatus === 'accepted' ? '#dcfce7' : '#fef3c7',
+                      color: requestStatus === 'accepted' ? '#15803d' : '#92400e',
+                      border: `1px solid ${requestStatus === 'accepted' ? '#bbf7d0' : '#fde68a'}`,
+                      padding: '4px 12px',
                       borderRadius: '12px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
                     }}
                   >
-                    قيد مراجعة الإدارة
+                    {requestStatus === 'accepted' ? '✓ معتمد وملغي رسمياً' : 'قيد مراجعة الإدارة'}
                   </span>
                 </div>
               </div>
