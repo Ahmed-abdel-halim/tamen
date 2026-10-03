@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel, generateGroupedDocsExcel } from '../utils/excelGenerator';
 import CustomDateInput from './CustomDateInput';
 import AgentSalariesModal from './AgentSalariesModal';
+import AgencyCancellations from './AgencyCancellations';
+import AllAgentRequests from './AllAgentRequests';
+import ProfileUpdateRequestsList from './ProfileUpdateRequestsList';
 
 const ARABIC_MONTHS_LDG = [
   'يناير','فبراير','مارس','أبريل','مايو','يونيو',
@@ -238,6 +240,11 @@ export default function AgentMonthlyLedger() {
   const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
   const [agentSearchText, setAgentSearchText] = useState('');
   const agentDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Modals for Agent Management actions (شاشات منبثقة)
+  const [agencyCancellationsModal, setAgencyCancellationsModal] = useState(false);
+  const [agentRequestsModal, setAgentRequestsModal] = useState(false);
+  const [agentProfileUpdateModal, setAgentProfileUpdateModal] = useState(false);
 
   // Agent Quick Actions State (Full Comprehensive Details & Edit)
   const [agentDetailsModal, setAgentDetailsModal] = useState<any | null>(null);
@@ -1997,12 +2004,13 @@ export default function AgentMonthlyLedger() {
               سجل إنتاجية وتصفية حسابات وعهد الوكلاء شهراً بشهر
             </p>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
-              <Link
-                to="/agency-cancellations"
+              <button
+                type="button"
+                onClick={() => setAgencyCancellationsModal(true)}
                 style={{
                   padding: '5px 11px',
                   borderRadius: '8px',
-                  textDecoration: 'none',
+                  cursor: 'pointer',
                   fontWeight: 800,
                   fontSize: '11px',
                   color: '#ef4444',
@@ -2017,14 +2025,15 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-user-slash" />
                 <span>إلغاء الوكيل</span>
-              </Link>
+              </button>
 
-              <Link
-                to="/agent-requests"
+              <button
+                type="button"
+                onClick={() => setAgentRequestsModal(true)}
                 style={{
                   padding: '5px 11px',
                   borderRadius: '8px',
-                  textDecoration: 'none',
+                  cursor: 'pointer',
                   fontWeight: 800,
                   fontSize: '11px',
                   color: '#2563eb',
@@ -2039,14 +2048,15 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-paper-plane" />
                 <span>طلبات الوكيل</span>
-              </Link>
+              </button>
 
-              <Link
-                to="/profile-update-requests?type=agent"
+              <button
+                type="button"
+                onClick={() => setAgentProfileUpdateModal(true)}
                 style={{
                   padding: '5px 11px',
                   borderRadius: '8px',
-                  textDecoration: 'none',
+                  cursor: 'pointer',
                   fontWeight: 800,
                   fontSize: '11px',
                   color: '#d97706',
@@ -2061,7 +2071,7 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-user-pen" />
                 <span>طلبات تعديل بيانات الوكيل</span>
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -2581,15 +2591,17 @@ export default function AgentMonthlyLedger() {
                 <span>عهد الوكيل</span>
               </button>
 
-              <Link
-                to="/agency-cancellations"
+              <button
+                type="button"
+                onClick={() => setAgencyCancellationsModal(true)}
                 title="إلغاء الوكالة وتوثيق إخلاء الطرف"
                 style={{
                   width: '100%',
                   justifyContent: 'center',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  textDecoration: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
                   background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
                   color: '#fff',
                   fontWeight: 800,
@@ -2605,17 +2617,19 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-user-slash" />
                 <span>إلغاء الوكيل</span>
-              </Link>
+              </button>
 
-              <Link
-                to="/agent-requests"
+              <button
+                type="button"
+                onClick={() => setAgentRequestsModal(true)}
                 title="عرض ومتابعة طلبات الوكيل"
                 style={{
                   width: '100%',
                   justifyContent: 'center',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  textDecoration: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
                   background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                   color: '#fff',
                   fontWeight: 800,
@@ -2631,17 +2645,19 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-paper-plane" />
                 <span>طلبات الوكيل</span>
-              </Link>
+              </button>
 
-              <Link
-                to="/profile-update-requests?type=agent"
+              <button
+                type="button"
+                onClick={() => setAgentProfileUpdateModal(true)}
                 title="عرض ومتابعة طلبات تعديل بيانات الوكيل"
                 style={{
                   width: '100%',
                   justifyContent: 'center',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  textDecoration: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
                   background: 'linear-gradient(135deg, #f59e0b, #b45309)',
                   color: '#fff',
                   fontWeight: 800,
@@ -2657,7 +2673,7 @@ export default function AgentMonthlyLedger() {
               >
                 <i className="fa-solid fa-user-pen" />
                 <span>طلبات التعديل</span>
-              </Link>
+              </button>
 
               <button
                 onClick={handleToggleAgentBlock}
@@ -7751,6 +7767,282 @@ export default function AgentMonthlyLedger() {
           agent={ledger.agent}
           onClose={() => setAgentSalariesModal(false)}
         />
+      )}
+
+      {/* ====== Modal: Agency Cancellations (شاشة إلغاء الوكالات وإخلاء الطرف) ====== */}
+      {agencyCancellationsModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setAgencyCancellationsModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--panel)',
+              borderRadius: '16px',
+              width: '95vw',
+              maxWidth: '1350px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--card-bg, #ffffff)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px'
+                }}>
+                  <i className="fa-solid fa-user-slash" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>
+                    إلغاء الوكيل وإخلاء الطرف
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    إدارة طلبات إنهاء التعاقد ومراجعة العهد وبراءة الذمة
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAgencyCancellationsModal(false)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  transition: 'all 0.2s'
+                }}
+                title="إغلاق"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <AgencyCancellations isModal={true} onClose={() => setAgencyCancellationsModal(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Modal: Agent Requests (شاشة طلبات الوكلاء والفروع) ====== */}
+      {agentRequestsModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setAgentRequestsModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--panel)',
+              borderRadius: '16px',
+              width: '95vw',
+              maxWidth: '1350px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--card-bg, #ffffff)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(37, 99, 235, 0.1)',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px'
+                }}>
+                  <i className="fa-solid fa-paper-plane" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>
+                    طلبات الوكيل والفروع
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    سجل ومتابعة طلبات المخزون والدعم والتسويات
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAgentRequestsModal(false)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  transition: 'all 0.2s'
+                }}
+                title="إغلاق"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <AllAgentRequests isModal={true} onClose={() => setAgentRequestsModal(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Modal: Agent Profile Update Requests (شاشة طلبات تعديل بيانات الوكيل) ====== */}
+      {agentProfileUpdateModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setAgentProfileUpdateModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--panel)',
+              borderRadius: '16px',
+              width: '95vw',
+              maxWidth: '1350px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--card-bg, #ffffff)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  color: '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px'
+                }}>
+                  <i className="fa-solid fa-user-pen" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>
+                    طلبات تعديل بيانات الوكيل
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    مراجعة وتدقيق المستندات والبيانات الشخصية المقترحة للوكلاء
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAgentProfileUpdateModal(false)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  transition: 'all 0.2s'
+                }}
+                title="إغلاق"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <ProfileUpdateRequestsList fixedType="agent" isModal={true} onClose={() => setAgentProfileUpdateModal(false)} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

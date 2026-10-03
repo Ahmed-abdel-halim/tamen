@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { API_BASE_URL, BACKEND_URL } from "../config/api";
 import { showToast } from "./Toast";
 import { generatePremiumExcel } from "../utils/excelGenerator";
+import AllEmployeeRequests from "./AllEmployeeRequests";
+import ProfileUpdateRequestsList from "./ProfileUpdateRequestsList";
 
 // ─── Interfaces & Types ───────────────────────────────────────────────────────
 
@@ -461,6 +463,10 @@ export default function EmployeeManagement() {
 
   // Digital vCard modal
   const [showVCardModal, setShowVCardModal] = useState(false);
+
+  // Modals for Employee Requests and Profile Updates (شاشات منبثقة)
+  const [employeeRequestsModal, setEmployeeRequestsModal] = useState(false);
+  const [employeeProfileUpdateModal, setEmployeeProfileUpdateModal] = useState(false);
 
   // End of Service Gratuity Calculator Custom State
   const [settlementTerminationDate, setSettlementTerminationDate] = useState(new Date().toISOString().split("T")[0]);
@@ -3271,12 +3277,13 @@ export default function EmployeeManagement() {
             <p className="header-subtitle">سجل إنتاجية وتصفية مرتبات وعهد ومستندات وشهادات الموظف شهراً بشهر</p>
             {/* Quick shortcuts copied into إدارة الموظف */}
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-              <Link
-                to="/employee-requests"
+              <button
+                type="button"
+                onClick={() => setEmployeeRequestsModal(true)}
                 style={{
                   padding: '5px 11px',
                   borderRadius: '8px',
-                  textDecoration: 'none',
+                  cursor: 'pointer',
                   fontWeight: 800,
                   fontSize: '11px',
                   color: '#2563eb',
@@ -3291,14 +3298,15 @@ export default function EmployeeManagement() {
               >
                 <i className="fa-solid fa-paper-plane" />
                 <span>طلبات الموظف</span>
-              </Link>
+              </button>
 
-              <Link
-                to="/profile-update-requests?type=employee"
+              <button
+                type="button"
+                onClick={() => setEmployeeProfileUpdateModal(true)}
                 style={{
                   padding: '5px 11px',
                   borderRadius: '8px',
-                  textDecoration: 'none',
+                  cursor: 'pointer',
                   fontWeight: 800,
                   fontSize: '11px',
                   color: '#d97706',
@@ -3313,7 +3321,7 @@ export default function EmployeeManagement() {
               >
                 <i className="fa-solid fa-user-pen" />
                 <span>طلب تعديل بيانات الموظف</span>
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -3633,26 +3641,28 @@ export default function EmployeeManagement() {
               </button>
 
               {/* طلبات الموظف */}
-              <Link
-                to="/employee-requests"
+              <button
+                type="button"
+                onClick={() => setEmployeeRequestsModal(true)}
                 className="action-btn-pill blue"
                 title="عرض وإدارة طلبات الموظفين"
-                style={{ textDecoration: 'none' }}
+                style={{ border: 'none', cursor: 'pointer' }}
               >
                 <i className="fa-solid fa-paper-plane" />
                 <span>طلبات الموظف</span>
-              </Link>
+              </button>
 
               {/* طلب تعديل بيانات الموظف */}
-              <Link
-                to="/profile-update-requests?type=employee"
+              <button
+                type="button"
+                onClick={() => setEmployeeProfileUpdateModal(true)}
                 className="action-btn-pill amber"
                 title="عرض وإدارة طلبات تعديل بيانات الموظفين"
-                style={{ textDecoration: 'none' }}
+                style={{ border: 'none', cursor: 'pointer' }}
               >
                 <i className="fa-solid fa-user-pen" />
                 <span>طلب تعديل بيانات الموظف</span>
-              </Link>
+              </button>
 
               {/* 10. تقييم الأداء KPI (NEW WOW FEATURE) */}
               <button
@@ -3802,22 +3812,24 @@ export default function EmployeeManagement() {
 
             {/* Quick Actions Shortcuts */}
             <div className="health-shortcuts">
-              <Link
-                to="/employee-requests"
+              <button
+                type="button"
+                onClick={() => setEmployeeRequestsModal(true)}
                 className="shortcut-btn"
-                style={{ textDecoration: 'none' }}
+                style={{ border: 'none', cursor: 'pointer', background: 'none' }}
               >
                 <i className="fa-solid fa-paper-plane text-cyan" />
                 <span>طلبات الموظف</span>
-              </Link>
-              <Link
-                to="/profile-update-requests?type=employee"
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmployeeProfileUpdateModal(true)}
                 className="shortcut-btn"
-                style={{ textDecoration: 'none' }}
+                style={{ border: 'none', cursor: 'pointer', background: 'none' }}
               >
                 <i className="fa-solid fa-user-pen text-amber" />
                 <span>طلب تعديل بيانات الموظف</span>
-              </Link>
+              </button>
               <button className="shortcut-btn" onClick={() => setActiveTab("performance")}>
                 <i className="fa-solid fa-star text-amber" />
                 <span>تقييم الأداء</span>
@@ -7244,6 +7256,190 @@ export default function EmployeeManagement() {
               >
                 {notesModal.status === "approved" ? "تأكيد الموافقة" : "تأكيد الرفض"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Modal: Employee Requests (شاشة طلبات الموظفين) ====== */}
+      {employeeRequestsModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setEmployeeRequestsModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--panel)',
+              borderRadius: '16px',
+              width: '95vw',
+              maxWidth: '1350px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--card-bg, #ffffff)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(37, 99, 235, 0.1)',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px'
+                }}>
+                  <i className="fa-solid fa-paper-plane" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>
+                    طلبات الموظف
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    سجل ومتابعة طلبات الإجازات والسلف والاستقالة والبدلات
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmployeeRequestsModal(false)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  transition: 'all 0.2s'
+                }}
+                title="إغلاق"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <AllEmployeeRequests isModal={true} onClose={() => setEmployeeRequestsModal(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== Modal: Employee Profile Update Requests (شاشة طلب تعديل بيانات الموظف) ====== */}
+      {employeeProfileUpdateModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setEmployeeProfileUpdateModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--panel)',
+              borderRadius: '16px',
+              width: '95vw',
+              maxWidth: '1350px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--card-bg, #ffffff)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  color: '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px'
+                }}>
+                  <i className="fa-solid fa-user-pen" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>
+                    طلب تعديل بيانات الموظف
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    مراجعة وتدقيق المستندات والبيانات الشخصية المقترحة للموظفين
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmployeeProfileUpdateModal(false)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  transition: 'all 0.2s'
+                }}
+                title="إغلاق"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <ProfileUpdateRequestsList fixedType="employee" isModal={true} onClose={() => setEmployeeProfileUpdateModal(false)} />
             </div>
           </div>
         </div>

@@ -64,7 +64,13 @@ interface ProfileUpdateRequest {
   };
 }
 
-export default function ProfileUpdateRequestsList() {
+interface ProfileUpdateRequestsListProps {
+  fixedType?: 'agent' | 'employee';
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
+export default function ProfileUpdateRequestsList({ fixedType, isModal }: ProfileUpdateRequestsListProps = {}) {
   const [requests, setRequests] = useState<ProfileUpdateRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'pending' | 'all'>('pending');
@@ -75,7 +81,7 @@ export default function ProfileUpdateRequestsList() {
 
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const typeFilter = params.get('type') || ''; // 'agent' or 'employee'
+  const typeFilter = fixedType || params.get('type') || ''; // 'agent' or 'employee'
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -105,7 +111,7 @@ export default function ProfileUpdateRequestsList() {
 
   useEffect(() => {
     fetchRequests();
-  }, [statusFilter, location.search]);
+  }, [statusFilter, location.search, fixedType]);
 
   const handleAction = async (id: number, type: 'approve' | 'reject') => {
     if (type === 'reject' && !adminNotes.trim()) {
@@ -248,9 +254,11 @@ export default function ProfileUpdateRequestsList() {
 
   return (
     <section className="users-management font-cairo">
-      <div className="users-breadcrumb">
-        <span>{breadcrumbText}</span>
-      </div>
+      {!isModal && (
+        <div className="users-breadcrumb">
+          <span>{breadcrumbText}</span>
+        </div>
+      )}
 
       <div className="users-card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>

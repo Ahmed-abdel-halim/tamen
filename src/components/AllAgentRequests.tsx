@@ -18,7 +18,12 @@ type AgentRequest = {
   };
 };
 
-export default function AllAgentRequests() {
+interface AllAgentRequestsProps {
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
+export default function AllAgentRequests({ isModal }: AllAgentRequestsProps = {}) {
   const [requests, setRequests] = useState<AgentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'rejected'>('all');
@@ -129,9 +134,11 @@ export default function AllAgentRequests() {
 
   return (
     <section className="users-management font-cairo">
-      <div className="users-breadcrumb">
-        <span>الشؤون الإدارية / إدارة الوكلاء / جميع طلبات الوكلاء</span>
-      </div>
+      {!isModal && (
+        <div className="users-breadcrumb">
+          <span>الشؤون الإدارية / إدارة الوكلاء / جميع طلبات الوكلاء</span>
+        </div>
+      )}
 
       <div className="users-card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

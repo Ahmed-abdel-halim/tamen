@@ -32,7 +32,12 @@ function resolvePublicUrl(path: string | null | undefined): string {
   return `${API_BASE_URL.replace('/api', '')}/storage/${path}`;
 }
 
-export default function AllEmployeeRequests() {
+interface AllEmployeeRequestsProps {
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
+export default function AllEmployeeRequests({ isModal }: AllEmployeeRequestsProps = {}) {
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -316,9 +321,11 @@ export default function AllEmployeeRequests() {
 
   return (
     <section className="users-management font-cairo">
-      <div className="users-breadcrumb">
-        <span>الشؤون الإدارية / إدارة الموظفين / جميع الطلبات</span>
-      </div>
+      {!isModal && (
+        <div className="users-breadcrumb">
+          <span>الشؤون الإدارية / إدارة الموظفين / جميع الطلبات</span>
+        </div>
+      )}
 
       <div className="users-card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>

@@ -144,7 +144,12 @@ interface CustodyItem {
   status: string;
 }
 
-export default function AgencyCancellations() {
+interface AgencyCancellationsProps {
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
+export default function AgencyCancellations({ isModal }: AgencyCancellationsProps = {}) {
   const [cancellations, setCancellations] = useState<AgencyCancellation[]>([]);
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -515,9 +520,11 @@ export default function AgencyCancellations() {
 
   return (
     <section className="users-management font-cairo">
-      <div className="users-breadcrumb">
-        <span>إدارة الفروع والوكلاء / إلغاء الوكالات وإخلاء الطرف</span>
-      </div>
+      {!isModal && (
+        <div className="users-breadcrumb">
+          <span>إدارة الفروع والوكلاء / إلغاء الوكالات وإخلاء الطرف</span>
+        </div>
+      )}
 
       <div className="users-card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
