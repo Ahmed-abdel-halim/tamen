@@ -188,6 +188,44 @@ export default function AgentMonthlyLedger() {
     return inventoryType;
   };
 
+  // User Permissions & Capabilities
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const uStr = localStorage.getItem('user');
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        setCurrentUser(u);
+        const docs = Array.isArray(u.authorized_documents)
+          ? u.authorized_documents
+          : (typeof u.authorized_documents === 'string' ? JSON.parse(u.authorized_documents) : []);
+        setUserPermissions(docs);
+      }
+    } catch (e) {
+      console.error('Error parsing user permissions', e);
+    }
+  }, []);
+
+  const isAdmin = Boolean(currentUser?.is_admin);
+  const canManageAgent = Boolean(
+    isAdmin ||
+    userPermissions.includes('مدير الوكلاء') ||
+    userPermissions.includes('إدارة الوكيل') ||
+    userPermissions.includes('إدارة الفروع والوكلاء') ||
+    userPermissions.includes('إدارة الوكلاء')
+  );
+  const canAudit = Boolean(
+    canManageAgent ||
+    userPermissions.includes('تدقيق كشف حساب الوكيل')
+  );
+  const canPay = Boolean(
+    canManageAgent ||
+    userPermissions.includes('تسديد كشف حساب الوكيل') ||
+    userPermissions.includes('المحاسب المالي')
+  );
+
   // Audit / Verification State
   const [togglingMonthKey, setTogglingMonthKey] = useState<string | null>(null);
 
@@ -1473,6 +1511,10 @@ export default function AgentMonthlyLedger() {
   };
 
   const toggleMonthAuditStatus = async (row: MonthRow) => {
+    if (!canAudit) {
+      showToast('غير مصرح لك باعتماد أو تعديل حالة التدقيق لهذا الشهر', 'error');
+      return;
+    }
     if (!selectedAgentId) return;
     setTogglingMonthKey(row.month_key);
     try {
@@ -1503,6 +1545,14 @@ export default function AgentMonthlyLedger() {
 
   const submitPayment = async () => {
     if (!payModal || !selectedAgentId) return;
+    if (!canPay) {
+      showToast('غير مصرح لك بتسديد الحسابات', 'error');
+      return;
+    }
+    if (payModal.row.is_audited && !canManageAgent) {
+      showToast('هذا الشهر مدقق، لا يمكن التسديد إلا بعد إلغاء التدقيق من مدير الوكلاء', 'error');
+      return;
+    }
     const amt = parseFloat(payAmount);
     if (isNaN(amt) || amt <= 0) {
       showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error');
@@ -1583,6 +1633,16 @@ export default function AgentMonthlyLedger() {
 
   const handleResetPayment = async (row: MonthRow) => {
     if (!selectedAgentId) return;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const isPastMonth = row.year < currentYear || (row.year === currentYear && row.month < currentMonth);
+
+    if (!canManageAgent && (row.is_audited || isPastMonth)) {
+      showToast('غير مصرح للمحاسب بتعديل أو إلغاء استلامات الشهور السابقة أو المدققة، يلزم صلاحية مدير الوكلاء', 'error');
+      return;
+    }
+
     if (
       !window.confirm(
         `هل أنت تأكد من إلغاء وتصفير المبلغ المستلم لشهر (${row.month_label})؟\n\nسيتم حذف إيصالات القبض المسجلة وتصفير المبلغ المستلم وإعادة حساب المستحقات للشهر.`
@@ -2003,76 +2063,85 @@ export default function AgentMonthlyLedger() {
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif" }}>
               سجل إنتاجية وتصفية حسابات وعهد الوكلاء شهراً بشهر
             </p>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setAgencyCancellationsModal(true)}
-                style={{
-                  padding: '5px 11px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 800,
-                  fontSize: '11px',
-                  color: '#ef4444',
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo', sans-serif",
-                  transition: 'all 0.2s',
-                }}
-              >
-                <i className="fa-solid fa-user-slash" />
-                <span>إلغاء الوكيل</span>
-              </button>
+            {canManageAgent ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setAgencyCancellationsModal(true)}
+                  style={{
+                    padding: '5px 11px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: '11px',
+                    color: '#ef4444',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontFamily: "'Cairo', sans-serif",
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <i className="fa-solid fa-user-slash" />
+                  <span>إلغاء الوكيل</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setAgentRequestsModal(true)}
-                style={{
-                  padding: '5px 11px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 800,
-                  fontSize: '11px',
-                  color: '#2563eb',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  border: '1px solid rgba(37, 99, 235, 0.25)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo', sans-serif",
-                  transition: 'all 0.2s',
-                }}
-              >
-                <i className="fa-solid fa-paper-plane" />
-                <span>طلبات الوكيل</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setAgentRequestsModal(true)}
+                  style={{
+                    padding: '5px 11px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: '11px',
+                    color: '#2563eb',
+                    background: 'rgba(37, 99, 235, 0.08)',
+                    border: '1px solid rgba(37, 99, 235, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontFamily: "'Cairo', sans-serif",
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <i className="fa-solid fa-paper-plane" />
+                  <span>طلبات الوكيل</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setAgentProfileUpdateModal(true)}
-                style={{
-                  padding: '5px 11px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 800,
-                  fontSize: '11px',
-                  color: '#d97706',
-                  background: 'rgba(245, 158, 11, 0.08)',
-                  border: '1px solid rgba(245, 158, 11, 0.25)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo', sans-serif",
-                  transition: 'all 0.2s',
-                }}
-              >
-                <i className="fa-solid fa-user-pen" />
-                <span>طلبات تعديل بيانات الوكيل</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setAgentProfileUpdateModal(true)}
+                  style={{
+                    padding: '5px 11px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: '11px',
+                    color: '#d97706',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontFamily: "'Cairo', sans-serif",
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <i className="fa-solid fa-user-pen" />
+                  <span>طلبات تعديل بيانات الوكيل</span>
+                </button>
+              </div>
+            ) : (
+              <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--panel)', padding: '3px 10px', borderRadius: '8px', border: '1px solid var(--border)', fontWeight: 700 }}>
+                  <i className="fa-solid fa-user-shield" style={{ marginLeft: '5px', color: '#3b82f6' }} />
+                  {canAudit ? 'صلاحية: تدقيق واعتماد الحسابات' : (canPay ? 'صلاحية: تسديد الحسابات (محاسب)' : 'صلاحية: استعراض كشف الحساب')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2495,17 +2564,19 @@ export default function AgentMonthlyLedger() {
                 <span>عرض</span>
               </button>
 
-              <button
-                onClick={handleOpenAgentEdit}
-                disabled={agentDetailsLoading}
-                title="تعديل بيانات الوكيل"
-                style={{ width: '100%', justifyContent: 'center', padding: '10px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 10px rgba(245,158,11,0.3)', transition: 'all .2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-              >
-                <i className="fa-solid fa-pencil" />
-                <span>تعديل</span>
-              </button>
+              {canManageAgent && (
+                <button
+                  onClick={handleOpenAgentEdit}
+                  disabled={agentDetailsLoading}
+                  title="تعديل بيانات الوكيل"
+                  style={{ width: '100%', justifyContent: 'center', padding: '10px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Cairo',sans-serif", boxShadow: '0 2px 10px rgba(245,158,11,0.3)', transition: 'all .2s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <i className="fa-solid fa-pencil" />
+                  <span>تعديل</span>
+                </button>
+              )}
 
               <button
                 onClick={() => ldgPrintAgentA4(selectedAgentId!)}
@@ -2591,119 +2662,123 @@ export default function AgentMonthlyLedger() {
                 <span>عهد الوكيل</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setAgencyCancellationsModal(true)}
-                title="إلغاء الوكالة وتوثيق إخلاء الطرف"
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
-                  color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo',sans-serif",
-                  boxShadow: '0 2px 10px rgba(239,68,68,0.35)',
-                  transition: 'all .2s',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <i className="fa-solid fa-user-slash" />
-                <span>إلغاء الوكيل</span>
-              </button>
+              {canManageAgent && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setAgencyCancellationsModal(true)}
+                    title="إلغاء الوكالة وتوثيق إخلاء الطرف"
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontFamily: "'Cairo',sans-serif",
+                      boxShadow: '0 2px 10px rgba(239,68,68,0.35)',
+                      transition: 'all .2s',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <i className="fa-solid fa-user-slash" />
+                    <span>إلغاء الوكيل</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setAgentRequestsModal(true)}
-                title="عرض ومتابعة طلبات الوكيل"
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                  color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo',sans-serif",
-                  boxShadow: '0 2px 10px rgba(37,99,235,0.35)',
-                  transition: 'all .2s',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <i className="fa-solid fa-paper-plane" />
-                <span>طلبات الوكيل</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setAgentRequestsModal(true)}
+                    title="عرض ومتابعة طلبات الوكيل"
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontFamily: "'Cairo',sans-serif",
+                      boxShadow: '0 2px 10px rgba(37,99,235,0.35)',
+                      transition: 'all .2s',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <i className="fa-solid fa-paper-plane" />
+                    <span>طلبات الوكيل</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setAgentProfileUpdateModal(true)}
-                title="عرض ومتابعة طلبات تعديل بيانات الوكيل"
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #f59e0b, #b45309)',
-                  color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo',sans-serif",
-                  boxShadow: '0 2px 10px rgba(245,158,11,0.35)',
-                  transition: 'all .2s',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <i className="fa-solid fa-user-pen" />
-                <span>طلبات التعديل</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setAgentProfileUpdateModal(true)}
+                    title="عرض ومتابعة طلبات تعديل بيانات الوكيل"
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #f59e0b, #b45309)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontFamily: "'Cairo',sans-serif",
+                      boxShadow: '0 2px 10px rgba(245,158,11,0.35)',
+                      transition: 'all .2s',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <i className="fa-solid fa-user-pen" />
+                    <span>طلبات التعديل</span>
+                  </button>
 
-              <button
-                onClick={handleToggleAgentBlock}
-                disabled={agentBlockLoading}
-                title={isAgentBlocked ? 'إلغاء حظر الوكيل' : 'حظر الوكيل'}
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  cursor: agentBlockLoading ? 'wait' : 'pointer',
-                  background: isAgentBlocked ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: "'Cairo',sans-serif",
-                  boxShadow: isAgentBlocked ? '0 2px 10px rgba(16,185,129,0.35)' : '0 2px 10px rgba(239,68,68,0.35)',
-                  transition: 'all .2s, opacity .15s',
-                  opacity: agentBlockLoading ? 0.7 : 1
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-              >
-                <i className={`fa-solid ${agentBlockLoading ? 'fa-circle-notch fa-spin' : isAgentBlocked ? 'fa-user-check' : 'fa-user-slash'}`} />
-                <span>{isAgentBlocked ? 'إلغاء الحظر' : 'حظر الوكيل'}</span>
-              </button>
+                  <button
+                    onClick={handleToggleAgentBlock}
+                    disabled={agentBlockLoading}
+                    title={isAgentBlocked ? 'إلغاء حظر الوكيل' : 'حظر الوكيل'}
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      cursor: agentBlockLoading ? 'wait' : 'pointer',
+                      background: isAgentBlocked ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontFamily: "'Cairo',sans-serif",
+                      boxShadow: isAgentBlocked ? '0 2px 10px rgba(16,185,129,0.35)' : '0 2px 10px rgba(239,68,68,0.35)',
+                      transition: 'all .2s, opacity .15s',
+                      opacity: agentBlockLoading ? 0.7 : 1
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                  >
+                    <i className={`fa-solid ${agentBlockLoading ? 'fa-circle-notch fa-spin' : isAgentBlocked ? 'fa-user-check' : 'fa-user-slash'}`} />
+                    <span>{isAgentBlocked ? 'إلغاء الحظر' : 'حظر الوكيل'}</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Row 2: Organized Info Badges (3x2 Balanced Grid Spanning 100% Width) */}
@@ -3203,45 +3278,70 @@ export default function AgentMonthlyLedger() {
                         <td style={{ ...td, whiteSpace: 'nowrap', padding: '4px 2px' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
                             {/* Monthly Audit Toggle Button */}
-                            <button
-                              className="pay-btn"
-                              disabled={togglingMonthKey === row.month_key}
-                              onClick={() => toggleMonthAuditStatus(row)}
-                              title={row.is_audited ? 'انقر لإلغاء التدقيق لهذا الشهر' : 'انقر لتدقيق حساب هذا الشهر'}
-                              style={{
-                                padding: '3px 6px',
-                                borderRadius: '7px',
-                                border: 'none',
-                                cursor: togglingMonthKey === row.month_key ? 'wait' : 'pointer',
-                                fontFamily: "'Cairo',sans-serif",
-                                fontWeight: 800,
-                                fontSize: '10px',
-                                color: 'white',
-                                background: row.is_audited
-                                  ? 'linear-gradient(135deg,#059669,#10b981)'
-                                  : 'linear-gradient(135deg,#dc2626,#ef4444)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                transition: 'all .2s',
-                                boxShadow: row.is_audited
-                                  ? '0 2px 5px rgba(16,185,129,0.3)'
-                                  : '0 2px 5px rgba(220,38,38,0.3)',
-                                opacity: togglingMonthKey === row.month_key ? 0.7 : 1,
-                              }}
-                            >
-                              <i
-                                className={`fa-solid ${
-                                  togglingMonthKey === row.month_key
-                                    ? 'fa-circle-notch fa-spin'
-                                    : row.is_audited
-                                    ? 'fa-circle-check'
-                                    : 'fa-circle-xmark'
-                                }`}
-                                style={{ fontSize: '9px' }}
-                              />
-                              {row.is_audited ? 'تم التدقيق' : 'لم يتم التدقيق'}
-                            </button>
+                            {canAudit ? (
+                              <button
+                                className="pay-btn"
+                                disabled={togglingMonthKey === row.month_key}
+                                onClick={() => toggleMonthAuditStatus(row)}
+                                title={row.is_audited ? 'انقر لإلغاء التدقيق لهذا الشهر' : 'انقر لتدقيق حساب هذا الشهر'}
+                                style={{
+                                  padding: '3px 6px',
+                                  borderRadius: '7px',
+                                  border: 'none',
+                                  cursor: togglingMonthKey === row.month_key ? 'wait' : 'pointer',
+                                  fontFamily: "'Cairo',sans-serif",
+                                  fontWeight: 800,
+                                  fontSize: '10px',
+                                  color: 'white',
+                                  background: row.is_audited
+                                    ? 'linear-gradient(135deg,#059669,#10b981)'
+                                    : 'linear-gradient(135deg,#dc2626,#ef4444)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  transition: 'all .2s',
+                                  boxShadow: row.is_audited
+                                    ? '0 2px 5px rgba(16,185,129,0.3)'
+                                    : '0 2px 5px rgba(220,38,38,0.3)',
+                                  opacity: togglingMonthKey === row.month_key ? 0.7 : 1,
+                                }}
+                              >
+                                <i
+                                  className={`fa-solid ${
+                                    togglingMonthKey === row.month_key
+                                      ? 'fa-circle-notch fa-spin'
+                                      : row.is_audited
+                                      ? 'fa-circle-check'
+                                      : 'fa-circle-xmark'
+                                  }`}
+                                  style={{ fontSize: '9px' }}
+                                />
+                                {row.is_audited ? 'تم التدقيق' : 'لم يتم التدقيق'}
+                              </button>
+                            ) : (
+                              <span
+                                title={row.is_audited ? 'هذا الشهر تم تدقيقه واعتماده' : 'هذا الشهر غير مدقق (يلزم صلاحية التدقيق للاعتماد)'}
+                                style={{
+                                  padding: '3px 6px',
+                                  borderRadius: '7px',
+                                  fontFamily: "'Cairo',sans-serif",
+                                  fontWeight: 800,
+                                  fontSize: '10px',
+                                  color: 'white',
+                                  background: row.is_audited
+                                    ? 'linear-gradient(135deg,#059669,#10b981)'
+                                    : '#94a3b8',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  opacity: 0.9,
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <i className={`fa-solid ${row.is_audited ? 'fa-circle-check' : 'fa-clock'}`} style={{ fontSize: '9px' }} />
+                                {row.is_audited ? 'تم التدقيق' : 'غير مدقق'}
+                              </span>
+                            )}
 
                             {/* View Month Documents Button */}
                             <button
@@ -3268,61 +3368,80 @@ export default function AgentMonthlyLedger() {
                               <i className="fa-solid fa-folder-open" style={{ fontSize: '9px' }} />وثائق الشهر
                             </button>
 
-                            {!isEmpty && (
-                              <button
-                                className="pay-btn"
-                                onClick={() => openPay(row)}
-                                title="تسديد دفعة لهذا الشهر"
-                                style={{
-                                  padding: '3px 6px',
-                                  borderRadius: '7px',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  fontFamily: "'Cairo',sans-serif",
-                                  fontWeight: 700,
-                                  fontSize: '10px',
-                                  color: 'white',
-                                  background: 'linear-gradient(135deg,#1e40af,#3b82f6)',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px',
-                                  transition: 'all .2s',
-                                  boxShadow: '0 2px 5px rgba(30,64,175,0.2)',
-                                }}
-                              >
-                                <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '9px' }} />تسديد
-                              </button>
-                            )}
+                            {canPay && !isEmpty && (() => {
+                              const canPayThisRow = canManageAgent || !row.is_audited;
+                              return (
+                                <button
+                                  className="pay-btn"
+                                  disabled={!canPayThisRow}
+                                  onClick={() => canPayThisRow && openPay(row)}
+                                  title={
+                                    !canPayThisRow
+                                      ? 'هذا الشهر مدقق، لا يمكن التسديد إلا بعد إلغاء التدقيق من مدير الوكلاء'
+                                      : 'تسديد دفعة لهذا الشهر'
+                                  }
+                                  style={{
+                                    padding: '3px 6px',
+                                    borderRadius: '7px',
+                                    border: 'none',
+                                    cursor: canPayThisRow ? 'pointer' : 'not-allowed',
+                                    fontFamily: "'Cairo',sans-serif",
+                                    fontWeight: 700,
+                                    fontSize: '10px',
+                                    color: 'white',
+                                    background: canPayThisRow
+                                      ? 'linear-gradient(135deg,#1e40af,#3b82f6)'
+                                      : '#94a3b8',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    transition: 'all .2s',
+                                    boxShadow: canPayThisRow ? '0 2px 5px rgba(30,64,175,0.2)' : 'none',
+                                    opacity: canPayThisRow ? 1 : 0.6,
+                                  }}
+                                >
+                                  <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '9px' }} />تسديد
+                                </button>
+                              );
+                            })()}
 
-                            {row.paid_amount > 0 && (
-                              <button
-                                className="pay-btn"
-                                disabled={resetLoading}
-                                onClick={() => handleResetPayment(row)}
-                                title="إلغاء وتصفير المبلغ المستلم لهذا الشهر"
-                                style={{
-                                  padding: '3px 6px',
-                                  borderRadius: '7px',
-                                  border: 'none',
-                                  cursor: resetLoading ? 'wait' : 'pointer',
-                                  fontFamily: "'Cairo',sans-serif",
-                                  fontWeight: 700,
-                                  fontSize: '10px',
-                                  color: 'white',
-                                  background: 'linear-gradient(135deg,#dc2626,#ef4444)',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px',
-                                  transition: 'all .2s',
-                                  boxShadow: '0 2px 5px rgba(220,38,38,0.2)',
-                                  opacity: resetLoading ? 0.7 : 1,
-                                }}
-                              >
-                                <i className={`fa-solid ${resetLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-left'}`} style={{ fontSize: '9px' }} />إلغاء المستلم
-                              </button>
-                            )}
+                            {row.paid_amount > 0 && (() => {
+                              const now = new Date();
+                              const currentYear = now.getFullYear();
+                              const currentMonth = now.getMonth() + 1;
+                              const isPastMonth = row.year < currentYear || (row.year === currentYear && row.month < currentMonth);
+                              const canResetThisRow = canManageAgent || (canPay && !row.is_audited && !isPastMonth);
 
+                              if (!canResetThisRow) return null;
 
+                              return (
+                                <button
+                                  className="pay-btn"
+                                  disabled={resetLoading}
+                                  onClick={() => handleResetPayment(row)}
+                                  title="إلغاء وتصفير المبلغ المستلم لهذا الشهر"
+                                  style={{
+                                    padding: '3px 6px',
+                                    borderRadius: '7px',
+                                    border: 'none',
+                                    cursor: resetLoading ? 'wait' : 'pointer',
+                                    fontFamily: "'Cairo',sans-serif",
+                                    fontWeight: 700,
+                                    fontSize: '10px',
+                                    color: 'white',
+                                    background: 'linear-gradient(135deg,#dc2626,#ef4444)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    transition: 'all .2s',
+                                    boxShadow: '0 2px 5px rgba(220,38,38,0.2)',
+                                    opacity: resetLoading ? 0.7 : 1,
+                                  }}
+                                >
+                                  <i className={`fa-solid ${resetLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-left'}`} style={{ fontSize: '9px' }} />إلغاء المستلم
+                                </button>
+                              );
+                            })()}
                           </div>
                         </td>
                       </tr>

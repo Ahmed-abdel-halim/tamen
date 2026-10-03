@@ -224,7 +224,9 @@ function hasAccessToRoute(
     'إلغاء الوكيل': ['/agency-cancellations'],
     'الغاء الوكيل': ['/agency-cancellations'],
     'طلبات تعديل بيانات الوكلاء': ['/profile-update-requests'],
-    'طلبات تعديل بيانات الوكيل': ['/profile-update-requests'],
+    'مدير الوكلاء': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
+    'تدقيق كشف حساب الوكيل': ['/reports/agent-monthly-ledger'],
+    'تسديد كشف حساب الوكيل': ['/reports/agent-monthly-ledger'],
     'إدارة الوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
     'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
 
@@ -687,8 +689,11 @@ const createMenuSections = (
     'الغاء الوكيل': { label: 'إلغاء الوكيل', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
     'طلبات تعديل بيانات الوكلاء': { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
     'طلبات تعديل بيانات الوكيل': { label: 'طلبات تعديل بيانات الوكيل', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+    'مدير الوكلاء': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+    'تدقيق كشف حساب الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+    'تسديد كشف حساب الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
     'إدارة الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
-    'كشف الحساب الشهري للوكيل': { label: 'كشف الحساب الشهري للوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
+    'كشف الحساب الشهري للوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
     'صرف المرتبات والمسيرات': { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
 
     'إدارة الموظفين': [
