@@ -189,8 +189,26 @@ export default function AgentMonthlyLedger() {
   };
 
   // User Permissions & Capabilities
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const uStr = localStorage.getItem('user');
+      return uStr ? JSON.parse(uStr) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [userPermissions, setUserPermissions] = useState<string[]>(() => {
+    try {
+      const uStr = localStorage.getItem('user');
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        return Array.isArray(u.authorized_documents)
+          ? u.authorized_documents
+          : (typeof u.authorized_documents === 'string' ? JSON.parse(u.authorized_documents) : []);
+      }
+    } catch {}
+    return [];
+  });
 
   useEffect(() => {
     try {
@@ -208,7 +226,15 @@ export default function AgentMonthlyLedger() {
     }
   }, []);
 
-  const isAdmin = Boolean(currentUser?.is_admin);
+  const isAdmin = Boolean(
+    currentUser &&
+    (currentUser.is_admin === true || currentUser.is_admin === 1 || currentUser.is_admin === 'true' || currentUser.is_admin === '1') &&
+    currentUser.is_admin !== 0 &&
+    currentUser.is_admin !== '0' &&
+    currentUser.is_admin !== false &&
+    currentUser.is_admin !== 'false' &&
+    !currentUser.branch_agent_id
+  );
   const canManageAgent = Boolean(
     isAdmin ||
     userPermissions.includes('مدير الوكلاء') ||
@@ -239,7 +265,10 @@ export default function AgentMonthlyLedger() {
   const [monthStatusFilter, setMonthStatusFilter] = useState<'all' | 'active' | 'expired' | 'canceled'>('all');
   const [exportingDocsExcel, setExportingDocsExcel] = useState(false);
 
-  // Edit Document state
+  // Preview Document State
+  const [previewDocModal, setPreviewDocModal] = useState<MonthDocItem | null>(null);
+
+  // Edit Document state (متاح لصلاحية الأدمن فقط)
   const [editDocModal, setEditDocModal] = useState<MonthDocItem | null>(null);
   const [editName, setEditName] = useState('');
   const [editNumber, setEditNumber] = useState('');
@@ -250,9 +279,11 @@ export default function AgentMonthlyLedger() {
   const [editNotes, setEditNotes] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
-  // Delete Document state
+  // Delete Document state (متاح لصلاحية الأدمن فقط)
   const [deleteDocTarget, setDeleteDocTarget] = useState<MonthDocItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+
 
   // Quick Add Old Document Modal State
   const [quickAddModal, setQuickAddModal] = useState(false);
@@ -829,11 +860,18 @@ export default function AgentMonthlyLedger() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isAgentActive = (a: any) => {
+    const statusStr = (a.status || '').trim();
+    const isActiveStatus = statusStr === 'نشط' || (!statusStr && statusStr !== 'غير نشط' && statusStr !== 'ملغي' && statusStr !== 'قيد الانتظار');
+    const isNotBlocked = !a.is_blocked && !a.user?.is_blocked;
+    return isActiveStatus && isNotBlocked;
+  };
+
   useEffect(() => {
     const loadAgents = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/branches-agents`, {
+        const res = await fetch(`${API_BASE_URL}/branches-agents?status=نشط`, {
           headers: {
             'Accept': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -842,7 +880,8 @@ export default function AgentMonthlyLedger() {
         if (res.ok) {
           const d = await res.json();
           const list = Array.isArray(d) ? d : (d.data || []);
-          setAgents(list);
+          const activeList = list.filter(isAgentActive);
+          setAgents(activeList);
         } else {
           showToast(`فشل في جلب قائمة الوكلاء (${res.status})`, 'error');
         }
@@ -1549,10 +1588,6 @@ export default function AgentMonthlyLedger() {
       showToast('غير مصرح لك بتسديد الحسابات', 'error');
       return;
     }
-    if (payModal.row.is_audited && !canManageAgent) {
-      showToast('هذا الشهر مدقق، لا يمكن التسديد إلا بعد إلغاء التدقيق من مدير الوكلاء', 'error');
-      return;
-    }
     const amt = parseFloat(payAmount);
     if (isNaN(amt) || amt <= 0) {
       showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error');
@@ -1711,7 +1746,94 @@ export default function AgentMonthlyLedger() {
     }
   };
 
+  const getDocPrintUrl = (doc: MonthDocItem): string => {
+    const dt = doc.document_type || '';
+    const tbl = doc.table || '';
+
+    if (dt === 'compulsory' || tbl === 'insurance_documents') {
+      return `${API_BASE_URL}/insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'international' || tbl === 'international_insurance_documents') {
+      return `${API_BASE_URL}/international-insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'travel' || tbl === 'travel_insurance_documents') {
+      return `${API_BASE_URL}/travel-insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'resident' || tbl === 'resident_insurance_documents') {
+      return `${API_BASE_URL}/resident-insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'marine' || tbl === 'marine_structure_insurance_documents') {
+      return `${API_BASE_URL}/marine-structure-insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'medical' || tbl === 'professional_liability_insurance_documents') {
+      return `${API_BASE_URL}/professional-liability-insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'personal_accident' || tbl === 'personal_accident_insurance_documents') {
+      return `${API_BASE_URL}/personal-accident-insurance-documents/${doc.id}/print`;
+    }
+    if (dt === 'school_student' || tbl === 'school_student_insurance_documents') {
+      return `${API_BASE_URL}/school-student-insurance/${doc.id}/print`;
+    }
+    if (dt === 'cash_in_transit' || tbl === 'cash_in_transit_insurance_documents') {
+      return `${API_BASE_URL}/cash-in-transit-insurance/${doc.id}/print`;
+    }
+    if (dt === 'cargo' || tbl === 'cargo_insurance_documents') {
+      return `${API_BASE_URL}/cargo-insurance/${doc.id}/print`;
+    }
+    return `${API_BASE_URL}/insurance-documents/${doc.id}/print`;
+  };
+
+  const getDocViewUrl = (doc: MonthDocItem): string => {
+    const dt = doc.document_type || '';
+    const tbl = doc.table || '';
+
+    if (dt === 'compulsory' || tbl === 'insurance_documents') {
+      return `/insurance-documents/${doc.id}`;
+    }
+    if (dt === 'international' || tbl === 'international_insurance_documents') {
+      return `/international-insurance-documents/${doc.id}`;
+    }
+    if (dt === 'travel' || tbl === 'travel_insurance_documents') {
+      return `/travel-insurance-documents/${doc.id}`;
+    }
+    if (dt === 'resident' || tbl === 'resident_insurance_documents') {
+      return `/resident-insurance-documents/${doc.id}`;
+    }
+    if (dt === 'marine' || tbl === 'marine_structure_insurance_documents') {
+      return `/marine-structure-insurance-documents/${doc.id}`;
+    }
+    if (dt === 'medical' || tbl === 'professional_liability_insurance_documents') {
+      return `/professional-liability-insurance-documents/${doc.id}`;
+    }
+    if (dt === 'personal_accident' || tbl === 'personal_accident_insurance_documents') {
+      return `/personal-accident-insurance-documents/${doc.id}`;
+    }
+    if (dt === 'school_student' || tbl === 'school_student_insurance_documents') {
+      return `/school-student-insurance/${doc.id}`;
+    }
+    if (dt === 'cash_in_transit' || tbl === 'cash_in_transit_insurance_documents') {
+      return `/cash-in-transit-insurance/${doc.id}`;
+    }
+    if (dt === 'cargo' || tbl === 'cargo_insurance_documents') {
+      return `/cargo-insurance/${doc.id}`;
+    }
+    return `/insurance-documents/${doc.id}`;
+  };
+
+  const handlePrintDoc = (doc: MonthDocItem) => {
+    const url = `${getDocPrintUrl(doc)}?t=${Date.now()}`;
+    window.open(url, '_blank');
+  };
+
+  const handlePreviewDoc = (doc: MonthDocItem) => {
+    setPreviewDocModal(doc);
+  };
+
   const handleOpenQuickAddOldDoc = () => {
+    if (!isAdmin) {
+      showToast('عذراً، إضافة الوثائق مقتصرة على صلاحية مدير النظام فقط', 'error');
+      return;
+    }
     if (!monthDocsModal) return;
     const year = monthDocsModal.row.year;
     const month = String(monthDocsModal.row.month).padStart(2, '0');
@@ -1739,6 +1861,10 @@ export default function AgentMonthlyLedger() {
 
   const handleQuickAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      showToast('عذراً، إضافة الوثائق مقتصرة على صلاحية مدير النظام فقط', 'error');
+      return;
+    }
     if (!selectedAgentId || !monthDocsModal) return;
     setQuickSubmitting(true);
 
@@ -1790,22 +1916,26 @@ export default function AgentMonthlyLedger() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        showToast(data.message || 'تمت إضافة الوثيقة القديمة بنجاح وتحديث الكشف فوريًا', 'success');
+        showToast(data.message || 'تمت إضافة الوثيقة بنجاح وتحديث الكشف فوريًا', 'success');
         setQuickAddModal(false);
         fetchMonthDocsData(monthDocsModal.row.year, monthDocsModal.row.month, searchMonthDocs, filterDocType);
         fetchLedger(selectedAgentId);
       } else {
-        showToast(data.message || data.error || 'فشل في حفظ الوثيقة القديمة', 'error');
+        showToast(data.message || data.error || 'فشل في حفظ الوثيقة', 'error');
       }
     } catch (err: any) {
       console.error('Error quick adding old doc:', err);
-      showToast(err?.message || 'حدث خطأ أثناء حفظ الوثيقة القديمة', 'error');
+      showToast(err?.message || 'حدث خطأ أثناء حفظ الوثيقة', 'error');
     } finally {
       setQuickSubmitting(false);
     }
   };
 
   const handleOpenEditDoc = (doc: MonthDocItem) => {
+    if (!isAdmin) {
+      showToast('عذراً، تعديل الوثيقة مقتصر على صلاحية مدير النظام فقط', 'error');
+      return;
+    }
     setEditDocModal(doc);
     setEditName(doc.insured_name || '');
     setEditNumber(doc.document_number || '');
@@ -1817,15 +1947,22 @@ export default function AgentMonthlyLedger() {
   };
 
   const handleUpdateDocument = async () => {
+    if (!isAdmin) {
+      showToast('عذراً، تعديل الوثيقة مقتصر على صلاحية مدير النظام فقط', 'error');
+      return;
+    }
     if (!editDocModal) return;
     setEditLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
       const res = await fetch(`${API_BASE_URL}/financial-statistics/agent-month-document`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          'X-User-Id': user?.id ? user.id.toString() : '',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
@@ -1861,6 +1998,10 @@ export default function AgentMonthlyLedger() {
   };
 
   const handleDeleteDocument = async () => {
+    if (!isAdmin) {
+      showToast('عذراً، مسح الوثيقة مقتصر على صلاحية مدير النظام فقط', 'error');
+      return;
+    }
     if (!deleteDocTarget) return;
     setDeleteLoading(true);
     try {
@@ -1899,6 +2040,8 @@ export default function AgentMonthlyLedger() {
       setDeleteLoading(false);
     }
   };
+
+
 
   const handleExportExcel = async () => {
     if (!ledger) return;
@@ -2005,12 +2148,19 @@ export default function AgentMonthlyLedger() {
   };
 
   const selectedAgentObj = agents.find((a) => a.id === selectedAgentId);
-  const filteredAgentsDropdown = agents.filter(
-    (a) =>
-      a.agency_name.toLowerCase().includes(agentSearchText.toLowerCase()) ||
-      a.code.toLowerCase().includes(agentSearchText.toLowerCase()) ||
-      a.agent_name.toLowerCase().includes(agentSearchText.toLowerCase())
-  );
+  const filteredAgentsDropdown = agents
+    .filter(isAgentActive)
+    .filter(
+      (a) => {
+        if (!agentSearchText.trim()) return true;
+        const term = agentSearchText.toLowerCase();
+        return (
+          (a.agency_name && a.agency_name.toLowerCase().includes(term)) ||
+          (a.code && a.code.toLowerCase().includes(term)) ||
+          (a.agent_name && a.agent_name.toLowerCase().includes(term))
+        );
+      }
+    );
 
   const td: React.CSSProperties = {
     padding: '6px 3px',
@@ -2535,10 +2685,11 @@ export default function AgentMonthlyLedger() {
               </div>
             </div>
 
-            {/* Row 1: Action Toolbar (Spans 100% Full Width Evenly Across 7 Columns) */}
-            <div
-              style={{
-                display: 'grid',
+            {/* Row 1: Action Toolbar (Spans 100% Full Width Evenly Across 7 Columns - متاح لمدير الوكلاء فقط ومحجوب عن المحاسب) */}
+            {canManageAgent && (
+              <div
+                style={{
+                  display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
                 gap: '8px',
                 width: '100%',
@@ -2780,6 +2931,7 @@ export default function AgentMonthlyLedger() {
                 </>
               )}
             </div>
+          )}
 
             {/* Row 2: Organized Info Badges (3x2 Balanced Grid Spanning 100% Width) */}
             <div
@@ -3368,42 +3520,32 @@ export default function AgentMonthlyLedger() {
                               <i className="fa-solid fa-folder-open" style={{ fontSize: '9px' }} />وثائق الشهر
                             </button>
 
-                            {canPay && !isEmpty && (() => {
-                              const canPayThisRow = canManageAgent || !row.is_audited;
-                              return (
-                                <button
-                                  className="pay-btn"
-                                  disabled={!canPayThisRow}
-                                  onClick={() => canPayThisRow && openPay(row)}
-                                  title={
-                                    !canPayThisRow
-                                      ? 'هذا الشهر مدقق، لا يمكن التسديد إلا بعد إلغاء التدقيق من مدير الوكلاء'
-                                      : 'تسديد دفعة لهذا الشهر'
-                                  }
-                                  style={{
-                                    padding: '3px 6px',
-                                    borderRadius: '7px',
-                                    border: 'none',
-                                    cursor: canPayThisRow ? 'pointer' : 'not-allowed',
-                                    fontFamily: "'Cairo',sans-serif",
-                                    fontWeight: 700,
-                                    fontSize: '10px',
-                                    color: 'white',
-                                    background: canPayThisRow
-                                      ? 'linear-gradient(135deg,#1e40af,#3b82f6)'
-                                      : '#94a3b8',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    transition: 'all .2s',
-                                    boxShadow: canPayThisRow ? '0 2px 5px rgba(30,64,175,0.2)' : 'none',
-                                    opacity: canPayThisRow ? 1 : 0.6,
-                                  }}
-                                >
-                                  <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '9px' }} />تسديد
-                                </button>
-                              );
-                            })()}
+                            {canPay && (
+                              <button
+                                className="pay-btn"
+                                onClick={() => openPay(row)}
+                                title="تسديد دفعة لهذا الشهر"
+                                style={{
+                                  padding: '3px 6px',
+                                  borderRadius: '7px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontFamily: "'Cairo',sans-serif",
+                                  fontWeight: 700,
+                                  fontSize: '10px',
+                                  color: 'white',
+                                  background: 'linear-gradient(135deg,#1e40af,#3b82f6)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  transition: 'all .2s',
+                                  boxShadow: '0 2px 5px rgba(30,64,175,0.2)',
+                                  opacity: 1,
+                                }}
+                              >
+                                <i className="fa-solid fa-money-bill-transfer" style={{ fontSize: '9px' }} />تسديد
+                              </button>
+                            )}
 
                             {row.paid_amount > 0 && (() => {
                               const now = new Date();
@@ -3820,30 +3962,32 @@ export default function AgentMonthlyLedger() {
               </div>
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={handleOpenQuickAddOldDoc}
-                  style={{
-                    padding: '9px 18px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontWeight: 800,
-                    fontSize: '12px',
-                    fontFamily: "'Cairo',sans-serif",
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-                >
-                  <i className="fa-solid fa-plus-circle" style={{ fontSize: '13px' }} />
-                  إضافة وثيقة قديمة جديدة
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={handleOpenQuickAddOldDoc}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      fontFamily: "'Cairo',sans-serif",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                  >
+                    <i className="fa-solid fa-plus-circle" style={{ fontSize: '13px' }} />
+                    إضافة وثيقة قديمة جديدة
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
@@ -3991,15 +4135,16 @@ export default function AgentMonthlyLedger() {
                             )}
                           </td>
                           <td style={td}>
-                            <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                              {/* زر معاينة الوثيقة - متاح للجميع */}
                               <button
-                                onClick={() => handleOpenEditDoc(doc)}
-                                title="تعديل الوثيقة"
+                                onClick={() => handlePreviewDoc(doc)}
+                                title="معاينة تفاصيل الوثيقة"
                                 style={{
                                   padding: '5px 10px',
                                   borderRadius: '8px',
                                   border: 'none',
-                                  background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+                                  background: 'linear-gradient(135deg,#0ea5e9,#0284c7)',
                                   color: 'white',
                                   cursor: 'pointer',
                                   fontWeight: 700,
@@ -4007,19 +4152,25 @@ export default function AgentMonthlyLedger() {
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  boxShadow: '0 2px 6px rgba(245,158,11,0.25)',
+                                  boxShadow: '0 2px 6px rgba(2,132,199,0.25)',
+                                  transition: 'all .15s ease',
+                                  whiteSpace: 'nowrap',
                                 }}
+                                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                               >
-                                <i className="fa-solid fa-pen-to-square" /> تعديل
+                                <i className="fa-solid fa-eye" /> معاينة
                               </button>
+
+                              {/* زر طباعة الوثيقة - متاح للجميع */}
                               <button
-                                onClick={() => setDeleteDocTarget(doc)}
-                                title="مسح/حذف الوثيقة"
+                                onClick={() => handlePrintDoc(doc)}
+                                title="طباعة الوثيقة الرسمية"
                                 style={{
                                   padding: '5px 10px',
                                   borderRadius: '8px',
                                   border: 'none',
-                                  background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                                  background: 'linear-gradient(135deg,#0f766e,#0d9488)',
                                   color: 'white',
                                   cursor: 'pointer',
                                   fontWeight: 700,
@@ -4027,11 +4178,69 @@ export default function AgentMonthlyLedger() {
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  boxShadow: '0 2px 6px rgba(239,68,68,0.25)',
+                                  boxShadow: '0 2px 6px rgba(15,118,110,0.25)',
+                                  transition: 'all .15s ease',
+                                  whiteSpace: 'nowrap',
                                 }}
+                                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                               >
-                                <i className="fa-solid fa-trash-can" /> مسح
+                                <i className="fa-solid fa-print" /> طباعة
                               </button>
+
+                              {/* صلاحية التعديل والمسح: متاحة للأدمن فقط، ومحجوبة وممنوعة تماماً عن الموظفين */}
+                              {isAdmin && (
+                                <>
+                                  <button
+                                    onClick={() => handleOpenEditDoc(doc)}
+                                    title="تعديل الوثيقة (مدير النظام فقط)"
+                                    style={{
+                                      padding: '5px 10px',
+                                      borderRadius: '8px',
+                                      border: 'none',
+                                      background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '11px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      boxShadow: '0 2px 6px rgba(245,158,11,0.25)',
+                                      transition: 'all .15s ease',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                                  >
+                                    <i className="fa-solid fa-pen-to-square" /> تعديل
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteDocTarget(doc)}
+                                    title="مسح/حذف الوثيقة (مدير النظام فقط)"
+                                    style={{
+                                      padding: '5px 10px',
+                                      borderRadius: '8px',
+                                      border: 'none',
+                                      background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '11px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      boxShadow: '0 2px 6px rgba(239,68,68,0.25)',
+                                      transition: 'all .15s ease',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                                  >
+                                    <i className="fa-solid fa-trash-can" /> مسح
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -4073,8 +4282,374 @@ export default function AgentMonthlyLedger() {
         </div>
       )}
 
-      {/* Edit Document Modal */}
-      {editDocModal && (
+      {/* Document Preview Modal */}
+      {previewDocModal && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewDocModal(null);
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1300,
+            padding: '20px',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '680px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                background: 'linear-gradient(135deg, #0284c7, #0f172a)',
+                color: 'white',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                  }}
+                >
+                  <i className="fa-solid fa-file-shield" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, fontFamily: "'Cairo',sans-serif" }}>
+                    معاينة الوثيقة
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#cbd5e1', fontFamily: "'Cairo',sans-serif" }}>
+                    رقم الوثيقة: <span style={{ direction: 'ltr', display: 'inline-block', fontWeight: 800 }}>{previewDocModal.document_number}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.15)',
+                  color: 'white',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Type & Status Bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'var(--table-header)',
+                  padding: '12px 18px',
+                  borderRadius: '14px',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 700 }}>نوع التأمين:</span>
+                  <span
+                    style={{
+                      background: 'linear-gradient(135deg,#e0f2fe,#bae6fd)',
+                      color: '#0369a1',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                    }}
+                  >
+                    {previewDocModal.type_label}
+                  </span>
+                </div>
+                <div>
+                  {previewDocModal.is_old_document ? (
+                    <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                      وثيقة قديمة
+                    </span>
+                  ) : previewDocModal.status === 'ملغية' ? (
+                    <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                      ملغية
+                    </span>
+                  ) : previewDocModal.status === 'منتهية' ? (
+                    <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                      منتهية
+                    </span>
+                  ) : (
+                    <span style={{ background: '#d1fae5', color: '#047857', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                      نشطة وسارية
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Insured & General Info Card */}
+              <div
+                style={{
+                  background: 'var(--card-bg)',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border)',
+                  padding: '16px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '14px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-user" style={{ marginLeft: '6px', color: '#0284c7' }} />
+                    اسم المؤمن له / العميل
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--text)' }}>
+                    {previewDocModal.insured_name}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-hashtag" style={{ marginLeft: '6px', color: '#0284c7' }} />
+                    رقم الوثيقة
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--text)', direction: 'ltr', textAlign: 'right' }}>
+                    {previewDocModal.document_number}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-calendar-day" style={{ marginLeft: '6px', color: '#0284c7' }} />
+                    تاريخ الإصدار
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>
+                    {previewDocModal.issue_date ? previewDocModal.issue_date.substring(0, 10) : '—'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-calendar-check" style={{ marginLeft: '6px', color: '#10b981' }} />
+                    تاريخ بداية التغطية
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>
+                    {previewDocModal.start_date ? previewDocModal.start_date.substring(0, 10) : '—'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-calendar-xmark" style={{ marginLeft: '6px', color: '#ef4444' }} />
+                    تاريخ انتهاء التغطية
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>
+                    {previewDocModal.end_date ? previewDocModal.end_date.substring(0, 10) : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Breakdown Card */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(2,132,199,0.03), rgba(16,185,129,0.03))',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border)',
+                  padding: '16px',
+                }}
+              >
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 900, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fa-solid fa-coins" style={{ color: '#f59e0b' }} />
+                  البيانات المالية وعمولة الوكيل
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                  <div style={{ background: 'var(--card-bg)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>صافي القسط</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#0284c7', marginTop: '4px' }}>
+                      {fmt(previewDocModal.premium)} <span style={{ fontSize: '10px' }}>د.ل</span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--card-bg)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>القيمة الإجمالية</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#3b82f6', marginTop: '4px' }}>
+                      {fmt(previewDocModal.total)} <span style={{ fontSize: '10px' }}>د.ل</span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--card-bg)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>نسبة العمولة</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#8b5cf6', marginTop: '4px' }}>
+                      {previewDocModal.percentage}%
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--card-bg)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>حصة الوكيل</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#8b5cf6', marginTop: '4px' }}>
+                      {fmt(previewDocModal.agent_share)} <span style={{ fontSize: '10px' }}>د.ل</span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--card-bg)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>حصة الشركة</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>
+                      {fmt(previewDocModal.company_share)} <span style={{ fontSize: '10px' }}>د.ل</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes if available */}
+              {previewDocModal.notes && (
+                <div
+                  style={{
+                    background: 'var(--card-bg)',
+                    borderRadius: '14px',
+                    border: '1px solid var(--border)',
+                    padding: '12px 16px',
+                    fontSize: '12px',
+                    color: 'var(--text)',
+                  }}
+                >
+                  <strong style={{ color: 'var(--muted)', display: 'block', marginBottom: '4px' }}>ملاحظات:</strong>
+                  {previewDocModal.notes}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div
+              style={{
+                padding: '16px 24px',
+                background: 'var(--table-header)',
+                borderTop: '1px solid var(--border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card-bg)',
+                  cursor: 'pointer',
+                  fontFamily: "'Cairo',sans-serif",
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  color: 'var(--text)',
+                }}
+              >
+                إغلاق
+              </button>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  onClick={() => window.open(getDocViewUrl(previewDocModal), '_blank')}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #0284c7',
+                    background: 'transparent',
+                    color: '#0284c7',
+                    cursor: 'pointer',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#0284c7';
+                    e.currentTarget.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = '#0284c7';
+                  }}
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square" />
+                  فتح صفحة الوثيقة الكاملة
+                </button>
+
+                <button
+                  onClick={() => handlePrintDoc(previewDocModal)}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #0f766e, #0d9488)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(15, 118, 110, 0.3)',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <i className="fa-solid fa-print" />
+                  طباعة الوثيقة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Document Modal (متاح للأدمن فقط) */}
+      {editDocModal && isAdmin && (
         <div
           className="modal-overlay"
           onClick={(e) => {
@@ -4161,8 +4736,8 @@ export default function AgentMonthlyLedger() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteDocTarget && (
+      {/* Delete Confirmation Modal (متاح للأدمن فقط) */}
+      {deleteDocTarget && isAdmin && (
         <div
           className="modal-overlay"
           onClick={(e) => {
@@ -4260,6 +4835,8 @@ export default function AgentMonthlyLedger() {
           </div>
         </div>
       )}
+
+
 
       {/* Payment Modal (Full Revenue Management Integration) */}
       {payModal && (
@@ -5457,7 +6034,7 @@ export default function AgentMonthlyLedger() {
 
 
       {/* Quick Add Old Document Modal Overlay */}
-      {quickAddModal && monthDocsModal && (
+      {quickAddModal && monthDocsModal && isAdmin && (
         <div
           className="modal-overlay"
           onClick={(e) => {

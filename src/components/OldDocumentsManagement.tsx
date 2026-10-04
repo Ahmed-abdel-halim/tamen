@@ -121,6 +121,26 @@ const HIGH_VALUE_ITEMS = [
 export default function OldDocumentsManagement() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = Boolean(
+    user &&
+    (user.is_admin === true || user.is_admin === 1 || user.is_admin === 'true' || user.is_admin === '1') &&
+    user.is_admin !== 0 &&
+    user.is_admin !== '0' &&
+    user.is_admin !== false &&
+    user.is_admin !== 'false' &&
+    !user.branch_agent_id
+  );
+
+  useEffect(() => {
+    if (!isAdmin) {
+      showToast('عذراً، إدارة الوثائق القديمة مخصصة لصلاحية مدير النظام فقط (Admin)', 'error');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -1476,6 +1496,16 @@ export default function OldDocumentsManagement() {
       setSubmitting(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div style={{ textAlign: 'center', padding: '60px 20px', fontFamily: "'Cairo',sans-serif" }}>
+        <i className="fa-solid fa-lock" style={{ fontSize: '48px', color: '#ef4444', marginBottom: '16px' }} />
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b' }}>عذراً، هذه الصفحة غير مصرح بها</h2>
+        <p style={{ color: '#64748b', fontSize: '14px', marginTop: '8px' }}>إدارة وإصدار الوثائق القديمة متاحة فقط لصلاحيات مدير النظام (Admin).</p>
+      </div>
+    );
+  }
 
   return (
     <section className="document-section">

@@ -180,7 +180,7 @@ function hasAccessToRoute(
     if (path.startsWith('/document-requests')) {
       return true;
     }
-    if (path.startsWith('/reports/agent-monthly-ledger') || path.startsWith('/old-documents')) {
+    if (path.startsWith('/reports/agent-monthly-ledger')) {
       return true;
     }
   }
@@ -209,10 +209,9 @@ function hasAccessToRoute(
     'تأمين حماية طلاب المدارس': ['/school-student-insurance'],
     'تأمين نقل النقدية': ['/cash-in-transit-insurance'],
     'تأمين شحن البضائع': ['/cargo-insurance'],
-    'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries', '/reports/agent-monthly-ledger', '/old-documents'],
-    'إدارة الوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries', '/reports/agent-monthly-ledger', '/old-documents'],
+    'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries', '/reports/agent-monthly-ledger'],
+    'إدارة الوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries', '/reports/agent-monthly-ledger'],
     'صرف المرتبات والمسيرات': ['/reports/employee-salaries'],
-    'إدارة الوثائق القديمة': ['/old-documents'],
     'الوثائق الملغية': ['/canceled-documents'],
 
     // تفصيل صلاحيات الفروع والوكلاء
@@ -256,7 +255,6 @@ function hasAccessToRoute(
     'الوثائق المنتهية': ['/archive'],
     'طلبات الوثائق': ['/document-requests'],
     'ملفات الشركة': ['/company-documents'],
-    'الوثائق القديمة': ['/old-documents'],
 
     'المحاسب المالي': [
       '/reports/financial-statistics',
@@ -279,8 +277,7 @@ function hasAccessToRoute(
       '/reports/treasury-banks',
       '/reports/financial-reconciliation',
       '/reports/live-agents-production',
-      '/reports/agent-monthly-ledger',
-      '/old-documents'
+      '/reports/agent-monthly-ledger'
     ],
     // تفصيل صلاحيات المحاسب المالي
     'المصارف والخزنة': ['/reports/treasury-banks'],
@@ -659,7 +656,7 @@ const createMenuSections = (
     'تأمين نقل النقدية': { label: 'تأمين نقل النقدية', icon: 'fa-solid fa-money-bill-transfer', to: '/cash-in-transit-insurance' },
     'تأمين شحن البضائع': { label: 'تأمين شحن البضائع', icon: 'fa-solid fa-truck', to: '/cargo-insurance' },
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests', badge: pendingDocsCount },
-    'إدارة الوثائق القديمة': { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' },
+    ...(isAdmin ? { 'إدارة الوثائق القديمة': { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' } } : {}),
     'الوثائق الملغية': { label: 'الوثائق الملغية', icon: 'fa-solid fa-ban', to: '/canceled-documents' },
     'إدارة الفروع والوكلاء': [
       { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
@@ -726,7 +723,7 @@ const createMenuSections = (
     'البريد الصادر': { label: 'البريد الصادر', icon: 'fa-solid fa-file-export', to: '/mail/outgoing' },
 
     'الوثائق المنتهية': { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
-    'أرشيف المستندات الإدارية': { label: 'الوثائق المنتهية', icon: 'fa-solid fa-box-archive', to: '/archive' },
+    'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
       { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
@@ -1671,7 +1668,7 @@ export default function App() {
                   <Route path="/notifications" element={<NotificationsPage />} />
 
                   <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/old-documents" element={<AuthorizedRoute requiredPath="/old-documents"><OldDocumentsManagement /></AuthorizedRoute>} />
+                  <Route path="/old-documents" element={isAdmin ? <OldDocumentsManagement /> : <Navigate to="/dashboard" />} />
                   <Route path="/office-users" element={<OfficeUsers />} />
                   <Route path="/profile-update-requests" element={<AuthorizedRoute requiredPath="/profile-update-requests"><ProfileUpdateRequestsList /></AuthorizedRoute>} />
                   <Route path="/users" element={<AuthorizedRoute requiredPath="/users"><UsersList /></AuthorizedRoute>} />
