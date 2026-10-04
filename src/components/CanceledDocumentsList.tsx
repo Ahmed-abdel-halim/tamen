@@ -892,13 +892,34 @@ export default function CanceledDocumentsList() {
           </div>
         ) : (
           <>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+            <div style={{ width: '100%', overflowX: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '3.5%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '8.5%' }} />
+                  <col style={{ width: '8.5%' }} />
+                  <col style={{ width: '7.5%' }} />
+                  <col style={{ width: '7.5%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '9.5%' }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)', borderBottom: '2px solid var(--border, #e2e8f0)' }}>
-                    {['#', 'رقم الوثيقة', 'نوع التأمين', 'اسم المؤمن', 'الوكيل / المكتب', 'الإجمالي', 'رسوم الإلغاء', 'تاريخ الإصدار', 'تاريخ الإلغاء', 'سبب الإلغاء', 'إجراءات'].map((h, i) => (
-                      <th key={h} style={{ padding: '16px 14px', textAlign: (i === 5 || i === 6 || i === 10) ? 'center' : 'right', fontSize: '13px', color: '#dc2626', fontWeight: 900, whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
+                    <th style={{ padding: '11px 2px', textAlign: 'center', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>#</th>
+                    <th style={{ padding: '11px 4px', textAlign: 'right', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>رقم الوثيقة</th>
+                    <th style={{ padding: '11px 4px', textAlign: 'right', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>نوع التأمين</th>
+                    <th style={{ padding: '11px 4px', textAlign: 'right', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>اسم المؤمن</th>
+                    <th style={{ padding: '11px 4px', textAlign: 'right', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>الوكيل / المكتب</th>
+                    <th style={{ padding: '11px 2px', textAlign: 'center', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>الإجمالي</th>
+                    <th style={{ padding: '11px 2px', textAlign: 'center', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>رسوم الإلغاء</th>
+                    <th style={{ padding: '11px 2px', textAlign: 'center', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>تاريخ الإصدار</th>
+                    <th style={{ padding: '11px 2px', textAlign: 'center', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>تاريخ الإلغاء</th>
+                    <th style={{ padding: '11px 4px', textAlign: 'right', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>سبب الإلغاء</th>
+                    <th style={{ padding: '11px 2px', textAlign: 'center', fontSize: '12px', color: '#dc2626', fontWeight: 900 }}>إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -910,81 +931,96 @@ export default function CanceledDocumentsList() {
                         className="canceled-table-row"
                         style={{ borderBottom: '1px solid var(--border, #e2e8f0)', transition: 'all 0.2s ease' }}
                       >
-                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--muted)', fontWeight: 700 }}>{((page - 1) * perPage) + idx + 1}</td>
-                        <td style={{ padding: '14px' }}>
+                        <td style={{ padding: '9px 2px', fontSize: '11.5px', color: 'var(--muted)', fontWeight: 700, textAlign: 'center' }}>
+                          {((page - 1) * perPage) + idx + 1}
+                        </td>
+                        <td style={{ padding: '9px 4px', overflow: 'hidden' }}>
                           <span style={{
                             fontFamily: 'monospace',
                             fontWeight: 800,
-                            fontSize: '13px',
+                            fontSize: '11px',
                             color: '#0f172a',
                             background: 'var(--panel, #f1f5f9)',
-                            padding: '4px 10px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border, #cbd5e1)'
-                          }}>
+                            padding: '3px 6px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border, #cbd5e1)',
+                            display: 'inline-block',
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }} title={doc.insurance_number}>
                             {doc.insurance_number}
                           </span>
                         </td>
-                        <td style={{ padding: '14px' }}>
+                        <td style={{ padding: '9px 4px', overflow: 'hidden' }}>
                           <span style={{
                             background: 'rgba(2, 132, 199, 0.08)',
                             border: '1px solid rgba(2, 132, 199, 0.2)',
-                            borderRadius: '10px',
-                            padding: '5px 12px',
-                            fontSize: '12px',
+                            borderRadius: '6px',
+                            padding: '3px 6px',
+                            fontSize: '11px',
                             color: '#0284c7',
                             fontWeight: 800,
-                            whiteSpace: 'nowrap'
-                          }}>
+                            display: 'inline-block',
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }} title={doc.doc_type_label}>
                             {doc.doc_type_label}
                           </span>
                         </td>
-                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--text, #0f172a)', fontWeight: 700 }}>{doc.insured_name}</td>
-                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--text, #334155)', fontWeight: 700 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <i className="fa-solid fa-building-user" style={{ color: '#64748b', fontSize: '12px' }} />
-                            {doc.agency_name || '-'}
+                        <td style={{ padding: '9px 4px', fontSize: '12px', color: 'var(--text, #0f172a)', fontWeight: 700, overflow: 'hidden' }}>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.insured_name}>
+                            {doc.insured_name}
                           </div>
                         </td>
-                        <td style={{ padding: '14px', fontSize: '14px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          {fmt(doc.total)} <span style={{ fontSize: '11px' }}>د.ل</span>
+                        <td style={{ padding: '9px 4px', fontSize: '11.5px', color: 'var(--text, #334155)', fontWeight: 700, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.agency_name || '-'}>
+                            <i className="fa-solid fa-building-user" style={{ color: '#64748b', fontSize: '10px', flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.agency_name || '-'}</span>
+                          </div>
                         </td>
-                        <td style={{ padding: '14px', fontSize: '13px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '9px 2px', fontSize: '12px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          {fmt(doc.total)} <span style={{ fontSize: '9px' }}>د.ل</span>
+                        </td>
+                        <td style={{ padding: '9px 2px', fontSize: '11.5px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
                           <span style={{
                             background: cancelFee > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(100, 116, 139, 0.1)',
                             border: `1px solid ${cancelFee > 0 ? '#f59e0b' : '#cbd5e1'}`,
-                            padding: '4px 10px',
-                            borderRadius: '8px',
+                            padding: '2px 5px',
+                            borderRadius: '6px',
                             display: 'inline-block'
                           }}>
                             {fmt(cancelFee)} د.ل
                           </span>
                         </td>
-                        <td style={{ padding: '14px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(doc.issue_date)}</td>
-                        <td style={{ padding: '14px', fontSize: '13px', color: '#dc2626', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtDate(doc.canceled_at)}</td>
-                        <td style={{ padding: '14px', fontSize: '12px', color: 'var(--muted)', maxWidth: '240px' }}>
-                          <div style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }} title={doc.cancel_reason}>
-                            {doc.cancel_reason}
+                        <td style={{ padding: '9px 2px', fontSize: '11px', color: 'var(--muted)', textAlign: 'center', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(doc.issue_date)}</td>
+                        <td style={{ padding: '9px 2px', fontSize: '11px', color: '#dc2626', textAlign: 'center', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtDate(doc.canceled_at)}</td>
+                        <td style={{ padding: '9px 4px', fontSize: '11px', color: 'var(--muted)', overflow: 'hidden' }}>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }} title={doc.cancel_reason}>
+                            {doc.cancel_reason || '-'}
                           </div>
                         </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                        <td style={{ padding: '7px 2px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', gap: '3px', alignItems: 'center', justifyContent: 'center' }}>
                             <button
                               onClick={() => setPreviewDocModal(doc)}
-                              title="معاينة تفاصيل الوثيقة الملغية"
+                              title="معاينة تفاصيل الوثيقة"
                               style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
+                                padding: '4px 6px',
+                                borderRadius: '6px',
                                 border: 'none',
                                 background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
                                 color: '#ffffff',
                                 cursor: 'pointer',
                                 fontWeight: 800,
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                                gap: '3px',
+                                boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
                                 fontFamily: "'Cairo', sans-serif",
                                 transition: 'all 0.15s ease',
                               }}
@@ -998,18 +1034,18 @@ export default function CanceledDocumentsList() {
                               onClick={() => window.open(`${getDocPrintUrl(doc)}?t=${Date.now()}`, '_blank')}
                               title="طباعة الوثيقة"
                               style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
+                                padding: '4px 6px',
+                                borderRadius: '6px',
                                 border: 'none',
                                 background: 'linear-gradient(135deg, #0f766e, #0d9488)',
                                 color: '#ffffff',
                                 cursor: 'pointer',
                                 fontWeight: 800,
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                boxShadow: '0 2px 6px rgba(15, 118, 110, 0.25)',
+                                gap: '3px',
+                                boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)',
                                 fontFamily: "'Cairo', sans-serif",
                                 transition: 'all 0.15s ease',
                               }}
@@ -1026,14 +1062,14 @@ export default function CanceledDocumentsList() {
                 </tbody>
                 <tfoot>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.03) 100%)', borderTop: '2px solid var(--border, #e2e8f0)' }}>
-                    <td colSpan={5} style={{ padding: '14px 16px', fontSize: '14px', color: 'var(--text, #0f172a)', fontWeight: 900 }}>
+                    <td colSpan={5} style={{ padding: '10px 8px', fontSize: '12.5px', color: 'var(--text, #0f172a)', fontWeight: 900 }}>
                       إجمالي الصفحة ({docs.length} وثيقة)
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '15px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      {fmt(docs.reduce((s, d) => s + d.total, 0))} د.ل
+                    <td style={{ padding: '10px 2px', fontSize: '12.5px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      {fmt(docs.reduce((s, d) => s + d.total, 0))} <span style={{ fontSize: '9px' }}>د.ل</span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      {fmt(docs.reduce((s, d) => s + getCancellationFee(d), 0))} د.ل
+                    <td style={{ padding: '10px 2px', fontSize: '12px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      {fmt(docs.reduce((s, d) => s + getCancellationFee(d), 0))} <span style={{ fontSize: '9px' }}>د.ل</span>
                     </td>
                     <td colSpan={4}></td>
                   </tr>
