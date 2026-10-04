@@ -34,6 +34,7 @@ interface MonthRow {
   active_count?: number;
   expired_count?: number;
   canceled_count?: number;
+  cancellation_fees?: number;
   total_sales: number;
   agent_share: number;
   company_share: number;
@@ -64,6 +65,7 @@ interface LedgerSummary {
   active_documents?: number;
   expired_documents?: number;
   canceled_documents?: number;
+  total_cancellation_fees?: number;
   total_sales: number;
   total_agent_share: number;
   total_company_share: number;
@@ -102,6 +104,7 @@ interface MonthDocItem {
   percentage: number;
   agent_share: number;
   company_share: number;
+  cancellation_fee?: number;
   is_old_document: boolean;
   status: string;
   notes?: string | null;
@@ -3358,9 +3361,14 @@ export default function AgentMonthlyLedger() {
                           </span>
                         </td>
                         <td style={td}>
-                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
+                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }} title={row.cancellation_fees ? `رسوم الإلغاء: ${fmt(row.cancellation_fees)} د.ل` : undefined}>
                             {row.canceled_count ?? 0}
                           </span>
+                          {row.cancellation_fees && row.cancellation_fees > 0 ? (
+                            <div style={{ fontSize: '10px', color: '#d97706', fontWeight: 800, marginTop: '2px' }} title="رسوم الإلغاء المستحقة لصالح الشركة">
+                              {fmt(row.cancellation_fees)} د.ل
+                            </div>
+                          ) : null}
                         </td>
                         <td style={{ ...td, fontWeight: 800, color: '#3b82f6', fontSize: '12px' }}>
                           {row.total_sales > 0 ? (
@@ -3387,6 +3395,11 @@ export default function AgentMonthlyLedger() {
                             <>
                               {fmt(row.company_share)}
                               <span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span>
+                              {row.cancellation_fees && row.cancellation_fees > 0 ? (
+                                <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: 800, marginTop: '2px' }} title="تتضمن حصة الشركة رسوم الإلغاء">
+                                  (منها {fmt(row.cancellation_fees)} رسوم إلغاء)
+                                </div>
+                              ) : null}
                             </>
                           ) : (
                             <span style={{ color: 'var(--muted)' }}>—</span>
@@ -3612,6 +3625,11 @@ export default function AgentMonthlyLedger() {
                       <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>
                         {ledger.summary.canceled_documents ?? 0}
                       </span>
+                      {ledger.summary.total_cancellation_fees && ledger.summary.total_cancellation_fees > 0 ? (
+                        <div style={{ fontSize: '9.5px', color: '#d97706', fontWeight: 800, marginTop: '2px' }} title="إجمالي رسوم الإلغاء">
+                          {fmt(ledger.summary.total_cancellation_fees)} د.ل
+                        </div>
+                      ) : null}
                     </td>
                     <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#3b82f6' }}>
                       {fmt(ledger.summary.total_sales)}
@@ -3624,6 +3642,11 @@ export default function AgentMonthlyLedger() {
                     <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#2dd4bf' }}>
                       {fmt(ledger.summary.total_company_share)}
                       <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
+                      {ledger.summary.total_cancellation_fees && ledger.summary.total_cancellation_fees > 0 ? (
+                        <div style={{ fontSize: '9.5px', color: '#f59e0b', fontWeight: 800, marginTop: '2px' }} title="تتضمن إجمالي رسوم الإلغاء">
+                          (منها {fmt(ledger.summary.total_cancellation_fees)} رسوم إلغاء)
+                        </div>
+                      ) : null}
                     </td>
                     <td style={{ padding: '10px 4px', textAlign: 'center', color: 'var(--muted)', fontSize: '11px' }}>—</td>
                     <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#059669' }}>
@@ -4121,9 +4144,16 @@ export default function AgentMonthlyLedger() {
                                 وثيقة قديمة
                               </span>
                             ) : doc.status === 'ملغية' ? (
-                              <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
-                                ملغية
-                              </span>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                                <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
+                                  ملغية
+                                </span>
+                                {doc.cancellation_fee && doc.cancellation_fee > 0 ? (
+                                  <span style={{ background: '#fef3c7', color: '#d97706', padding: '1px 6px', borderRadius: '8px', fontSize: '9.5px', fontWeight: 800 }} title="رسوم الإلغاء المستحقة للشركة">
+                                    رسوم: {fmt(doc.cancellation_fee)} د.ل
+                                  </span>
+                                ) : null}
+                              </div>
                             ) : doc.status === 'منتهية' ? (
                               <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 800 }}>
                                 منتهية
@@ -4410,7 +4440,7 @@ export default function AgentMonthlyLedger() {
                     </span>
                   ) : previewDocModal.status === 'ملغية' ? (
                     <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
-                      ملغية
+                      ملغية {previewDocModal.cancellation_fee ? `(رسوم إلغاء: ${fmt(previewDocModal.cancellation_fee)} د.ل)` : ''}
                     </span>
                   ) : previewDocModal.status === 'منتهية' ? (
                     <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
@@ -4531,7 +4561,9 @@ export default function AgentMonthlyLedger() {
                   </div>
 
                   <div style={{ background: 'var(--card-bg)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>حصة الشركة</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700 }}>
+                      {previewDocModal.status === 'ملغية' ? 'رسوم الإلغاء (حصة الشركة)' : 'حصة الشركة'}
+                    </div>
                     <div style={{ fontSize: '14px', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>
                       {fmt(previewDocModal.company_share)} <span style={{ fontSize: '10px' }}>د.ل</span>
                     </div>

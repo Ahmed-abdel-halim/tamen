@@ -84,6 +84,79 @@ export default function CanceledDocumentsList() {
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
 
+  // Preview Document State
+  const [previewDocModal, setPreviewDocModal] = useState<CanceledDoc | null>(null);
+
+  const getDocPrintUrl = (doc: CanceledDoc): string => {
+    const tbl = doc.table || '';
+    if (tbl === 'insurance_documents') {
+      return `${API_BASE_URL}/insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'international_insurance_documents') {
+      return `${API_BASE_URL}/international-insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'travel_insurance_documents') {
+      return `${API_BASE_URL}/travel-insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'resident_insurance_documents') {
+      return `${API_BASE_URL}/resident-insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'marine_structure_insurance_documents') {
+      return `${API_BASE_URL}/marine-structure-insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'professional_liability_insurance_documents') {
+      return `${API_BASE_URL}/professional-liability-insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'personal_accident_insurance_documents') {
+      return `${API_BASE_URL}/personal-accident-insurance-documents/${doc.id}/print`;
+    }
+    if (tbl === 'school_student_insurance_documents') {
+      return `${API_BASE_URL}/school-student-insurance/${doc.id}/print`;
+    }
+    if (tbl === 'cash_in_transit_insurance_documents') {
+      return `${API_BASE_URL}/cash-in-transit-insurance/${doc.id}/print`;
+    }
+    if (tbl === 'cargo_insurance_documents') {
+      return `${API_BASE_URL}/cargo-insurance/${doc.id}/print`;
+    }
+    return `${API_BASE_URL}/insurance-documents/${doc.id}/print`;
+  };
+
+  const getDocViewUrl = (doc: CanceledDoc): string => {
+    const tbl = doc.table || '';
+    if (tbl === 'insurance_documents') {
+      return `/insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'international_insurance_documents') {
+      return `/international-insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'travel_insurance_documents') {
+      return `/travel-insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'resident_insurance_documents') {
+      return `/resident-insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'marine_structure_insurance_documents') {
+      return `/marine-structure-insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'professional_liability_insurance_documents') {
+      return `/professional-liability-insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'personal_accident_insurance_documents') {
+      return `/personal-accident-insurance-documents/${doc.id}`;
+    }
+    if (tbl === 'school_student_insurance_documents') {
+      return `/school-student-insurance/${doc.id}`;
+    }
+    if (tbl === 'cash_in_transit_insurance_documents') {
+      return `/cash-in-transit-insurance/${doc.id}`;
+    }
+    if (tbl === 'cargo_insurance_documents') {
+      return `/cargo-insurance/${doc.id}`;
+    }
+    return `/insurance-documents/${doc.id}`;
+  };
+
   // Agent searchable dropdown
   const [agentSearch, setAgentSearch] = useState('');
   const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
@@ -823,8 +896,8 @@ export default function CanceledDocumentsList() {
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)', borderBottom: '2px solid var(--border, #e2e8f0)' }}>
-                    {['#', 'رقم الوثيقة', 'نوع التأمين', 'اسم المؤمن', 'الوكيل / المكتب', 'الإجمالي', 'رسوم الإلغاء', 'تاريخ الإصدار', 'تاريخ الإلغاء', 'سبب الإلغاء'].map((h, i) => (
-                      <th key={h} style={{ padding: '16px 14px', textAlign: (i === 5 || i === 6) ? 'center' : 'right', fontSize: '13px', color: '#dc2626', fontWeight: 900, whiteSpace: 'nowrap' }}>{h}</th>
+                    {['#', 'رقم الوثيقة', 'نوع التأمين', 'اسم المؤمن', 'الوكيل / المكتب', 'الإجمالي', 'رسوم الإلغاء', 'تاريخ الإصدار', 'تاريخ الإلغاء', 'سبب الإلغاء', 'إجراءات'].map((h, i) => (
+                      <th key={h} style={{ padding: '16px 14px', textAlign: (i === 5 || i === 6 || i === 10) ? 'center' : 'right', fontSize: '13px', color: '#dc2626', fontWeight: 900, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -894,6 +967,59 @@ export default function CanceledDocumentsList() {
                             {doc.cancel_reason}
                           </div>
                         </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => setPreviewDocModal(doc)}
+                              title="معاينة تفاصيل الوثيقة الملغية"
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                                color: '#ffffff',
+                                cursor: 'pointer',
+                                fontWeight: 800,
+                                fontSize: '11px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                                fontFamily: "'Cairo', sans-serif",
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                            >
+                              <i className="fa-solid fa-eye" /> معاينة
+                            </button>
+
+                            <button
+                              onClick={() => window.open(`${getDocPrintUrl(doc)}?t=${Date.now()}`, '_blank')}
+                              title="طباعة الوثيقة"
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #0f766e, #0d9488)',
+                                color: '#ffffff',
+                                cursor: 'pointer',
+                                fontWeight: 800,
+                                fontSize: '11px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 2px 6px rgba(15, 118, 110, 0.25)',
+                                fontFamily: "'Cairo', sans-serif",
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                            >
+                              <i className="fa-solid fa-print" /> طباعة
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -909,7 +1035,7 @@ export default function CanceledDocumentsList() {
                     <td style={{ padding: '14px 16px', fontSize: '14px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
                       {fmt(docs.reduce((s, d) => s + getCancellationFee(d), 0))} د.ل
                     </td>
-                    <td colSpan={3}></td>
+                    <td colSpan={4}></td>
                   </tr>
                 </tfoot>
               </table>
@@ -1005,6 +1131,362 @@ export default function CanceledDocumentsList() {
           </>
         )}
       </div>
+    
+      {/* Canceled Document Preview Modal */}
+      {previewDocModal && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewDocModal(null);
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1300,
+            padding: '20px',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg, #ffffff)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '680px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+              border: '1px solid var(--border, #e2e8f0)',
+              overflow: 'hidden',
+              animation: 'fadeInUp 0.3s ease',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                background: 'linear-gradient(135deg, #b91c1c, #dc2626, #7f1d1d)',
+                color: 'white',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '22px',
+                  }}
+                >
+                  <i className="fa-solid fa-file-circle-xmark" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, fontFamily: "'Cairo', sans-serif" }}>
+                      معاينة الوثيقة الملغية
+                    </h3>
+                    <span style={{
+                      background: 'rgba(255, 255, 255, 0.25)',
+                      padding: '2px 8px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: 800
+                    }}>
+                      ملغية
+                    </span>
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#fecaca', fontFamily: "'Cairo', sans-serif" }}>
+                    رقم الوثيقة: <span style={{ direction: 'ltr', display: 'inline-block', fontWeight: 800 }}>{previewDocModal.insurance_number}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.15)',
+                  color: 'white',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Cancellation Alert Banner */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.04) 100%)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#dc2626', fontWeight: 800, fontSize: '13px' }}>
+                    <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '16px' }} />
+                    <span>تم إلغاء هذه الوثيقة واستبعادها من المبيعات وكشوفات الحساب</span>
+                  </div>
+                  <span style={{
+                    background: '#fee2e2',
+                    color: '#991b1b',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                  }}>
+                    تاريخ الإلغاء: {fmtDate(previewDocModal.canceled_at)}
+                  </span>
+                </div>
+                {previewDocModal.cancel_reason && (
+                  <div style={{ fontSize: '12px', color: 'var(--text, #334155)', fontWeight: 600, background: 'rgba(255,255,255,0.6)', padding: '8px 12px', borderRadius: '10px', marginTop: '4px' }}>
+                    <strong style={{ color: '#dc2626' }}>سبب الإلغاء: </strong>
+                    {previewDocModal.cancel_reason}
+                  </div>
+                )}
+              </div>
+
+              {/* Document Info Card */}
+              <div
+                style={{
+                  background: 'var(--panel, #f8fafc)',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border, #e2e8f0)',
+                  padding: '16px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '14px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-user" style={{ marginLeft: '6px', color: '#dc2626' }} />
+                    اسم المؤمن له / العميل
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--text, #0f172a)' }}>
+                    {previewDocModal.insured_name}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-layer-group" style={{ marginLeft: '6px', color: '#0284c7' }} />
+                    نوع التأمين
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0284c7' }}>
+                    {previewDocModal.doc_type_label}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-building-user" style={{ marginLeft: '6px', color: '#7c3aed' }} />
+                    الوكيل / المكتب
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text, #0f172a)' }}>
+                    {previewDocModal.agency_name || '—'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-calendar-day" style={{ marginLeft: '6px', color: '#0284c7' }} />
+                    تاريخ الإصدار
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text, #0f172a)' }}>
+                    {fmtDate(previewDocModal.issue_date)}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-calendar-check" style={{ marginLeft: '6px', color: '#10b981' }} />
+                    تاريخ سريان الوثيقة
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text, #0f172a)' }}>
+                    {fmtDate(previewDocModal.start_date)}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700, marginBottom: '4px' }}>
+                    <i className="fa-solid fa-calendar-xmark" style={{ marginLeft: '6px', color: '#ef4444' }} />
+                    تاريخ انتهاء الوثيقة
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text, #0f172a)' }}>
+                    {fmtDate(previewDocModal.end_date)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial & Cancellation Fee Details */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.05), rgba(220, 38, 38, 0.05))',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(217, 119, 6, 0.25)',
+                  padding: '16px',
+                }}
+              >
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 900, color: 'var(--text, #0f172a)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fa-solid fa-receipt" style={{ color: '#d97706' }} />
+                  المعالجة المالية ورسوم الإلغاء
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                  <div style={{ background: 'var(--card-bg, #ffffff)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700 }}>إجمالي الوثيقة (الملغي)</div>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: '#dc2626', marginTop: '4px', textDecoration: 'line-through' }}>
+                      {fmt(previewDocModal.total)} <span style={{ fontSize: '11px' }}>د.ل</span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', fontWeight: 600 }}>مستبعد تماماً</div>
+                  </div>
+
+                  <div style={{ background: 'var(--card-bg, #ffffff)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 700 }}>صافي القسط</div>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: '#64748b', marginTop: '4px' }}>
+                      {fmt(previewDocModal.premium)} <span style={{ fontSize: '11px' }}>د.ل</span>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%)',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: '2px solid #f59e0b',
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 800 }}>رسوم الإلغاء (حصة الشركة)</div>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: '#d97706', marginTop: '4px' }}>
+                      {fmt(getCancellationFee(previewDocModal))} <span style={{ fontSize: '12px' }}>د.ل</span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px', fontWeight: 700 }}>تُضاف تلقائياً إلى كشف الحساب</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div
+              style={{
+                padding: '16px 24px',
+                background: 'var(--panel, #f8fafc)',
+                borderTop: '1px solid var(--border, #e2e8f0)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border, #cbd5e1)',
+                  background: 'var(--card-bg, #ffffff)',
+                  cursor: 'pointer',
+                  fontFamily: "'Cairo', sans-serif",
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  color: 'var(--text, #0f172a)',
+                }}
+              >
+                إغلاق
+              </button>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  onClick={() => window.open(getDocViewUrl(previewDocModal), '_blank')}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #0284c7',
+                    background: 'transparent',
+                    color: '#0284c7',
+                    cursor: 'pointer',
+                    fontFamily: "'Cairo', sans-serif",
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#0284c7';
+                    e.currentTarget.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = '#0284c7';
+                  }}
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square" />
+                  فتح صفحة الوثيقة الكاملة
+                </button>
+
+                <button
+                  onClick={() => window.open(`${getDocPrintUrl(previewDocModal)}?t=${Date.now()}`, '_blank')}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #0f766e, #0d9488)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontFamily: "'Cairo', sans-serif",
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(15,118,110,0.3)',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <i className="fa-solid fa-print" />
+                  طباعة الوثيقة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
