@@ -524,6 +524,27 @@ export default function CanceledDocumentsList() {
         .canceled-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
         .canceled-table-row:hover { background: rgba(239, 68, 68, 0.04) !important; }
         .canceled-input:focus { border-color: #2563eb !important; background: #ffffff !important; box-shadow: 0 0 0 4px rgba(37,99,235,0.1) !important; }
+        .text-cell-scroll {
+          overflow-y: auto;
+          overflow-x: hidden;
+          max-height: 44px;
+          line-height: 1.35;
+          white-space: normal;
+          word-break: break-word;
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
+        .text-cell-scroll::-webkit-scrollbar {
+          width: 3px;
+          height: 3px;
+        }
+        .text-cell-scroll::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        .text-cell-scroll::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
       `}</style>
 
       {/* Header Banner */}
@@ -895,17 +916,17 @@ export default function CanceledDocumentsList() {
             <div style={{ width: '100%', overflowX: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <colgroup>
-                  <col style={{ width: '3.5%' }} />
-                  <col style={{ width: '11%' }} />
-                  <col style={{ width: '11%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '8.5%' }} />
-                  <col style={{ width: '8.5%' }} />
+                  <col style={{ width: '3%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '14%' }} />
                   <col style={{ width: '7.5%' }} />
                   <col style={{ width: '7.5%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '12%' }} />
                   <col style={{ width: '9%' }} />
-                  <col style={{ width: '9.5%' }} />
                 </colgroup>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)', borderBottom: '2px solid var(--border, #e2e8f0)' }}>
@@ -931,61 +952,57 @@ export default function CanceledDocumentsList() {
                         className="canceled-table-row"
                         style={{ borderBottom: '1px solid var(--border, #e2e8f0)', transition: 'all 0.2s ease' }}
                       >
-                        <td style={{ padding: '9px 2px', fontSize: '11.5px', color: 'var(--muted)', fontWeight: 700, textAlign: 'center' }}>
+                        <td style={{ padding: '8px 2px', fontSize: '11.5px', color: 'var(--muted)', fontWeight: 700, textAlign: 'center' }}>
                           {((page - 1) * perPage) + idx + 1}
                         </td>
-                        <td style={{ padding: '9px 4px', overflow: 'hidden' }}>
+                        <td style={{ padding: '8px 3px', textAlign: 'right' }}>
                           <span style={{
                             fontFamily: 'monospace',
                             fontWeight: 800,
                             fontSize: '11px',
                             color: '#0f172a',
                             background: 'var(--panel, #f1f5f9)',
-                            padding: '3px 6px',
+                            padding: '3px 5px',
                             borderRadius: '6px',
                             border: '1px solid var(--border, #cbd5e1)',
                             display: 'inline-block',
-                            maxWidth: '100%',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }} title={doc.insurance_number}>
                             {doc.insurance_number}
                           </span>
                         </td>
-                        <td style={{ padding: '9px 4px', overflow: 'hidden' }}>
+                        <td style={{ padding: '8px 3px', textAlign: 'right' }}>
                           <span style={{
                             background: 'rgba(2, 132, 199, 0.08)',
                             border: '1px solid rgba(2, 132, 199, 0.2)',
                             borderRadius: '6px',
-                            padding: '3px 6px',
+                            padding: '3px 5px',
                             fontSize: '11px',
                             color: '#0284c7',
                             fontWeight: 800,
                             display: 'inline-block',
-                            maxWidth: '100%',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            lineHeight: '1.25',
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
                           }} title={doc.doc_type_label}>
                             {doc.doc_type_label}
                           </span>
                         </td>
-                        <td style={{ padding: '9px 4px', fontSize: '12px', color: 'var(--text, #0f172a)', fontWeight: 700, overflow: 'hidden' }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.insured_name}>
+                        <td style={{ padding: '8px 4px', fontSize: '12px', color: 'var(--text, #0f172a)', fontWeight: 700 }}>
+                          <div className="text-cell-scroll" title={doc.insured_name}>
                             {doc.insured_name}
                           </div>
                         </td>
-                        <td style={{ padding: '9px 4px', fontSize: '11.5px', color: 'var(--text, #334155)', fontWeight: 700, overflow: 'hidden' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.agency_name || '-'}>
-                            <i className="fa-solid fa-building-user" style={{ color: '#64748b', fontSize: '10px', flexShrink: 0 }} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.agency_name || '-'}</span>
+                        <td style={{ padding: '8px 4px', fontSize: '11.5px', color: 'var(--text, #334155)', fontWeight: 700 }}>
+                          <div className="text-cell-scroll" style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }} title={doc.agency_name || '-'}>
+                            <i className="fa-solid fa-building-user" style={{ color: '#64748b', fontSize: '10px', marginTop: '3px', flexShrink: 0 }} />
+                            <span>{doc.agency_name || '-'}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '9px 2px', fontSize: '12px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '8px 2px', fontSize: '12px', color: '#dc2626', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
                           {fmt(doc.total)} <span style={{ fontSize: '9px' }}>د.ل</span>
                         </td>
-                        <td style={{ padding: '9px 2px', fontSize: '11.5px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '8px 2px', fontSize: '11.5px', color: '#d97706', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
                           <span style={{
                             background: cancelFee > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(100, 116, 139, 0.1)',
                             border: `1px solid ${cancelFee > 0 ? '#f59e0b' : '#cbd5e1'}`,
@@ -996,14 +1013,14 @@ export default function CanceledDocumentsList() {
                             {fmt(cancelFee)} د.ل
                           </span>
                         </td>
-                        <td style={{ padding: '9px 2px', fontSize: '11px', color: 'var(--muted)', textAlign: 'center', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(doc.issue_date)}</td>
-                        <td style={{ padding: '9px 2px', fontSize: '11px', color: '#dc2626', textAlign: 'center', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtDate(doc.canceled_at)}</td>
-                        <td style={{ padding: '9px 4px', fontSize: '11px', color: 'var(--muted)', overflow: 'hidden' }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }} title={doc.cancel_reason}>
+                        <td style={{ padding: '8px 2px', fontSize: '11px', color: 'var(--muted)', textAlign: 'center', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(doc.issue_date)}</td>
+                        <td style={{ padding: '8px 2px', fontSize: '11px', color: '#dc2626', textAlign: 'center', fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtDate(doc.canceled_at)}</td>
+                        <td style={{ padding: '8px 4px', fontSize: '11px', color: 'var(--muted)' }}>
+                          <div className="text-cell-scroll" style={{ fontWeight: 600 }} title={doc.cancel_reason}>
                             {doc.cancel_reason || '-'}
                           </div>
                         </td>
-                        <td style={{ padding: '7px 2px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '6px 2px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'inline-flex', gap: '3px', alignItems: 'center', justifyContent: 'center' }}>
                             <button
                               onClick={() => setPreviewDocModal(doc)}
