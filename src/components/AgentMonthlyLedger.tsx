@@ -123,7 +123,7 @@ interface MonthDocsSummary {
 export default function AgentMonthlyLedger() {
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [excludeCanceled, setExcludeCanceled] = useState(true);
+  const [excludeCanceled, setExcludeCanceled] = useState(false);
   const [onlyActiveMonths, setOnlyActiveMonths] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('all');
   const [loading, setLoading] = useState(false);
