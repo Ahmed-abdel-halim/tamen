@@ -56,6 +56,7 @@ type ExternalVehicleNationality = {
 type ExternalInsuranceClause = {
   id: number;
   name?: string;
+  slug?: string;
   type?: string;
   active?: number;
   created_at?: string;
@@ -176,6 +177,52 @@ const HIGH_VALUE_ITEMS = [
   'سيارات الركوبة الحافلات'
 ];
 
+// دالة ربط البند بمعرف بند الاتحاد LIFO
+const getClauseIdForItemType = (itemType: string, clauses?: ExternalInsuranceClause[]): string => {
+  if (!itemType) return '1';
+
+  if (clauses && clauses.length > 0) {
+    const cleanItem = itemType.replace(/^ال/, '').trim();
+    const matched = clauses.find(c => {
+      const text = (c.slug || c.name || '').replace(/^ال/, '').trim();
+      return text === cleanItem || text.includes(cleanItem) || cleanItem.includes(text);
+    });
+    if (matched) return matched.id.toString();
+  }
+
+  const staticMap: Record<string, string> = {
+    'سيارات خاصة ملاكي': '1',
+    'دراجة نارية': '2',
+    'سيارة تعليم قيادة': '3',
+    'سيارة تعليم القيادة': '3',
+    'سيارة نقل الموتى': '4',
+    'سيارة نقل الموتي': '4',
+    'سيارة اسعاف': '5',
+    'سيارة إسعاف': '5',
+    'مقطورة': '6',
+    'المقطورة': '6',
+    'السيارات التجارية': '7',
+    'سيارات تجارية': '7',
+    'الجرارات': '8',
+    'جرار': '8',
+    'جرارات': '8',
+    'سيارات نقل بضائع': '9',
+    'سيارات نقل البضائع': '9',
+    'سيارات الركوبة الحافلات': '10',
+    'سيارات الركوب الحافلات': '10',
+  };
+
+  if (staticMap[itemType]) return staticMap[itemType];
+
+  for (const [key, id] of Object.entries(staticMap)) {
+    if (itemType.includes(key) || key.includes(itemType)) {
+      return id;
+    }
+  }
+
+  return '1';
+};
+
 export default function CreateInternationalInsurance() {
   const navigate = useNavigate();
   const EXTERNAL_API_BASE_URL = import.meta.env.DEV
@@ -211,7 +258,7 @@ export default function CreateInternationalInsurance() {
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   });
-  const [, setExternalInsuranceClauses] = useState<ExternalInsuranceClause[]>(() => {
+  const [externalInsuranceClauses, setExternalInsuranceClauses] = useState<ExternalInsuranceClause[]>(() => {
     try {
       const stored = localStorage.getItem('cache_external_insurance_clauses');
       return stored ? JSON.parse(stored) : [];
@@ -907,6 +954,9 @@ export default function CreateInternationalInsurance() {
   // لا يُعيد تعيين tax و supervision_fees لأنها تأتي من API الاتحاد
   useEffect(() => {
     if (formData.item_type) {
+      const clauseId = getClauseIdForItemType(formData.item_type, externalInsuranceClauses);
+      setSelectedInsuranceClauseId(clauseId);
+
       let dailyPremium = 0;
 
       if (LOW_VALUE_ITEMS.includes(formData.item_type)) {
@@ -1291,7 +1341,7 @@ export default function CreateInternationalInsurance() {
       formData.append('insurance_days_number', insuranceDaysNumber);
       
       // insurance_clauses_id: Insurance clause ID من النظام الخارجي
-      const insuranceClausesId = selectedInsuranceClauseId || '1'; // استخدام القيمة المختارة أو القيمة الافتراضية
+      const insuranceClausesId = getClauseIdForItemType(documentData.item_type, externalInsuranceClauses) || selectedInsuranceClauseId || '1';
       formData.append('insurance_clauses_id', insuranceClausesId);
       
       // insurance_country_number: Insurance country number
@@ -2067,7 +2117,12 @@ export default function CreateInternationalInsurance() {
                     <select
                       id="item_type"
                       value={formData.item_type}
-                      onChange={(e) => setFormData({ ...formData, item_type: e.target.value as any })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ ...formData, item_type: val as any });
+                        const clauseId = getClauseIdForItemType(val, externalInsuranceClauses);
+                        setSelectedInsuranceClauseId(clauseId);
+                      }}
                     >
                       <option value="">اختر البند</option>
                       {ITEM_TYPES.map((item) => (
