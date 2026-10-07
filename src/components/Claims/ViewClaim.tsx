@@ -427,6 +427,18 @@ export default function ViewClaim() {
     const cachedRates = localStorage.getItem('mli_exchange_rates');
     const exchangeRates = cachedRates ? JSON.parse(cachedRates) : { usd_to_lyd: 7.15, tnd_to_lyd: 2.30, eur_to_lyd: 7.65 };
 
+    const formatPrintDate = (d: any) => {
+      if (!d || d === '---') return '---';
+      try {
+        const str = String(d).replace(' ', 'T');
+        const dt = new Date(str);
+        if (!isNaN(dt.getTime())) {
+          return dt.toLocaleDateString('en-GB');
+        }
+      } catch (e) {}
+      return String(d);
+    };
+
     // --- Financial ---
     let tndAmount = claim.assessor_other_amount || '---';
     let rawLyd: any = claim.assessor_amount_dinar;
@@ -533,19 +545,20 @@ export default function ViewClaim() {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
           @media print {
-            @page { margin: 5mm; size: A4; }
+            @page { margin: 6mm; size: A4 portrait; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { margin: 0; }
+            body { margin: 0 auto; max-width: 100% !important; padding: 0 !important; }
           }
           * { box-sizing: border-box; }
           body {
             font-family: 'Cairo', sans-serif;
             margin: 0 auto;
-            max-width: 195mm;
-            padding: 8px 10px;
+            max-width: 205mm;
+            padding: 8px 12px;
             color: #000;
             background: #fff;
             font-size: 10.5px;
+            line-height: 1.4;
           }
 
           /* ===== HEADER ===== */
@@ -553,7 +566,7 @@ export default function ViewClaim() {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             align-items: start;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             gap: 10px;
           }
           .hdr-logo { display: flex; align-items: flex-start; }
@@ -566,11 +579,11 @@ export default function ViewClaim() {
           }
           .hdr-subtitle { font-size: 11px; font-weight: 700; color: #475569; }
           .hdr-qr { display: flex; justify-content: flex-end; align-items: flex-start; }
-          .hdr-qr img { width: 82px; height: 82px; border: 1.5px solid #000; padding: 2px; }
+          .hdr-qr img { width: 80px; height: 80px; border: 1.5px solid #000; padding: 2px; }
 
           /* Company strip */
           .company-strip {
-            display: grid; grid-template-columns: 1fr 1fr;
+            display: grid; grid-template-columns: 1.2fr 0.8fr;
             border: 1.5px solid #000; margin-bottom: 10px;
           }
           .cs-box { padding: 6px 12px; border-left: 1px solid #000; }
@@ -587,25 +600,51 @@ export default function ViewClaim() {
             text-align: center; padding: 4px 8px;
             margin-bottom: 0; letter-spacing: 0.3px;
           }
-          .section-body { border: 1.5px solid #1e293b; border-top: none; padding: 5px 8px; }
+          .section-body { border: 1.5px solid #1e293b; border-top: none; padding: 6px 10px; }
 
           /* Grid layouts */
-          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
-          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 10px; }
-          .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px 10px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px 12px; }
+          .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px 10px; }
 
-          .field-row { display: flex; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 3px; padding-top: 3px; }
+          .field-row {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 4px;
+            padding-top: 4px;
+            gap: 6px;
+            min-width: 0;
+          }
           .field-row:last-child { border-bottom: none; }
-          .fl { font-weight: 800; font-size: 10px; width: 95px; flex-shrink: 0; color: #334155; }
+          .fl {
+            font-weight: 800;
+            font-size: 10px;
+            color: #334155;
+            white-space: nowrap;
+            flex-shrink: 0;
+          }
           .fv {
-            flex-grow: 1; font-weight: 700; font-size: 10.5px;
-            border: 1px solid #94a3b8; border-radius: 3px;
-            padding: 1px 6px; min-height: 17px;
-            background: #f8fafc; text-align: center;
-            display: flex; align-items: center; justify-content: center;
+            flex-grow: 1;
+            font-weight: 700;
+            font-size: 10.5px;
+            border: 1px solid #94a3b8;
+            border-radius: 4px;
+            padding: 2px 8px;
+            min-height: 22px;
+            background: #f8fafc;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
           }
           .fv.highlight { background: #ecfdf5; color: #065f46; font-weight: 900; }
           .fv.accent { background: #eff6ff; color: #1e40af; }
+          .fv.num-val { direction: ltr; font-variant-numeric: tabular-nums; }
           .span-2 { grid-column: span 2; }
           .span-3 { grid-column: span 3; }
           .span-4 { grid-column: span 4; }
@@ -617,11 +656,13 @@ export default function ViewClaim() {
           }
           .settlements-table th {
             background: #0f172a; color: #fff; font-weight: 800;
-            padding: 4px 4px; text-align: center; border: 1px solid #334155;
+            padding: 5px 6px; text-align: center; border: 1px solid #334155;
+            white-space: nowrap;
           }
           .settlements-table td {
-            padding: 3px 4px; text-align: center;
+            padding: 4px 6px; text-align: center;
             border: 1px solid #cbd5e1; font-weight: 700;
+            white-space: nowrap;
           }
           .settlements-table tr:nth-child(even) td { background: #f8fafc; }
           .settlements-table td.money { font-weight: 900; color: #0369a1; direction: ltr; }
@@ -631,16 +672,16 @@ export default function ViewClaim() {
           /* ===== SIGNATURES ===== */
           .sig-area {
             display: flex; justify-content: space-between;
-            padding: 0 30px; margin-top: 20px;
+            padding: 0 30px; margin-top: 18px;
           }
-          .sig-box { width: 160px; text-align: center; }
-          .sig-outline { border: 1px solid #000; height: 55px; margin-bottom: 6px; }
+          .sig-box { width: 170px; text-align: center; }
+          .sig-outline { border: 1px solid #000; height: 50px; margin-bottom: 6px; }
           .sig-label { font-size: 11px; font-weight: 900; }
 
           /* ===== FOOTER ===== */
           .footer-note {
             text-align: right; font-size: 9px; font-weight: 700;
-            margin-top: 14px; color: #475569; line-height: 1.5;
+            margin-top: 12px; color: #475569; line-height: 1.5;
             border-top: 1px solid #e2e8f0; padding-top: 5px;
           }
         </style>
@@ -685,12 +726,12 @@ export default function ViewClaim() {
           <div class="section-title">📋 بيانات مقدم المطالبة / المشترك</div>
           <div class="section-body">
             <div class="grid-3">
-              <div class="field-row"><div class="fl">اسم مقدم المطالبة</div><div class="fv accent">${claim.claimant_name || '---'}</div></div>
+              <div class="field-row span-2"><div class="fl">اسم مقدم المطالبة</div><div class="fv accent" style="font-weight:900;">${claim.claimant_name || '---'}</div></div>
               <div class="field-row"><div class="fl">الجنسيـــة</div><div class="fv">${claim.nationality || '---'}</div></div>
-              <div class="field-row"><div class="fl">رقم الإثبات</div><div class="fv">${claim.personal_id || '---'}</div></div>
+              <div class="field-row"><div class="fl">رقم الإثبات</div><div class="fv num-val">${claim.personal_id || '---'}</div></div>
               <div class="field-row"><div class="fl">صلة القرابة</div><div class="fv">${claim.kinship || '---'}</div></div>
-              <div class="field-row"><div class="fl">رقم الهاتف</div><div class="fv">${claim.phone_number || '---'}</div></div>
-              ${claim.claimant_check_number ? `<div class="field-row"><div class="fl">رقم الشيك/الإيصال</div><div class="fv">${claim.claimant_check_number}</div></div>` : '<div></div>'}
+              <div class="field-row"><div class="fl">رقم الهاتف</div><div class="fv num-val">${claim.phone_number || '---'}</div></div>
+              ${claim.claimant_check_number ? `<div class="field-row span-3"><div class="fl">رقم الشيك / الإيصال</div><div class="fv num-val">${claim.claimant_check_number}</div></div>` : ''}
             </div>
           </div>
         </div>
@@ -699,14 +740,14 @@ export default function ViewClaim() {
         <div class="section">
           <div class="section-title">🚨 بيانات المطالبة / الحادث</div>
           <div class="section-body">
-            <div class="grid-4">
-              <div class="field-row"><div class="fl">رقم المطالبة</div><div class="fv highlight">${claim.claim_number || '---'}</div></div>
-              <div class="field-row"><div class="fl">تاريخ المطالبة</div><div class="fv">${claim.claim_date || '---'}</div></div>
-              <div class="field-row"><div class="fl">تاريخ الحادث</div><div class="fv">${claim.accident_date || '---'}</div></div>
-              <div class="field-row"><div class="fl">وقت الحادث</div><div class="fv">${claim.accident_time || '---'}</div></div>
-              <div class="field-row"><div class="fl">نوع الأضرار</div><div class="fv">${claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '---'}</div></div>
+            <div class="grid-3">
+              <div class="field-row"><div class="fl">رقم المطالبة</div><div class="fv highlight num-val">${claim.claim_number || '---'}</div></div>
+              <div class="field-row"><div class="fl">تاريخ المطالبة</div><div class="fv num-val">${formatPrintDate(claim.claim_date)}</div></div>
+              <div class="field-row"><div class="fl">تاريخ الحادث</div><div class="fv num-val">${formatPrintDate(claim.accident_date)}</div></div>
+              <div class="field-row"><div class="fl">وقت الحادث</div><div class="fv num-val">${claim.accident_time || '---'}</div></div>
               <div class="field-row"><div class="fl">حالة المطالبة</div><div class="fv">${claim.status || '---'}</div></div>
-              <div class="field-row span-2"><div class="fl">مكان الحادث</div><div class="fv">${claim.accident_location || '---'}</div></div>
+              <div class="field-row"><div class="fl">نوع الأضرار</div><div class="fv">${claim.damage_type ? claim.damage_type.split(/[،,]\s*/).map((t: any) => t === 'اخر' ? (claim.other_damage_type || 'أخرى') : t).join('، ') : '---'}</div></div>
+              <div class="field-row span-3"><div class="fl">مكان الحادث</div><div class="fv">${claim.accident_location || '---'}</div></div>
             </div>
           </div>
         </div>
@@ -715,14 +756,14 @@ export default function ViewClaim() {
         <div class="section">
           <div class="section-title">📄 بيانات الوثيقة المربوطة</div>
           <div class="section-body">
-            <div class="grid-4">
-              <div class="field-row"><div class="fl">رقم الوثيقة</div><div class="fv accent">${policyNum}</div></div>
+            <div class="grid-2">
+              <div class="field-row"><div class="fl">رقم الوثيقة</div><div class="fv accent num-val">${policyNum}</div></div>
               <div class="field-row"><div class="fl">نوع التأمين</div><div class="fv">${insuranceType}</div></div>
+              <div class="field-row span-2"><div class="fl">اسم المؤمن له</div><div class="fv accent" style="font-weight:900;">${insuredName}</div></div>
               <div class="field-row"><div class="fl">نوع التغطية</div><div class="fv">${coverage}</div></div>
-              <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv">${plateNum}</div></div>
-              <div class="field-row span-2"><div class="fl">اسم المؤمن له</div><div class="fv accent">${insuredName}</div></div>
-              <div class="field-row"><div class="fl">تاريخ الإصدار</div><div class="fv">${issueDate !== '---' ? new Date(String(issueDate).replace(' ', 'T')).toLocaleDateString('en-GB') : '---'}</div></div>
-              <div class="field-row"><div class="fl">تاريخ الانتهاء</div><div class="fv">${endDate !== '---' ? new Date(String(endDate).replace(' ', 'T')).toLocaleDateString('en-GB') : '---'}</div></div>
+              <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv num-val">${plateNum}</div></div>
+              <div class="field-row"><div class="fl">تاريخ الإصدار</div><div class="fv num-val">${formatPrintDate(issueDate)}</div></div>
+              <div class="field-row"><div class="fl">تاريخ الانتهاء</div><div class="fv num-val">${formatPrintDate(endDate)}</div></div>
             </div>
           </div>
         </div>
@@ -733,15 +774,15 @@ export default function ViewClaim() {
           <div class="section-title">📎 وثائق التأمين الإضافية المرفقة</div>
           <div class="section-body">
             ${claim.additional_documents.map((doc: any, index: number) => `
-              <div style="margin-bottom:${index < claim.additional_documents.length - 1 ? '6px' : '0'}; border-bottom:${index < claim.additional_documents.length - 1 ? '1px dashed #cbd5e1' : 'none'}; padding-bottom:${index < claim.additional_documents.length - 1 ? '6px' : '0'}">
-                <div style="font-weight:800; font-size:10px; color:#0369a1; margin-bottom:3px;">وثيقة إضافية #${index + 1}</div>
-                <div class="grid-4">
-                  <div class="field-row"><div class="fl">رقم الوثيقة</div><div class="fv">${doc.insurance_number || '---'}</div></div>
-                  <div class="field-row"><div class="fl">اسم المؤمن له</div><div class="fv">${doc.insured_name || '---'}</div></div>
-                  <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv">${doc.plate_number || '---'}</div></div>
+              <div style="margin-bottom:${index < claim.additional_documents.length - 1 ? '8px' : '0'}; border-bottom:${index < claim.additional_documents.length - 1 ? '1px dashed #cbd5e1' : 'none'}; padding-bottom:${index < claim.additional_documents.length - 1 ? '8px' : '0'}">
+                <div style="font-weight:800; font-size:10px; color:#0369a1; margin-bottom:4px;">وثيقة إضافية #${index + 1}</div>
+                <div class="grid-2">
+                  <div class="field-row"><div class="fl">رقم الوثيقة</div><div class="fv num-val">${doc.insurance_number || '---'}</div></div>
+                  <div class="field-row"><div class="fl">اسم المؤمن له</div><div class="fv accent" style="font-weight:900;">${doc.insured_name || '---'}</div></div>
                   <div class="field-row"><div class="fl">نوع السيارة</div><div class="fv">${doc.vehicle_type || '---'}</div></div>
-                  <div class="field-row"><div class="fl">تاريخ الإصدار</div><div class="fv">${doc.issue_date || '---'}</div></div>
-                  <div class="field-row"><div class="fl">تاريخ الانتهاء</div><div class="fv">${doc.end_date || '---'}</div></div>
+                  <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv num-val">${doc.plate_number || '---'}</div></div>
+                  <div class="field-row"><div class="fl">تاريخ الإصدار</div><div class="fv num-val">${formatPrintDate(doc.issue_date)}</div></div>
+                  <div class="field-row"><div class="fl">تاريخ الانتهاء</div><div class="fv num-val">${formatPrintDate(doc.end_date)}</div></div>
                 </div>
               </div>
             `).join('')}
@@ -758,7 +799,7 @@ export default function ViewClaim() {
               <div class="field-row"><div class="fl">نوع المركبة</div><div class="fv">${claim.damaged_vehicle_type || '---'}</div></div>
               <div class="field-row"><div class="fl">الموديل</div><div class="fv">${claim.damaged_vehicle_model || '---'}</div></div>
               <div class="field-row"><div class="fl">اللون</div><div class="fv">${claim.damaged_vehicle_color || '---'}</div></div>
-              <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv">${claim.damaged_vehicle_plate || '---'}</div></div>
+              <div class="field-row"><div class="fl">رقم اللوحة</div><div class="fv num-val">${claim.damaged_vehicle_plate || '---'}</div></div>
               ${claim.damaged_vehicle_repair_shop ? `<div class="field-row span-2"><div class="fl">ورشة التصليح</div><div class="fv">${claim.damaged_vehicle_repair_shop}</div></div>` : ''}
               ${claim.damaged_vehicle_details ? `<div class="field-row span-2"><div class="fl">بيانات الأضرار</div><div class="fv">${claim.damaged_vehicle_details}</div></div>` : ''}
             </div>
@@ -771,10 +812,11 @@ export default function ViewClaim() {
         <div class="section">
           <div class="section-title">👤 بيانات السائق المسبب</div>
           <div class="section-body">
-            <div class="grid-3">
-              <div class="field-row"><div class="fl">اسم السائق</div><div class="fv">${claim.driver_name}</div></div>
-              <div class="field-row"><div class="fl">رقم الرخصة</div><div class="fv">${claim.driver_license_number || '---'}</div></div>
+            <div class="grid-2">
+              <div class="field-row span-2"><div class="fl">اسم السائق</div><div class="fv accent" style="font-weight:900;">${claim.driver_name}</div></div>
+              <div class="field-row"><div class="fl">رقم الرخصة</div><div class="fv num-val">${claim.driver_license_number || '---'}</div></div>
               <div class="field-row"><div class="fl">الجنسية</div><div class="fv">${claim.driver_nationality || '---'}</div></div>
+              ${claim.driver_id_number ? `<div class="field-row span-2"><div class="fl">رقم الهوية</div><div class="fv num-val">${claim.driver_id_number}</div></div>` : ''}
             </div>
           </div>
         </div>
@@ -787,13 +829,13 @@ export default function ViewClaim() {
             <div class="grid-2">
               <div class="field-row">
                 <div class="fl">مبلغ الأضرار (بالتونسي)</div>
-                <div class="fv" style="color:#0369a1; font-weight:900;">${tndAmount}</div>
+                <div class="fv num-val" style="color:#0369a1; font-weight:900;">${tndAmount}</div>
               </div>
               <div class="field-row">
                 <div class="fl">قيمة التقييم (بالليبي)</div>
-                <div class="fv highlight">${lydAmount}</div>
+                <div class="fv highlight num-val">${lydAmount}</div>
               </div>
-              ${claim.assessor_date ? `<div class="field-row"><div class="fl">تاريخ التقييم</div><div class="fv">${claim.assessor_date}</div></div>` : ''}
+              ${claim.assessor_date ? `<div class="field-row"><div class="fl">تاريخ التقييم</div><div class="fv num-val">${formatPrintDate(claim.assessor_date)}</div></div>` : ''}
               ${claim.assessor_percentage ? `<div class="field-row"><div class="fl">نسبة المقدر</div><div class="fv">${claim.assessor_percentage}</div></div>` : ''}
             </div>
           </div>
@@ -814,8 +856,8 @@ export default function ViewClaim() {
             <div class="sig-label">ختم وإعتماد الشركة</div>
           </div>
           <div class="sig-box" style="text-align:center;">
-            <div style="font-size:9px; font-weight:700; color:#64748b; margin-bottom:8px;">رقم المطالبة: ${claim.claim_number}</div>
-            <div style="font-size:9px; font-weight:700; color:#64748b;">التاريخ: ${new Date().toLocaleDateString('en-GB')}</div>
+            <div style="font-size:9.5px; font-weight:800; color:#475569; margin-bottom:8px;">رقم المطالبة: <span style="direction:ltr; display:inline-block;">${claim.claim_number}</span></div>
+            <div style="font-size:9.5px; font-weight:800; color:#475569;">التاريخ: ${new Date().toLocaleDateString('en-GB')}</div>
           </div>
           <div class="sig-box">
             <div class="sig-outline"></div>
