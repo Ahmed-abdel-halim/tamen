@@ -118,29 +118,48 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
       if (match) {
         const amt = parseFloat(match[1]) || 0;
         const curr = match[2]?.trim() || '';
+        const existingLyd = Number(claim.assessor_amount_dinar) || 0;
         if (curr.includes('تونس') || curr.toUpperCase().includes('TND')) {
           foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} د.ت`;
-          appliedRate = tndRate;
-          rateLabel = `${tndRate.toFixed(2)}`;
-          reserveLYD = amt * appliedRate;
+          if (existingLyd > 0 && amt > 0) {
+            reserveLYD = existingLyd;
+            appliedRate = Number((existingLyd / amt).toFixed(3));
+            rateLabel = appliedRate.toFixed(3);
+          } else {
+            appliedRate = tndRate;
+            rateLabel = `${tndRate.toFixed(2)}`;
+            reserveLYD = amt * appliedRate;
+          }
           claimsWithForeignCount++;
         } else if (curr.includes('يورو') || curr.toUpperCase().includes('EUR')) {
           foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} €`;
-          appliedRate = eurRate;
-          rateLabel = `${eurRate.toFixed(2)}`;
-          reserveLYD = amt * appliedRate;
+          if (existingLyd > 0 && amt > 0) {
+            reserveLYD = existingLyd;
+            appliedRate = Number((existingLyd / amt).toFixed(3));
+            rateLabel = appliedRate.toFixed(3);
+          } else {
+            appliedRate = eurRate;
+            rateLabel = `${eurRate.toFixed(2)}`;
+            reserveLYD = amt * appliedRate;
+          }
           claimsWithForeignCount++;
         } else if (curr.includes('دولار') || curr.toUpperCase().includes('USD')) {
           foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} $`;
-          appliedRate = usdRate;
-          rateLabel = `${usdRate.toFixed(2)}`;
-          reserveLYD = amt * appliedRate;
+          if (existingLyd > 0 && amt > 0) {
+            reserveLYD = existingLyd;
+            appliedRate = Number((existingLyd / amt).toFixed(3));
+            rateLabel = appliedRate.toFixed(3);
+          } else {
+            appliedRate = usdRate;
+            rateLabel = `${usdRate.toFixed(2)}`;
+            reserveLYD = amt * appliedRate;
+          }
           claimsWithForeignCount++;
         } else {
           foreignAmountStr = `${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} ${curr}`;
           appliedRate = 1;
           rateLabel = '1.00';
-          reserveLYD = amt;
+          reserveLYD = existingLyd > 0 ? existingLyd : amt;
         }
       } else {
         foreignAmountStr = claim.assessor_other_amount;
@@ -552,39 +571,50 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
           overflow-wrap: break-word;
         }
 
-        /* Category Headers */
+        /* Category Headers - توفير الحبر وإلغاء الخلفيات السوداء الداكنة */
         table.claims-table thead tr:first-child th {
-          background: #1e293b;
-          color: #ffffff;
+          background: #f8fafc;
+          color: #0f172a;
           font-weight: 800;
           font-size: 7.5pt;
-          padding: 3.5px 2px;
-          border-color: #334155;
+          padding: 4px 2px;
+          border: 1px solid #cbd5e1;
+          border-bottom: 2px solid #64748b;
         }
 
         table.claims-table thead tr:first-child th.group-claim {
-          background: #1e293b;
+          background: #f1f5f9;
+          color: #1e293b;
+          border-bottom: 2px solid #64748b;
         }
         table.claims-table thead tr:first-child th.group-accident {
-          background: #0f172a;
+          background: #fef2f2;
+          color: #991b1b;
+          border-bottom: 2px solid #ef4444;
         }
         table.claims-table thead tr:first-child th.group-policy {
-          background: #1e293b;
+          background: #f0f9ff;
+          color: #0369a1;
+          border-bottom: 2px solid #0284c7;
         }
         table.claims-table thead tr:first-child th.group-finance {
-          background: #0369a1;
+          background: #ecfeff;
+          color: #0e7490;
+          border-bottom: 2px solid #06b6d4;
         }
         table.claims-table thead tr:first-child th.group-settlement {
-          background: #047857;
+          background: #f0fdf4;
+          color: #166534;
+          border-bottom: 2px solid #22c55e;
         }
 
         table.claims-table thead tr:nth-child(2) th {
-          background: #334155;
-          color: #f8fafc;
-          font-weight: 700;
-          font-size: 7pt;
-          padding: 2.5px 2px;
-          border-color: #475569;
+          background: #f8fafc;
+          color: #334155;
+          font-weight: 800;
+          font-size: 6.9pt;
+          padding: 3px 2px;
+          border: 1px solid #cbd5e1;
         }
 
         /* Data Rows */
@@ -654,26 +684,28 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
         .badge-pending { background: #f1f5f9; color: #475569; border: 0.5px solid #cbd5e1; }
         .badge-other { background: #f3e8ff; color: #6b21a8; border: 0.5px solid #d8b4fe; }
 
-        /* Totals Row */
+        /* Totals Row - Ink Saving (إلغاء السواد الداكن لتوفير الحبر) */
         table.claims-table tfoot tr td {
-          background: #0f172a !important;
-          color: #ffffff !important;
+          background: #f8fafc !important;
+          color: #0f172a !important;
           font-weight: 900;
           font-size: 7.6pt;
           padding: 4px 3px;
-          border-color: #0f172a;
+          border: 1px solid #cbd5e1 !important;
+          border-top: 2px solid #0284c7 !important;
         }
         table.claims-table tfoot .total-label {
           text-align: center;
           letter-spacing: 0.3px;
+          color: #0f172a !important;
         }
         table.claims-table tfoot .total-val {
-          color: #38bdf8 !important;
+          color: #0284c7 !important;
           font-size: 8pt;
           font-variant-numeric: tabular-nums;
         }
         table.claims-table tfoot .total-paid {
-          color: #4ade80 !important;
+          color: #16a34a !important;
           font-size: 8pt;
           font-variant-numeric: tabular-nums;
         }
@@ -863,10 +895,11 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
           </div>
 
           <div class="exchange-rates-badge">
-            <span>سعر الصرف المطبق:</span>
+            <span>سعر الصرف المعتمد:</span>
             <span>1 USD = ${usdRate.toFixed(2)} د.ل</span>
             <span>|</span>
             <span>1 TND = ${tndRate.toFixed(2)} د.ل</span>
+            <span style="font-size:6.8pt; color:#64748b; font-weight:600;">(بتاريخ: ${new Date().toLocaleDateString('en-GB')})</span>
           </div>
         </div>
 
@@ -880,7 +913,7 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <th colspan="3" class="group-policy">بيانات الوثيقة والمؤمن له</th>
               <th colspan="3" class="group-finance">التقييم والاحتياطي المرصود</th>
               <th colspan="5" class="group-settlement">التسوية والسداد</th>
-              <th rowspan="2" style="width: 58px; background: #0f172a; border-color: #334155;">الحالة</th>
+              <th rowspan="2" style="width: 58px; background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-bottom: 2px solid #64748b;">الحالة</th>
             </tr>
             <tr>
               <th style="width: 56px;">تاريخها</th>
@@ -896,11 +929,11 @@ export function printClaimsDetailedReport(claims: any[], options: PrintClaimsOpt
               <th style="width: 90px;">المؤمن له</th>
 
               <th style="width: 72px;">المرصود (أجنبي)</th>
-              <th style="width: 38px;">سعر التحويل</th>
+              <th style="width: 38px;">سعر الصرف</th>
               <th style="width: 76px;">المرصود (د.ل)</th>
 
               <th style="width: 72px;">آخر تسوية (أجنبي)</th>
-              <th style="width: 38px;">سعر التحويل</th>
+              <th style="width: 38px;">سعر الصرف</th>
               <th style="width: 76px;">آخر تسوية (د.ل)</th>
               <th style="width: 72px;">المسدد (د.ل)</th>
               <th style="width: 58px;">طريقة السداد</th>

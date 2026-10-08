@@ -442,18 +442,35 @@ export default function ViewClaim() {
     // --- Financial ---
     let tndAmount = claim.assessor_other_amount || '---';
     let rawLyd: any = claim.assessor_amount_dinar;
+    let foreignNumber = 0;
+    let currencySymbol = 'د.ت';
+    let currencyLabel = 'تونسي';
+    let appliedExchangeRate = Number(exchangeRates.tnd_to_lyd) || 3.03;
 
-    if (!rawLyd && claim.assessor_other_amount) {
+    if (claim.assessor_other_amount) {
       const match = String(claim.assessor_other_amount).match(/^([\d.]+)\s*(.*)$/);
       if (match) {
-        const amt = parseFloat(match[1]) || 0;
+        foreignNumber = parseFloat(match[1]) || 0;
         const curr = match[2]?.trim() || '';
         if (curr.includes('تونس') || curr.toUpperCase().includes('TND')) {
-          rawLyd = amt * (exchangeRates.tnd_to_lyd || 2.30);
+          currencySymbol = 'د.ت';
+          currencyLabel = 'تونسي';
+          appliedExchangeRate = Number(exchangeRates.tnd_to_lyd) || 3.03;
+          if (!rawLyd) rawLyd = foreignNumber * appliedExchangeRate;
         } else if (curr.includes('دولار') || curr.toUpperCase().includes('USD')) {
-          rawLyd = amt * (exchangeRates.usd_to_lyd || 7.15);
+          currencySymbol = '$';
+          currencyLabel = 'دولار';
+          appliedExchangeRate = Number(exchangeRates.usd_to_lyd) || 7.15;
+          if (!rawLyd) rawLyd = foreignNumber * appliedExchangeRate;
         } else if (curr.includes('يورو') || curr.toUpperCase().includes('EUR')) {
-          rawLyd = amt * (exchangeRates.eur_to_lyd || 7.65);
+          currencySymbol = '€';
+          currencyLabel = 'يورو';
+          appliedExchangeRate = Number(exchangeRates.eur_to_lyd) || 7.65;
+          if (!rawLyd) rawLyd = foreignNumber * appliedExchangeRate;
+        } else {
+          currencySymbol = curr || 'أجنبي';
+          currencyLabel = curr || 'أجنبي';
+          if (!rawLyd) rawLyd = foreignNumber;
         }
       }
     }
@@ -462,6 +479,10 @@ export default function ViewClaim() {
     }
     if (!rawLyd && claim.compensation_value) {
       rawLyd = claim.compensation_value;
+    }
+
+    if (foreignNumber > 0 && rawLyd > 0) {
+      appliedExchangeRate = Number((Number(rawLyd) / foreignNumber).toFixed(3));
     }
     const lydAmount = rawLyd ? (Number(rawLyd).toLocaleString('en-US', { minimumFractionDigits: 3 }) + ' د.ل') : '---';
 
@@ -566,41 +587,58 @@ export default function ViewClaim() {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             align-items: start;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             gap: 10px;
           }
           .hdr-logo { display: flex; align-items: flex-start; }
-          .hdr-logo img { height: 68px; }
+          .hdr-logo img { height: 65px; }
           .hdr-center { text-align: center; }
           .hdr-title {
-            font-size: 17px; font-weight: 900; color: #1e293b;
-            border: 2px solid #1e293b; padding: 5px 22px;
-            border-radius: 8px; display: inline-block; margin-bottom: 4px;
+            font-size: 16px; font-weight: 900; color: #0284c7;
+            border: 1.5px solid #0284c7; padding: 4px 20px;
+            border-radius: 6px; display: inline-block; margin-bottom: 3px;
+            background: #f0f9ff;
           }
           .hdr-subtitle { font-size: 11px; font-weight: 700; color: #475569; }
           .hdr-qr { display: flex; justify-content: flex-end; align-items: flex-start; }
-          .hdr-qr img { width: 80px; height: 80px; border: 1.5px solid #000; padding: 2px; }
+          .hdr-qr img { width: 75px; height: 75px; border: 1px solid #cbd5e1; padding: 2px; }
 
           /* Company strip */
           .company-strip {
             display: grid; grid-template-columns: 1.2fr 0.8fr;
-            border: 1.5px solid #000; margin-bottom: 10px;
+            border: 1px solid #cbd5e1; border-radius: 4px;
+            margin-bottom: 8px; background: #fff;
           }
-          .cs-box { padding: 6px 12px; border-left: 1px solid #000; }
+          .cs-box { padding: 5px 12px; border-left: 1px solid #cbd5e1; }
           .cs-box:last-child { border-left: none; }
-          .cs-row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; margin-bottom: 2px; }
+          .cs-row { display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 800; margin-bottom: 2px; }
           .cs-row .val { font-weight: 900; color: #0f172a; }
-          .cs-legal { font-size: 9px; font-weight: 700; text-align: center; color: #475569; display: flex; align-items: center; justify-content: center; line-height: 1.5; }
+          .cs-legal { font-size: 9px; font-weight: 700; text-align: center; color: #475569; display: flex; align-items: center; justify-content: center; line-height: 1.4; }
 
-          /* ===== SECTIONS ===== */
-          .section { margin-bottom: 9px; }
+          /* ===== SECTIONS (توفير الحبر وإلغاء اللون الأسود) ===== */
+          .section { margin-bottom: 8px; }
           .section-title {
-            background: #1e293b; color: #f8fafc;
-            font-weight: 900; font-size: 11px;
-            text-align: center; padding: 4px 8px;
-            margin-bottom: 0; letter-spacing: 0.3px;
+            background: #f8fafc;
+            color: #0369a1;
+            font-weight: 900;
+            font-size: 11px;
+            text-align: right;
+            padding: 4px 10px;
+            margin-bottom: 0;
+            border: 1px solid #cbd5e1;
+            border-bottom: 2px solid #0284c7;
+            border-radius: 4px 4px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
           }
-          .section-body { border: 1.5px solid #1e293b; border-top: none; padding: 6px 10px; }
+          .section-body {
+            border: 1px solid #cbd5e1;
+            border-top: none;
+            padding: 6px 10px;
+            border-radius: 0 0 4px 4px;
+            background: #ffffff;
+          }
 
           /* Grid layouts */
           .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; }
@@ -655,8 +693,9 @@ export default function ViewClaim() {
             margin-top: 2px;
           }
           .settlements-table th {
-            background: #0f172a; color: #fff; font-weight: 800;
-            padding: 5px 6px; text-align: center; border: 1px solid #334155;
+            background: #f1f5f9; color: #0f172a; font-weight: 800;
+            padding: 5px 6px; text-align: center; border: 1px solid #cbd5e1;
+            border-bottom: 2px solid #0284c7;
             white-space: nowrap;
           }
           .settlements-table td {
@@ -822,21 +861,28 @@ export default function ViewClaim() {
         </div>
         ` : ''}
 
-        <!-- Section 6: بيانات التقييم المالي -->
+        <!-- Section 6: بيانات التقييم المالي وسعر الصرف -->
         <div class="section">
-          <div class="section-title">💰 بيانات التقييم المالي</div>
+          <div class="section-title">💰 بيانات التقييم المالي وسعر الصرف</div>
           <div class="section-body">
             <div class="grid-2">
               <div class="field-row">
-                <div class="fl">مبلغ الأضرار (بالتونسي)</div>
+                <div class="fl">مبلغ الأضرار (${currencyLabel})</div>
                 <div class="fv num-val" style="color:#0369a1; font-weight:900;">${tndAmount}</div>
               </div>
               <div class="field-row">
-                <div class="fl">قيمة التقييم (بالليبي)</div>
-                <div class="fv highlight num-val">${lydAmount}</div>
+                <div class="fl">سعر الصرف المعتمد</div>
+                <div class="fv highlight num-val" style="font-weight:900; color:#0e7490;">${foreignNumber > 0 ? `1 ${currencySymbol} = ${Number(appliedExchangeRate).toFixed(3)} د.ل` : 'سعر محلي (د.ل)'}</div>
               </div>
-              ${claim.assessor_date ? `<div class="field-row"><div class="fl">تاريخ التقييم</div><div class="fv num-val">${formatPrintDate(claim.assessor_date)}</div></div>` : ''}
-              ${claim.assessor_percentage ? `<div class="field-row"><div class="fl">نسبة المقدر</div><div class="fv">${claim.assessor_percentage}</div></div>` : ''}
+              <div class="field-row">
+                <div class="fl">قيمة التقييم (بالليبي)</div>
+                <div class="fv highlight num-val" style="font-size:11px; font-weight:900;">${lydAmount}</div>
+              </div>
+              <div class="field-row">
+                <div class="fl">تاريخ التقييم / الصرف</div>
+                <div class="fv num-val">${formatPrintDate(claim.assessor_date) !== '---' ? formatPrintDate(claim.assessor_date) : formatPrintDate(claim.claim_date)}</div>
+              </div>
+              ${claim.assessor_percentage ? `<div class="field-row span-2"><div class="fl">نسبة المقدر</div><div class="fv">${claim.assessor_percentage}</div></div>` : ''}
             </div>
           </div>
         </div>
