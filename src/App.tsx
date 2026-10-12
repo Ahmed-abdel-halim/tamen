@@ -417,7 +417,8 @@ const menuSections: SidebarSection[] = [
           {
             label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', children: [
               { label: 'وثائق التأمين الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
-              { label: 'بوابة الاتحاد (LIFO)', icon: 'fa-solid fa-chart-pie', to: '/international-insurance-documents/lifo-dashboard' }
+              { label: 'بوابة الاتحاد (LIFO)', icon: 'fa-solid fa-chart-pie', to: '/international-insurance-documents/lifo-dashboard' },
+              { label: 'مطابقة رصيد الاتحاد (LIFO)', icon: 'fa-solid fa-scale-balanced', to: '/reports/union-balances' }
             ]
           },
           { label: ' تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
@@ -496,10 +497,10 @@ const menuSections: SidebarSection[] = [
           { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
           { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
           { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' },
+          { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+          { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
           {
             label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
-              { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
-              { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
               { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
               { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
             ]
@@ -515,6 +516,12 @@ const menuSections: SidebarSection[] = [
             : []),
         ]
       },
+    ],
+  },
+  {
+    title: 'هيئة الإشراف على التأمين',
+    items: [
+      { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
     ],
   },
   {
@@ -1127,10 +1134,13 @@ const createMenuSections = (
     const accountantOrder = [
       '/reports/revenue',
       '/reports/live-agents-production',
+      '/reports/comprehensive-production',
       '/reports/agent-monthly-ledger',
       '/reports/payment-vouchers',
       '/reports/inventory',
       '/reports/financial-reconciliation',
+      '/reports/union-balances',
+      '/reports/insurance-supervision',
       '/reports/commissions',
       '/reports/branch-agent-account',
       '/reports/agent-transfers',
@@ -1140,8 +1150,6 @@ const createMenuSections = (
       '/reports/bank-reconciliation'
     ];
     const expensesOrder = [
-      '/reports/union-balances',
-      '/reports/insurance-supervision',
       '/reports/rental-vouchers',
       '/reports/expenses'
     ];
@@ -1182,6 +1190,15 @@ const createMenuSections = (
       title: 'الشؤون المالية',
       items: finalReports,
     });
+
+    if (reportsItemsMap.has('/reports/insurance-supervision')) {
+      sections.push({
+        title: 'هيئة الإشراف على التأمين',
+        items: [
+          { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' }
+        ]
+      });
+    }
   }
 
   if (settingsItems.length > 0) {
