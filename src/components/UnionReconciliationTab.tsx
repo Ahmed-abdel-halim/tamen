@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
@@ -134,37 +134,50 @@ export default function UnionReconciliationTab() {
   // Export to Excel
   const handleExportExcel = () => {
     if (filteredRows.length === 0) {
-      showToast('لا توجد بيانات مطابقة لتصديرها', 'warning');
+      showToast('لا توجد بيانات مطابقة لتصديرها', 'error');
       return;
     }
 
-    const exportData = filteredRows.map((r, index) => ({
-      'م': index + 1,
-      'رقم الطلب / الواصل': r.request_number,
-      'تاريخ الشراء': r.purchase_date || '—',
-      'المبلغ المسدد (د.ل)': r.amount_paid,
-      'البطاقات المسددة بالدفاتر': r.local_cards_count,
-      'البطاقات المسجلة بالاتحاد (LIFO)': r.lifo_cards_count,
-      'فارق الكمية': r.cards_diff,
-      'الفارق المالي (د.ل)': r.financial_diff,
-      'البطاقات المصدرة/المباعة': r.lifo_issued_cards,
-      'البطاقات المتبقية بالمخزون': r.lifo_assigned_cards,
-      'البطاقات الملغية': r.lifo_canceled_cards,
-      'تسلسل البطاقات': r.min_card_number && r.max_card_number ? `${r.min_card_number} إلى ${r.max_card_number}` : '—',
-      'حالة المطابقة':
+    const columns = [
+      { header: 'م', key: 'seq', width: 8 },
+      { header: 'رقم الطلب / الواصل', key: 'req_num', width: 22 },
+      { header: 'تاريخ الشراء', key: 'date', width: 15 },
+      { header: 'المبلغ المسدد (د.ل)', key: 'amount', width: 18 },
+      { header: 'البطاقات بالدفاتر', key: 'local_cards', width: 18 },
+      { header: 'البطاقات بالاتحاد (LIFO)', key: 'lifo_cards', width: 22 },
+      { header: 'فارق الكمية', key: 'diff', width: 15 },
+      { header: 'الفارق المالي (د.ل)', key: 'fin_diff', width: 18 },
+      { header: 'البطاقات المباعة', key: 'issued', width: 16 },
+      { header: 'المتبقي بالمخزون', key: 'assigned', width: 18 },
+      { header: 'حالة المطابقة', key: 'status', width: 24 },
+      { header: 'طريقة السداد', key: 'method', width: 18 },
+    ];
+
+    const data = filteredRows.map((r, index) => ({
+      seq: index + 1,
+      req_num: r.request_number,
+      date: r.purchase_date || '—',
+      amount: r.amount_paid,
+      local_cards: r.local_cards_count,
+      lifo_cards: r.lifo_cards_count,
+      diff: r.cards_diff,
+      fin_diff: r.financial_diff,
+      issued: r.lifo_issued_cards,
+      assigned: r.lifo_assigned_cards,
+      status:
         r.status === 'matched' ? 'مطابق 100%' :
         r.status === 'diff' ? 'يوجد فارق بالكمية' :
         r.status === 'not_in_lifo' ? 'مسدد بالدفاتر وغير مقيد بالاتحاد' :
         'مقيد بالاتحاد بدون سند محلي',
-      'طريقة السداد': r.payment_method,
+      method: r.payment_method,
     }));
 
     generatePremiumExcel({
       title: 'تقرير مطابقة رصيد الاتحاد مع المدفوعات والبطاقات (LIFO)',
+      subtitle: `تاريخ الاستخراج: ${new Date().toISOString().split('T')[0]} - إجمالي السجلات: ${filteredRows.length}`,
+      columns,
+      data,
       fileName: `مطابقة_رصيد_الاتحاد_${new Date().toISOString().split('T')[0]}`,
-      data: exportData,
-      themeColor: '014cb1',
-      showStats: true
     });
     showToast('تم تصدير ملف المطابقة بنجاح', 'success');
   };
@@ -357,8 +370,8 @@ export default function UnionReconciliationTab() {
               <i className={`fa-solid ${summary && summary.total_cards_diff === 0 ? 'fa-circle-check' : 'fa-triangle-exclamation'}`}></i>
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: summary && summary.total_cards_diff === 0 ? '#16a34a' : (summary && summary.total_cards_diff > 0 ? '#b45309' : '#dc2626') }}>
-            {summary && summary.total_cards_diff === 0 ? 'مطابق 100%' : `${summary?.total_cards_diff > 0 ? '+' : ''}${(summary?.total_cards_diff || 0).toLocaleString()} بطاقة`}
+          <div style={{ fontSize: '24px', fontWeight: 900, color: summary && summary.total_cards_diff === 0 ? '#16a34a' : (summary && (summary.total_cards_diff ?? 0) > 0 ? '#b45309' : '#dc2626') }}>
+            {summary && summary.total_cards_diff === 0 ? 'مطابق 100%' : `${(summary?.total_cards_diff ?? 0) > 0 ? '+' : ''}${(summary?.total_cards_diff || 0).toLocaleString()} بطاقة`}
           </div>
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: summary && summary.total_cards_diff === 0 ? '#15803d' : '#b91c1c' }}>
             {summary && summary.total_cards_diff === 0 ? 'لا توجد أي فروقات بين الدفاتر والاتحاد' : `أثر مالي: ${(summary?.total_financial_diff || 0).toLocaleString()} د.ل`}

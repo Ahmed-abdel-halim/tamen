@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
@@ -247,10 +247,10 @@ export default function InsuranceSupervisionManagement() {
   };
 
   // Save Payment
-  const handleSavePayment = async (e: React.FormEvent) => {
+  const handleSavePayment = async (e: FormEvent) => {
     e.preventDefault();
     if (!payAmount || parseFloat(payAmount) <= 0) {
-      showToast('يرجى إدخال مبلغ صحيح للسداد', 'warning');
+      showToast('يرجى إدخال مبلغ صحيح للسداد', 'error');
       return;
     }
 
@@ -356,28 +356,40 @@ export default function InsuranceSupervisionManagement() {
   // Export Detailed Report
   const handleExportDetailedExcel = () => {
     if (docsList.length === 0) {
-      showToast('لا توجد بيانات وثائق لتصديرها', 'warning');
+      showToast('لا توجد بيانات وثائق لتصديرها', 'error');
       return;
     }
 
-    const exportData = docsList.map((doc, idx) => ({
-      'م': idx + 1,
-      'رقم الوثيقة': doc.policy_number,
-      'نوع التأمين': doc.insurance_type_name,
-      'اسم المؤمن له': doc.insured_name,
-      'تاريخ الإصدار': doc.issue_date,
-      'الفرع / الوكيل': doc.branch_name,
-      'قسط التأمين (د.ل)': doc.premium,
-      'نسبة الرسم (%)': `${doc.fee_rate}%`,
-      'رسم هيئة الإشراف (د.ل)': doc.supervision_fee,
+    const columns = [
+      { header: 'م', key: 'seq', width: 8 },
+      { header: 'رقم الوثيقة', key: 'policy_number', width: 22 },
+      { header: 'نوع التأمين', key: 'type', width: 20 },
+      { header: 'اسم المؤمن له', key: 'insured_name', width: 25 },
+      { header: 'تاريخ الإصدار', key: 'issue_date', width: 15 },
+      { header: 'الفرع / الوكيل', key: 'branch', width: 20 },
+      { header: 'قسط التأمين (د.ل)', key: 'premium', width: 18 },
+      { header: 'نسبة الرسم (%)', key: 'fee_rate', width: 15 },
+      { header: 'رسم هيئة الإشراف (د.ل)', key: 'supervision_fee', width: 20 },
+    ];
+
+    const data = docsList.map((doc, idx) => ({
+      seq: idx + 1,
+      policy_number: doc.policy_number,
+      type: doc.insurance_type_name,
+      insured_name: doc.insured_name,
+      issue_date: doc.issue_date,
+      branch: doc.branch_name,
+      premium: doc.premium,
+      fee_rate: `${doc.fee_rate}%`,
+      supervision_fee: doc.supervision_fee,
     }));
 
     generatePremiumExcel({
       title: 'تقرير رسوم هيئة الإشراف على التأمين التفصيلي للوثائق',
+      subtitle: `تاريخ الاستخراج: ${new Date().toISOString().split('T')[0]} - إجمالي الوثائق: ${docsList.length}`,
+      columns,
+      data,
       fileName: `رسوم_هيئة_الإشراف_${new Date().toISOString().split('T')[0]}`,
-      data: exportData,
-      themeColor: '014cb1',
-      showStats: true
     });
     showToast('تم تصدير ملف الوثائق بنجاح', 'success');
   };
@@ -385,25 +397,34 @@ export default function InsuranceSupervisionManagement() {
   // Export Categories Statement
   const handleExportCategoriesExcel = () => {
     if (categories.length === 0) {
-      showToast('لا توجد بيانات فئات لتصديرها', 'warning');
+      showToast('لا توجد بيانات فئات لتصديرها', 'error');
       return;
     }
 
-    const exportData = categories.map((cat, idx) => ({
-      'م': idx + 1,
-      'فرع / نوع التأمين': cat.name,
-      'عدد الوثائق الصادرة': cat.document_count,
-      'إجمالي الأقساط المكتتبة (د.ل)': cat.total_premium,
-      'نسبة الرسم القانونية (%)': `${cat.fee_rate}%`,
-      'إجمالي رسم هيئة الإشراف (د.ل)': cat.supervision_fee,
+    const columns = [
+      { header: 'م', key: 'seq', width: 8 },
+      { header: 'فرع / نوع التأمين', key: 'name', width: 25 },
+      { header: 'عدد الوثائق الصادرة', key: 'count', width: 18 },
+      { header: 'إجمالي الأقساط المكتتبة (د.ل)', key: 'premium', width: 24 },
+      { header: 'نسبة الرسم القانونية (%)', key: 'fee_rate', width: 20 },
+      { header: 'إجمالي رسم هيئة الإشراف (د.ل)', key: 'supervision_fee', width: 24 },
+    ];
+
+    const data = categories.map((cat, idx) => ({
+      seq: idx + 1,
+      name: cat.name,
+      count: cat.document_count,
+      premium: cat.total_premium,
+      fee_rate: `${cat.fee_rate}%`,
+      supervision_fee: cat.supervision_fee,
     }));
 
     generatePremiumExcel({
       title: 'كشف حساب رسوم هيئة الإشراف على التأمين حسب الفروع',
+      subtitle: `تاريخ الاستخراج: ${new Date().toISOString().split('T')[0]} - إجمالي الفروع: ${categories.length}`,
+      columns,
+      data,
       fileName: `كشف_حساب_هيئة_الإشراف_${new Date().toISOString().split('T')[0]}`,
-      data: exportData,
-      themeColor: '0284c7',
-      showStats: true
     });
     showToast('تم تصدير كشف الحساب بنجاح', 'success');
   };
@@ -449,7 +470,7 @@ export default function InsuranceSupervisionManagement() {
               padding: '4px 12px',
               borderRadius: '20px'
             }}>
-              قسم الشؤون الرقابية والمحاسبية
+              {loading ? 'جاري التحميل...' : 'قسم الشؤون الرقابية والمحاسبية'}
             </span>
             <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px' }}>
               <i className="fa-solid fa-building-columns" style={{ color: '#fcd34d' }}></i>
@@ -1003,6 +1024,14 @@ export default function InsuranceSupervisionManagement() {
                   ))
                 )}
               </tbody>
+              <tfoot>
+                <tr style={{ background: 'var(--bg)', fontWeight: 900, borderTop: '2px solid var(--border)' }}>
+                  <td colSpan={5} style={{ padding: '14px 16px' }}>الإجمالي العام للوثائق المعروضة</td>
+                  <td style={{ padding: '14px 16px', color: '#1e40af' }}>{docsAggregates.total_premium.toLocaleString()} د.ل</td>
+                  <td style={{ padding: '14px 16px' }}>—</td>
+                  <td style={{ padding: '14px 16px', color: '#dc2626' }}>{docsAggregates.total_supervision_fee.toLocaleString()} د.ل</td>
+                </tr>
+              </tfoot>
             </table>
 
             {/* Pagination Controls */}
