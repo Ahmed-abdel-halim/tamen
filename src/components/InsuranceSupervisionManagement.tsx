@@ -2,6 +2,11 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import {
+  printSupervisionFinancialStatement,
+  printSupervisionDetailedDocsReport,
+  printSinglePaymentVoucher
+} from '../utils/printInsuranceSupervisionReport';
 
 interface SupervisionSummary {
   total_supervision_due: number;
@@ -102,6 +107,9 @@ export default function InsuranceSupervisionManagement() {
   // Image Preview Modal
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewRotation, setPreviewRotation] = useState<number>(0);
+
+  // Print Menu State
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
 
   // Date Filters for Summary / Ledger
   const [yearFilter, setYearFilter] = useState('الكل');
@@ -440,6 +448,52 @@ export default function InsuranceSupervisionManagement() {
     }
   };
 
+  // Handler for Professional Official Reports Printing
+  const handlePrintReport = (forcedType?: 'statement' | 'docs' | 'payments') => {
+    setShowPrintMenu(false);
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (forcedType === 'docs' || (!forcedType && activeTab === 'reports')) {
+      if (docsList.length === 0) {
+        showToast('لا توجد وثائق في الجدول لطباعتها', 'error');
+        return;
+      }
+      printSupervisionDetailedDocsReport({
+        docs: docsList,
+        aggregates: docsAggregates,
+        totalCount: docsPagination.total || docsList.length,
+        filters: {
+          fromDate: docFromDate,
+          toDate: docToDate,
+          search: docSearch,
+          typeLabel: categories.find(c => c.key === selectedType)?.name || (selectedType === 'all' ? 'كل فروع التأمين' : selectedType),
+        },
+        currentUser,
+      });
+      return;
+    }
+
+    // Default: Official Financial Statement & Position
+    printSupervisionFinancialStatement({
+      summary: {
+        total_premiums: summary?.total_premiums || 0,
+        total_supervision_due: summary?.total_supervision_due || 0,
+        total_paid: summary?.total_paid_to_authority || 0,
+        net_balance: summary?.remaining_due_to_authority || 0,
+        total_documents_count: summary?.total_documents_count || 0,
+      },
+      categories,
+      payments,
+      filters: {
+        year: yearFilter,
+        month: monthFilter,
+        fromDate: summaryFromDate,
+        toDate: summaryToDate,
+      },
+      currentUser,
+    });
+  };
+
   return (
     <div style={{ animation: 'fadeIn 0.3s ease', padding: '0 5px' }}>
       {/* Top Banner / Header */}
@@ -503,24 +557,123 @@ export default function InsuranceSupervisionManagement() {
             <i className="fa-solid fa-file-invoice-dollar"></i> تسجيل توريد دفعة
           </button>
 
-          <button
-            onClick={() => window.print()}
-            style={{
-              background: '#334155',
-              color: '#fff',
-              border: 'none',
-              padding: '11px 18px',
+          {/* Professional Printing Button & Menu */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              display: 'inline-flex',
               borderRadius: '10px',
-              cursor: 'pointer',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.9rem'
-            }}
-          >
-            <i className="fa-solid fa-print"></i> طباعة التقرير
-          </button>
+              overflow: 'hidden',
+              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.35)'
+            }}>
+              <button
+                onClick={() => handlePrintReport()}
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '11px 18px',
+                  cursor: 'pointer',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.9rem'
+                }}
+                title="طباعة التقرير الرسمي المعتمد"
+              >
+                <i className="fa-solid fa-print"></i> طباعة التقرير الرسمي
+              </button>
+              <button
+                onClick={() => setShowPrintMenu(!showPrintMenu)}
+                style={{
+                  background: '#0369a1',
+                  color: '#fff',
+                  border: 'none',
+                  borderRight: '1px solid rgba(255,255,255,0.25)',
+                  padding: '11px 12px',
+                  cursor: 'pointer',
+                  fontWeight: 800,
+                  fontSize: '0.85rem'
+                }}
+                title="خيارات الطباعة"
+              >
+                <i className={`fa-solid fa-chevron-${showPrintMenu ? 'up' : 'down'}`}></i>
+              </button>
+            </div>
+
+            {showPrintMenu && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                left: 0,
+                background: '#ffffff',
+                color: '#0f172a',
+                borderRadius: '12px',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
+                border: '1px solid #cbd5e1',
+                padding: '6px',
+                zIndex: 1000,
+                minWidth: '270px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                <button
+                  onClick={() => handlePrintReport('statement')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    color: '#0f172a',
+                    width: '100%'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <i className="fa-solid fa-building-columns" style={{ color: '#0284c7', fontSize: '1.1rem' }}></i>
+                  <div>
+                    <div style={{ fontWeight: 800 }}>كشف الحساب والموقف المالي الشامل</div>
+                    <small style={{ color: '#64748b', fontSize: '0.72rem' }}>الموقف المالي، الفروع، والسندات المسددة (A4)</small>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handlePrintReport('docs')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    color: '#0f172a',
+                    width: '100%'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <i className="fa-solid fa-file-invoice" style={{ color: '#10b981', fontSize: '1.1rem' }}></i>
+                  <div>
+                    <div style={{ fontWeight: 800 }}>تقرير رسوم الوثائق التفصيلي</div>
+                    <small style={{ color: '#64748b', fontSize: '0.72rem' }}>حصر وثائق التأمين المصدرة والرسوم (A4 أفقي)</small>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -794,6 +947,13 @@ export default function InsuranceSupervisionManagement() {
                 >
                   <i className="fa-solid fa-file-excel"></i> Excel
                 </button>
+                <button
+                  onClick={() => handlePrintReport('statement')}
+                  style={{ flex: 1.2, padding: '10px 14px', borderRadius: '10px', border: 'none', background: '#0284c7', color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  title="طباعة كشف الحساب والموقف المالي المعتمد"
+                >
+                  <i className="fa-solid fa-print"></i> طباعة كشف الحساب
+                </button>
               </div>
             </div>
           </div>
@@ -973,6 +1133,13 @@ export default function InsuranceSupervisionManagement() {
                 >
                   <i className="fa-solid fa-file-excel"></i> Excel
                 </button>
+                <button
+                  onClick={() => handlePrintReport('docs')}
+                  style={{ flex: 1.2, padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#334155', color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  title="طباعة تقرير الوثائق التفصيلي"
+                >
+                  <i className="fa-solid fa-print"></i> طباعة التقرير
+                </button>
               </div>
             </div>
           </div>
@@ -1063,28 +1230,49 @@ export default function InsuranceSupervisionManagement() {
       {/* TAB 3: PAYMENTS & VOUCHERS */}
       {activeTab === 'payments' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>سجل سندات التوريد والسداد لهيئة الإشراف</h3>
               <p style={{ margin: '4px 0 0 0', color: 'var(--muted)', fontSize: '0.85rem' }}>قائمة الدفعات المسددة للهيئة بموجب إيصالات الإيداع والصكوك</p>
             </div>
-            <button
-              onClick={() => handleOpenPaymentModal()}
-              style={{
-                background: '#10b981',
-                color: '#fff',
-                border: 'none',
-                padding: '11px 20px',
-                borderRadius: '10px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <i className="fa-solid fa-plus"></i> إضافة سند توريد جديد
-            </button>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handlePrintReport('statement')}
+                style={{
+                  background: '#0284c7',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '11px 18px',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.9rem'
+                }}
+              >
+                <i className="fa-solid fa-print"></i> طباعة كشف التوريدات والموقف المالي
+              </button>
+              <button
+                onClick={() => handleOpenPaymentModal()}
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '11px 20px',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.9rem'
+                }}
+              >
+                <i className="fa-solid fa-plus"></i> إضافة سند توريد جديد
+              </button>
+            </div>
           </div>
 
           <div className="users-table-wrapper" style={{
@@ -1161,6 +1349,13 @@ export default function InsuranceSupervisionManagement() {
                       </td>
                       <td className="no-print" style={{ padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: '8px' }}>
+                          <button
+                            onClick={() => printSinglePaymentVoucher(p, JSON.parse(localStorage.getItem('user') || '{}'))}
+                            style={{ background: '#0284c7', color: '#fff', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
+                            title="طباعة سند التوريد الرسمي"
+                          >
+                            <i className="fa-solid fa-print"></i>
+                          </button>
                           <button
                             onClick={() => handleOpenPaymentModal(p)}
                             style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
