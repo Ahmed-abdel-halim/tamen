@@ -4655,6 +4655,12 @@ export default function LifoReportsDashboard() {
             <OfficeUsers />
           </div>
         )}
+
+        {!loading && activeTab === 'reconciliation' && isAdmin && (
+          <div style={{ padding: '0 30px 30px' }}>
+            <UnionReconciliationTab />
+          </div>
+        )}
       </div>
     </section>
   );
