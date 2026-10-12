@@ -4,6 +4,7 @@ import SearchableSelect from './SearchableSelect';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
+import UnionReconciliationTab from './UnionReconciliationTab';
 
 interface ExpenseItem {
   item_number?: string;
@@ -519,6 +520,10 @@ export default function ExpenseManagement({
     setActiveTab(activeTabOverride);
   }, [activeTabOverride]);
   const [unionPurchases, setUnionPurchases] = useState<UnionPurchase[]>([]);
+  const [unionSubTab, setUnionSubTab] = useState<'purchases' | 'reconciliation'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('subtab') === 'reconciliation' ? 'reconciliation' : 'purchases';
+  });
   const [showUnionModal, setShowUnionModal] = useState(false);
   const [editingUnionPurchase, setEditingUnionPurchase] = useState<UnionPurchase | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -1488,6 +1493,60 @@ export default function ExpenseManagement({
       {/* Union Balance Tab */}
       {activeTab === 'union' && (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
+          {/* Subtabs Switcher between Purchases and LIFO Reconciliation */}
+          <div className="no-print" style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '25px',
+            borderBottom: '2px solid var(--border)',
+            paddingBottom: '14px'
+          }}>
+            <button
+              onClick={() => setUnionSubTab('purchases')}
+              style={{
+                padding: '11px 24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: unionSubTab === 'purchases' ? 'linear-gradient(135deg, #014cb1 0%, #003173 100%)' : 'var(--card-bg)',
+                color: unionSubTab === 'purchases' ? '#fff' : 'var(--text)',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: unionSubTab === 'purchases' ? '0 4px 10px rgba(1, 76, 177, 0.25)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <i className="fa-solid fa-list-check"></i> سجل الشراء والطلبات
+            </button>
+            <button
+              onClick={() => setUnionSubTab('reconciliation')}
+              style={{
+                padding: '11px 24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: unionSubTab === 'reconciliation' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : 'var(--card-bg)',
+                color: unionSubTab === 'reconciliation' ? '#fff' : 'var(--text)',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: unionSubTab === 'reconciliation' ? '0 4px 10px rgba(2, 132, 199, 0.25)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <i className="fa-solid fa-scale-balanced"></i> مطابقة رصيد الاتحاد مع المنظومة (LIFO)
+            </button>
+          </div>
+
+          {unionSubTab === 'reconciliation' ? (
+            <UnionReconciliationTab />
+          ) : (
+            <>
           <div className="users-breadcrumb no-print" style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '30px',
             background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '16px', marginBottom: '30px', color: '#fff',
@@ -1622,6 +1681,8 @@ export default function ExpenseManagement({
                 <button key={idx} onClick={() => typeof p === 'number' && setCurrentUnionPage(p)} disabled={p === '...' || p === currentUnionPage} style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', border: '1px solid var(--border)', background: p === currentUnionPage ? '#014cb1' : 'var(--card-bg)', color: p === currentUnionPage ? '#fff' : 'var(--text)', fontWeight: 700, cursor: p === '...' ? 'default' : 'pointer' }}>{p}</button>
               ))}
             </div>
+          )}
+            </>
           )}
         </div>
       )}

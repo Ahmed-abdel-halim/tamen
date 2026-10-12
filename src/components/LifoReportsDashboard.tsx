@@ -6,6 +6,7 @@ import { API_BASE_URL } from "../config/api";
 import { translateLifoError } from "../utils/translateLifoError";
 import "../styles/LifoDashboard.css";
 import OfficeUsers from "./OfficeUsers";
+import UnionReconciliationTab from "./UnionReconciliationTab";
 
 
 // Default external credentials
@@ -41,7 +42,7 @@ const getExternalCredentials = () => {
 };
 
 
-type ActiveTab = 'home' | 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports' | 'users';
+type ActiveTab = 'home' | 'requests' | 'inventory' | 'distribution' | 'refund' | 'reports' | 'users' | 'reconciliation';
 
 
 type CardCategory = 'all' | 'active' | 'cancel' | 'sold';
@@ -1680,6 +1681,16 @@ export default function LifoReportsDashboard() {
               إدارة الراجعات
             </button>
           )}
+          {isAdmin && (
+            <button 
+              type="button" 
+              onClick={() => setActiveTab('reconciliation')} 
+              className={`lifo-tab-btn ${activeTab === 'reconciliation' ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-scale-balanced" style={{ marginLeft: '8px' }}></i>
+              مطابقة الرصيد والمدفوعات
+            </button>
+          )}
           {hasReportsPermission && (
             <button 
               type="button"
@@ -1717,6 +1728,10 @@ export default function LifoReportsDashboard() {
             <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '30px', marginBottom: '15px', color: 'var(--sidebar)' }}></i>
             <p style={{ fontWeight: '600' }}>جاري استرجاع البيانات الحية مباشرة من سيرفر الاتحاد (LIFO)...</p>
           </div>
+        )}
+
+        {!loading && activeTab === 'reconciliation' && (
+          <UnionReconciliationTab />
         )}
 
         {!loading && activeTab === 'home' && (

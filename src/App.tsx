@@ -103,6 +103,7 @@ import TestCarInfoAPI from './components/TestCarInfoAPI';
 import TestLifoLogin from './components/TestLifoLogin';
 import CommissionManagement from './components/CommissionManagement';
 import BankReconciliation from './components/BankReconciliation';
+import InsuranceSupervisionManagement from './components/InsuranceSupervisionManagement';
 import FinancialArchive from './components/FinancialArchive';
 import OutstandingDebts from './components/OutstandingDebts';
 import InventoryManagement from './components/InventoryManagement';
@@ -271,6 +272,7 @@ function hasAccessToRoute(
       '/reports/indemnities',
       '/reports/finance-claims',
       '/reports/union-balances',
+      '/reports/insurance-supervision',
       '/reports/rental-vouchers',
       '/reports/employee-salaries',
       '/reports/financial-archive',
@@ -292,6 +294,7 @@ function hasAccessToRoute(
     'إدارة الإيرادات': ['/reports/payment-vouchers'],
     'المخازن والعهدة': ['/reports/inventory'],
     'رصيد الاتحاد (البطاقة البرتقالية)': ['/reports/union-balances'],
+    'هيئة الإشراف على التأمين': ['/reports/insurance-supervision'],
     'الإيجارات العقارية': ['/reports/rental-vouchers'],
     'المصروفات التشغيلية': ['/reports/expenses'],
     'التسويات والعمولات': ['/reports/commissions'],
@@ -496,6 +499,7 @@ const menuSections: SidebarSection[] = [
           {
             label: 'إدارة المصروفات', icon: 'fa-solid fa-vault', children: [
               { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+              { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
               { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
               { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
             ]
@@ -737,6 +741,7 @@ const createMenuSections = (
       { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
       { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
       { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+      { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
       { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
       { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
       { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
@@ -760,6 +765,7 @@ const createMenuSections = (
     'إدارة الإيرادات': { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
     'المخازن والعهدة': { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
     'رصيد الاتحاد (البطاقة البرتقالية)': { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+    'هيئة الإشراف على التأمين': { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
     'الإيجارات العقارية': { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
     'التسويات والعمولات': { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
     'كشف حساب الوكيل': { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
@@ -831,6 +837,7 @@ const createMenuSections = (
     '/reports/indemnities',
     '/reports/finance-claims',
     '/reports/union-balances',
+    '/reports/insurance-supervision',
     '/reports/rental-vouchers',
     '/reports/expenses',
     '/reports/financial-reconciliation',
@@ -1134,6 +1141,7 @@ const createMenuSections = (
     ];
     const expensesOrder = [
       '/reports/union-balances',
+      '/reports/insurance-supervision',
       '/reports/rental-vouchers',
       '/reports/expenses'
     ];
@@ -1798,6 +1806,8 @@ export default function App() {
                   <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><CompensationsList /></AuthorizedRoute>} />
                   <Route path="/reports/finance-claims" element={<AuthorizedRoute requiredPath="/reports/finance-claims"><FinanceClaimsList /></AuthorizedRoute>} />
                   <Route path="/reports/union-balances" element={<AuthorizedRoute requiredPath="/reports/union-balances"><ExpenseManagement activeTabOverride="union" /></AuthorizedRoute>} />
+                  <Route path="/reports/insurance-supervision" element={<AuthorizedRoute requiredPath="/reports/insurance-supervision"><InsuranceSupervisionManagement /></AuthorizedRoute>} />
+                  <Route path="/insurance-supervision" element={<AuthorizedRoute requiredPath="/reports/insurance-supervision"><InsuranceSupervisionManagement /></AuthorizedRoute>} />
                   {/* ورقة الإيجارات */}
                   <Route path="/reports/rental-vouchers" element={<AuthorizedRoute requiredPath="/reports/rental-vouchers"><RentalVouchersList /></AuthorizedRoute>} />
                   <Route path="/reports/rental-vouchers/create" element={<AuthorizedRoute requiredPath="/reports/rental-vouchers"><CreateRentalVoucher /></AuthorizedRoute>} />
