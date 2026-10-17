@@ -865,13 +865,13 @@ export default function ViewClaim() {
         <div class="section">
           <div class="section-title">💰 بيانات التقييم المالي وسعر الصرف</div>
           <div class="section-body">
-            <div class="grid-2">
+            <div class="grid-3">
               <div class="field-row">
                 <div class="fl">مبلغ الأضرار (${currencyLabel})</div>
                 <div class="fv num-val" style="color:#0369a1; font-weight:900;">${tndAmount}</div>
               </div>
               <div class="field-row">
-                <div class="fl">سعر الصرف المعتمد</div>
+                <div class="fl">سعر الصرف</div>
                 <div class="fv highlight num-val" style="font-weight:900; color:#0e7490;">${foreignNumber > 0 ? `1 ${currencySymbol} = ${Number(appliedExchangeRate).toFixed(3)} د.ل` : 'سعر محلي (د.ل)'}</div>
               </div>
               <div class="field-row">
@@ -882,7 +882,7 @@ export default function ViewClaim() {
                 <div class="fl">تاريخ التقييم / الصرف</div>
                 <div class="fv num-val">${formatPrintDate(claim.assessor_date) !== '---' ? formatPrintDate(claim.assessor_date) : formatPrintDate(claim.claim_date)}</div>
               </div>
-              ${claim.assessor_percentage ? `<div class="field-row span-2"><div class="fl">نسبة المقدر</div><div class="fv">${claim.assessor_percentage}</div></div>` : ''}
+              ${claim.assessor_percentage ? `<div class="field-row"><div class="fl">نسبة المقدر</div><div class="fv">${claim.assessor_percentage}</div></div>` : ''}
             </div>
           </div>
         </div>

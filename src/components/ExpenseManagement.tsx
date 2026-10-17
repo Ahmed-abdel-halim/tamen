@@ -365,38 +365,54 @@ export default function ExpenseManagement({
     const title = activeTab === 'union' ? 'تقرير سجل رصيد الاتحاد' :
       activeTab === 'expenses' ? 'تقرير المصروفات التشغيلية' : 'تقرير التعويضات والمطالبات المالية';
 
+    const totalUnionPaid = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + (parseFloat(it.amount_paid?.toString() || '0') || 0), 0) : 0;
+    const totalUnionCards = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + (parseFloat(it.cards_count?.toString() || '0') || 0), 0) : 0;
+    const totalUnionFee = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + ((parseFloat(it.cards_count?.toString() || '0') || 0) * (parseFloat(it.union_fee_per_card?.toString() || '0') || 0)), 0) : 0;
+    const totalUnionDeposit = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + ((parseFloat(it.cards_count?.toString() || '0') || 0) * (parseFloat(it.company_deposit_per_card?.toString() || '0') || 0)), 0) : 0;
+
     printWindow.document.write(`
       <html dir="rtl">
       <head>
         <title>${title}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-          body { font-family: 'Cairo', sans-serif; margin: 20px; padding: 20px; }
-          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #014cb1; padding-bottom: 15px; }
-          .header h1 { margin: 0; color: #014cb1; font-size: 24px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: right; font-size: 13px; }
-          th { background: #f8fafc; font-weight: 900; }
-          .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #64748b; }
+          @page { margin: 10mm; size: A4 portrait; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+          body { font-family: 'Cairo', sans-serif; margin: 15px; padding: 10px; color: #0f172a; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #014cb1; padding-bottom: 15px; }
+          .header h1 { margin: 0; color: #014cb1; font-size: 22px; font-weight: 900; }
+          .header p { margin: 4px 0 0 0; color: #475569; font-size: 14px; font-weight: 700; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: right; }
+          th { background: #f8fafc; font-weight: 900; color: #1e293b; }
+          tbody tr:nth-child(even) { background: #f8fafc; }
+          tfoot tr { background: #f1f5f9; font-weight: 900; border-top: 2px solid #014cb1; }
+          tfoot td { padding: 10px; }
+          .footer { margin-top: 25px; text-align: center; font-size: 11px; color: #64748b; font-weight: 600; }
           @media print { .no-print { display: none; } }
         </style>
       </head>
       <body onload="window.print(); window.onafterprint = () => window.close();">
         <div class="header">
-          <div><h1>شركة المدار الليبي للتأمين</h1><p>${title}</p></div>
-          <img src="/img/logo.png" style="height: 60px;">
+          <div>
+            <h1>شركة المدار الليبي للتأمين</h1>
+            <p>${title}</p>
+          </div>
+          <img src="/img/logo.png" style="height: 55px;" onerror="this.style.display='none'">
         </div>
         <table>
           <thead>
             <tr>
               ${activeTab === 'union' ? `
+                <th style="width: 45px; text-align: center;">الترقيم</th>
                 <th>رقم الطلب</th>
                 <th>المبلغ</th>
-                <th>عدد البطاقات</th>
+                <th style="text-align: center;">عدد البطاقات</th>
                 <th>خصم الاتحاد</th>
                 <th>وديعة الشركة</th>
-                <th>التاريخ</th>
+                <th style="text-align: center;">التاريخ</th>
               ` : `
+                <th style="width: 45px; text-align: center;">الترقيم</th>
                 <th>البيان</th>
                 <th>المستلم</th>
                 <th>الفئة / البند الفرعي</th>
@@ -408,27 +424,48 @@ export default function ExpenseManagement({
             </tr>
           </thead>
           <tbody>
-            ${currentData.map((item: any) => `
+            ${currentData.map((item: any, idx: number) => `
               <tr>
                 ${activeTab === 'union' ? `
-                  <td>${item.request_number}</td>
-                  <td>${item.amount_paid.toLocaleString()} د.ل</td>
-                  <td>${item.cards_count}</td>
-                  <td>${(item.cards_count * item.union_fee_per_card).toLocaleString()} د.ل</td>
-                  <td>${(item.cards_count * item.company_deposit_per_card).toLocaleString()} د.ل</td>
-                  <td>${item.purchase_date ? item.purchase_date.split('T')[0] : '-'}</td>
+                  <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
+                  <td style="font-weight: 700;">${item.request_number || '-'}</td>
+                  <td style="font-weight: 700;">${(parseFloat(item.amount_paid?.toString() || '0') || 0).toLocaleString()} د.ل</td>
+                  <td style="text-align: center; font-weight: 700;">${item.cards_count || 0}</td>
+                  <td>${((parseFloat(item.cards_count?.toString() || '0') || 0) * (parseFloat(item.union_fee_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
+                  <td>${((parseFloat(item.cards_count?.toString() || '0') || 0) * (parseFloat(item.company_deposit_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
+                  <td style="text-align: center;">${item.purchase_date ? item.purchase_date.split('T')[0] : '-'}</td>
                 ` : `
+                  <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
                   <td>${item.name}</td>
                   <td>${item.recipient || '-'}</td>
                   <td>${item.category} ${item.sub_category ? ` / ${item.sub_category}` : ''}</td>
                   <td>${item.expense_type || '-'}</td>
-                  <td>${item.amount.toLocaleString()} ${item.currency}</td>
+                  <td style="font-weight: 700;">${(parseFloat(item.amount?.toString() || '0') || 0).toLocaleString()} ${item.currency || 'د.ل'}</td>
                   <td>${item.expense_date}</td>
                   <td>${item.status}</td>
                 `}
               </tr>
             `).join('')}
           </tbody>
+          ${activeTab === 'union' ? `
+            <tfoot>
+              <tr>
+                <td colspan="2" style="text-align: center; font-size: 13px; font-weight: 900; color: #014cb1;">المجموع</td>
+                <td style="font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionPaid.toLocaleString()} د.ل</td>
+                <td style="text-align: center; font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionCards.toLocaleString()}</td>
+                <td style="font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionFee.toLocaleString()} د.ل</td>
+                <td style="font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionDeposit.toLocaleString()} د.ل</td>
+                <td style="text-align: center;">-</td>
+              </tr>
+            </tfoot>
+          ` : `
+            <tfoot>
+              <tr>
+                <td colspan="5" style="text-align: center; font-size: 13px; font-weight: 900; color: #014cb1;">إجمالي المصروفات</td>
+                <td colspan="3" style="font-weight: 900; font-size: 13px; color: #0f172a;">${filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.amount?.toString() || '0') || 0), 0).toLocaleString()} د.ل</td>
+              </tr>
+            </tfoot>
+          `}
         </table>
         <div class="footer">تم استخراج التقرير بتاريخ: ${new Date().toLocaleString('ar-LY')}</div>
       </body>
@@ -1068,14 +1105,21 @@ export default function ExpenseManagement({
       setUnionPurchaseDate(purchase.purchase_date ? purchase.purchase_date.split('T')[0] : '');
       setUnionNotes(purchase.notes || '');
     } else {
+      const today = new Date().toISOString().split('T')[0];
       setEditingUnionPurchase(null);
       setRequestNumber('');
       setAmountPaid('');
-      setCardPrice('20');
-      setUnionFeePerCard('5');
-      setCompanyDepositPerCard('15');
+      if (today >= '2026-08-01') {
+        setCardPrice('28');
+        setUnionFeePerCard('6');
+        setCompanyDepositPerCard('20');
+      } else {
+        setCardPrice('20');
+        setUnionFeePerCard('5');
+        setCompanyDepositPerCard('15');
+      }
       setPaymentMethod('حوالة مصرفية');
-      setUnionPurchaseDate(new Date().toISOString().split('T')[0]);
+      setUnionPurchaseDate(today);
       setUnionNotes('');
     }
     setShowUnionModal(true);
@@ -1216,6 +1260,7 @@ export default function ExpenseManagement({
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     try {
       const columns = [
+        { header: '#', key: 'seq', width: 8 },
         { header: 'رقم الواصل/الطلب', key: 'request_number', width: 25 },
         { header: 'المبلغ المدفوع', key: 'amount_paid', width: 20 },
         { header: 'عدد البطاقات', key: 'cards_count', width: 15 },
@@ -1225,7 +1270,8 @@ export default function ExpenseManagement({
         { header: 'البيان/ملاحظات', key: 'notes', width: 30 },
       ];
 
-      const data = filteredUnion.map((u) => ({
+      const data: any[] = filteredUnion.map((u, idx) => ({
+        seq: idx + 1,
         request_number: u.request_number || '-',
         amount_paid: parseFloat(u.amount_paid.toString()).toLocaleString() + ' د.ل',
         cards_count: u.cards_count,
@@ -1237,7 +1283,8 @@ export default function ExpenseManagement({
 
       // Summary row
       data.push({
-        request_number: 'الإجمالي المفلتر',
+        seq: '',
+        request_number: 'المجموع الكلي',
         amount_paid: unionFilteredStats.totalPaid.toLocaleString() + ' د.ل',
         cards_count: unionFilteredStats.totalCards,
         union_fee: unionFilteredStats.totalFee.toLocaleString() + ' د.ل',
@@ -1631,28 +1678,32 @@ export default function ExpenseManagement({
             <table className="users-table">
               <thead>
                 <tr>
+                  <th style={{ width: '55px', textAlign: 'center', verticalAlign: 'middle' }}>#</th>
                   <th style={{ verticalAlign: 'middle' }}>رقم الواصل/الطلب</th>
                   <th style={{ verticalAlign: 'middle' }}>المبلغ المدفوع</th>
-                  <th style={{ verticalAlign: 'middle' }}>عدد البطاقات</th>
+                  <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>عدد البطاقات</th>
                   <th style={{ verticalAlign: 'middle' }}>خصم الاتحاد (المصروفات)</th>
                   <th style={{ verticalAlign: 'middle' }}>وديعة الشركة</th>
-                  <th style={{ verticalAlign: 'middle' }}>تاريخ الطلب</th>
-                  <th style={{ verticalAlign: 'middle' }}>صورة الواصل</th>
-                  <th className="no-print" style={{ verticalAlign: 'middle' }}>الإجراءات</th>
+                  <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>تاريخ الطلب</th>
+                  <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>صورة الواصل</th>
+                  <th className="no-print" style={{ verticalAlign: 'middle', textAlign: 'center' }}>الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedUnion.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>لا توجد بيانات سجل رصيد الاتحاد</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px' }}>لا توجد بيانات سجل رصيد الاتحاد</td></tr>
                 ) : (
-                  paginatedUnion.map(u => (
+                  paginatedUnion.map((u, idx) => (
                     <tr key={u.id}>
+                      <td style={{ textAlign: 'center', fontWeight: 'bold', verticalAlign: 'middle', color: '#64748b' }}>
+                        {(currentUnionPage - 1) * unionItemsPerPage + idx + 1}
+                      </td>
                       <td style={{ fontWeight: 'bold', verticalAlign: 'middle' }}>{u.request_number || '-'}</td>
                       <td style={{ color: '#ef4444', fontWeight: 800, verticalAlign: 'middle' }}>{(parseFloat(u.amount_paid?.toString() || '0') || 0).toLocaleString()} د.ل</td>
-                      <td style={{ color: '#065f46', fontWeight: 'bold', verticalAlign: 'middle' }}>{u.cards_count || 0}</td>
-                      <td style={{ verticalAlign: 'middle' }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.union_fee_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
+                      <td style={{ color: '#065f46', fontWeight: 'bold', verticalAlign: 'middle', textAlign: 'center' }}>{u.cards_count || 0}</td>
+                      <td style={{ verticalAlign: 'middle', fontWeight: 700 }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.union_fee_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
                       <td style={{ color: '#92400e', fontWeight: 700, verticalAlign: 'middle' }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.company_deposit_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
-                      <td style={{ verticalAlign: 'middle' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
+                      <td style={{ verticalAlign: 'middle', textAlign: 'center' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
                       <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {u.receipt_image ? (
@@ -1673,6 +1724,28 @@ export default function ExpenseManagement({
                   ))
                 )}
               </tbody>
+              <tfoot>
+                <tr style={{ background: '#f8fafc', fontWeight: 900, borderTop: '2px solid #014cb1' }}>
+                  <td colSpan={2} style={{ textAlign: 'center', padding: '14px', fontSize: '1.05rem', color: '#014cb1' }}>
+                    المجموع الكلي
+                  </td>
+                  <td style={{ color: '#ef4444', fontWeight: 900, padding: '14px', fontSize: '1.05rem' }}>
+                    {unionFilteredStats.totalPaid.toLocaleString()} د.ل
+                  </td>
+                  <td style={{ color: '#065f46', fontWeight: 900, padding: '14px', fontSize: '1.05rem', textAlign: 'center' }}>
+                    {unionFilteredStats.totalCards.toLocaleString()}
+                  </td>
+                  <td style={{ color: '#1e293b', fontWeight: 900, padding: '14px', fontSize: '1.05rem' }}>
+                    {unionFilteredStats.totalFee.toLocaleString()} د.ل
+                  </td>
+                  <td style={{ color: '#92400e', fontWeight: 900, padding: '14px', fontSize: '1.05rem' }}>
+                    {unionFilteredStats.totalDeposit.toLocaleString()} د.ل
+                  </td>
+                  <td style={{ textAlign: 'center', color: '#94a3b8' }}>-</td>
+                  <td style={{ textAlign: 'center', color: '#94a3b8' }}>-</td>
+                  <td className="no-print"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
           {totalUnionPages > 1 && (
@@ -2084,7 +2157,27 @@ export default function ExpenseManagement({
                   <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b', textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#ef4444' }}>*</span> تاريخ الشراء / الطلب
                   </label>
-                  <input type="date" value={unionPurchaseDate} onChange={e => setUnionPurchaseDate(e.target.value)} required style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center' }} />
+                  <input
+                    type="date"
+                    value={unionPurchaseDate}
+                    onChange={e => {
+                      const d = e.target.value;
+                      setUnionPurchaseDate(d);
+                      if (!editingUnionPurchase) {
+                        if (d >= '2026-08-01') {
+                          setCardPrice('28');
+                          setUnionFeePerCard('6');
+                          setCompanyDepositPerCard('20');
+                        } else {
+                          setCardPrice('20');
+                          setUnionFeePerCard('5');
+                          setCompanyDepositPerCard('15');
+                        }
+                      }
+                    }}
+                    required
+                    style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center' }}
+                  />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>رقم الطلب (إن وجد)</label>
@@ -2100,20 +2193,58 @@ export default function ExpenseManagement({
                 </div>
               </div>
 
-              <div style={{ background: '#f8fafc', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
-                <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>إعدادات حساب الوديعة (قابلة للتغيير مستقبلاً)</p>
+              <div style={{ background: '#f8fafc', padding: '22px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
+                  <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                    <i className="fa-solid fa-table-list" style={{ color: '#014cb1', marginLeft: '6px' }}></i>
+                    تسعيرة رصيد البطاقة البرتقالية (جدول الرصيد المعتمد)
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCardPrice('20');
+                        setUnionFeePerCard('5');
+                        setCompanyDepositPerCard('15');
+                      }}
+                      style={{
+                        padding: '6px 12px', borderRadius: '8px', border: cardPrice === '20' ? '2px solid #014cb1' : '1px solid #cbd5e1',
+                        background: cardPrice === '20' ? '#eff6ff' : '#fff', color: cardPrice === '20' ? '#014cb1' : '#475569',
+                        fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer'
+                      }}
+                    >
+                      تسعيرة سابقة (20 د.ل: 15 وديعة + 5 اتحاد)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCardPrice('28');
+                        setUnionFeePerCard('6');
+                        setCompanyDepositPerCard('20');
+                      }}
+                      style={{
+                        padding: '6px 12px', borderRadius: '8px', border: cardPrice === '28' ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: cardPrice === '28' ? '#ecfdf5' : '#fff', color: cardPrice === '28' ? '#059669' : '#475569',
+                        fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer'
+                      }}
+                    >
+                      اعتباراً من 2026/08/01 (28 د.ل: 20 وديعة + 6 اتحاد + 2 إشراف)
+                    </button>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e293b' }}>سعر البطاقة الكلي</label>
-                    <input type="number" value={cardPrice} onChange={e => setCardPrice(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 700 }} />
+                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>سعر البطاقة الكلي (د.ل)</label>
+                    <input type="number" value={cardPrice} onChange={e => setCardPrice(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#014cb1' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e293b' }}>خصم الاتحاد الفعلي (مصروف)</label>
-                    <input type="number" value={unionFeePerCard} onChange={e => setUnionFeePerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 700 }} />
+                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>خصم الاتحاد الفعلي (د.ل)</label>
+                    <input type="number" value={unionFeePerCard} onChange={e => setUnionFeePerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#ef4444' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e293b' }}>رصيد/وديعة الشركة للبطاقة</label>
-                    <input type="number" value={companyDepositPerCard} onChange={e => setCompanyDepositPerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 700 }} />
+                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>وديعة الشركة للبطاقة (د.ل)</label>
+                    <input type="number" value={companyDepositPerCard} onChange={e => setCompanyDepositPerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#059669' }} />
                   </div>
                 </div>
               </div>
