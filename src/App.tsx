@@ -227,7 +227,7 @@ function hasAccessToRoute(
     'مدير الوكلاء': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
     'تدقيق كشف حساب الوكيل': ['/reports/agent-monthly-ledger'],
     'تسديد كشف حساب الوكيل': ['/reports/agent-monthly-ledger'],
-    'إدارة الوكيل': ['/', '/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
+    'إدارة الوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
     'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
 
     'إدارة الموظفين': ['/users', '/employee-requests', '/departments', '/employees', '/employees-management', '/profile-update-requests'],
@@ -448,7 +448,7 @@ const menuSections: SidebarSection[] = [
           { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
           { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent' },
-          { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/' },
+          { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
           { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
         ]
       },
@@ -675,7 +675,7 @@ const createMenuSections = (
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
       { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
-      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/' },
+      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
       { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     ],
     'إدارة الوكلاء': [
@@ -684,7 +684,7 @@ const createMenuSections = (
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
       { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
       { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
-      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/' },
+      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
       { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     ],
     // تفصيل صلاحيات الفروع والوكلاء
@@ -700,7 +700,7 @@ const createMenuSections = (
     'مدير الوكلاء': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
     'تدقيق كشف حساب الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
     'تسديد كشف حساب الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
-    'إدارة الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/' },
+    'إدارة الوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
     'كشف الحساب الشهري للوكيل': { label: 'إدارة الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/agent-monthly-ledger' },
     'صرف المرتبات والمسيرات': { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
 
@@ -855,7 +855,6 @@ const createMenuSections = (
     '/agency-cancellations', 
     '/agent-requests', 
     '/profile-update-requests?type=agent',
-    '/',
     '/reports/agent-monthly-ledger',
     '/employees',
     '/users', 
@@ -1034,7 +1033,6 @@ const createMenuSections = (
       '/agency-cancellations',
       '/agent-requests',
       '/profile-update-requests?type=agent',
-      '/',
       '/reports/agent-monthly-ledger'
     ];
     const mailOrder = [
