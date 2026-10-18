@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { showToast } from './Toast';
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 type Employee = {
   id: number;
@@ -176,6 +177,7 @@ const CustomDatePicker = ({
 };
 
 export default function EmployeeSalaries() {
+  const canEdit = canEditFinancial('مرتبات الموظفين') || canEditFinancial('صرف المرتبات والمسيرات');
   const now = new Date();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
@@ -537,6 +539,10 @@ export default function EmployeeSalaries() {
   };
 
   const savePayroll = async () => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!payrollForm) return;
     setSaving(true);
     try {
@@ -731,6 +737,10 @@ export default function EmployeeSalaries() {
   };
 
   const handleBulkPay = async () => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (employees.length === 0) {
       showToast('لا يوجد موظفون لصرف المرتبات', 'error');
       return;
@@ -1699,6 +1709,9 @@ export default function EmployeeSalaries() {
   return (
     <section className="users-management animate-fade-in">
       <div className="users-breadcrumb"><span>الشؤون المالية / مرتبات الموظفين</span></div>
+      {!canEdit && (
+        <ReadOnlyNotice message="وضع القراءة فقط: يمكنك استعراض مرتبات ومسيرات الموظفين وتصديرها وطباعة الكشوفات ووصولات المرتب، دون صلاحية تعديل الرواتب أو صرفها." />
+      )}
 
       {/* View Tabs */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
@@ -1849,16 +1862,18 @@ export default function EmployeeSalaries() {
                   <i className="fa-solid fa-print"></i>
                   طباعة الكشف
                 </button>
-                <button
-                  className="btn-submit"
-                  type="button"
-                  onClick={handleBulkPay}
-                  disabled={loading || bulkPaying || employees.length === 0}
-                  title="تسجيل صرف المرتب لجميع الموظفين للشهر المحدد"
-                >
-                  <i className="fa-solid fa-money-bill-wave"></i>
-                  {bulkPaying ? 'جاري الصرف...' : 'صرف الكل للشهر'}
-                </button>
+                {canEdit && (
+                  <button
+                    className="btn-submit"
+                    type="button"
+                    onClick={handleBulkPay}
+                    disabled={loading || bulkPaying || employees.length === 0}
+                    title="تسجيل صرف المرتب لجميع الموظفين للشهر المحدد"
+                  >
+                    <i className="fa-solid fa-money-bill-wave"></i>
+                    {bulkPaying ? 'جاري الصرف...' : 'صرف الكل للشهر'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1928,7 +1943,9 @@ export default function EmployeeSalaries() {
                       <td style={{ fontSize: '11px' }}>{r.p?.delivery_method === 'أخرى' ? r.p.custom_delivery_method : (r.p?.delivery_method || '-')}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button className="action-btn edit" onClick={() => openPayrollForm(r)} title="تعديل بيان المرتب"><i className="fa-solid fa-pen"></i></button>
+                          {canEdit && (
+                            <button className="action-btn edit" onClick={() => openPayrollForm(r)} title="تعديل بيان المرتب"><i className="fa-solid fa-pen"></i></button>
+                          )}
                           <button className="action-btn" onClick={() => handlePrintPayslipFromRow(r)} title="طباعة واصل المرتب" style={{ backgroundColor: '#10b981', color: 'white' }}><i className="fa-solid fa-print"></i></button>
                           <button className="action-btn" onClick={() => openHistory(r.e)} title="سجل المرتب"><i className="fa-solid fa-clock-rotate-left"></i></button>
                         </div>

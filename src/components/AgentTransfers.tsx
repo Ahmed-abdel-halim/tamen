@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showToast } from './Toast';
 import { API_BASE_URL, resolveImageUrl } from "../config/api";
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 type Agent = {
   id: number;
@@ -62,6 +63,7 @@ const paymentMethodMap: Record<string, string> = {
 };
 
 export default function AgentTransfers() {
+  const canEdit = canEditFinancial('حوالات الوكلاء المالية');
   const [transfers, setTransfers] = useState<AgentTransfer[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [posMachines, setPosMachines] = useState<PosMachine[]>([]);
@@ -237,6 +239,10 @@ export default function AgentTransfers() {
 
   const handleAddTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية التعديل أو الإضافة (عرض فقط)', 'error');
+      return;
+    }
 
     if (!formAmount || parseFloat(formAmount) <= 0) {
       showToast('يرجى إدخال مبلغ صحيح أكبر من صفر', 'error');
@@ -315,6 +321,10 @@ export default function AgentTransfers() {
   };
 
   const handleApprove = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية اعتماد الحوالة (عرض فقط)', 'error');
+      return;
+    }
     const ok = window.confirm('هل أنت متأكد من مطابقة هذه الحوالة واعتمادها في الدفاتر المالية وسندات القبض؟');
     if (!ok) return;
 
@@ -349,6 +359,10 @@ export default function AgentTransfers() {
   };
 
   const handleReject = async () => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية رفض الحوالة (عرض فقط)', 'error');
+      return;
+    }
     if (!rejectionReason.trim()) {
       showToast('يرجى كتابة سبب الرفض للوكيل', 'error');
       return;
@@ -384,6 +398,10 @@ export default function AgentTransfers() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الحذف (عرض فقط)', 'error');
+      return;
+    }
     const ok = window.confirm('هل أنت متأكد من حذف هذا التحويل نهائياً؟');
     if (!ok) return;
 
@@ -441,6 +459,8 @@ export default function AgentTransfers() {
       <div className="users-breadcrumb">
         <span>الشؤون المالية / {isAdmin ? 'حوالات الوكلاء المالية' : 'التحويلات المالية للشركة'}</span>
       </div>
+
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك استعراض ومتابعة حوالات الوكلاء المالية، استخدام الفلاتر، واستعراض الإيصالات. اعتماد الحوالات أو إدخالها أو حذفها مقيد بحسب صلاحياتك." />
 
 
 
@@ -529,10 +549,12 @@ export default function AgentTransfers() {
           </div>
 
           <div className="ep-payroll-actions" style={{ marginTop: '16px' }}>
-            <button className="btn-submit" type="button" onClick={() => { resetForm(); setShowAddModal(true); }}>
-              <i className="fa-solid fa-plus"></i>
-              {isAdmin ? 'إدخال عملية مالية للوكيل' : 'تسجيل إيصال حوالة جديد'}
-            </button>
+            {canEdit && (
+              <button className="btn-submit" type="button" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                <i className="fa-solid fa-plus"></i>
+                {isAdmin ? 'إدخال عملية مالية للوكيل' : 'تسجيل إيصال حوالة جديد'}
+              </button>
+            )}
             <button className="btn-submit" type="button" style={{ background: '#64748b' }} onClick={loadData}>
               <i className="fa-solid fa-rotate"></i>
               تحديث البيانات
@@ -667,55 +689,61 @@ export default function AgentTransfers() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        {isAdmin && t.status === 'pending' && (
+                        {canEdit ? (
                           <>
-                            <button
-                              className="action-btn"
-                              style={{ background: '#10b981', color: 'white' }}
-                              onClick={() => handleApprove(t.id)}
-                              title="تأكيد ومطابقة الحوالة"
-                            >
-                              <i className="fa-solid fa-check"></i> مطابقة
-                            </button>
-                            <button
-                              className="action-btn"
-                              style={{ background: '#ef4444', color: 'white' }}
-                              onClick={() => handleOpenRejectModal(t.id)}
-                              title="رفض الطلب"
-                            >
-                              <i className="fa-solid fa-xmark"></i> رفض
-                            </button>
+                            {isAdmin && t.status === 'pending' && (
+                              <>
+                                <button
+                                  className="action-btn"
+                                  style={{ background: '#10b981', color: 'white' }}
+                                  onClick={() => handleApprove(t.id)}
+                                  title="تأكيد ومطابقة الحوالة"
+                                >
+                                  <i className="fa-solid fa-check"></i> مطابقة
+                                </button>
+                                <button
+                                  className="action-btn"
+                                  style={{ background: '#ef4444', color: 'white' }}
+                                  onClick={() => handleOpenRejectModal(t.id)}
+                                  title="رفض الطلب"
+                                >
+                                  <i className="fa-solid fa-xmark"></i> رفض
+                                </button>
+                              </>
+                            )}
+                            {!isAdmin && t.status === 'pending' && (
+                              <>
+                                <button
+                                  className="action-btn edit"
+                                  style={{ background: '#3b82f6', color: 'white' }}
+                                  onClick={() => handleEditClick(t)}
+                                  title="تعديل الحوالة"
+                                >
+                                  <i className="fa-solid fa-pencil"></i>
+                                </button>
+                                <button
+                                  className="action-btn delete"
+                                  style={{ background: '#ef4444', color: 'white' }}
+                                  onClick={() => handleDelete(t.id)}
+                                  title="حذف السجل"
+                                >
+                                  <i className="fa-solid fa-trash"></i>
+                                </button>
+                              </>
+                            )}
+                            {isAdmin && (t.status === 'pending' || t.status === 'approved') && (
+                              <button
+                                className="action-btn delete"
+                                style={{ background: '#ef4444', color: 'white' }}
+                                onClick={() => handleDelete(t.id)}
+                                title="حذف السجل"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            )}
                           </>
-                        )}
-                        {!isAdmin && t.status === 'pending' && (
-                          <>
-                            <button
-                              className="action-btn edit"
-                              style={{ background: '#3b82f6', color: 'white' }}
-                              onClick={() => handleEditClick(t)}
-                              title="تعديل الحوالة"
-                            >
-                              <i className="fa-solid fa-pencil"></i>
-                            </button>
-                            <button
-                              className="action-btn delete"
-                              style={{ background: '#ef4444', color: 'white' }}
-                              onClick={() => handleDelete(t.id)}
-                              title="حذف السجل"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          </>
-                        )}
-                        {isAdmin && (t.status === 'pending' || t.status === 'approved') && (
-                          <button
-                            className="action-btn delete"
-                            style={{ background: '#ef4444', color: 'white' }}
-                            onClick={() => handleDelete(t.id)}
-                            title="حذف السجل"
-                          >
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
+                        ) : (
+                          <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>عرض فقط</span>
                         )}
                       </div>
                     </td>

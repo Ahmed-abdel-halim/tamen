@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 interface RentalVoucher {
   id: number;
@@ -17,6 +18,7 @@ interface RentalVoucher {
 
 export default function RentalVouchersList() {
   const navigate = useNavigate();
+  const canEdit = canEditFinancial('إدارة الإيرادات');
   const [vouchers, setVouchers] = useState<RentalVoucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
@@ -50,6 +52,10 @@ export default function RentalVouchersList() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الحذف (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من حذف الإيجار العقاري هذا؟')) return;
     try {
       const res = await fetch(`${API_BASE_URL}/rental-vouchers/${id}`, { method: 'DELETE' });
@@ -534,6 +540,7 @@ export default function RentalVouchersList() {
 
   return (
     <section className="users-management">
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك استعراض الإيجارات العقارية، الفلترة، طباعة الإيصالات والتقارير وتصدير Excel. إضافة وتعديل وحذف الإيجارات مقيد بحسب صلاحياتك." />
       {/* ── Header ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -563,14 +570,16 @@ export default function RentalVouchersList() {
               : <><i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i> تصدير إكسيل كامل</>
             }
           </button>
-          <button
-            onClick={() => navigate('/reports/rental-vouchers/create')}
-            className="primary"
-            style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <i className="fa-solid fa-plus"></i>
-            إضافة إيجار عقاري جديد
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => navigate('/reports/rental-vouchers/create')}
+              className="primary"
+              style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <i className="fa-solid fa-plus"></i>
+              إضافة إيجار عقاري جديد
+            </button>
+          )}
         </div>
       </div>
 
@@ -809,16 +818,20 @@ export default function RentalVouchersList() {
                         style={{ background: '#e0f2fe', border: 'none', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#0369a1' }}
                         title="عرض التفاصيل"
                       ><i className="fa-solid fa-eye"></i></button>
-                      <button
-                        onClick={() => navigate(`/reports/rental-vouchers/${v.id}/edit`)}
-                        style={{ background: '#fef9c3', border: 'none', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#a16207' }}
-                        title="تعديل"
-                      ><i className="fa-solid fa-pen-to-square"></i></button>
-                      <button
-                        onClick={() => handleDelete(v.id)}
-                        style={{ background: '#fee2e2', border: 'none', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#991b1b' }}
-                        title="حذف"
-                      ><i className="fa-solid fa-trash"></i></button>
+                      {canEdit && (
+                        <>
+                          <button
+                            onClick={() => navigate(`/reports/rental-vouchers/${v.id}/edit`)}
+                            style={{ background: '#fef9c3', border: 'none', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#a16207' }}
+                            title="تعديل"
+                          ><i className="fa-solid fa-pen-to-square"></i></button>
+                          <button
+                            onClick={() => handleDelete(v.id)}
+                            style={{ background: '#fee2e2', border: 'none', padding: '7px 11px', borderRadius: '8px', cursor: 'pointer', color: '#991b1b' }}
+                            title="حذف"
+                          ><i className="fa-solid fa-trash"></i></button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

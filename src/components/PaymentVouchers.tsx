@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 interface BranchAgent {
   id: number;
@@ -29,6 +30,7 @@ interface Voucher {
 }
 
 export default function PaymentVouchers() {
+  const canEdit = canEditFinancial('إدارة الإيرادات');
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,6 +199,10 @@ export default function PaymentVouchers() {
 
   const handleCreateVoucher = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لديك صلاحية عرض واطلاع فقط بدون تعديل', 'error');
+      return;
+    }
     if (!selectedAgent || !amount) return;
 
     setLoading(true);
@@ -259,6 +265,10 @@ export default function PaymentVouchers() {
   };
 
   const handleDeleteVoucher = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لديك صلاحية عرض واطلاع فقط بدون تعديل', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من حذف هذا الإيصال؟')) return;
 
     try {
@@ -954,19 +964,23 @@ export default function PaymentVouchers() {
             <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
             تصدير إكسيل
           </button>
-          <button
-            onClick={() => handleOpenModal()}
-            className="primary"
-            style={{
-              padding: '10px 20px', borderRadius: '10px',
-              fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px'
-            }}
-          >
-            <i className="fa-solid fa-plus"></i>
-            إصدار إيصال جديد
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => handleOpenModal()}
+              className="primary"
+              style={{
+                padding: '10px 20px', borderRadius: '10px',
+                fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px'
+              }}
+            >
+              <i className="fa-solid fa-plus"></i>
+              إصدار إيصال جديد
+            </button>
+          )}
         </div>
       </div>
+
+      <ReadOnlyNotice message="وضع العرض والاطلاع فقط: يمكنك استعراض وطباعة وتصدير كشوفات الإيصالات، ولا تملك صلاحية لإصدار أو تعديل أو حذف إيصالات القبض." />
 
       {/* فلترة وبحث الإيصالات */}
       <div className="no-print" style={{
@@ -1348,20 +1362,24 @@ export default function PaymentVouchers() {
                       >
                         <i className="fa-brands fa-whatsapp"></i>
                       </button>
-                      <button
-                        onClick={() => handleOpenModal(voucher)}
-                        style={{ background: '#f0f9ff', border: 'none', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', color: '#0369a1' }}
-                        title="تعديل الإيصال"
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteVoucher(voucher.id)}
-                        style={{ background: '#fef2f2', border: 'none', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', color: '#991b1b' }}
-                        title="حذف الإيصال"
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
+                      {canEdit && (
+                        <>
+                          <button
+                            onClick={() => handleOpenModal(voucher)}
+                            style={{ background: '#f0f9ff', border: 'none', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', color: '#0369a1' }}
+                            title="تعديل الإيصال"
+                          >
+                            <i className="fa-solid fa-pen-to-square"></i>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVoucher(voucher.id)}
+                            style={{ background: '#fef2f2', border: 'none', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', color: '#991b1b' }}
+                            title="حذف الإيصال"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

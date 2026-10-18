@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 interface BranchAgent {
   id: number;
@@ -37,6 +38,7 @@ const DOCUMENT_TYPES = [
 ];
 
 export default function CommissionManagement() {
+  const canEdit = canEditFinancial('إدارة الإيرادات');
   const [agents, setAgents] = useState<BranchAgent[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +118,10 @@ export default function CommissionManagement() {
   };
 
   const handlePayCommission = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية تعديل حالة العمولة (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من وضع علامة "مدفوع" لهذه العمولات؟')) return;
 
     // Logic to update status
@@ -351,6 +357,7 @@ export default function CommissionManagement() {
 
   return (
     <section className="users-management">
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك تصفح سجل العمولات، استخدام الفلاتر، وتصدير التقارير وطباعتها. تسجيل سداد العمولات مقيد بحسب صلاحياتك." />
       <div className="users-breadcrumb" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -485,7 +492,7 @@ export default function CommissionManagement() {
                   </span>
                 </td>
                 <td>
-                  {comm.status === 'pending' && (
+                  {comm.status === 'pending' && canEdit && (
                     <button
                       onClick={() => handlePayCommission(comm.id)}
                       style={{ background: '#139625', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}

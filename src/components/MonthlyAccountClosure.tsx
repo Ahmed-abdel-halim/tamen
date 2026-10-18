@@ -3,6 +3,7 @@ import { enhanceAuthorizedDocuments } from "../utils/insuranceTypeHelper";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import CustomDateInput from './CustomDateInput';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 type BranchAgent = {
   id: number;
@@ -83,6 +84,7 @@ const getPresetRange = (preset: DatePreset) => {
 };
 
 export default function MonthlyAccountClosure() {
+  const canEdit = canEditFinancial('إغلاق حساب شهري');
   const [filterMode, setFilterMode] = useState<FilterMode>('range');
   const [selectedAgent, setSelectedAgent] = useState<BranchAgent | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -637,6 +639,10 @@ export default function MonthlyAccountClosure() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية حفظ الإغلاق وترحيل الرصيد (عرض فقط)', 'error');
+      return;
+    }
     if (!selectedAgent) {
       showToast('يرجى اختيار الوكيل', 'error');
       return;
@@ -789,6 +795,8 @@ export default function MonthlyAccountClosure() {
       <div className="users-breadcrumb">
         <span>إغلاق حساب شهري</span>
       </div>
+
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك الاستعلام عن كشوفات حسابات الوكلاء، مراجعة الوثائق المكتتبة، وطباعة الكشوفات وإيصالات الاستلام. حفظ الإغلاقات المالية مقيد بحسب صلاحياتك." />
 
       <div className="users-card">
 
@@ -1334,22 +1342,24 @@ export default function MonthlyAccountClosure() {
                   طباعة إيصال الاستلام
                 </button>
               )}
-              <button
-                onClick={handleSave}
-                className="btn-submit"
-                disabled={loading || documents.length === 0}
-                style={{
-                  padding: '12px 24px',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  backgroundColor: '#10b981',
-                  opacity: (loading || documents.length === 0) ? 0.6 : 1,
-                  cursor: (loading || documents.length === 0) ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <i className="fa-solid fa-save" style={{ marginLeft: '8px' }}></i>
-                حفظ
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleSave}
+                  className="btn-submit"
+                  disabled={loading || documents.length === 0}
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    backgroundColor: '#10b981',
+                    opacity: (loading || documents.length === 0) ? 0.6 : 1,
+                    cursor: (loading || documents.length === 0) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <i className="fa-solid fa-save" style={{ marginLeft: '8px' }}></i>
+                  حفظ
+                </button>
+              )}
               <button
                 onClick={handlePrint}
                 className="btn-submit"

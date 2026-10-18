@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 import {
   printSupervisionFinancialStatement,
   printSupervisionDetailedDocsReport,
@@ -66,6 +67,7 @@ interface DetailedDocRow {
 }
 
 export default function InsuranceSupervisionManagement() {
+  const canEdit = canEditFinancial('إدارة الإيرادات');
   const [activeTab, setActiveTab] = useState<'ledger' | 'reports' | 'payments' | 'settings'>('ledger');
   const [loading, setLoading] = useState(false);
 
@@ -227,6 +229,10 @@ export default function InsuranceSupervisionManagement() {
 
   // Open Payment Modal
   const handleOpenPaymentModal = (pay: SupervisionPayment | null = null) => {
+    if (!canEdit) {
+      showToast('عذراً، تملك صلاحية العرض والاطلاع فقط ولا يمكنك تسجيل أو تعديل الدفعات', 'error');
+      return;
+    }
     setEditingPayment(pay);
     if (pay) {
       setPayVoucherNumber(pay.voucher_number || '');
@@ -257,6 +263,10 @@ export default function InsuranceSupervisionManagement() {
   // Save Payment
   const handleSavePayment = async (e: FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية تسجيل أو تعديل الدفعات (عرض فقط)', 'error');
+      return;
+    }
     if (!payAmount || parseFloat(payAmount) <= 0) {
       showToast('يرجى إدخال مبلغ صحيح للسداد', 'error');
       return;
@@ -313,6 +323,10 @@ export default function InsuranceSupervisionManagement() {
 
   // Delete Payment
   const handleDeletePayment = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الحذف (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من حذف سند السداد هذا نهائياً؟')) return;
     try {
       const token = localStorage.getItem('token');
@@ -336,6 +350,10 @@ export default function InsuranceSupervisionManagement() {
 
   // Save Settings
   const handleSaveSettings = async () => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية تعديل الإعدادات (عرض فقط)', 'error');
+      return;
+    }
     setSavingSettings(true);
     try {
       const token = localStorage.getItem('token');
@@ -496,6 +514,7 @@ export default function InsuranceSupervisionManagement() {
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease', padding: '0 5px' }}>
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك مراجعة كشف حساب هيئة الإشراف، تصفح التقارير التفصيلية، استخدام الفلاتر، وطباعة السندات والكشوفات وتصديرها. تسجيل التوريدات وتعديل النسب مقيد بحسب صلاحياتك." />
       {/* Top Banner / Header */}
       <div className="users-breadcrumb no-print" style={{
         display: 'flex',
@@ -537,25 +556,27 @@ export default function InsuranceSupervisionManagement() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', zIndex: 1, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => handleOpenPaymentModal()}
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#fff',
-              border: 'none',
-              padding: '11px 20px',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
-              fontSize: '0.9rem'
-            }}
-          >
-            <i className="fa-solid fa-file-invoice-dollar"></i> تسجيل توريد دفعة
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => handleOpenPaymentModal()}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '11px 20px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                fontSize: '0.9rem'
+              }}
+            >
+              <i className="fa-solid fa-file-invoice-dollar"></i> تسجيل توريد دفعة
+            </button>
+          )}
 
           {/* Professional Printing Button & Menu */}
           <div style={{ position: 'relative' }}>
@@ -1254,24 +1275,26 @@ export default function InsuranceSupervisionManagement() {
               >
                 <i className="fa-solid fa-print"></i> طباعة كشف التوريدات والموقف المالي
               </button>
-              <button
-                onClick={() => handleOpenPaymentModal()}
-                style={{
-                  background: '#10b981',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '11px 20px',
-                  borderRadius: '10px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '0.9rem'
-                }}
-              >
-                <i className="fa-solid fa-plus"></i> إضافة سند توريد جديد
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => handleOpenPaymentModal()}
+                  style={{
+                    background: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '11px 20px',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <i className="fa-solid fa-plus"></i> إضافة سند توريد جديد
+                </button>
+              )}
             </div>
           </div>
 
@@ -1356,20 +1379,24 @@ export default function InsuranceSupervisionManagement() {
                           >
                             <i className="fa-solid fa-print"></i>
                           </button>
-                          <button
-                            onClick={() => handleOpenPaymentModal(p)}
-                            style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
-                            title="تعديل"
-                          >
-                            <i className="fa-solid fa-pencil"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDeletePayment(p.id)}
-                            style={{ background: '#ef4444', color: '#fff', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
-                            title="حذف"
-                          >
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
+                          {canEdit && (
+                            <>
+                              <button
+                                onClick={() => handleOpenPaymentModal(p)}
+                                style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
+                                title="تعديل"
+                              >
+                                <i className="fa-solid fa-pencil"></i>
+                              </button>
+                              <button
+                                onClick={() => handleDeletePayment(p.id)}
+                                style={{ background: '#ef4444', color: '#fff', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
+                                title="حذف"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1396,24 +1423,26 @@ export default function InsuranceSupervisionManagement() {
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>إعدادات نسب ورسوم هيئة الإشراف على التأمين</h3>
                 <p style={{ margin: '5px 0 0 0', color: 'var(--muted)', fontSize: '0.85rem' }}>تحديد النسبة المئوية القانونية أو المبلغ المقطوع المحتسب لصالح الهيئة لكل فرع</p>
               </div>
-              <button
-                onClick={handleSaveSettings}
-                disabled={savingSettings}
-                style={{
-                  background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '10px',
-                  fontWeight: 800,
-                  cursor: savingSettings ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <i className="fa-solid fa-floppy-disk"></i> {savingSettings ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
+                  style={{
+                    background: 'linear-gradient(135deg, #014cb1 0%, #003173 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    cursor: savingSettings ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <i className="fa-solid fa-floppy-disk"></i> {savingSettings ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+                </button>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

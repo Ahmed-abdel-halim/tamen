@@ -5,6 +5,7 @@ import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import UnionReconciliationTab from './UnionReconciliationTab';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 interface ExpenseItem {
   item_number?: string;
@@ -74,6 +75,7 @@ export default function ExpenseManagement({
   hideHeader?: boolean;
 }) {
   const navigate = useNavigate();
+  const canEdit = canEditFinancial('إدارة المصروفات');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     monthly_total: 0,
@@ -992,10 +994,15 @@ export default function ExpenseManagement({
         }
       });
       const data = await response.json();
+      if (!response.ok) {
+        showToast(data?.message || 'فشل جلب بيانات رصيد الاتحاد من الخادم', 'error');
+        return;
+      }
       const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
       setUnionPurchases(list);
     } catch (e) {
       console.error('Error fetching union balances:', e);
+      showToast('تعذر الاتصال بالخادم لجلب بيانات رصيد الاتحاد', 'error');
     }
   };
 
@@ -1024,6 +1031,10 @@ export default function ExpenseManagement({
   };
 
   const handleOpenModal = (expense: Expense | null = null) => {
+    if (!canEdit) {
+      showToast('عذراً، تملك صلاحية العرض والاطلاع فقط ولا يمكنك تعديل أو إضافة المصروفات', 'error');
+      return;
+    }
     if (expense) {
       setEditingExpense(expense);
       setName(expense.name || '');
@@ -1075,6 +1086,10 @@ export default function ExpenseManagement({
 
   const handleAddExpense = async (e: FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الإضافة أو التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!name || !amount) return;
     setLoading(true);
     try {
@@ -1136,6 +1151,10 @@ export default function ExpenseManagement({
   };
 
   const handleDeleteExpense = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الحذف (عرض فقط)', 'error');
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       title: 'تأكيد الحذف',
@@ -1160,6 +1179,10 @@ export default function ExpenseManagement({
 
 
   const handleOpenUnionModal = (purchase: UnionPurchase | null = null) => {
+    if (!canEdit) {
+      showToast('عذراً، تملك صلاحية العرض والاطلاع فقط ولا يمكنك إضافة أو تعديل رصيد الاتحاد', 'error');
+      return;
+    }
     if (purchase) {
       setEditingUnionPurchase(purchase);
       setRequestNumber(purchase.request_number || '');
@@ -1215,6 +1238,10 @@ export default function ExpenseManagement({
 
   const handleAddUnionPurchase = async (e: FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الإضافة أو التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!amountPaid || !cardPrice) return;
     setLoading(true);
     try {
@@ -1272,6 +1299,10 @@ export default function ExpenseManagement({
   };
 
   const handleDeleteUnionPurchase = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الحذف (عرض فقط)', 'error');
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       title: 'تأكيد الحذف',
@@ -1514,6 +1545,8 @@ export default function ExpenseManagement({
         </div>
       </div>
 
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك تصفح المصروفات وسجل الاتحاد والتعويضات، استخدام الفلاتر، وتصدير التقارير وطباعتها. تعديل أو إضافة العمليات المالية مقيد بحسب صلاحياتك." />
+
       {/* Expense/Indemnity Tab */}
       {(activeTab === 'expenses' || activeTab === 'indemnities') && (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
@@ -1544,9 +1577,11 @@ export default function ExpenseManagement({
               <button onClick={exportToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-solid fa-file-excel"></i> تصدير Excel
               </button>
-              <button onClick={() => handleOpenModal()} className="btn-primary" style={{ background: activeTab === 'expenses' ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
-                <i className="fa-solid fa-plus"></i> {activeTab === 'expenses' ? 'إضافة مصروف' : 'إضافة تعويض'}
-              </button>
+              {canEdit && (
+                <button onClick={() => handleOpenModal()} className="btn-primary" style={{ background: activeTab === 'expenses' ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
+                  <i className="fa-solid fa-plus"></i> {activeTab === 'expenses' ? 'إضافة مصروف' : 'إضافة تعويض'}
+                </button>
+              )}
             </div>
           </div>
           )}
@@ -1574,7 +1609,7 @@ export default function ExpenseManagement({
                   {activeTab === 'expenses' ? 'تخصيص عرض المصروفات والبحث عن بند محدد' : 'تصفية قائمة التعويضات والمطالبات المالية'}
                 </p>
               </div>
-              {!hideHeader && (
+              {canEdit && !hideHeader && (
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button onClick={() => setShowCategoryModal(true)} className="btn-secondary" style={{ background: '#475569', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
                     <i className="fa-solid fa-tags"></i> إدارة الفئات
@@ -1671,8 +1706,12 @@ export default function ExpenseManagement({
                         <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
                           <button onClick={() => handlePrintExpenseVoucher(e)} style={{ background: '#f59e0b', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="طباعة الوصل"><i className="fa-solid fa-print"></i></button>
                           <button onClick={() => navigate(`/reports/expenses/${e.id}`)} style={{ background: '#10b981', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="عرض التفاصيل"><i className="fa-solid fa-eye"></i></button>
-                          <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
-                          <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
+                          {canEdit && (
+                            <>
+                              <button onClick={() => handleOpenModal(e)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
+                              <button onClick={() => handleDeleteExpense(e.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1772,9 +1811,11 @@ export default function ExpenseManagement({
               <button onClick={exportUnionToExcelFunc} className="btn-secondary" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-solid fa-file-excel"></i> تصدير Excel
               </button>
-              <button onClick={() => handleOpenUnionModal()} className="btn-primary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)' }}>
-                <i className="fa-solid fa-plus"></i> طلب رصيد جديد
-              </button>
+              {canEdit && (
+                <button onClick={() => handleOpenUnionModal()} className="btn-primary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)' }}>
+                  <i className="fa-solid fa-plus"></i> طلب رصيد جديد
+                </button>
+              )}
             </div>
           </div>
 
@@ -1897,8 +1938,12 @@ export default function ExpenseManagement({
                       <td className="no-print" style={{ verticalAlign: 'middle', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
                           <button onClick={() => handlePrintUnionVoucher(u)} style={{ background: '#ea580c', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="طباعة الواصل"><i className="fa-solid fa-print"></i></button>
-                          <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
-                          <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
+                          {canEdit && (
+                            <>
+                              <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
+                              <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL, BACKEND_URL } from '../config/api';
 import { showToast } from './Toast';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 interface DocumentRecord {
   id: number;
@@ -17,6 +18,7 @@ interface DocumentRecord {
 const CATEGORIES = ['إيصالات قبض', 'وثائق تأمين ملغاة', 'كشوفات بنكية', 'فواتير مصروفات', 'عقود وكلاء', 'تقارير دورية', 'أخرى'];
 
 export default function FinancialArchive() {
+  const canEdit = canEditFinancial('الأرشيف المالي');
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +71,10 @@ export default function FinancialArchive() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!formData.file) return showToast('يرجى اختيار ملف', 'error');
 
     const data = new FormData();
@@ -94,6 +100,10 @@ export default function FinancialArchive() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا المستند نهائياً؟')) return;
 
     try {
@@ -119,6 +129,9 @@ export default function FinancialArchive() {
 
   return (
     <section className="users-management">
+      {!canEdit && (
+        <ReadOnlyNotice message="وضع القراءة فقط: يمكنك تصفح واستعراض وتحميل مستندات الأرشيف المالي، دون صلاحية رفع مستندات جديدة أو حذف المستندات." />
+      )}
       <div className="users-breadcrumb" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -133,10 +146,12 @@ export default function FinancialArchive() {
           <i className="fa-solid fa-folder-open" style={{ marginLeft: '10px', color: '#139625' }}></i>
           الأرشيف المالي والمستندات
         </span>
-        <button className="primary" style={{ padding: '10px 24px', borderRadius: '10px' }} onClick={() => setShowModal(true)}>
-          <i className="fa-solid fa-cloud-arrow-up" style={{ marginLeft: '8px' }}></i>
-          أرشفة مستند جديد
-        </button>
+        {canEdit && (
+          <button className="primary" style={{ padding: '10px 24px', borderRadius: '10px' }} onClick={() => setShowModal(true)}>
+            <i className="fa-solid fa-cloud-arrow-up" style={{ marginLeft: '8px' }}></i>
+            أرشفة مستند جديد
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr) 3fr', gap: '20px' }}>
@@ -211,13 +226,15 @@ export default function FinancialArchive() {
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <a href={`${BACKEND_URL}/storage/${(doc as any).file_path}`} target="_blank" rel="noreferrer" style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="معاينة"><i className="fa-solid fa-eye"></i></a>
                         <a href={`${BACKEND_URL}/storage/${(doc as any).file_path}`} download style={{ background: 'var(--table-header)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: 'var(--text)' }} title="تحميل"><i className="fa-solid fa-download"></i></a>
-                        <button 
-                          onClick={() => handleDelete(doc.id)}
-                          style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#ef4444' }} 
-                          title="حذف"
-                        >
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
+                        {canEdit && (
+                          <button 
+                            onClick={() => handleDelete(doc.id)}
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#ef4444' }} 
+                            title="حذف"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

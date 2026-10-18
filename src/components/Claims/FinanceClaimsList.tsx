@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { showToast } from '../Toast';
 import { API_BASE_URL } from '../../config/api';
 import { generatePremiumExcel } from '../../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../../utils/financialPermissions';
 
 export default function FinanceClaimsList() {
+  const canEdit = canEditFinancial('تسديد التعويضات');
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +58,10 @@ export default function FinanceClaimsList() {
   }, [claims, activeTab, searchQuery]);
 
   const handleApprove = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية صرف التعويضات (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من الموافقة وصرف قيمة هذا التعويض؟')) return;
 
     setProcessingId(id);
@@ -83,6 +89,10 @@ export default function FinanceClaimsList() {
   };
 
   const handleCancelPayment = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية إلغاء التسديد (عرض فقط)', 'error');
+      return;
+    }
     const reason = window.prompt('يرجى تأكيد سبب إلغاء التسديد وإرجاع الملف غير مسدد:', 'إلغاء التسديد بسبب خطأ في الإدخال');
     if (reason === null) return;
 
@@ -115,6 +125,10 @@ export default function FinanceClaimsList() {
 
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية رفض الصرف (عرض فقط)', 'error');
+      return;
+    }
     if (!rejectReason) {
       showToast('يرجى كتابة سبب الرفض', 'error');
       return;
@@ -408,6 +422,7 @@ export default function FinanceClaimsList() {
 
   return (
     <section className="users-management">
+      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك مراجعة ملفات التعويضات المرفوعة للمالية، استخدام البحث، وطباعة وصولات الصرف وتصدير Excel. قبول وصرف أو رفض التعويضات مقيد بحسب صلاحياتك." />
       <div className="users-breadcrumb no-print" style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
         background: 'var(--panel)', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--border)'
@@ -497,25 +512,31 @@ export default function FinanceClaimsList() {
                       <td className="no-print">
                         {(() => {
                           const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                          const canCancelPayment = currentUser.is_admin || 
+                          const canCancelPayment = canEdit && (currentUser.is_admin || 
                             (currentUser.authorized_documents && (
                               currentUser.authorized_documents.includes('إلغاء تسديد التعويضات') || 
                               currentUser.authorized_documents.includes('تسديد التعويضات') || 
                               currentUser.authorized_documents.includes('المحاسب المالي')
-                            ));
+                            )));
 
                           return activeTab === 'pending' ? (
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              <button onClick={() => handleApprove(c.id)} disabled={processingId === c.id} style={{ background: '#139625', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                {processingId === c.id ? 'جاري...' : '✅ قبول وصرف'}
-                              </button>
-                              <button onClick={() => setRejectingClaimId(c.id)} disabled={processingId === c.id} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                ❌ رفض وإرجاع
-                              </button>
-                              {canCancelPayment && (
-                                <button onClick={() => handleCancelPayment(c.id)} disabled={processingId === c.id} style={{ background: '#6b7280', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }} title="إلغاء التسديد وإعادة الملف للتعويضات">
-                                  ↩️ إلغاء
-                                </button>
+                              {canEdit ? (
+                                <>
+                                  <button onClick={() => handleApprove(c.id)} disabled={processingId === c.id} style={{ background: '#139625', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                    {processingId === c.id ? 'جاري...' : '✅ قبول وصرف'}
+                                  </button>
+                                  <button onClick={() => setRejectingClaimId(c.id)} disabled={processingId === c.id} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                    ❌ رفض وإرجاع
+                                  </button>
+                                  {canCancelPayment && (
+                                    <button onClick={() => handleCancelPayment(c.id)} disabled={processingId === c.id} style={{ background: '#6b7280', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }} title="إلغاء التسديد وإعادة الملف للتعويضات">
+                                      ↩️ إلغاء
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>بانتظار الصرف (عرض فقط)</span>
                               )}
                             </div>
                           ) : (

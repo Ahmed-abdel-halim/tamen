@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 const formatDateTime = (dateStr?: string) => {
   if (!dateStr) return '—';
@@ -73,6 +74,7 @@ interface InventoryMovement {
 
 
 export default function InventoryManagement() {
+  const canEdit = canEditFinancial('إدارة المخازن');
   const [activeTab, setActiveTab] = useState<'store' | 'custody' | 'assign' | 'log'>('store');
   const [items, setItems] = useState<StoreItem[]>([]);
   const [custodies, setCustodies] = useState<Custody[]>([]);
@@ -294,6 +296,10 @@ export default function InventoryManagement() {
 
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية إضافة أو تعديل الأصناف (عرض فقط)', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       if (!newItem.category || !newItem.inventory_type) {
@@ -402,6 +408,10 @@ export default function InventoryManagement() {
   };
 
   const handleDeleteItem = async (item: StoreItem) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية حذف الأصناف (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm(`هل تريد حذف الصنف "${item.name}"؟`)) return;
     try {
       const token = localStorage.getItem('token');
@@ -426,6 +436,10 @@ export default function InventoryManagement() {
 
   const handleAddSetting = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!newSettingName.trim()) return;
     try {
       const token = localStorage.getItem('token');
@@ -454,6 +468,10 @@ export default function InventoryManagement() {
   };
 
   const handleUpdateSetting = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!editingSettingName.trim()) return;
     try {
       const token = localStorage.getItem('token');
@@ -480,6 +498,10 @@ export default function InventoryManagement() {
   };
 
   const handleDeleteSetting = async (id: number) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية الحذف (عرض فقط)', 'error');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من الحذف؟ سيتم حذف هذا الخيار من القوائم.')) return;
     try {
       const token = localStorage.getItem('token');
@@ -498,6 +520,10 @@ export default function InventoryManagement() {
 
   const handleAssignCustody = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية صرف العهدة (عرض فقط)', 'error');
+      return;
+    }
     if (assignmentItems.length === 0 || assignmentItems.some((it) => !it.item_id)) {
       showToast('يرجى اختيار صنف واحد على الأقل', 'error');
       return;
@@ -564,6 +590,10 @@ export default function InventoryManagement() {
   };
 
   const handleReturnCustodyGroup = async (group: Custody[]) => {
+    if (!canEdit) {
+      showToast('عذراً، لا تملك صلاحية استرجاع العهدة (عرض فقط)', 'error');
+      return;
+    }
     const activeRows = group.filter((item) => item.status === 'active');
     if (activeRows.length === 0) {
       showToast('لا توجد أصناف نشطة داخل هذه العهدة', 'error');
@@ -1191,6 +1221,8 @@ export default function InventoryManagement() {
           <span>الشؤون المالية / إدارة المخازن والعهدة المالية</span>
         </div>
 
+        <ReadOnlyNotice message="وضع القراءة فقط: يمكنك جرد المخزن، استعراض العهد الحالية وسجل الحركات، واستخدام الفلاتر وطباعة الإيصالات والتقارير وتصدير Excel. إضافة الأصناف وصرف العهد واسترجاعها مقيد بحسب صلاحياتك." />
+
         {/* Premium KPI Stats Cards Grid */}
         <div className="premium-stats-grid">
           <div className="premium-stat-card">
@@ -1276,9 +1308,11 @@ export default function InventoryManagement() {
             <button className={`premium-tab-btn ${activeTab === 'custody' ? 'active' : ''}`} onClick={() => setActiveTab('custody')}>
               <i className="fa-solid fa-user-check"></i> العهد الحالية
             </button>
-            <button className={`premium-tab-btn ${activeTab === 'assign' ? 'active' : ''}`} onClick={() => setActiveTab('assign')}>
-              <i className="fa-solid fa-arrow-up-right-from-square"></i> صرف عهدة
-            </button>
+            {canEdit && (
+              <button className={`premium-tab-btn ${activeTab === 'assign' ? 'active' : ''}`} onClick={() => setActiveTab('assign')}>
+                <i className="fa-solid fa-arrow-up-right-from-square"></i> صرف عهدة
+              </button>
+            )}
             <button className={`premium-tab-btn ${activeTab === 'log' ? 'active' : ''}`} onClick={() => setActiveTab('log')}>
               <i className="fa-solid fa-clock-rotate-left"></i> سجل الحركات
             </button>
@@ -1439,13 +1473,15 @@ export default function InventoryManagement() {
                   >
                     <i className="fa-solid fa-print"></i> طباعة التقرير
                   </button>
-                  <button 
-                    type="button"
-                    className="premium-primary-btn" 
-                    onClick={openAddItemModal}
-                  >
-                    <i className="fa-solid fa-plus"></i> إضافة صنف
-                  </button>
+                  {canEdit && (
+                    <button 
+                      type="button"
+                      className="premium-primary-btn" 
+                      onClick={openAddItemModal}
+                    >
+                      <i className="fa-solid fa-plus"></i> إضافة صنف
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1567,24 +1603,30 @@ export default function InventoryManagement() {
                               <td>{item.stocks?.[0]?.warehouse_location || '-'}</td>
                               <td>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button
-                                    className="action-btn edit"
-                                    onClick={() => openEditItemModal(item)}
-                                    title="تعديل الصنف"
-                                    aria-label="تعديل الصنف"
-                                    style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                  >
-                                    <i className="fa-solid fa-pen-to-square"></i>
-                                  </button>
-                                  <button
-                                    className="action-btn delete"
-                                    onClick={() => handleDeleteItem(item)}
-                                    title="حذف الصنف"
-                                    aria-label="حذف الصنف"
-                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                  >
-                                    <i className="fa-solid fa-trash"></i>
-                                  </button>
+                                  {canEdit ? (
+                                    <>
+                                      <button
+                                        className="action-btn edit"
+                                        onClick={() => openEditItemModal(item)}
+                                        title="تعديل الصنف"
+                                        aria-label="تعديل الصنف"
+                                        style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                      >
+                                        <i className="fa-solid fa-pen-to-square"></i>
+                                      </button>
+                                      <button
+                                        className="action-btn delete"
+                                        onClick={() => handleDeleteItem(item)}
+                                        title="حذف الصنف"
+                                        aria-label="حذف الصنف"
+                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                      >
+                                        <i className="fa-solid fa-trash"></i>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>عرض فقط</span>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1803,7 +1845,7 @@ export default function InventoryManagement() {
                                 >
                                   <i className="fa-solid fa-print"></i>
                                 </button>
-                                {isActive && (
+                                {isActive && canEdit && (
                                   <button
                                     className="action-btn delete"
                                     onClick={() => handleReturnCustodyGroup(group)}
@@ -1888,7 +1930,7 @@ export default function InventoryManagement() {
                             طباعة إيصال التسليم
                           </button>
 
-                          {isActive && (
+                          {isActive && canEdit && (
                             <button
                               className="btn-submit"
                               style={{ width: '100%', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid currentColor', borderRadius: '8px' }}

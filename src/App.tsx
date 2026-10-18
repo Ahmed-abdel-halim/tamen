@@ -164,6 +164,16 @@ function hasAccessToRoute(
     return false;
   }
 
+  // إذا كان المستخدم محاسب بصلاحية عرض فقط، يمنع من الوصول لمسارات إنشاء أو تعديل السندات
+  const isReadOnlyAccountantOnly = authorizedDocs &&
+    (authorizedDocs.includes('المحاسب المالي (عرض فقط)') || authorizedDocs.includes('المحاسب المالي - عرض واطلاع فقط (يدخل بدون تعديل)')) &&
+    !authorizedDocs.includes('المحاسب المالي') &&
+    !authorizedDocs.includes('المحاسب المالي (تعديل كامل)');
+
+  if (isReadOnlyAccountantOnly && (path.includes('/rental-vouchers/create') || (path.includes('/rental-vouchers/') && path.endsWith('/edit')))) {
+    return false;
+  }
+
   // الفروع/الوكلاء لديهم وصول إلى صفحاتهم الخاصة وإعدادات أنواع السيارات وحوالات الوكلاء وطلبات الوثائق
   if (branchAgentId) {
     if (path.startsWith('/vehicle-types')) {
@@ -279,7 +289,64 @@ function hasAccessToRoute(
       '/reports/treasury-banks',
       '/reports/financial-reconciliation',
       '/reports/live-agents-production',
-      '/reports/agent-monthly-ledger'
+      '/reports/agent-monthly-ledger',
+      '/reports/comprehensive-production',
+      '/reports/tax',
+      '/reports/social-security'
+    ],
+    'المحاسب المالي (عرض فقط)': [
+      '/reports/financial-statistics',
+      '/reports/revenue',
+      '/reports/outstanding-debts',
+      '/reports/commissions',
+      '/reports/payment-vouchers',
+      '/reports/inventory',
+      '/reports/branch-agent-account',
+      '/reports/monthly-account-closure',
+      '/reports/monthly-account-closures-report',
+      '/reports/bank-reconciliation',
+      '/reports/expenses',
+      '/reports/indemnities',
+      '/reports/finance-claims',
+      '/reports/union-balances',
+      '/reports/insurance-supervision',
+      '/reports/rental-vouchers',
+      '/reports/employee-salaries',
+      '/reports/financial-archive',
+      '/reports/treasury-banks',
+      '/reports/financial-reconciliation',
+      '/reports/live-agents-production',
+      '/reports/agent-monthly-ledger',
+      '/reports/comprehensive-production',
+      '/reports/tax',
+      '/reports/social-security'
+    ],
+    'المحاسب المالي (تعديل كامل)': [
+      '/reports/financial-statistics',
+      '/reports/revenue',
+      '/reports/outstanding-debts',
+      '/reports/commissions',
+      '/reports/payment-vouchers',
+      '/reports/inventory',
+      '/reports/branch-agent-account',
+      '/reports/monthly-account-closure',
+      '/reports/monthly-account-closures-report',
+      '/reports/bank-reconciliation',
+      '/reports/expenses',
+      '/reports/indemnities',
+      '/reports/finance-claims',
+      '/reports/union-balances',
+      '/reports/insurance-supervision',
+      '/reports/rental-vouchers',
+      '/reports/employee-salaries',
+      '/reports/financial-archive',
+      '/reports/treasury-banks',
+      '/reports/financial-reconciliation',
+      '/reports/live-agents-production',
+      '/reports/agent-monthly-ledger',
+      '/reports/comprehensive-production',
+      '/reports/tax',
+      '/reports/social-security'
     ],
     // تفصيل صلاحيات المحاسب المالي
     'المصارف والخزنة': ['/reports/treasury-banks'],
@@ -737,6 +804,54 @@ const createMenuSections = (
     'أرشيف المستندات الإدارية': { label: 'أرشيف المستندات الإدارية', icon: 'fa-solid fa-box-archive', to: '/archive' },
     'ملفات الشركة': { label: 'ملفات الشركة', icon: 'fa-solid fa-folder-open', to: '/company-documents' },
     'المحاسب المالي': [
+      { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
+      { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+      { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
+      { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
+      { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
+      { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
+      { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
+      { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
+      { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+      { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+      { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+      { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
+      { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
+      { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
+      { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
+      { label: 'حوالات الوكلاء المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/reports/agent-transfers', badge: adminCounts?.agent_transfers },
+      { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
+      { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+      { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
+      { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+      { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
+      { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
+    ],
+    'المحاسب المالي (عرض فقط)': [
+      { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
+      { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
+      { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
+      { label: 'مرتبات الموظفين', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
+      { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
+      { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
+      { label: 'تقرير الإنتاجية المباشر', icon: 'fa-solid fa-chart-bar', to: '/reports/live-agents-production' },
+      { label: 'تقرير الحوافظ والإنتاجية الشامل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/comprehensive-production' },
+      { label: 'إدارة الإيرادات', icon: 'fa-solid fa-receipt', to: '/reports/payment-vouchers' },
+      { label: 'المخازن والعهدة', icon: 'fa-solid fa-boxes-stacked', to: '/reports/inventory' },
+      { label: 'رصيد الاتحاد (البطاقة البرتقالية)', icon: 'fa-solid fa-id-card', to: '/reports/union-balances' },
+      { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
+      { label: 'الإيجارات العقارية', icon: 'fa-solid fa-building', to: '/reports/rental-vouchers' },
+      { label: 'التسويات والعمولات', icon: 'fa-solid fa-percent', to: '/reports/commissions' },
+      { label: 'كشف حساب الوكيل', icon: 'fa-solid fa-file-invoice-dollar', to: '/reports/branch-agent-account' },
+      { label: 'حوالات الوكلاء المالية', icon: 'fa-solid fa-money-bill-transfer', to: '/reports/agent-transfers', badge: adminCounts?.agent_transfers },
+      { label: 'اغلاق حساب الوكيل', icon: 'fa-solid fa-calendar-check', to: '/reports/monthly-account-closure' },
+      { label: 'كشف حساب الوكلاء', icon: 'fa-solid fa-file-contract', to: '/reports/monthly-account-closures-report' },
+      { label: 'التحصيلات البنكية', icon: 'fa-solid fa-building-columns', to: '/reports/bank-reconciliation' as const },
+      { label: 'المصروفات التشغيلية', icon: 'fa-solid fa-money-bill-wave', to: '/reports/expenses' },
+      { label: 'المطابقة والتحصيلات المالية', icon: 'fa-solid fa-scale-balanced', to: '/reports/financial-reconciliation' as const },
+      { label: 'تسديد التعويضات', icon: 'fa-solid fa-receipt', to: '/reports/finance-claims' },
+    ],
+    'المحاسب المالي (تعديل كامل)': [
       { label: 'المصارف والخزنة', icon: 'fa-solid fa-building-columns', to: '/reports/treasury-banks' },
       { label: 'الإحصائيات المالية', icon: 'fa-solid fa-chart-line', to: '/reports/financial-statistics' },
       { label: 'الديون المستحقة', icon: 'fa-solid fa-hand-holding-dollar', to: '/reports/outstanding-debts' },
@@ -1394,6 +1509,8 @@ export default function App() {
       authorizedDocuments.includes('إدارة الفروع والوكلاء') ||
       authorizedDocuments.includes('إدارة الموظفين') ||
       authorizedDocuments.includes('المحاسب المالي') ||
+      authorizedDocuments.includes('المحاسب المالي (عرض فقط)') ||
+      authorizedDocuments.includes('المحاسب المالي (تعديل كامل)') ||
       authorizedDocuments.includes('الوكلاء الجدد') ||
       authorizedDocuments.includes('طلبات الوكلاء') ||
       authorizedDocuments.includes('إلغاء الوكالات') ||
@@ -1416,6 +1533,8 @@ export default function App() {
           user.authorized_documents.includes('إدارة الفروع والوكلاء') ||
           user.authorized_documents.includes('إدارة الموظفين') ||
           user.authorized_documents.includes('المحاسب المالي') ||
+          user.authorized_documents.includes('المحاسب المالي (عرض فقط)') ||
+          user.authorized_documents.includes('المحاسب المالي (تعديل كامل)') ||
           user.authorized_documents.includes('الوكلاء الجدد') ||
           user.authorized_documents.includes('طلبات الوكلاء') ||
           user.authorized_documents.includes('إلغاء الوكالات') ||

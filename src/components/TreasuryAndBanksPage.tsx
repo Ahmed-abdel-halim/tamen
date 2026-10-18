@@ -1,9 +1,10 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import ExpenseManagement from './ExpenseManagement';
+import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
 
 
 interface BranchAgent {
@@ -122,6 +123,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const canEdit = canEditFinancial('إدارة الخزينة والبنوك') || canEditFinancial('المطابقة والتحصيلات المالية');
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -408,6 +410,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleAddBank = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!newBankName.trim()) return;
     try {
       const res = await fetch(`${API_BASE_URL}/bank-settings/banks`, {
@@ -430,6 +436,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeleteBank = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف المصرف', 'هل أنت متأكد من حذف هذا المصرف؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/bank-settings/banks/${id}`, {
@@ -449,6 +459,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleUpdateBank = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!editingBankName.trim()) return;
     try {
       const res = await fetch(`${API_BASE_URL}/bank-settings/banks/${id}`, {
@@ -471,6 +485,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleAddSourceBank = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!newSourceBankName.trim()) return;
     try {
       const res = await fetch(`${API_BASE_URL}/bank-settings/source-banks`, {
@@ -493,6 +511,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeleteSourceBank = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف المصرف المرسل منه', 'هل أنت متأكد من حذف هذا المصرف المرسل منه؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/bank-settings/source-banks/${id}`, {
@@ -512,6 +534,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleUpdateSourceBank = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!editingSourceBankName.trim()) return;
     try {
       const res = await fetch(`${API_BASE_URL}/bank-settings/source-banks/${id}`, {
@@ -534,6 +560,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleAddType = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     if (!newTypeName.trim()) return;
     try {
       const res = await fetch(`${API_BASE_URL}/bank-settings/transaction-types`, {
@@ -555,6 +585,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeleteType = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف طريقة التحصيل', 'هل أنت متأكد من حذف طريقة التحصيل هذه؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/bank-settings/transaction-types/${id}`, {
@@ -684,6 +718,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleSaveTreasuryTxn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     setIsSavingTreasury(true);
     const formData = new FormData();
     Object.entries(treasuryFormData).forEach(([key, val]) => {
@@ -730,6 +768,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeleteTreasuryTxn = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف المعاملة', 'هل أنت متأكد من حذف هذه المعاملة؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/treasury/${id}`, {
@@ -766,6 +808,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleSaveBankTxn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     setIsSavingBank(true);
     const isEdit = editingBankTxnId !== null;
     const url = isEdit ? `${API_BASE_URL}/bank-transactions/${editingBankTxnId}` : `${API_BASE_URL}/bank-transactions`;
@@ -826,6 +872,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleToggleBankReconcile = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/bank-transactions/${id}/reconcile`, {
         method: 'POST'
@@ -840,6 +890,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeleteBankTxn = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف المعاملة البنكية', 'هل أنت متأكد من حذف هذه المعاملة البنكية؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/bank-transactions/${id}`, {
@@ -893,6 +947,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleSaveMachine = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     setIsSavingMachine(true);
     try {
       const url = editingMachineId
@@ -945,6 +1003,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleToggleMachineActive = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/pos-machines/${id}/toggle-active`, {
         method: 'POST',
@@ -963,6 +1025,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeleteMachine = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف ماكينة POS', 'هل أنت متأكد من حذف ماكينة POS هذه نهائياً؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/pos-machines/${id}`, {
@@ -984,6 +1050,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   const handleSavePosTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     const formData = new FormData();
     Object.entries(posTxnFormData).forEach(([key, val]) => {
       if (key === 'report_file' && val) {
@@ -1029,6 +1099,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleTogglePosReconcile = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/pos-transactions/${id}/reconcile`, {
         method: 'POST',
@@ -1047,6 +1121,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
   };
 
   const handleDeletePosTxn = async (id: number) => {
+    if (!canEdit) {
+      showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+      return;
+    }
     customConfirm('تأكيد حذف معاملة POS', 'هل أنت متأكد من حذف معاملة تسوية POS هذه؟', async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/pos-transactions/${id}`, {
@@ -1466,6 +1544,9 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
 
   return (
     <section className="users-management" style={{ position: 'relative' }}>
+      {!canEdit && (
+        <ReadOnlyNotice message="وضع القراءة فقط: يمكنك استعراض ومتابعة حركات الخزينة والمصارف والماكينات وتصدير التقارير وطباعتها، دون صلاحية الإضافة أو التعديل أو الحذف." />
+      )}
       {/* Dynamic Header */}
       <div className="users-breadcrumb" style={{ 
         display: 'flex', 
@@ -1489,10 +1570,12 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                 <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                 تصدير إكسيل
               </button>
-              <button className="primary" onClick={() => setShowTreasuryModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
-                <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
-                إضافة حركة كاش (خزينة)
-              </button>
+              {canEdit && (
+                <button className="primary" onClick={() => setShowTreasuryModal(true)} style={{ borderRadius: '10px', fontWeight: 'bold' }}>
+                  <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
+                  إضافة حركة كاش (خزينة)
+                </button>
+              )}
             </div>
           )}
           {activeTab === 'banks' && (
@@ -1501,10 +1584,12 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                 <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                 تصدير إكسيل
               </button>
-              <button className="primary" onClick={() => openBankModal('deposit')} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#10b981' }}>
-                <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
-                إضافة إيداع بنكي (+)
-              </button>
+              {canEdit && (
+                <button className="primary" onClick={() => openBankModal('deposit')} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#10b981' }}>
+                  <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
+                  إضافة إيداع بنكي (+)
+                </button>
+              )}
             </div>
           )}
           {activeTab === 'pos' && (
@@ -1513,23 +1598,25 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                 <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                 تصدير إكسيل
               </button>
-              <button className="primary" onClick={() => {
-                setEditingMachineId(null);
-                setMachineFormData({
-                  machine_name: '',
-                  machine_serial: '',
-                  bank_name: BANKS[0],
-                  merchant_id: '',
-                  location: '',
-                  notes: '',
-                  branch_agent_ids: []
-                });
-                setShowMachineModal(true);
-              }} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#475569' }}>
-                <i className="fa-solid fa-laptop-code" style={{ marginLeft: '8px' }}></i>
-                تعريف ماكينة POS
-              </button>
-              {(currentUser?.is_admin || 
+              {canEdit && (
+                <button className="primary" onClick={() => {
+                  setEditingMachineId(null);
+                  setMachineFormData({
+                    machine_name: '',
+                    machine_serial: '',
+                    bank_name: BANKS[0],
+                    merchant_id: '',
+                    location: '',
+                    notes: '',
+                    branch_agent_ids: []
+                  });
+                  setShowMachineModal(true);
+                }} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#475569' }}>
+                  <i className="fa-solid fa-laptop-code" style={{ marginLeft: '8px' }}></i>
+                  تعريف ماكينة POS
+                </button>
+              )}
+              {canEdit && (currentUser?.is_admin || 
                 currentUser?.authorized_documents?.includes('إدخال مبيعات نقاط البيع (POS)') || 
                 currentUser?.authorized_documents?.includes('المطابقة والتحصيلات المالية') || 
                 currentUser?.authorized_documents?.includes('المحاسب المالي')) && (
@@ -1550,14 +1637,18 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                 <i className="fa-solid fa-file-excel" style={{ color: '#166534' }}></i>
                 تصدير إكسيل
               </button>
-              <button className="secondary" onClick={() => window.dispatchEvent(new CustomEvent('open-category-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)', background: '#475569', color: '#fff' }}>
-                <i className="fa-solid fa-tags"></i>
-                إدارة الفئات
-              </button>
-              <button className="primary" onClick={() => window.dispatchEvent(new CustomEvent('open-expense-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#ef4444' }}>
-                <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
-                إضافة مصروف
-              </button>
+              {canEdit && (
+                <button className="secondary" onClick={() => window.dispatchEvent(new CustomEvent('open-category-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)', background: '#475569', color: '#fff' }}>
+                  <i className="fa-solid fa-tags"></i>
+                  إدارة الفئات
+                </button>
+              )}
+              {canEdit && (
+                <button className="primary" onClick={() => window.dispatchEvent(new CustomEvent('open-expense-modal'))} style={{ borderRadius: '10px', fontWeight: 'bold', background: '#ef4444' }}>
+                  <i className="fa-solid fa-plus" style={{ marginLeft: '8px' }}></i>
+                  إضافة مصروف
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1655,25 +1746,27 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
             <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--text)' }}>
               أرصدة الحسابات البنكية المتاحة
             </span>
-            <button 
-              onClick={() => setShowBankSettingsModal(true)}
-              style={{
-                background: 'rgba(1, 76, 177, 0.08)',
-                color: '#014cb1',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <i className="fa-solid fa-gears"></i>
-              تهيئة وإدارة المصارف
-            </button>
+            {canEdit && (
+              <button 
+                onClick={() => setShowBankSettingsModal(true)}
+                style={{
+                  background: 'rgba(1, 76, 177, 0.08)',
+                  color: '#014cb1',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className="fa-solid fa-gears"></i>
+                تهيئة وإدارة المصارف
+              </button>
+            )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
             {dbBanks.length === 0 ? (
@@ -1862,7 +1955,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '5px' }}>
-                        {currentUser?.is_admin && (
+                        {canEdit && currentUser?.is_admin && (
                           <button 
                             onClick={() => handleToggleBankReconcile(txn.id)}
                             className="action-btn"
@@ -1888,22 +1981,26 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                         >
                           <i className="fa-brands fa-whatsapp"></i>
                         </button>
-                        <button 
-                          onClick={() => openEditBankModal(txn)}
-                          className="action-btn"
-                          style={{ background: '#f59e0b', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
-                          title="تعديل الحركة البنكية"
-                        >
-                          <i className="fa-solid fa-pen"></i>
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteBankTxn(txn.id)}
-                          className="action-btn"
-                          style={{ background: '#ef4444', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
-                          title="حذف المعاملة"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
+                        {canEdit && (
+                          <>
+                            <button 
+                              onClick={() => openEditBankModal(txn)}
+                              className="action-btn"
+                              style={{ background: '#f59e0b', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                              title="تعديل الحركة البنكية"
+                            >
+                              <i className="fa-solid fa-pen"></i>
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteBankTxn(txn.id)}
+                              className="action-btn"
+                              style={{ background: '#ef4444', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                              title="حذف المعاملة"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -2114,14 +2211,16 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                         >
                           <i className="fa-brands fa-whatsapp"></i>
                         </button>
-                        <button 
-                          onClick={() => handleDeleteTreasuryTxn(txn.id)}
-                          className="action-btn"
-                          style={{ background: '#ef4444', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
-                          title="حذف الحركة"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
+                        {canEdit && (
+                          <button 
+                            onClick={() => handleDeleteTreasuryTxn(txn.id)}
+                            className="action-btn"
+                            style={{ background: '#ef4444', color: '#fff', padding: '6px 10px', borderRadius: '8px' }}
+                            title="حذف الحركة"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -2261,7 +2360,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                           style={{ background: '#f3e8ff', border: '1px solid #d8b4fe', color: '#7c3aed', padding: '4px 7px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}
                           title="سجل العهدة"
                         ><i className="fa-solid fa-clock-rotate-left"></i></button>
-                        {(mac.custody_status === 'available' || !mac.custody_status) && (
+                        {canEdit && (mac.custody_status === 'available' || !mac.custody_status) && (
                           <button
                             onClick={() => {
                               setCustodyTargetMachine(mac);
@@ -2273,7 +2372,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                             title="تسليم عهدة لوكيل"
                           ><i className="fa-solid fa-arrow-right-from-bracket"></i> تسليم</button>
                         )}
-                        {mac.custody_status === 'in_custody' && (
+                        {canEdit && mac.custody_status === 'in_custody' && (
                           <button
                             onClick={() => {
                               setCustodyTargetMachine(mac);
@@ -2285,25 +2384,29 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                             title="استرجاع العهدة"
                           ><i className="fa-solid fa-arrow-right-to-bracket"></i> استرجاع</button>
                         )}
-                        <button
-                          onClick={() => {
-                            setEditingMachineId(mac.id);
-                            setMachineFormData({ machine_name: mac.machine_name, machine_serial: mac.machine_serial || '', bank_name: mac.bank_name, merchant_id: mac.merchant_id || '', location: mac.location || '', notes: mac.notes || '', branch_agent_ids: mac.branch_agents ? mac.branch_agents.map(a => a.id) : [] });
-                            setShowMachineModal(true);
-                          }}
-                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '4px 7px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}
-                          title="تعديل"
-                        ><i className="fa-solid fa-pen"></i></button>
-                        <button
-                          onClick={() => handleToggleMachineActive(mac.id)}
-                          style={{ background: mac.is_active ? '#fef2f2' : '#e8f5e9', border: `1px solid ${mac.is_active ? '#fecaca' : '#bbf7d0'}`, color: mac.is_active ? '#991b1b' : '#166534', padding: '4px 7px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}
-                          title={mac.is_active ? 'تعطيل' : 'تفعيل'}
-                        ><i className={`fa-solid ${mac.is_active ? 'fa-pause' : 'fa-play'}`}></i></button>
-                        <button
-                          onClick={() => handleDeleteMachine(mac.id)}
-                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px' }}
-                          title="حذف"
-                        ><i className="fa-solid fa-trash-can"></i></button>
+                        {canEdit && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingMachineId(mac.id);
+                                setMachineFormData({ machine_name: mac.machine_name, machine_serial: mac.machine_serial || '', bank_name: mac.bank_name, merchant_id: mac.merchant_id || '', location: mac.location || '', notes: mac.notes || '', branch_agent_ids: mac.branch_agents ? mac.branch_agents.map(a => a.id) : [] });
+                                setShowMachineModal(true);
+                              }}
+                              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '4px 7px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}
+                              title="تعديل"
+                            ><i className="fa-solid fa-pen"></i></button>
+                            <button
+                              onClick={() => handleToggleMachineActive(mac.id)}
+                              style={{ background: mac.is_active ? '#fef2f2' : '#e8f5e9', border: `1px solid ${mac.is_active ? '#fecaca' : '#bbf7d0'}`, color: mac.is_active ? '#991b1b' : '#166534', padding: '4px 7px', borderRadius: '6px', cursor: 'pointer', fontSize: '10px' }}
+                              title={mac.is_active ? 'تعطيل' : 'تفعيل'}
+                            ><i className={`fa-solid ${mac.is_active ? 'fa-pause' : 'fa-play'}`}></i></button>
+                            <button
+                              onClick={() => handleDeleteMachine(mac.id)}
+                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px' }}
+                              title="حذف"
+                            ><i className="fa-solid fa-trash-can"></i></button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2505,7 +2608,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '5px' }}>
-                            {(currentUser?.is_admin || 
+                            {canEdit && (currentUser?.is_admin || 
                               currentUser?.authorized_documents?.includes('مطابقة مبيعات نقاط البيع (POS)') || 
                               currentUser?.authorized_documents?.includes('المطابقة والتحصيلات المالية') || 
                               currentUser?.authorized_documents?.includes('المحاسب المالي')) && (
@@ -2518,7 +2621,7 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
                                 <i className={`fa-solid ${txn.is_reconciled ? 'fa-xmark' : 'fa-check'}`}></i>
                               </button>
                             )}
-                            {(currentUser?.is_admin || 
+                            {canEdit && (currentUser?.is_admin || 
                               currentUser?.authorized_documents?.includes('إدخال مبيعات نقاط البيع (POS)') || 
                               currentUser?.authorized_documents?.includes('المطابقة والتحصيلات المالية') || 
                               currentUser?.authorized_documents?.includes('المحاسب المالي')) && (
@@ -4054,6 +4157,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
               <button
                 disabled={isSavingCustody || !handoverForm.branch_agent_id || !handoverForm.movement_date}
                 onClick={async () => {
+                  if (!canEdit) {
+                    showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+                    return;
+                  }
                   setIsSavingCustody(true);
                   try {
                     const res = await fetch(`${API_BASE_URL}/pos-machines/${custodyTargetMachine.id}/handover`, { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(handoverForm) });
@@ -4149,6 +4256,10 @@ export default function TreasuryAndBanksPage({ hideExpenses = false }: { hideExp
               <button
                 disabled={isSavingCustody || !returnForm.movement_date}
                 onClick={async () => {
+                  if (!canEdit) {
+                    showToast('عفواً، لا تملك صلاحية التعديل (عرض فقط)', 'error');
+                    return;
+                  }
                   setIsSavingCustody(true);
                   try {
                     const res = await fetch(`${API_BASE_URL}/pos-machines/${custodyTargetMachine.id}/return-custody`, { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(returnForm) });
