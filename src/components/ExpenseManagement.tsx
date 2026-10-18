@@ -46,13 +46,20 @@ interface UnionPurchase {
   amount_paid: number;
   card_price: number;
   union_fee_per_card: number;
+  supervision_fee_per_card?: number;
   company_deposit_per_card: number;
   cards_count: number;
   total_union_fee: number;
+  total_supervision_fee?: number;
   total_company_deposit: number;
   payment_method: string;
+  depositor_name?: string | null;
+  deposit_date?: string | null;
+  bank_account_number?: string | null;
+  deposit_amount?: number | null;
   purchase_date: string;
   receipt_image: string | null;
+  bank_deposit_image?: string | null;
   notes: string;
 }
 
@@ -283,9 +290,9 @@ export default function ExpenseManagement({
           <table class="data-table">
             <tr>
               <td class="label">رقم الطلب:</td>
-              <td class="value">${u.request_number}</td>
+              <td class="value">${u.request_number || '—'}</td>
               <td class="label">تاريخ الطلب:</td>
-              <td class="value">${u.purchase_date}</td>
+              <td class="value">${u.purchase_date ? u.purchase_date.split('T')[0] : '—'}</td>
             </tr>
             <tr>
               <td class="label">طريقة الدفع:</td>
@@ -295,14 +302,32 @@ export default function ExpenseManagement({
             </tr>
           </table>
 
+          ${(u.depositor_name || u.deposit_date || u.bank_account_number || u.deposit_amount) ? `
+          <div class="section-title">بيانات الإيداع والتحويل المصرفي</div>
+          <table class="data-table">
+            <tr>
+              <td class="label">اسم الواصل / المودع:</td>
+              <td class="value">${u.depositor_name || '—'}</td>
+              <td class="label">تاريخ الإيداع:</td>
+              <td class="value">${u.deposit_date ? u.deposit_date.split('T')[0] : '—'}</td>
+            </tr>
+            <tr>
+              <td class="label">رقم الحساب المصرفي:</td>
+              <td class="value">${u.bank_account_number || '—'}</td>
+              <td class="label">قيمة الإيداع:</td>
+              <td class="value" style="font-weight: 800; color: #014cb1;">${u.deposit_amount ? `${parseFloat(u.deposit_amount.toString()).toLocaleString()} د.ل` : '—'}</td>
+            </tr>
+          </table>
+          ` : ''}
+
           <div class="section-title">تفاصيل الحصص والودائع</div>
           <table class="items-table">
             <thead>
               <tr>
-                <th style="width: 50%;">البيان</th>
-                <th style="width: 20%;">الكمية</th>
-                <th style="width: 15%;">سعر الوحدة</th>
-                <th style="width: 15%;">الإجمالي</th>
+                <th style="width: 45%;">البيان</th>
+                <th style="width: 15%;">الكمية</th>
+                <th style="width: 20%;">سعر الوحدة</th>
+                <th style="width: 20%;">الإجمالي</th>
               </tr>
             </thead>
             <tbody>
@@ -318,6 +343,21 @@ export default function ExpenseManagement({
                 <td>${u.union_fee_per_card} د.ل</td>
                 <td>${(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
               </tr>
+              ${(() => {
+                const sup = parseFloat(u.supervision_fee_per_card?.toString() || (u.purchase_date && u.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+                const totSup = u.total_supervision_fee ? parseFloat(u.total_supervision_fee.toString()) : (u.cards_count * sup);
+                if (totSup > 0) {
+                  return `
+                  <tr>
+                    <td style="text-align: right; color: #7c3aed; font-weight: 700;">خصم هيئة الإشراف على التأمين</td>
+                    <td>${u.cards_count}</td>
+                    <td>${sup} د.ل</td>
+                    <td style="font-weight: 700; color: #7c3aed;">${totSup.toLocaleString()} د.ل</td>
+                  </tr>
+                  `;
+                }
+                return '';
+              })()}
               <tr>
                 <td style="text-align: right;">وديعة الشركة</td>
                 <td>${u.cards_count}</td>
@@ -368,6 +408,11 @@ export default function ExpenseManagement({
     const totalUnionPaid = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + (parseFloat(it.amount_paid?.toString() || '0') || 0), 0) : 0;
     const totalUnionCards = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + (parseFloat(it.cards_count?.toString() || '0') || 0), 0) : 0;
     const totalUnionFee = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + ((parseFloat(it.cards_count?.toString() || '0') || 0) * (parseFloat(it.union_fee_per_card?.toString() || '0') || 0)), 0) : 0;
+    const totalSupervisionFee = activeTab === 'union' ? filteredUnion.reduce((s, it) => {
+      const cards = parseFloat(it.cards_count?.toString() || '0') || 0;
+      const fee = parseFloat(it.supervision_fee_per_card?.toString() || (it.purchase_date && it.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+      return s + (it.total_supervision_fee ? parseFloat(it.total_supervision_fee.toString()) : (cards * fee));
+    }, 0) : 0;
     const totalUnionDeposit = activeTab === 'union' ? filteredUnion.reduce((s, it) => s + ((parseFloat(it.cards_count?.toString() || '0') || 0) * (parseFloat(it.company_deposit_per_card?.toString() || '0') || 0)), 0) : 0;
 
     printWindow.document.write(`
@@ -376,14 +421,14 @@ export default function ExpenseManagement({
         <title>${title}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-          @page { margin: 10mm; size: A4 portrait; }
+          @page { margin: 8mm; size: A4 landscape; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
           body { font-family: 'Cairo', sans-serif; margin: 15px; padding: 10px; color: #0f172a; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #014cb1; padding-bottom: 15px; }
           .header h1 { margin: 0; color: #014cb1; font-size: 22px; font-weight: 900; }
           .header p { margin: 4px 0 0 0; color: #475569; font-size: 14px; font-weight: 700; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: right; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 8px; text-align: right; }
           th { background: #f8fafc; font-weight: 900; color: #1e293b; }
           tbody tr:nth-child(even) { background: #f8fafc; }
           tfoot tr { background: #f1f5f9; font-weight: 900; border-top: 2px solid #014cb1; }
@@ -404,13 +449,15 @@ export default function ExpenseManagement({
           <thead>
             <tr>
               ${activeTab === 'union' ? `
-                <th style="width: 45px; text-align: center;">الترقيم</th>
+                <th style="width: 40px; text-align: center;">الترقيم</th>
                 <th>رقم الطلب</th>
                 <th>المبلغ</th>
                 <th style="text-align: center;">عدد البطاقات</th>
                 <th>خصم الاتحاد</th>
+                <th>رسوم هيئة الإشراف</th>
                 <th>وديعة الشركة</th>
                 <th style="text-align: center;">التاريخ</th>
+                <th>ملاحظات</th>
               ` : `
                 <th style="width: 45px; text-align: center;">الترقيم</th>
                 <th>البيان</th>
@@ -432,8 +479,15 @@ export default function ExpenseManagement({
                   <td style="font-weight: 700;">${(parseFloat(item.amount_paid?.toString() || '0') || 0).toLocaleString()} د.ل</td>
                   <td style="text-align: center; font-weight: 700;">${item.cards_count || 0}</td>
                   <td>${((parseFloat(item.cards_count?.toString() || '0') || 0) * (parseFloat(item.union_fee_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
+                  <td style="font-weight: 700; color: #7c3aed;">${(() => {
+                    const cards = parseFloat(item.cards_count?.toString() || '0') || 0;
+                    const fee = parseFloat(item.supervision_fee_per_card?.toString() || (item.purchase_date && item.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+                    const tot = item.total_supervision_fee ? parseFloat(item.total_supervision_fee.toString()) : (cards * fee);
+                    return tot > 0 ? `${tot.toLocaleString()} د.ل` : '-';
+                  })()}</td>
                   <td>${((parseFloat(item.cards_count?.toString() || '0') || 0) * (parseFloat(item.company_deposit_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
                   <td style="text-align: center;">${item.purchase_date ? item.purchase_date.split('T')[0] : '-'}</td>
+                  <td style="font-size: 10px; max-width: 140px;">${item.notes || '-'}</td>
                 ` : `
                   <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
                   <td>${item.name}</td>
@@ -454,7 +508,9 @@ export default function ExpenseManagement({
                 <td style="font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionPaid.toLocaleString()} د.ل</td>
                 <td style="text-align: center; font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionCards.toLocaleString()}</td>
                 <td style="font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionFee.toLocaleString()} د.ل</td>
+                <td style="font-weight: 900; font-size: 13px; color: #7c3aed;">${totalSupervisionFee.toLocaleString()} د.ل</td>
                 <td style="font-weight: 900; font-size: 13px; color: #0f172a;">${totalUnionDeposit.toLocaleString()} د.ل</td>
+                <td style="text-align: center;">-</td>
                 <td style="text-align: center;">-</td>
               </tr>
             </tfoot>
@@ -571,13 +627,19 @@ export default function ExpenseManagement({
   const [amountPaid, setAmountPaid] = useState('');
   const [cardPrice, setCardPrice] = useState('20');
   const [unionFeePerCard, setUnionFeePerCard] = useState('5');
+  const [supervisionFeePerCard, setSupervisionFeePerCard] = useState('0');
   const [companyDepositPerCard, setCompanyDepositPerCard] = useState('15');
   const [paymentMethod, setPaymentMethod] = useState('حوالة مصرفية');
+  const [depositorName, setDepositorName] = useState('');
+  const [depositDate, setDepositDate] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
   const [unionPurchaseDate, setUnionPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [unionNotes, setUnionNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
-
-
+  const [bankDepositImage, setBankDepositImage] = useState<File | null>(null);
+  const [deleteReceiptImage, setDeleteReceiptImage] = useState(false);
+  const [deleteBankDepositImage, setDeleteBankDepositImage] = useState(false);
 
   // Union Filter States
   const [unionSearchFilter, setUnionSearchFilter] = useState('');
@@ -594,6 +656,7 @@ export default function ExpenseManagement({
   }, [amountPaid, cardPrice]);
 
   const totalUnionFee = useMemo(() => cardsCount * (parseFloat(unionFeePerCard) || 0), [cardsCount, unionFeePerCard]);
+  const totalSupervisionFee = useMemo(() => cardsCount * (parseFloat(supervisionFeePerCard) || 0), [cardsCount, supervisionFeePerCard]);
   const totalCompanyDeposit = useMemo(() => cardsCount * (parseFloat(companyDepositPerCard) || 0), [cardsCount, companyDepositPerCard]);
 
   const filteredUnion = useMemo(() => {
@@ -631,6 +694,7 @@ export default function ExpenseManagement({
   const unionFilteredStats = useMemo(() => {
     let totalPaid = 0;
     let totalFee = 0;
+    let totalSupervision = 0;
     let totalDeposit = 0;
     let totalCards = 0;
     if (Array.isArray(filteredUnion)) {
@@ -640,10 +704,12 @@ export default function ExpenseManagement({
         const cards = parseFloat(u.cards_count?.toString() || '0') || 0;
         totalCards += cards;
         totalFee += cards * (parseFloat(u.union_fee_per_card?.toString() || '0') || 0);
+        const sup = parseFloat(u.supervision_fee_per_card?.toString() || (u.purchase_date && u.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+        totalSupervision += u.total_supervision_fee ? parseFloat(u.total_supervision_fee.toString()) : (cards * sup);
         totalDeposit += cards * (parseFloat(u.company_deposit_per_card?.toString() || '0') || 0);
       });
     }
-    return { totalPaid, totalFee, totalDeposit, totalCards };
+    return { totalPaid, totalFee, totalSupervision, totalDeposit, totalCards };
   }, [filteredUnion]);
 
   const dynamicCategories = useMemo(() => {
@@ -1100,27 +1166,49 @@ export default function ExpenseManagement({
       setAmountPaid(purchase.amount_paid.toString());
       setCardPrice(purchase.card_price.toString());
       setUnionFeePerCard(purchase.union_fee_per_card.toString());
+      const supFee = purchase.supervision_fee_per_card !== undefined && purchase.supervision_fee_per_card !== null
+        ? purchase.supervision_fee_per_card.toString()
+        : (purchase.purchase_date && purchase.purchase_date >= '2026-08-01' ? '2' : '0');
+      setSupervisionFeePerCard(supFee);
       setCompanyDepositPerCard(purchase.company_deposit_per_card.toString());
-      setPaymentMethod(purchase.payment_method);
+      setPaymentMethod(purchase.payment_method || 'حوالة مصرفية');
+      setDepositorName(purchase.depositor_name || '');
+      setDepositDate(purchase.deposit_date ? purchase.deposit_date.split('T')[0] : '');
+      setBankAccountNumber(purchase.bank_account_number || '');
+      setDepositAmount(purchase.deposit_amount ? purchase.deposit_amount.toString() : '');
       setUnionPurchaseDate(purchase.purchase_date ? purchase.purchase_date.split('T')[0] : '');
       setUnionNotes(purchase.notes || '');
+      setReceiptImage(null);
+      setBankDepositImage(null);
+      setDeleteReceiptImage(false);
+      setDeleteBankDepositImage(false);
     } else {
       const today = new Date().toISOString().split('T')[0];
       setEditingUnionPurchase(null);
       setRequestNumber('');
       setAmountPaid('');
       if (today >= '2026-08-01') {
-        setCardPrice('28');
-        setUnionFeePerCard('6');
-        setCompanyDepositPerCard('20');
+        setCardPrice('20');
+        setUnionFeePerCard('5');
+        setSupervisionFeePerCard('2');
+        setCompanyDepositPerCard('13');
       } else {
         setCardPrice('20');
         setUnionFeePerCard('5');
+        setSupervisionFeePerCard('0');
         setCompanyDepositPerCard('15');
       }
       setPaymentMethod('حوالة مصرفية');
+      setDepositorName('');
+      setDepositDate(today);
+      setBankAccountNumber('');
+      setDepositAmount('');
       setUnionPurchaseDate(today);
       setUnionNotes('');
+      setReceiptImage(null);
+      setBankDepositImage(null);
+      setDeleteReceiptImage(false);
+      setDeleteBankDepositImage(false);
     }
     setShowUnionModal(true);
   };
@@ -1135,14 +1223,23 @@ export default function ExpenseManagement({
       formData.append('amount_paid', amountPaid);
       formData.append('card_price', cardPrice);
       formData.append('union_fee_per_card', unionFeePerCard);
+      formData.append('supervision_fee_per_card', supervisionFeePerCard);
       formData.append('company_deposit_per_card', companyDepositPerCard);
       formData.append('cards_count', cardsCount.toString());
       formData.append('total_union_fee', totalUnionFee.toString());
+      formData.append('total_supervision_fee', totalSupervisionFee.toString());
       formData.append('total_company_deposit', totalCompanyDeposit.toString());
       formData.append('payment_method', paymentMethod);
+      formData.append('depositor_name', depositorName);
+      formData.append('deposit_date', depositDate);
+      formData.append('bank_account_number', bankAccountNumber);
+      formData.append('deposit_amount', depositAmount || amountPaid);
       formData.append('purchase_date', unionPurchaseDate);
       formData.append('notes', unionNotes);
       if (receiptImage) formData.append('receipt_image', receiptImage);
+      if (bankDepositImage) formData.append('bank_deposit_image', bankDepositImage);
+      if (deleteReceiptImage) formData.append('delete_receipt_image', '1');
+      if (deleteBankDepositImage) formData.append('delete_bank_deposit_image', '1');
       if (editingUnionPurchase) formData.append('_method', 'PUT');
 
       const url = editingUnionPurchase ? `${API_BASE_URL}/union-balances/${editingUnionPurchase.id}` : `${API_BASE_URL}/union-balances`;
@@ -1151,6 +1248,9 @@ export default function ExpenseManagement({
         showToast(editingUnionPurchase ? 'تم تحديث الإيصال بنجاح' : 'تم تسجيل إيصال رصيد الاتحاد بنجاح', 'success');
         setShowUnionModal(false);
         setReceiptImage(null);
+        setBankDepositImage(null);
+        setDeleteReceiptImage(false);
+        setDeleteBankDepositImage(false);
         setAmountPaid('');
         setRequestNumber('');
         setEditingUnionPurchase(null);
@@ -1265,21 +1365,33 @@ export default function ExpenseManagement({
         { header: 'المبلغ المدفوع', key: 'amount_paid', width: 20 },
         { header: 'عدد البطاقات', key: 'cards_count', width: 15 },
         { header: 'خصم الاتحاد', key: 'union_fee', width: 20 },
+        { header: 'رسوم هيئة الإشراف', key: 'supervision_fee', width: 20 },
         { header: 'وديعة الشركة', key: 'company_deposit', width: 20 },
+        { header: 'اسم الواصل / المودع', key: 'depositor_name', width: 25 },
+        { header: 'تاريخ الإيداع', key: 'deposit_date', width: 15 },
+        { header: 'رقم الحساب المصرفي', key: 'bank_account_number', width: 20 },
         { header: 'تاريخ الطلب', key: 'purchase_date', width: 15 },
         { header: 'البيان/ملاحظات', key: 'notes', width: 30 },
       ];
 
-      const data: any[] = filteredUnion.map((u, idx) => ({
-        seq: idx + 1,
-        request_number: u.request_number || '-',
-        amount_paid: parseFloat(u.amount_paid.toString()).toLocaleString() + ' د.ل',
-        cards_count: u.cards_count,
-        union_fee: parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString() + ' د.ل',
-        company_deposit: parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString() + ' د.ل',
-        purchase_date: u.purchase_date ? u.purchase_date.split('T')[0] : '',
-        notes: u.notes || '-',
-      }));
+      const data: any[] = filteredUnion.map((u, idx) => {
+        const sup = parseFloat(u.supervision_fee_per_card?.toString() || (u.purchase_date && u.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+        const totSup = u.total_supervision_fee ? parseFloat(u.total_supervision_fee.toString()) : (u.cards_count * sup);
+        return {
+          seq: idx + 1,
+          request_number: u.request_number || '-',
+          amount_paid: parseFloat(u.amount_paid.toString()).toLocaleString() + ' د.ل',
+          cards_count: u.cards_count,
+          union_fee: parseFloat((u.cards_count * u.union_fee_per_card).toString()).toLocaleString() + ' د.ل',
+          supervision_fee: totSup > 0 ? (totSup.toLocaleString() + ' د.ل') : '0 د.ل',
+          company_deposit: parseFloat((u.cards_count * u.company_deposit_per_card).toString()).toLocaleString() + ' د.ل',
+          depositor_name: u.depositor_name || '-',
+          deposit_date: u.deposit_date ? u.deposit_date.split('T')[0] : '-',
+          bank_account_number: u.bank_account_number || '-',
+          purchase_date: u.purchase_date ? u.purchase_date.split('T')[0] : '',
+          notes: u.notes || '-',
+        };
+      });
 
       // Summary row
       data.push({
@@ -1288,18 +1400,22 @@ export default function ExpenseManagement({
         amount_paid: unionFilteredStats.totalPaid.toLocaleString() + ' د.ل',
         cards_count: unionFilteredStats.totalCards,
         union_fee: unionFilteredStats.totalFee.toLocaleString() + ' د.ل',
+        supervision_fee: unionFilteredStats.totalSupervision.toLocaleString() + ' د.ل',
         company_deposit: unionFilteredStats.totalDeposit.toLocaleString() + ' د.ل',
+        depositor_name: '',
+        deposit_date: '',
+        bank_account_number: '',
         purchase_date: '',
         notes: '',
       });
 
       await generatePremiumExcel({
         title: 'شركة المدار الليبي للتأمين - تقرير رصيد الاتحاد والتكاليف',
-        subtitle: `خصم الاتحاد: ${unionFilteredStats.totalFee.toLocaleString()} د.ل - وديعة الشركة: ${unionFilteredStats.totalDeposit.toLocaleString()} د.ل`,
+        subtitle: `خصم الاتحاد: ${unionFilteredStats.totalFee.toLocaleString()} د.ل - رسوم الهيئة: ${unionFilteredStats.totalSupervision.toLocaleString()} د.ل - وديعة الشركة: ${unionFilteredStats.totalDeposit.toLocaleString()} د.ل`,
         columns,
         data,
         fileName: 'تقرير_سجل_الاتحاد',
-        qrData: `سجل الاتحاد - شركة المدار الليبي\nإجمالي المدفوع: ${unionFilteredStats.totalPaid.toLocaleString()} د.ل\nعدد البطاقات: ${unionFilteredStats.totalCards}\nبواسطة: ${currentUser.name || 'النظام'}`
+        qrData: `سجل الاتحاد - شركة المدار الليبي\nإجمالي المدفوع: ${unionFilteredStats.totalPaid.toLocaleString()} د.ل\nرسوم الهيئة: ${unionFilteredStats.totalSupervision.toLocaleString()} د.ل\nعدد البطاقات: ${unionFilteredStats.totalCards}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير سجل الاتحاد بنجاح', 'success');
@@ -1623,22 +1739,26 @@ export default function ExpenseManagement({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-            <div className="stat-box" style={{ background: '#fef3c7', padding: '25px', borderRadius: '15px', border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
-              <div style={{ color: '#92400e', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#92400e' }}>{unionFilteredStats.totalDeposit.toLocaleString()} <span style={{ fontSize: '16px' }}>د.ل</span></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+            <div className="stat-box" style={{ background: '#fef3c7', padding: '20px', borderRadius: '15px', border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#92400e', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#92400e' }}>{unionFilteredStats.totalDeposit.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
-            <div className="stat-box" style={{ background: '#fee2e2', padding: '25px', borderRadius: '15px', border: '1px solid #fecaca', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
-              <div style={{ color: '#991b1b', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي خصم الاتحاد</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#991b1b' }}>{unionFilteredStats.totalFee.toLocaleString()} <span style={{ fontSize: '16px' }}>د.ل</span></div>
+            <div className="stat-box" style={{ background: '#fee2e2', padding: '20px', borderRadius: '15px', border: '1px solid #fecaca', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#991b1b', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>إجمالي خصم الاتحاد</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#991b1b' }}>{unionFilteredStats.totalFee.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
-            <div className="stat-box" style={{ background: '#d1fae5', padding: '25px', borderRadius: '15px', border: '1px solid #a7f3d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
-              <div style={{ color: '#065f46', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي البطاقات المشتراة</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#065f46' }}>{unionFilteredStats.totalCards} <span style={{ fontSize: '16px' }}>بطاقة</span></div>
+            <div className="stat-box" style={{ background: '#f3e8ff', padding: '20px', borderRadius: '15px', border: '1px solid #e9d5ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#6b21a8', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>إجمالي رسوم هيئة الإشراف</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#7c3aed' }}>{unionFilteredStats.totalSupervision.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
-            <div className="stat-box" style={{ background: '#dbeafe', padding: '25px', borderRadius: '15px', border: '1px solid #bfdbfe', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
-              <div style={{ color: '#1e40af', fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>إجمالي المبلغ المدفوع</div>
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#1e40af' }}>{unionFilteredStats.totalPaid.toLocaleString()} <span style={{ fontSize: '16px' }}>د.ل</span></div>
+            <div className="stat-box" style={{ background: '#d1fae5', padding: '20px', borderRadius: '15px', border: '1px solid #a7f3d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#065f46', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>إجمالي البطاقات المشتراة</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#065f46' }}>{unionFilteredStats.totalCards} <span style={{ fontSize: '14px' }}>بطاقة</span></div>
+            </div>
+            <div className="stat-box" style={{ background: '#dbeafe', padding: '20px', borderRadius: '15px', border: '1px solid #bfdbfe', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <div style={{ color: '#1e40af', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>إجمالي المبلغ المدفوع</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e40af' }}>{unionFilteredStats.totalPaid.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
             </div>
           </div>
 
@@ -1678,46 +1798,68 @@ export default function ExpenseManagement({
             <table className="users-table">
               <thead>
                 <tr>
-                  <th style={{ width: '55px', textAlign: 'center', verticalAlign: 'middle' }}>#</th>
+                  <th style={{ width: '45px', textAlign: 'center', verticalAlign: 'middle' }}>#</th>
                   <th style={{ verticalAlign: 'middle' }}>رقم الواصل/الطلب</th>
                   <th style={{ verticalAlign: 'middle' }}>المبلغ المدفوع</th>
                   <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>عدد البطاقات</th>
                   <th style={{ verticalAlign: 'middle' }}>خصم الاتحاد (المصروفات)</th>
+                  <th style={{ verticalAlign: 'middle' }}>رسوم هيئة الإشراف</th>
                   <th style={{ verticalAlign: 'middle' }}>وديعة الشركة</th>
                   <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>تاريخ الطلب</th>
-                  <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>صورة الواصل</th>
+                  <th style={{ verticalAlign: 'middle', textAlign: 'center' }}>المرفقات</th>
+                  <th style={{ verticalAlign: 'middle' }}>ملاحظات</th>
                   <th className="no-print" style={{ verticalAlign: 'middle', textAlign: 'center' }}>الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedUnion.length === 0 ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px' }}>لا توجد بيانات سجل رصيد الاتحاد</td></tr>
+                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px' }}>لا توجد بيانات سجل رصيد الاتحاد</td></tr>
                 ) : (
                   paginatedUnion.map((u, idx) => (
                     <tr key={u.id}>
                       <td style={{ textAlign: 'center', fontWeight: 'bold', verticalAlign: 'middle', color: '#64748b' }}>
                         {(currentUnionPage - 1) * unionItemsPerPage + idx + 1}
                       </td>
-                      <td style={{ fontWeight: 'bold', verticalAlign: 'middle' }}>{u.request_number || '-'}</td>
+                      <td style={{ fontWeight: 'bold', verticalAlign: 'middle' }}>
+                        {u.request_number || '-'}
+                        {u.depositor_name && <div style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>المودع: {u.depositor_name}</div>}
+                      </td>
                       <td style={{ color: '#ef4444', fontWeight: 800, verticalAlign: 'middle' }}>{(parseFloat(u.amount_paid?.toString() || '0') || 0).toLocaleString()} د.ل</td>
                       <td style={{ color: '#065f46', fontWeight: 'bold', verticalAlign: 'middle', textAlign: 'center' }}>{u.cards_count || 0}</td>
                       <td style={{ verticalAlign: 'middle', fontWeight: 700 }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.union_fee_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
+                      <td style={{ verticalAlign: 'middle', fontWeight: 800, color: '#7c3aed' }}>
+                        {(() => {
+                          const cards = parseFloat(u.cards_count?.toString() || '0') || 0;
+                          const fee = parseFloat(u.supervision_fee_per_card?.toString() || (u.purchase_date && u.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+                          const tot = u.total_supervision_fee ? parseFloat(u.total_supervision_fee.toString()) : (cards * fee);
+                          return tot > 0 ? `${tot.toLocaleString()} د.ل` : '-';
+                        })()}
+                      </td>
                       <td style={{ color: '#92400e', fontWeight: 700, verticalAlign: 'middle' }}>{((parseFloat(u.cards_count?.toString() || '0') || 0) * (parseFloat(u.company_deposit_per_card?.toString() || '0') || 0)).toLocaleString()} د.ل</td>
                       <td style={{ verticalAlign: 'middle', textAlign: 'center' }}>{u.purchase_date ? u.purchase_date.split('T')[0] : '-'}</td>
                       <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                          {u.receipt_image ? (
-                            <button onClick={() => { setSelectedImage(resolveImageUrl(u.receipt_image)); setPreviewRotation(0); }} className="action-btn" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-                              <i className="fa-solid fa-image"></i> عرض الواصل
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          {u.receipt_image && (
+                            <button onClick={() => { setSelectedImage(resolveImageUrl(u.receipt_image)); setPreviewRotation(0); }} className="action-btn" style={{ color: '#0284c7', background: 'rgba(2, 132, 199, 0.1)', padding: '6px 10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }} title="عرض وصل الاتحاد">
+                              <i className="fa-solid fa-file-invoice"></i> وصل الاتحاد
                             </button>
-                          ) : <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>لا يوجد</span>}
+                          )}
+                          {u.bank_deposit_image && (
+                            <button onClick={() => { setSelectedImage(resolveImageUrl(u.bank_deposit_image)); setPreviewRotation(0); }} className="action-btn" style={{ color: '#059669', background: 'rgba(5, 150, 105, 0.1)', padding: '6px 10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }} title="عرض إيصال الإيداع المصرفي">
+                              <i className="fa-solid fa-building-columns"></i> الإيداع
+                            </button>
+                          )}
+                          {!u.receipt_image && !u.bank_deposit_image && <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>لا يوجد</span>}
                         </div>
+                      </td>
+                      <td style={{ verticalAlign: 'middle', fontSize: '0.82rem', color: '#475569', maxWidth: '140px' }}>
+                        {u.notes || '-'}
                       </td>
                       <td className="no-print" style={{ verticalAlign: 'middle', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
                           <button onClick={() => handlePrintUnionVoucher(u)} style={{ background: '#ea580c', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="طباعة الواصل"><i className="fa-solid fa-print"></i></button>
-                          <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-pencil"></i></button>
-                          <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
+                          <button onClick={() => handleOpenUnionModal(u)} style={{ background: '#3b82f6', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="تعديل"><i className="fa-solid fa-pencil"></i></button>
+                          <button onClick={() => handleDeleteUnionPurchase(u.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer' }} title="حذف"><i className="fa-solid fa-trash"></i></button>
                         </div>
                       </td>
                     </tr>
@@ -1738,9 +1880,13 @@ export default function ExpenseManagement({
                   <td style={{ color: '#1e293b', fontWeight: 900, padding: '14px', fontSize: '1.05rem' }}>
                     {unionFilteredStats.totalFee.toLocaleString()} د.ل
                   </td>
+                  <td style={{ color: '#7c3aed', fontWeight: 900, padding: '14px', fontSize: '1.05rem' }}>
+                    {unionFilteredStats.totalSupervision.toLocaleString()} د.ل
+                  </td>
                   <td style={{ color: '#92400e', fontWeight: 900, padding: '14px', fontSize: '1.05rem' }}>
                     {unionFilteredStats.totalDeposit.toLocaleString()} د.ل
                   </td>
+                  <td style={{ textAlign: 'center', color: '#94a3b8' }}>-</td>
                   <td style={{ textAlign: 'center', color: '#94a3b8' }}>-</td>
                   <td style={{ textAlign: 'center', color: '#94a3b8' }}>-</td>
                   <td className="no-print"></td>
@@ -2165,10 +2311,12 @@ export default function ExpenseManagement({
                       setUnionPurchaseDate(d);
                       if (!editingUnionPurchase) {
                         if (d >= '2026-08-01') {
-                          setCardPrice('28');
-                          setUnionFeePerCard('6');
-                          setCompanyDepositPerCard('20');
+                          setSupervisionFeePerCard('2');
+                          setCardPrice('20');
+                          setUnionFeePerCard('5');
+                          setCompanyDepositPerCard('13');
                         } else {
+                          setSupervisionFeePerCard('0');
                           setCardPrice('20');
                           setUnionFeePerCard('5');
                           setCompanyDepositPerCard('15');
@@ -2185,82 +2333,174 @@ export default function ExpenseManagement({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>طريقة الدفع</label>
-                  <select style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center', appearance: 'none' }}>
-                    <option>حوالة مصرفية</option>
-                    <option>نقداً</option>
-                    <option>صك مصدق</option>
+                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600, textAlign: 'center', appearance: 'none' }}>
+                    <option value="حوالة مصرفية">حوالة مصرفية</option>
+                    <option value="نقداً">نقداً</option>
+                    <option value="صك مصدق">صك مصدق</option>
+                    <option value="إيداع نقدي">إيداع نقدي</option>
                   </select>
                 </div>
               </div>
 
+              {/* Bank Deposit and Transfer Details */}
+              <div style={{ background: '#f8fafc', padding: '22px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+                <p style={{ margin: '0 0 15px 0', fontSize: '0.92rem', fontWeight: 800, color: '#1e293b' }}>
+                  <i className="fa-solid fa-building-columns" style={{ color: '#014cb1', marginLeft: '6px' }}></i>
+                  بيانات الإيداع والتحويل المصرفي
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b' }}>اسم الواصل / المودع</label>
+                    <input type="text" placeholder="اسم الشخص أو جهة الإيداع" value={depositorName} onChange={e => setDepositorName(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.95rem', fontWeight: 600 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b' }}>تاريخ الإيداع</label>
+                    <input type="date" value={depositDate} onChange={e => setDepositDate(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.95rem', fontWeight: 600 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b' }}>رقم الحساب المصرفي</label>
+                    <input type="text" placeholder="رقم الحساب المحول منه/إليه" value={bankAccountNumber} onChange={e => setBankAccountNumber(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.95rem', fontWeight: 600 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b' }}>قيمة الإيداع (د.ل)</label>
+                    <input type="number" step="0.01" placeholder="القيمة المودعة" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.95rem', fontWeight: 600 }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Orange Card Price Calculation */}
               <div style={{ background: '#f8fafc', padding: '22px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
                   <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
                     <i className="fa-solid fa-table-list" style={{ color: '#014cb1', marginLeft: '6px' }}></i>
                     تسعيرة رصيد البطاقة البرتقالية (جدول الرصيد المعتمد)
                   </p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     <button
                       type="button"
                       onClick={() => {
                         setCardPrice('20');
                         setUnionFeePerCard('5');
+                        setSupervisionFeePerCard('0');
                         setCompanyDepositPerCard('15');
                       }}
                       style={{
-                        padding: '6px 12px', borderRadius: '8px', border: cardPrice === '20' ? '2px solid #014cb1' : '1px solid #cbd5e1',
-                        background: cardPrice === '20' ? '#eff6ff' : '#fff', color: cardPrice === '20' ? '#014cb1' : '#475569',
-                        fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer'
+                        padding: '6px 12px', borderRadius: '8px', border: (cardPrice === '20' && supervisionFeePerCard === '0') ? '2px solid #014cb1' : '1px solid #cbd5e1',
+                        background: (cardPrice === '20' && supervisionFeePerCard === '0') ? '#eff6ff' : '#fff', color: (cardPrice === '20' && supervisionFeePerCard === '0') ? '#014cb1' : '#475569',
+                        fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer'
                       }}
                     >
-                      تسعيرة سابقة (20 د.ل: 15 وديعة + 5 اتحاد)
+                      ما قبل 2026/08/01 (20 د.ل: 15 وديعة + 5 اتحاد)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCardPrice('20');
+                        setUnionFeePerCard('5');
+                        setSupervisionFeePerCard('2');
+                        setCompanyDepositPerCard('13');
+                      }}
+                      style={{
+                        padding: '6px 12px', borderRadius: '8px', border: (cardPrice === '20' && supervisionFeePerCard === '2' && unionFeePerCard === '5') ? '2px solid #7c3aed' : '1px solid #cbd5e1',
+                        background: (cardPrice === '20' && supervisionFeePerCard === '2' && unionFeePerCard === '5') ? '#f5f3ff' : '#fff', color: (cardPrice === '20' && supervisionFeePerCard === '2' && unionFeePerCard === '5') ? '#7c3aed' : '#475569',
+                        fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer'
+                      }}
+                    >
+                      من 2026/08/01 (20 د.ل: 13 وديعة + 5 اتحاد + 2 إشراف)
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         setCardPrice('28');
                         setUnionFeePerCard('6');
+                        setSupervisionFeePerCard('2');
                         setCompanyDepositPerCard('20');
                       }}
                       style={{
-                        padding: '6px 12px', borderRadius: '8px', border: cardPrice === '28' ? '2px solid #059669' : '1px solid #cbd5e1',
-                        background: cardPrice === '28' ? '#ecfdf5' : '#fff', color: cardPrice === '28' ? '#059669' : '#475569',
-                        fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer'
+                        padding: '6px 12px', borderRadius: '8px', border: (cardPrice === '28') ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: (cardPrice === '28') ? '#ecfdf5' : '#fff', color: (cardPrice === '28') ? '#059669' : '#475569',
+                        fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer'
                       }}
                     >
-                      اعتباراً من 2026/08/01 (28 د.ل: 20 وديعة + 6 اتحاد + 2 إشراف)
+                      من 2026/08/01 (28 د.ل: 20 وديعة + 6 اتحاد + 2 إشراف)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCardPrice('20');
+                        setUnionFeePerCard('2');
+                        setSupervisionFeePerCard('2');
+                        setCompanyDepositPerCard('16');
+                      }}
+                      style={{
+                        padding: '6px 12px', borderRadius: '8px', border: (cardPrice === '20' && unionFeePerCard === '2') ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                        background: (cardPrice === '20' && unionFeePerCard === '2') ? '#eff6ff' : '#fff', color: (cardPrice === '20' && unionFeePerCard === '2') ? '#2563eb' : '#475569',
+                        fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer'
+                      }}
+                    >
+                      (20 د.ل: 16 وديعة + 2 اتحاد + 2 إشراف)
                     </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>سعر البطاقة الكلي (د.ل)</label>
-                    <input type="number" value={cardPrice} onChange={e => setCardPrice(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#014cb1' }} />
+                    <input type="number" step="0.01" value={cardPrice} onChange={e => {
+                      const val = e.target.value;
+                      setCardPrice(val);
+                      const p = parseFloat(val) || 0;
+                      const u = parseFloat(unionFeePerCard) || 0;
+                      const s = parseFloat(supervisionFeePerCard) || 0;
+                      setCompanyDepositPerCard(Math.max(0, p - u - s).toString());
+                    }} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#014cb1' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>خصم الاتحاد الفعلي (د.ل)</label>
-                    <input type="number" value={unionFeePerCard} onChange={e => setUnionFeePerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#ef4444' }} />
+                    <input type="number" step="0.01" value={unionFeePerCard} onChange={e => {
+                      const val = e.target.value;
+                      setUnionFeePerCard(val);
+                      const p = parseFloat(cardPrice) || 0;
+                      const u = parseFloat(val) || 0;
+                      const s = parseFloat(supervisionFeePerCard) || 0;
+                      setCompanyDepositPerCard(Math.max(0, p - u - s).toString());
+                    }} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#ef4444' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>خصم الهيئة (د.ل)</label>
+                    <input type="number" step="0.01" value={supervisionFeePerCard} onChange={e => {
+                      const val = e.target.value;
+                      setSupervisionFeePerCard(val);
+                      const p = parseFloat(cardPrice) || 0;
+                      const u = parseFloat(unionFeePerCard) || 0;
+                      const s = parseFloat(val) || 0;
+                      setCompanyDepositPerCard(Math.max(0, p - u - s).toString());
+                    }} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#7c3aed' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>وديعة الشركة للبطاقة (د.ل)</label>
-                    <input type="number" value={companyDepositPerCard} onChange={e => setCompanyDepositPerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#059669' }} />
+                    <input type="number" step="0.01" value={companyDepositPerCard} onChange={e => setCompanyDepositPerCard(e.target.value)} required style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 800, fontSize: '1.05rem', color: '#059669' }} />
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', border: '2px dashed #10b981', borderRadius: '20px', padding: '25px', marginBottom: '30px', background: '#f0fdf4' }}>
+              {/* Summary calculations */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '2px dashed #10b981', borderRadius: '20px', padding: '20px', marginBottom: '30px', background: '#f0fdf4' }}>
                 <div style={{ textAlign: 'center', borderLeft: '1px solid #d1fae5' }}>
-                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>الكمية المستلمة</p>
-                  <p style={{ margin: '10px 0 0 0', fontSize: '1.8rem', fontWeight: 900, color: '#10b981' }}>{cardsCount} <span style={{ fontSize: '1rem' }}>بطاقة</span></p>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#64748b' }}>الكمية المستلمة</p>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#10b981' }}>{cardsCount} <span style={{ fontSize: '0.9rem' }}>بطاقة</span></p>
                 </div>
                 <div style={{ textAlign: 'center', borderLeft: '1px solid #d1fae5' }}>
-                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>خصم الاتحاد (المصروفات)</p>
-                  <p style={{ margin: '10px 0 0 0', fontSize: '1.8rem', fontWeight: 900, color: '#ef4444' }}>{totalUnionFee.toLocaleString()} <span style={{ fontSize: '1rem' }}>د.ل</span></p>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#64748b' }}>خصم الاتحاد (المصروفات)</p>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#ef4444' }}>{totalUnionFee.toLocaleString()} <span style={{ fontSize: '0.9rem' }}>د.ل</span></p>
+                </div>
+                <div style={{ textAlign: 'center', borderLeft: '1px solid #d1fae5' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#64748b' }}>خصم الهيئة (الإشراف)</p>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#7c3aed' }}>{totalSupervisionFee.toLocaleString()} <span style={{ fontSize: '0.9rem' }}>د.ل</span></p>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>تضاف كوديعة للشركة</p>
-                  <p style={{ margin: '10px 0 0 0', fontSize: '1.8rem', fontWeight: 900, color: '#f59e0b' }}>{totalCompanyDeposit.toLocaleString()} <span style={{ fontSize: '1rem' }}>د.ل</span></p>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#64748b' }}>تضاف كوديعة للشركة</p>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#f59e0b' }}>{totalCompanyDeposit.toLocaleString()} <span style={{ fontSize: '0.9rem' }}>د.ل</span></p>
                 </div>
               </div>
 
@@ -2269,10 +2509,109 @@ export default function ExpenseManagement({
                   <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>ملاحظات إضافية</label>
                   <textarea value={unionNotes} onChange={e => setUnionNotes(e.target.value)} rows={2} style={{ width: '100%', padding: '15px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', marginTop: '10px' }} placeholder="أضف أي ملاحظات هنا..." />
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>إرفاق صورة الإيصال</label>
-                  <input type="file" accept="image/*,application/pdf" onChange={e => setReceiptImage(e.target.files?.[0] || null)} style={{ width: '100%', padding: '15px', marginTop: '10px', borderRadius: '14px', border: '1px dashed #cbd5e1' }} />
-                  {editingUnionPurchase?.receipt_image && <p style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '5px' }}>✓ يوجد إيصال مرفق مسبقاً</p>}
+
+                {/* Attach Union Receipt */}
+                <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-file-invoice" style={{ color: '#0284c7' }}></i>
+                    إرفاق صورة وصل الاتحاد
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => {
+                      setReceiptImage(e.target.files?.[0] || null);
+                      setDeleteReceiptImage(false);
+                    }}
+                    style={{ width: '100%', padding: '12px', marginTop: '10px', borderRadius: '10px', border: '1px dashed #cbd5e1', background: '#fff' }}
+                  />
+                  {receiptImage && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', padding: '6px 10px', background: '#eff6ff', borderRadius: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 700 }}>ملف محدد: {receiptImage.name}</span>
+                      <button type="button" onClick={() => setReceiptImage(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800 }}>إلغاء</button>
+                    </div>
+                  )}
+                  {editingUnionPurchase?.receipt_image && !deleteReceiptImage && !receiptImage && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 700 }}>
+                        <i className="fa-solid fa-circle-check" style={{ marginLeft: '4px' }}></i> يوجد وصل اتحاد مرفق مسبقاً
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteReceiptImage(true)}
+                        style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="مسح الإيصال نهائياً"
+                      >
+                        <i className="fa-solid fa-trash-can"></i> مسح الإيصال
+                      </button>
+                    </div>
+                  )}
+                  {deleteReceiptImage && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', padding: '8px 12px', background: '#fef2f2', borderRadius: '10px', border: '1px solid #fecaca' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#dc2626', fontWeight: 700 }}>
+                        <i className="fa-solid fa-triangle-exclamation" style={{ marginLeft: '4px' }}></i> سيتم مسح وصل الاتحاد عند حفظ التعديلات
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteReceiptImage(false)}
+                        style={{ background: '#fff', color: '#475569', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        تراجع
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Attach Bank Deposit */}
+                <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-building-columns" style={{ color: '#059669' }}></i>
+                    إرفاق صورة الإيداع المصرفي
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => {
+                      setBankDepositImage(e.target.files?.[0] || null);
+                      setDeleteBankDepositImage(false);
+                    }}
+                    style={{ width: '100%', padding: '12px', marginTop: '10px', borderRadius: '10px', border: '1px dashed #cbd5e1', background: '#fff' }}
+                  />
+                  {bankDepositImage && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', padding: '6px 10px', background: '#ecfdf5', borderRadius: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 700 }}>ملف محدد: {bankDepositImage.name}</span>
+                      <button type="button" onClick={() => setBankDepositImage(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800 }}>إلغاء</button>
+                    </div>
+                  )}
+                  {editingUnionPurchase?.bank_deposit_image && !deleteBankDepositImage && !bankDepositImage && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 700 }}>
+                        <i className="fa-solid fa-circle-check" style={{ marginLeft: '4px' }}></i> يوجد إشعار إيداع مصرفي مرفق
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteBankDepositImage(true)}
+                        style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="مسح إشعار الإيداع"
+                      >
+                        <i className="fa-solid fa-trash-can"></i> مسح الإيصال
+                      </button>
+                    </div>
+                  )}
+                  {deleteBankDepositImage && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', padding: '8px 12px', background: '#fef2f2', borderRadius: '10px', border: '1px solid #fecaca' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#dc2626', fontWeight: 700 }}>
+                        <i className="fa-solid fa-triangle-exclamation" style={{ marginLeft: '4px' }}></i> سيتم مسح إشعار الإيداع عند حفظ التعديلات
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteBankDepositImage(false)}
+                        style={{ background: '#fff', color: '#475569', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        تراجع
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
