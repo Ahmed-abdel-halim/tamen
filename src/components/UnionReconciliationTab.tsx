@@ -294,8 +294,21 @@ export default function UnionReconciliationTab() {
         </div>
       </div>
 
+      {/* Scoped print styles for zero-gap clean printing */}
+      <style>{`
+        @media print {
+          .no-print, [class*="no-print"] { display: none !important; }
+          .users-table-wrapper { border: none !important; box-shadow: none !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+          .users-table { width: 100% !important; border-collapse: collapse !important; border: 1.5px solid #000 !important; margin: 0 !important; }
+          .users-table tr { page-break-inside: avoid !important; }
+          .users-table th, .users-table td { border: 1px solid #000 !important; padding: 6px 8px !important; font-size: 9.5pt !important; text-align: center !important; color: #000 !important; }
+          .users-table th { background: #f1f5f9 !important; font-weight: 900 !important; }
+          .users-table tfoot td { background: #f8fafc !important; font-weight: 900 !important; border-top: 2px solid #000 !important; }
+        }
+      `}</style>
+
       {/* KPI Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {/* Total Amount Paid Locally */}
         <div style={{
           background: 'var(--card-bg)',
@@ -771,6 +784,38 @@ export default function UnionReconciliationTab() {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr style={{ background: '#f8fafc', fontWeight: 900, borderTop: '2px solid #000' }}>
+                <td style={{ padding: '10px', textAlign: 'center', color: '#014cb1', fontWeight: 900 }}>المجموع ({filteredRows.length} طلب)</td>
+                <td style={{ padding: '10px', textAlign: 'center' }}>-</td>
+                <td style={{ padding: '10px', color: '#1e40af', fontWeight: 900 }}>
+                  {filteredRows.reduce((sum, r) => sum + (Number(r.amount_paid) || 0), 0).toLocaleString()} د.ل
+                </td>
+                <td style={{ padding: '10px', textAlign: 'center', fontWeight: 900 }}>
+                  {filteredRows.reduce((sum, r) => sum + (Number(r.local_cards_count) || 0), 0).toLocaleString()}
+                </td>
+                <td style={{ padding: '10px', textAlign: 'center', fontWeight: 900 }}>
+                  {filteredRows.reduce((sum, r) => sum + (Number(r.lifo_cards_count) || 0), 0).toLocaleString()}
+                </td>
+                <td style={{ padding: '10px', textAlign: 'center', fontWeight: 900 }}>
+                  {(() => {
+                    const diff = filteredRows.reduce((sum, r) => sum + (Number(r.cards_diff) || 0), 0);
+                    return diff === 0 ? 'مطابق تماماً' : `${diff > 0 ? '+' : ''}${diff.toLocaleString()} بطاقة`;
+                  })()}
+                </td>
+                <td style={{ padding: '10px', textAlign: 'center', fontWeight: 900, color: filteredRows.reduce((sum, r) => sum + (Number(r.cards_diff) || 0), 0) === 0 ? '#16a34a' : '#dc2626' }}>
+                  {(() => {
+                    const diff = filteredRows.reduce((sum, r) => sum + (Number(r.cards_diff) || 0), 0);
+                    return diff === 0 ? '0 (مطابق)' : diff.toLocaleString();
+                  })()}
+                </td>
+                <td style={{ padding: '10px', textAlign: 'center', fontSize: '0.85rem' }}>
+                  مباعة: {filteredRows.reduce((sum, r) => sum + (Number(r.lifo_issued_cards) || 0), 0).toLocaleString()} | مخزون: {filteredRows.reduce((sum, r) => sum + (Number(r.lifo_assigned_cards) || 0), 0).toLocaleString()}
+                </td>
+                <td style={{ padding: '10px', textAlign: 'center' }}>-</td>
+                <td className="no-print" style={{ padding: '10px', textAlign: 'center' }}>-</td>
+              </tr>
+            </tfoot>
           </table>
         )}
       </div>

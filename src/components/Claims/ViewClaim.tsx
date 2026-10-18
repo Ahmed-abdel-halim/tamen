@@ -212,7 +212,12 @@ export default function ViewClaim() {
       setTransferDetails((prev: any) => {
         const tndBase = prev.tnd_settlement_amount !== undefined ? prev.tnd_settlement_amount : defaultTnd;
         const adminExp = prev.admin_expenses !== undefined ? prev.admin_expenses : '';
-        const transferExp = prev.transfer_expenses !== undefined ? prev.transfer_expenses : '';
+        const transferTaxRate = prev.transfer_tax_rate !== undefined ? prev.transfer_tax_rate : '';
+        let transferExp = prev.transfer_expenses !== undefined ? prev.transfer_expenses : '';
+        if (transferTaxRate !== '' && Number(transferTaxRate) > 0 && transferExp === '') {
+          const sub = (Number(tndBase) || 0) + (Number(adminExp) || 0);
+          transferExp = Number((sub * (Number(transferTaxRate) / 100)).toFixed(3));
+        }
         const calcFinalTnd = (Number(tndBase) || 0) + (Number(adminExp) || 0) + (Number(transferExp) || 0);
         const finalTnd = prev.final_tnd_value !== undefined ? prev.final_tnd_value : (calcFinalTnd > 0 ? Number(calcFinalTnd.toFixed(3)) : '');
         const finalLyd = prev.final_lyd_value !== undefined ? prev.final_lyd_value : (finalTnd > 0 ? Number((Number(finalTnd) * tndRate).toFixed(3)) : defaultComp);
@@ -228,6 +233,7 @@ export default function ViewClaim() {
           recipient_name: prev.recipient_name || 'الاتحاد الليبي لشركات التأمين',
           tnd_settlement_amount: tndBase,
           admin_expenses: adminExp,
+          transfer_tax_rate: transferTaxRate,
           transfer_expenses: transferExp,
           final_tnd_value: finalTnd,
           final_lyd_value: finalLyd,
@@ -246,13 +252,38 @@ export default function ViewClaim() {
       const updated = { ...prev, [key]: value };
 
       // ─── الحسابات التلقائية لنموذج "للتسديد - الشؤون المالية" ───
-      // القيمة النهائية بالتونسي = المبلغ + مصاريف إدارية + مصاريف التحويل
+      // مصاريف التحويل = (مبلغ التسوية + مصاريف إدارية) × (نسبة ضريبة التحويل % ÷ 100)
+      // القيمة النهائية بالتونسي = مبلغ التسوية + مصاريف إدارية + مصاريف التحويل
       // القيمة النهائية بالليبي = القيمة النهائية بالتونسي × سعر الصرف
-      if (['tnd_settlement_amount', 'admin_expenses', 'transfer_expenses'].includes(key)) {
-        const tndBase    = Number(key === 'tnd_settlement_amount' ? value : (updated.tnd_settlement_amount ?? 0)) || 0;
-        const adminExp   = Number(key === 'admin_expenses'        ? value : (updated.admin_expenses ?? 0))        || 0;
-        const transferExp= Number(key === 'transfer_expenses'     ? value : (updated.transfer_expenses ?? 0))     || 0;
-        const finalTnd   = tndBase + adminExp + transferExp;
+      if (['tnd_settlement_amount', 'admin_expenses', 'transfer_expenses', 'transfer_tax_rate'].includes(key)) {
+        const tndBase  = Number(key === 'tnd_settlement_amount' ? value : (updated.tnd_settlement_amount ?? 0)) || 0;
+        const adminExp = Number(key === 'admin_expenses'        ? value : (updated.admin_expenses ?? 0))        || 0;
+        const subtotal = tndBase + adminExp;
+
+        let transferTaxRate = key === 'transfer_tax_rate' ? (value === '' ? '' : Number(value)) : (updated.transfer_tax_rate !== undefined ? updated.transfer_tax_rate : '');
+        let transferExp     = Number(key === 'transfer_expenses' ? value : (updated.transfer_expenses ?? 0)) || 0;
+
+        if (key === 'transfer_tax_rate') {
+          if (transferTaxRate !== '' && Number(transferTaxRate) >= 0) {
+            transferExp = Number((subtotal * (Number(transferTaxRate) / 100)).toFixed(3));
+            updated.transfer_expenses = transferExp;
+          } else {
+            transferExp = 0;
+            updated.transfer_expenses = '';
+          }
+        } else if (key === 'transfer_expenses') {
+          if (subtotal > 0 && transferExp > 0) {
+            transferTaxRate = Number(((transferExp / subtotal) * 100).toFixed(2));
+            updated.transfer_tax_rate = transferTaxRate;
+          }
+        } else if (['tnd_settlement_amount', 'admin_expenses'].includes(key)) {
+          if (transferTaxRate !== '' && Number(transferTaxRate) > 0) {
+            transferExp = Number((subtotal * (Number(transferTaxRate) / 100)).toFixed(3));
+            updated.transfer_expenses = transferExp;
+          }
+        }
+
+        const finalTnd = subtotal + transferExp;
         updated.final_tnd_value = finalTnd > 0 ? Number(finalTnd.toFixed(3)) : '';
 
         const cachedRates = localStorage.getItem('mli_exchange_rates');
@@ -1056,7 +1087,64 @@ export default function ViewClaim() {
               />
             </div>
             <div className="field-group">
-              <label style={{ color: '#0369a1' }}>مصاريف التحويل (د.ت)</label>
+              <label style={{ color: '#0369a1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>ضريبة / مصاريف التحويل (%)</span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>نسبة من الإجمالي</span>
+              </label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="number"
+                  step="any"
+                  value={transferDetails.transfer_tax_rate !== undefined ? transferDetails.transfer_tax_rate : ''}
+                  onChange={e => handleDetailChange('transfer_tax_rate', e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="مثال: 15 أو 16"
+                  style={{ borderColor: '#bae6fd', flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDetailChange('transfer_tax_rate', 15)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    borderRadius: '8px',
+                    border: '1px solid #bae6fd',
+                    background: transferDetails.transfer_tax_rate === 15 ? '#0284c7' : '#f0f9ff',
+                    color: transferDetails.transfer_tax_rate === 15 ? '#fff' : '#0369a1',
+                    cursor: 'pointer',
+                    fontWeight: 800
+                  }}
+                  title="تطبيق نسبة 15%"
+                >
+                  15%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDetailChange('transfer_tax_rate', 16)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    borderRadius: '8px',
+                    border: '1px solid #bae6fd',
+                    background: transferDetails.transfer_tax_rate === 16 ? '#0284c7' : '#f0f9ff',
+                    color: transferDetails.transfer_tax_rate === 16 ? '#fff' : '#0369a1',
+                    cursor: 'pointer',
+                    fontWeight: 800
+                  }}
+                  title="تطبيق نسبة 16%"
+                >
+                  16%
+                </button>
+              </div>
+            </div>
+            <div className="field-group">
+              <label style={{ color: '#0369a1' }}>
+                مصاريف التحويل (د.ت)
+                {transferDetails.transfer_tax_rate ? (
+                  <span style={{ fontSize: '11px', color: '#0284c7', marginRight: '6px', fontWeight: 700 }}>
+                    ({transferDetails.transfer_tax_rate}%)
+                  </span>
+                ) : null}
+              </label>
               <input
                 type="number"
                 step="any"
@@ -1076,6 +1164,11 @@ export default function ViewClaim() {
                 placeholder="محسوبة تلقائياً"
                 style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: 900, borderColor: '#93c5fd' }}
               />
+              {transferDetails.final_tnd_value ? (
+                <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                  التسوية ({transferDetails.tnd_settlement_amount || 0}) + إدارية ({transferDetails.admin_expenses || 0}) + تحويل ({transferDetails.transfer_expenses || 0} د.ت)
+                </div>
+              ) : null}
             </div>
 
             {/* ─── القسم المالي بالليبي ─── */}
@@ -1951,6 +2044,7 @@ export default function ViewClaim() {
                               // ── الحقول الجديدة بالتونسي والليبي ──
                               tnd_settlement_amount: 'مبلغ التسوية (د.ت)',
                               admin_expenses: 'مصاريف إدارية (د.ت)',
+                              transfer_tax_rate: 'نسبة ضريبة / مصاريف التحويل (%)',
                               transfer_expenses: 'مصاريف التحويل (د.ت)',
                               final_tnd_value: 'القيمة النهائية (د.ت)',
                               final_lyd_value: 'القيمة النهائية (د.ل)',

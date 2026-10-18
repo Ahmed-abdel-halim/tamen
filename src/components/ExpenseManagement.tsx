@@ -1428,20 +1428,58 @@ export default function ExpenseManagement({
     <section className="users-management">
       <style>{`
         @media print {
-          @page { size: landscape; margin: 15mm; }
-          body { background: #fff !important; direction: rtl !important; font-family: 'Arial', sans-serif !important; }
-          .no-print, .sidebar, .topbar { display: none !important; }
-          .print-official-header { display: flex !important; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }
-          .users-management { padding: 0 !important; }
-          .users-table-wrapper { border: none !important; box-shadow: none !important; overflow: visible !important; }
-          .users-table { width: 100% !important; border-collapse: collapse !important; border: 1.5px solid #000 !important; }
-          .users-table th, .users-table td { border: 1px solid #000 !important; padding: 10px !important; color: #000 !important; font-size: 11pt !important; text-align: center !important; }
-          .users-table th { background: #f0f0f0 !important; font-weight: bold !important; }
-          * { visibility: hidden; }
-          .print-official-header, .print-official-header *, 
-          .users-table-wrapper, .users-table-wrapper * { visibility: visible; }
-          .print-official-header { position: static; }
-          .users-table-wrapper { position: relative; top: 0; }
+          @page { size: landscape; margin: 10mm; }
+          body { 
+            background: #fff !important; 
+            direction: rtl !important; 
+            font-family: 'Cairo', 'Segoe UI', Arial, sans-serif !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .no-print, .sidebar, .topbar, [class*="no-print"], nav, header { 
+            display: none !important; 
+          }
+          .print-official-header { 
+            display: flex !important; 
+            justify-content: space-between; 
+            align-items: center !important; 
+            margin-bottom: 12px !important; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 8px !important; 
+          }
+          .users-management { padding: 0 !important; margin: 0 !important; }
+          .users-table-wrapper { 
+            border: none !important; 
+            box-shadow: none !important; 
+            overflow: visible !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+          }
+          .users-table { 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            border: 1.5px solid #000 !important; 
+            margin: 0 !important;
+          }
+          .users-table tr {
+            page-break-inside: avoid !important;
+          }
+          .users-table th, .users-table td { 
+            border: 1px solid #000 !important; 
+            padding: 6px 8px !important; 
+            color: #000 !important; 
+            font-size: 9.5pt !important; 
+            text-align: center !important; 
+          }
+          .users-table th { 
+            background: #f1f5f9 !important; 
+            font-weight: 900 !important; 
+          }
+          .users-table tfoot td {
+            background: #f8fafc !important;
+            font-weight: 900 !important;
+            border-top: 2px solid #000 !important;
+          }
         }
         .print-official-header { display: none; }
       `}</style>
@@ -1449,29 +1487,30 @@ export default function ExpenseManagement({
       {/* Official Corporate Header for Print */}
       <div className="print-official-header" style={{ width: '100%', direction: 'rtl' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src={resolveImageUrl('/img/logo.png')} alt="Logo" style={{ width: '90px', height: '90px', objectFit: 'contain' }} />
+          <img src={resolveImageUrl('/img/logo.png')} alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
-            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#000' }}>المدار الليبي للتأمين</h1>
-            <p style={{ margin: '5px 0 0 0', fontSize: '1rem', color: '#000' }}>قسم الشؤون المالية والموارد البشرية</p>
+            <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#000' }}>المدار الليبي للتأمين</h1>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.95rem', color: '#000' }}>قسم الشؤون المالية والموارد البشرية</p>
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', flex: 1, marginTop: '15px' }}>
-          <div style={{ display: 'inline-block', border: '1.5px solid #000', padding: '12px 40px', borderRadius: '15px', backgroundColor: '#f9f9f9' }}>
-            <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800 }}>
-              {activeTab === 'union' ? 'سجل تداول أرصدة بطاقة الاتحاد (البرتقالية)' :
-                activeTab === 'expenses' ? 'كشف المصروفات التشغيلية المعتمدة' : 'كشف التعويضات والمطالبات المالية'}
+        <div style={{ textAlign: 'center', flex: 1, marginTop: '5px' }}>
+          <div style={{ display: 'inline-block', border: '1.5px solid #000', padding: '10px 32px', borderRadius: '12px', backgroundColor: '#f9f9f9' }}>
+            <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800 }}>
+              {activeTab === 'union' ? (
+                unionSubTab === 'reconciliation' ? 'سجل مطابقة رصيد الاتحاد مع البطاقات والمدفوعات (LIFO)' : 'سجل شراء رصيد البطاقة البرتقالية (الاتحاد)'
+              ) : activeTab === 'expenses' ? 'كشف المصروفات التشغيلية المعتمدة' : 'كشف التعويضات والمطالبات المالية'}
             </h2>
-            <p style={{ margin: '8px 0 0 0', fontSize: '1.1rem', fontWeight: 600 }}>
+            <p style={{ margin: '6px 0 0 0', fontSize: '1rem', fontWeight: 600 }}>
               بتاريخ: {new Date().toLocaleDateString('ar-LY')}
             </p>
           </div>
         </div>
 
-        <div style={{ textAlign: 'left', minWidth: '180px', marginTop: '10px' }}>
-          <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>الرقم المرجعي: {Math.floor(Math.random() * 900000 + 100000)}</p>
-          <p style={{ margin: '5px 0 0 0', fontSize: '1rem' }}>الحالة: وثيقة رسمية معتمدة</p>
-          <p style={{ margin: '5px 0 0 0', fontSize: '1rem' }}>المستخدم: المدير المالي</p>
+        <div style={{ textAlign: 'left', minWidth: '180px', marginTop: '5px' }}>
+          <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>الرقم المرجعي: {Math.floor(Math.random() * 900000 + 100000)}</p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem' }}>الحالة: وثيقة رسمية معتمدة</p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem' }}>المستخدم: المدير المالي</p>
         </div>
       </div>
 
@@ -1512,7 +1551,7 @@ export default function ExpenseManagement({
           </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
+          <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
             <div className="stat-box" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
               <div style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 600, marginBottom: '5px' }}>إجمالي مبلغ {activeTab === 'expenses' ? 'المصروفات' : 'التعويضات'}</div>
               <div style={{ fontSize: '26px', fontWeight: '900', color: '#ef4444' }}>{filteredStats.total.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
@@ -1739,7 +1778,7 @@ export default function ExpenseManagement({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+          <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
             <div className="stat-box" style={{ background: '#fef3c7', padding: '20px', borderRadius: '15px', border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ color: '#92400e', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>صافي مبلغ الوديعة (المتبقي للشركة)</div>
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#92400e' }}>{unionFilteredStats.totalDeposit.toLocaleString()} <span style={{ fontSize: '14px' }}>د.ل</span></div>
