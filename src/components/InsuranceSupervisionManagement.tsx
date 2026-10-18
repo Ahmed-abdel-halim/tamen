@@ -8,6 +8,7 @@ import {
   printSupervisionDetailedDocsReport,
   printSinglePaymentVoucher
 } from '../utils/printInsuranceSupervisionReport';
+import CompulsoryDocumentRequestsTab from './CompulsoryDocumentRequestsTab';
 
 interface SupervisionSummary {
   total_supervision_due: number;
@@ -68,7 +69,7 @@ interface DetailedDocRow {
 
 export default function InsuranceSupervisionManagement() {
   const canEdit = canEditFinancial('إدارة الإيرادات');
-  const [activeTab, setActiveTab] = useState<'ledger' | 'reports' | 'payments' | 'settings'>('ledger');
+  const [activeTab, setActiveTab] = useState<'ledger' | 'reports' | 'payments' | 'requests' | 'settings'>('ledger');
   const [loading, setLoading] = useState(false);
 
   // Summary State
@@ -878,6 +879,26 @@ export default function InsuranceSupervisionManagement() {
         </button>
 
         <button
+          onClick={() => setActiveTab('requests')}
+          style={{
+            padding: '11px 22px',
+            borderRadius: '12px',
+            border: 'none',
+            background: activeTab === 'requests' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : 'var(--card-bg)',
+            color: activeTab === 'requests' ? '#fff' : 'var(--text)',
+            fontWeight: 800,
+            fontSize: '0.92rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: activeTab === 'requests' ? '0 4px 10px rgba(2, 132, 199, 0.25)' : 'none'
+          }}
+        >
+          <i className="fa-solid fa-file-signature"></i> طلبات وثائق الإجباري (الخطابات الرسمية)
+        </button>
+
+        <button
           onClick={() => setActiveTab('settings')}
           style={{
             padding: '11px 22px',
@@ -1508,6 +1529,11 @@ export default function InsuranceSupervisionManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB 4: COMPULSORY DOCUMENT SUPPLY REQUESTS & OFFICIAL LETTERS */}
+      {activeTab === 'requests' && (
+        <CompulsoryDocumentRequestsTab />
       )}
 
       {/* MODAL: ADD / EDIT PAYMENT */}
