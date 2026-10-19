@@ -157,7 +157,15 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          overflow: hidden;
+          overflow: visible; /* لا نقص الترويسة الممتدة للحواف */
+        }
+        /* نضمن أن ظل الورقة يظهر صحيحاً */
+        .paper-container::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: #ffffff;
+          z-index: -1;
         }
 
         /* ─── الترويسة الرسمية — ممتدة من بداية الصفحة لنهايتها بالكامل ─── */
