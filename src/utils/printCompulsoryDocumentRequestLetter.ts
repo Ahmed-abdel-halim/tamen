@@ -160,106 +160,49 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           overflow: hidden;
         }
 
-        /* ─── الترويسة الرسمية في الوسط زي وثيقة المدار الأصلية ─── */
+        /* ─── الترويسة الرسمية (اللوجو على اليمين - التاريخ والإشاري على اليسار مع الخط الفاصل) ─── */
         .official-header {
           display: flex;
-          flex-direction: column;
+          justify-content: space-between;
           align-items: center;
-          justify-content: center;
           padding-bottom: 12px;
           border-bottom: 2px solid #0f172a;
-          margin-bottom: 12px;
-          text-align: center;
-          position: relative;
+          margin-bottom: 18px;
         }
 
-        .header-brand-centered {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          width: 100%;
-        }
-
-        .header-logo-wrap {
-          width: 65px;
-          height: 65px;
-          margin-bottom: 3px;
+        /* الطرف الأيمن: شعار الشركة */
+        .header-logo-box {
+          width: 80px;
+          height: 80px;
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
         }
-        .header-logo-wrap img {
-          max-width: 65px;
-          max-height: 65px;
+        .header-logo-box img {
+          max-width: 80px;
+          max-height: 80px;
           object-fit: contain;
         }
 
-        .company-title-ar {
-          font-family: 'Amiri', 'Traditional Arabic', serif;
-          font-size: 24px;
-          font-weight: 900;
-          color: #091e3a;
-          letter-spacing: 1.5px;
-          line-height: 1.25;
-          margin: 0;
-        }
-
-        .company-title-en {
-          font-family: 'Cairo', 'Times New Roman', serif;
-          font-size: 13px;
-          font-weight: 900;
-          color: #0f172a;
-          letter-spacing: 2.5px;
-          text-transform: uppercase;
-          line-height: 1.3;
-          margin-top: 1px;
-        }
-
-        .company-sub-ar {
-          font-family: 'Amiri', 'Traditional Arabic', serif;
-          font-size: 12.5px;
-          font-weight: 700;
-          color: #1e293b;
-          margin-top: 2px;
-          line-height: 1.3;
-        }
-
-        .company-sub-en {
-          font-family: 'Cairo', sans-serif;
-          font-size: 10px;
-          font-weight: 700;
-          color: #334155;
-          letter-spacing: 0.8px;
-          text-transform: uppercase;
-          line-height: 1.3;
-          margin-top: 1px;
-        }
-
-        /* شريط التاريخ والرقم الإشاري جهة اليسار أسفل الخط الفاصل */
-        .letter-meta-strip {
-          display: flex;
-          justify-content: flex-end; /* محاذاة لجهة اليسار في نمط RTL */
-          margin-bottom: 12px;
-        }
-
+        /* الطرف الأيسر: التاريخ والرقم الإشاري */
         .header-meta-box {
           text-align: right;
-          min-width: 195px;
+          min-width: 185px;
           font-family: 'Amiri', serif;
           background: #f8fafc;
-          padding: 6px 14px;
-          border-radius: 6px;
-          border: 1px solid #cbd5e1;
+          padding: 8px 14px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          flex-shrink: 0;
         }
         .meta-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           font-size: 13.5px;
-          line-height: 1.7;
+          line-height: 1.75;
         }
         .meta-lbl {
           font-weight: 900;
@@ -298,7 +241,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
 
         /* المخاطبة والموضوع */
         .recipient-box {
-          margin-top: 8px;
+          margin-top: 10px;
           margin-bottom: 12px;
         }
         .addressed-to {
@@ -312,7 +255,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           font-size: 17.5px;
           font-weight: 900;
           color: #0f172a;
-          margin: 12px 0 14px 0;
+          margin: 14px 0 16px 0;
           text-decoration: underline;
           text-underline-offset: 5px;
           text-decoration-thickness: 1.5px;
@@ -321,19 +264,19 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           font-size: 15.5px;
           font-weight: 800;
           color: #0f172a;
-          margin-bottom: 14px;
+          margin-bottom: 16px;
         }
 
         /* نص الخطاب الرسمي مطابق للأصل */
         .letter-content {
           font-size: 16.5px;
-          line-height: 2.2;
+          line-height: 2.25;
           color: #0f172a;
           text-align: justify;
-          margin-bottom: 20px;
+          margin-bottom: 25px;
         }
         .letter-content p {
-          margin: 0 0 12px 0;
+          margin: 0 0 14px 0;
           text-indent: 16px;
         }
         .highlight-bold {
@@ -344,10 +287,10 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         /* الخاتمة والسلام */
         .closing-section {
           text-align: center;
-          margin: 15px 0 20px 0;
+          margin: 20px 0 35px 0;
           font-size: 15.5px;
           font-weight: 800;
-          line-height: 1.8;
+          line-height: 1.9;
         }
         .closing-section .salam {
           font-size: 16.5px;
@@ -356,20 +299,20 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           letter-spacing: 1px;
         }
 
-        /* ─── قسم التوقيع (على جهة اليسار ومقربين على بعض) ─── */
+        /* ─── قسم التوقيع (على جهة اليسار بناءً على الطلب) ─── */
         .signatures-area {
           display: flex;
           justify-content: flex-end; /* محاذاة لجهة اليسار في نمط RTL */
           align-items: flex-start;
           padding-left: 25px;
           padding-right: 0;
-          margin-top: 10px;
-          margin-bottom: 15px;
+          margin-top: 15px;
+          margin-bottom: 25px;
           width: 100%;
         }
         .company-signature-box {
           text-align: center;
-          min-width: 220px;
+          min-width: 230px;
           margin-right: auto; /* يضمن دفع صندوق التوقيع لجهة اليسار */
           margin-left: 0;
         }
@@ -377,10 +320,10 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           font-size: 17.5px;
           font-weight: 900;
           color: #091e3a;
-          margin-bottom: 2px;
+          margin-bottom: 0;
         }
         .signature-manual-space {
-          height: 12px; /* مسافة قريبة ومناسبة جداً بناءً على طلب المستخدم */
+          height: 60px; /* مساحة خالية كافية للتوقيع والختم اليدوي الفعلي */
         }
         .company-signature-name {
           font-size: 16.5px;
@@ -479,21 +422,14 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         </div>
 
         <div style="position: relative; z-index: 1;">
-          <!-- الترويسة الرسمية في الوسط زي وثيقة المدار الأصلية -->
+          <!-- الترويسة الرسمية: اللوجو على اليمين والتاريخ والإشاري على اليسار مع الخط الفاصل -->
           <div class="official-header">
-            <div class="header-brand-centered">
-              <div class="header-logo-wrap">
-                <img src="/img/logo.png" onerror="this.src='/img/official_logo.PNG'; this.onerror=null;" alt="المدار الليبي للتأمين" />
-              </div>
-              <div class="company-title-ar">الـمـدار الـلـيـبـي لـلـتـأمـيـن</div>
-              <div class="company-title-en">ALMADAR LIBYAN INSURANCE</div>
-              <div class="company-sub-ar">رأس مال الشركة (10) مليون د.ل / سجل تجاري رقم ( 8748 )</div>
-              <div class="company-sub-en">EQUITY CAPITAL (10) MILLION L.Y.D – COMMERCIAL REG (8748)</div>
+            <!-- الطرف الأيمن: شعار الشركة -->
+            <div class="header-logo-box">
+              <img src="/img/logo.png" onerror="this.src='/img/official_logo.PNG'; this.onerror=null;" alt="شعار شركة المدار" />
             </div>
-          </div>
 
-          <!-- شريط التاريخ والرقم الإشاري (على جهة اليسار أسفل الخط الفاصل) -->
-          <div class="letter-meta-strip">
+            <!-- الطرف الأيسر: التاريخ والرقم الإشاري -->
             <div class="header-meta-box">
               <div class="meta-row">
                 <span class="meta-lbl">التاريخ :</span>
