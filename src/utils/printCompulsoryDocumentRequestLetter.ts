@@ -160,7 +160,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           overflow: hidden;
         }
 
-        /* ─── الترويسة الرسمية (بانر المدار الرسمي مع خلفية الخط المزخرفة كأنها في الخلفية) ─── */
+        /* ─── الترويسة الرسمية — ممتدة من بداية الصفحة لنهايتها بالكامل ─── */
         .official-header {
           display: flex;
           flex-direction: column;
@@ -169,14 +169,18 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           padding-bottom: 4px;
           border-bottom: 2px solid #0f172a;
           margin-bottom: 8px;
-          width: 100%;
+          /* تمدد الترويسة خارج حدود padding الحاوية لتملأ العرض الكامل للورقة */
+          width: calc(100% + 36mm); /* 18mm يمين + 18mm يسار */
+          margin-right: -18mm;
+          margin-left: -18mm;
+          margin-top: -12mm; /* تعويض padding العلوي للحاوية */
         }
         .official-header-banner-img {
           width: 100%;
-          max-height: 110px;
-          object-fit: contain;
+          height: auto;
+          max-height: 130px;
+          object-fit: fill;  /* يملأ العرض الكامل بدون قص */
           display: block;
-          margin: 0 auto;
         }
 
         /* شريط التاريخ والرقم الإشاري جهة اليسار أسفل الترويسة مباشرة */
@@ -377,6 +381,14 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
+          /* ضبط الترويسة عند الطباعة لتعويض padding الطباعة (12mm) */
+          .official-header {
+            width: calc(100% + 24mm) !important;
+            margin-right: -12mm !important;
+            margin-left: -12mm !important;
+            margin-top: -8mm !important;
+            border-bottom: 2px solid #0f172a !important;
+          }
           .watermark-container {
             opacity: 0.055 !important;
             -webkit-print-color-adjust: exact !important;
@@ -389,9 +401,6 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           .header-meta-box {
             background: transparent !important;
             border: 1px solid #94a3b8 !important;
-          }
-          .official-header {
-            border-bottom: 2px solid #0f172a !important;
           }
         }
       </style>
