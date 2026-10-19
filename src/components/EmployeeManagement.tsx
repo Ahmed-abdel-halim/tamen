@@ -133,6 +133,9 @@ interface CustodyItem {
 
 interface InsuranceDoc {
   id: number;
+  user_id?: number | string;
+  created_by?: number | string;
+  is_canceled?: boolean | number;
   document_number?: string;
   insurance_number?: string;
   doc_category?: string;
@@ -179,6 +182,33 @@ function resolvePublicUrl(path: string | null | undefined): string {
 const fmt = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = (v: unknown) => fmt.format(Number(v ?? 0));
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("ar-LY") : "—");
+
+const getTodayDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const getDocumentStatusInfo = (doc: any) => {
+  if (doc.status === "canceled" || doc.status === "cancelled" || Boolean(doc.is_canceled)) {
+    return { status: "canceled" as const, label: "ملغية", badgeClass: "status-tag canceled" };
+  }
+  if (doc.end_date) {
+    try {
+      const endStr = String(doc.end_date).substring(0, 10);
+      const todayStr = getTodayDateString();
+      if (endStr < todayStr) {
+        return { status: "expired" as const, label: "منتهية", badgeClass: "status-tag expired-doc" };
+      }
+    } catch {}
+  }
+  if (doc.status === "expired" || doc.status === "archived") {
+    return { status: "expired" as const, label: "منتهية", badgeClass: "status-tag expired-doc" };
+  }
+  return { status: "active" as const, label: "سارية", badgeClass: "status-tag active-doc" };
+};
 
 const MONTHS_AR = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -405,6 +435,7 @@ export default function EmployeeManagement() {
   // Filters
   const [selectedDocType, setSelectedDocType] = useState("all");
   const [excludeCanceledDocs, setExcludeCanceledDocs] = useState(true);
+  const [docStatusFilter, setDocStatusFilter] = useState<"all" | "active" | "expired" | "canceled">("all");
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
@@ -705,7 +736,12 @@ export default function EmployeeManagement() {
             docsData = Array.isArray(d) ? d : d.data || [];
           }
         }
-        setInsuranceDocs(docsData);
+        // Strict safety check: only keep documents issued by this employee
+        const userStrictDocs = docsData.filter((doc: any) => {
+          if (doc.user_id && Number(doc.user_id) !== Number(empId)) return false;
+          return true;
+        });
+        setInsuranceDocs(userStrictDocs);
       } catch {}
 
       try {
@@ -1175,16 +1211,19 @@ export default function EmployeeManagement() {
         { header: "تاريخ الإصدار", key: "issued_at", width: 16 },
       ];
 
-      const data = filteredDocs.map((d) => ({
-        doc_num: d.insurance_number || d.document_number || "—",
-        type: d.insurance_type || "—",
-        insured: d.insured_name || "—",
-        start: fmtDate(d.start_date),
-        end: fmtDate(d.end_date),
-        premium: Number(d.premium || 0).toFixed(2),
-        status: d.status === "canceled" ? "ملغية" : "سارية",
-        issued_at: fmtDate(d.created_at),
-      }));
+      const data = filteredDocs.map((d) => {
+        const st = getDocumentStatusInfo(d);
+        return {
+          doc_num: d.insurance_number || d.document_number || "—",
+          type: d.insurance_type || "—",
+          insured: d.insured_name || "—",
+          start: fmtDate(d.start_date),
+          end: fmtDate(d.end_date),
+          premium: Number(d.premium || 0).toFixed(2),
+          status: st.label,
+          issued_at: fmtDate(d.created_at),
+        };
+      });
 
       await generatePremiumExcel({
         title: `وثائق التأمين الصادرة بواسطة: ${employee.name}`,
@@ -3150,27 +3189,62 @@ export default function EmployeeManagement() {
     );
   });
 
-  const filteredDocs = insuranceDocs.filter((d) => {
-    if (excludeCanceledDocs && d.status === "canceled") return false;
-    if (selectedDocType !== "all") {
-      const cat = d.doc_category;
-      if (cat && cat === selectedDocType) return true;
-      const t = d.insurance_type || "";
-      if (selectedDocType === "insurance_documents" && (t.includes("سيارات") || t.includes("إجباري") || t.includes("شامل"))) return true;
-      if (selectedDocType === "international_insurance_documents" && (t.includes("دولي") || t.includes("بطاقة"))) return true;
-      if (selectedDocType === "travel_insurance_documents" && (t.includes("سفر") || t.includes("مسافر"))) return true;
-      if (selectedDocType === "resident_insurance_documents" && (t.includes("وافد") || t.includes("مقيم") || t.includes("إقامة"))) return true;
-      if (selectedDocType === "marine_structure_insurance_documents" && (t.includes("بحر") || t.includes("هياكل"))) return true;
-      if (selectedDocType === "professional_liability_insurance_documents" && (t.includes("مسؤولية") || t.includes("مهنية"))) return true;
-      if (selectedDocType === "personal_accident_insurance_documents" && (t.includes("حوادث") || t.includes("شخصية"))) return true;
-      if (selectedDocType === "school_student_insurance_documents" && (t.includes("طالب") || t.includes("مدارس"))) return true;
-      if (selectedDocType === "cargo_insurance_documents" && (t.includes("بضائع") || t.includes("شحن"))) return true;
-      if (selectedDocType === "cash_in_transit_insurance_documents" && (t.includes("نقد") || t.includes("أموال"))) return true;
-      if (t.includes(selectedDocType)) return true;
-      return false;
-    }
-    return true;
-  });
+  const employeeOwnedDocs = useMemo(() => {
+    return insuranceDocs.filter((d) => {
+      if (employee && d.user_id && Number(d.user_id) !== Number(employee.id)) return false;
+      return true;
+    });
+  }, [insuranceDocs, employee]);
+
+  const docStats = useMemo(() => {
+    let active = 0;
+    let expired = 0;
+    let canceled = 0;
+    employeeOwnedDocs.forEach((d) => {
+      const st = getDocumentStatusInfo(d).status;
+      if (st === "canceled") canceled++;
+      else if (st === "expired") expired++;
+      else active++;
+    });
+    return {
+      total: employeeOwnedDocs.length,
+      active,
+      expired,
+      canceled,
+    };
+  }, [employeeOwnedDocs]);
+
+  const filteredDocs = useMemo(() => {
+    return employeeOwnedDocs.filter((d) => {
+      const statusInfo = getDocumentStatusInfo(d);
+
+      if (docStatusFilter !== "all" && statusInfo.status !== docStatusFilter) {
+        return false;
+      }
+      if (docStatusFilter === "all" && excludeCanceledDocs && statusInfo.status === "canceled") {
+        return false;
+      }
+
+      if (selectedDocType !== "all") {
+        const cat = d.doc_category;
+        if (cat && cat === selectedDocType) return true;
+        const t = d.insurance_type || "";
+        if (selectedDocType === "insurance_documents" && (t.includes("سيارات") || t.includes("إجباري") || t.includes("شامل"))) return true;
+        if (selectedDocType === "international_insurance_documents" && (t.includes("دولي") || t.includes("بطاقة"))) return true;
+        if (selectedDocType === "travel_insurance_documents" && (t.includes("سفر") || t.includes("مسافر"))) return true;
+        if (selectedDocType === "resident_insurance_documents" && (t.includes("وافد") || t.includes("مقيم") || t.includes("إقامة"))) return true;
+        if (selectedDocType === "marine_structure_insurance_documents" && (t.includes("بحر") || t.includes("هياكل"))) return true;
+        if (selectedDocType === "professional_liability_insurance_documents" && (t.includes("مسؤولية") || t.includes("مهنية"))) return true;
+        if (selectedDocType === "personal_accident_insurance_documents" && (t.includes("حوادث") || t.includes("شخصية"))) return true;
+        if (selectedDocType === "school_student_insurance_documents" && (t.includes("طالب") || t.includes("مدارس"))) return true;
+        if (selectedDocType === "cargo_insurance_documents" && (t.includes("بضائع") || t.includes("شحن"))) return true;
+        if (selectedDocType === "cash_in_transit_insurance_documents" && (t.includes("نقد") || t.includes("أموال"))) return true;
+        if (t.includes(selectedDocType)) return true;
+        return false;
+      }
+      return true;
+    });
+  }, [employeeOwnedDocs, docStatusFilter, excludeCanceledDocs, selectedDocType]);
 
   // Financial Calculations
   const baseSalary = Number(employee?.salary || 0);
@@ -4192,6 +4266,131 @@ export default function EmployeeManagement() {
                 </div>
               </div>
 
+              {/* شريط فلترة حالة الوثائق (الكل، سارية، منتهية، ملغية) */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '12px 18px', borderBottom: '1px solid var(--border)', background: 'var(--table-header-bg, rgba(0,0,0,0.02))' }}>
+                <button
+                  type="button"
+                  onClick={() => setDocStatusFilter("all")}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid ' + (docStatusFilter === "all" ? 'var(--primary, #0284c7)' : 'var(--border)'),
+                    background: docStatusFilter === "all" ? 'var(--primary, #0284c7)' : 'var(--card-bg)',
+                    color: docStatusFilter === "all" ? '#fff' : 'var(--text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span>الكل</span>
+                  <span style={{
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    background: docStatusFilter === "all" ? 'rgba(255,255,255,0.25)' : 'rgba(100,116,139,0.15)',
+                    fontSize: '11px',
+                  }}>
+                    {docStats.total}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDocStatusFilter("active")}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid ' + (docStatusFilter === "active" ? '#10b981' : 'var(--border)'),
+                    background: docStatusFilter === "active" ? '#10b981' : 'var(--card-bg)',
+                    color: docStatusFilter === "active" ? '#fff' : 'var(--text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <i className="fa-solid fa-circle-check" style={{ color: docStatusFilter === "active" ? '#fff' : '#10b981' }} />
+                  <span>سارية المفعول</span>
+                  <span style={{
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    background: docStatusFilter === "active" ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)',
+                    color: docStatusFilter === "active" ? '#fff' : '#10b981',
+                    fontSize: '11px',
+                  }}>
+                    {docStats.active}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDocStatusFilter("expired")}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid ' + (docStatusFilter === "expired" ? '#f59e0b' : 'var(--border)'),
+                    background: docStatusFilter === "expired" ? '#f59e0b' : 'var(--card-bg)',
+                    color: docStatusFilter === "expired" ? '#fff' : 'var(--text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <i className="fa-solid fa-clock-rotate-left" style={{ color: docStatusFilter === "expired" ? '#fff' : '#f59e0b' }} />
+                  <span>منتهية الصلاحية</span>
+                  <span style={{
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    background: docStatusFilter === "expired" ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)',
+                    color: docStatusFilter === "expired" ? '#fff' : '#f59e0b',
+                    fontSize: '11px',
+                  }}>
+                    {docStats.expired}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDocStatusFilter("canceled")}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid ' + (docStatusFilter === "canceled" ? '#ef4444' : 'var(--border)'),
+                    background: docStatusFilter === "canceled" ? '#ef4444' : 'var(--card-bg)',
+                    color: docStatusFilter === "canceled" ? '#fff' : 'var(--text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <i className="fa-solid fa-ban" style={{ color: docStatusFilter === "canceled" ? '#fff' : '#ef4444' }} />
+                  <span>ملغية</span>
+                  <span style={{
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    background: docStatusFilter === "canceled" ? 'rgba(255,255,255,0.25)' : 'rgba(239,68,68,0.15)',
+                    color: docStatusFilter === "canceled" ? '#fff' : '#ef4444',
+                    fontSize: '11px',
+                  }}>
+                    {docStats.canceled}
+                  </span>
+                </button>
+              </div>
+
               {filteredDocs.length === 0 ? (
                 <div className="pane-empty">
                   <i className="fa-solid fa-file-circle-xmark" />
@@ -4214,40 +4413,39 @@ export default function EmployeeManagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredDocs.map((doc) => (
-                        <tr key={doc.id}>
-                          <td>
-                            <strong className="text-cyan">{doc.insurance_number || doc.document_number || "—"}</strong>
-                          </td>
-                          <td>{doc.insurance_type || "تأمين عام"}</td>
-                          <td>{doc.insured_name || "—"}</td>
-                          <td>{fmtDate(doc.start_date)}</td>
-                          <td>{fmtDate(doc.end_date)}</td>
-                          <td>
-                            <strong>{money(doc.premium)} د.ل</strong>
-                          </td>
-                          <td>
-                            {doc.status === "canceled" ? (
-                              <span className="status-tag canceled">ملغية</span>
-                            ) : (
-                              <span className="status-tag active-doc">سارية</span>
-                            )}
-                          </td>
-                          <td>{fmtDate(doc.created_at)}</td>
-                          <td>
-                            <button
-                              className="tbl-btn view"
-                              onClick={() => {
-                                const prefix = doc.view_url_prefix || "/insurance-documents/";
-                                navigate(`${prefix}${doc.id}`);
-                              }}
-                              title="عرض تفاصيل الوثيقة"
-                            >
-                              <i className="fa-solid fa-arrow-up-right-from-square" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredDocs.map((doc) => {
+                        const docSt = getDocumentStatusInfo(doc);
+                        return (
+                          <tr key={doc.id}>
+                            <td>
+                              <strong className="text-cyan">{doc.insurance_number || doc.document_number || "—"}</strong>
+                            </td>
+                            <td>{doc.insurance_type || "تأمين عام"}</td>
+                            <td>{doc.insured_name || "—"}</td>
+                            <td>{fmtDate(doc.start_date)}</td>
+                            <td>{fmtDate(doc.end_date)}</td>
+                            <td>
+                              <strong>{money(doc.premium)} د.ل</strong>
+                            </td>
+                            <td>
+                              <span className={docSt.badgeClass}>{docSt.label}</span>
+                            </td>
+                            <td>{fmtDate(doc.created_at)}</td>
+                            <td>
+                              <button
+                                className="tbl-btn view"
+                                onClick={() => {
+                                  const prefix = doc.view_url_prefix || "/insurance-documents/";
+                                  navigate(`${prefix}${doc.id}`);
+                                }}
+                                title="عرض تفاصيل الوثيقة"
+                              >
+                                <i className="fa-solid fa-arrow-up-right-from-square" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -7869,9 +8067,12 @@ export default function EmployeeManagement() {
         }
         .status-tag.paid { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
         .status-tag.unpaid { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
-        .status-tag.active-doc { background: rgba(59,130,246,0.15); color: #2563eb; border: 1px solid rgba(59,130,246,0.3); }
-        [data-theme='dark'] .status-tag.active-doc { color: #60a5fa; }
+        .status-tag.active-doc { background: rgba(16,185,129,0.15); color: #059669; border: 1px solid rgba(16,185,129,0.3); }
+        [data-theme='dark'] .status-tag.active-doc { color: #34d399; }
+        .status-tag.expired-doc { background: rgba(245,158,11,0.15); color: #d97706; border: 1px solid rgba(245,158,11,0.3); }
+        [data-theme='dark'] .status-tag.expired-doc { color: #fbbf24; }
         .status-tag.canceled { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        [data-theme='dark'] .status-tag.canceled { color: #f87171; }
 
         .payment-meta { display: flex; flex-direction: column; font-size: 11.5px; }
         .payment-meta small { color: var(--muted); }
