@@ -144,8 +144,8 @@ export default function CompulsoryDocumentRequestsTab() {
       setAmountInWords(req.amount_in_words || tafqeetDinar(req.total_amount));
       setPaymentMethod(req.payment_method || 'صك مصرفي');
       setPaymentReference(req.payment_reference || '');
-      setSignatoryName(req.signatory_name || 'محمد حوشي');
-      setSignatoryTitle(req.signatory_title || 'مدير الشؤون الإدارية');
+      const rawTitle = req.signatory_title;
+      setSignatoryTitle((!rawTitle || rawTitle.includes('إدارية') || rawTitle.includes('ادارية')) ? 'مدير الشؤون الإدارية' : rawTitle);
       setSubject(req.subject || 'الموضوع / طلب تزويد وثائق التأمين الاجباري');
       setAddressedTo(req.addressed_to || 'السيد / مدير عام هيئة الإشراف على التأمين');
       setStatus(req.status || 'draft');
@@ -425,7 +425,7 @@ export default function CompulsoryDocumentRequestsTab() {
       serial_from: r.serial_from || '—',
       serial_to: r.serial_to || '—',
       store_item_name: r.store_item?.name || '—',
-      signatory_name: `${r.signatory_name || ''} (${r.signatory_title || ''})`,
+      signatory_name: `${r.signatory_name || 'محمد حوشي'} (${(!r.signatory_title || r.signatory_title.includes('إدارية') || r.signatory_title.includes('ادارية')) ? 'مدير الشؤون الإدارية' : r.signatory_title})`,
       notes: r.notes || '',
     }));
 
