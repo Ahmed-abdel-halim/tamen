@@ -157,114 +157,148 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          overflow: visible; /* لا نقص الترويسة الممتدة للحواف */
-        }
-        /* نضمن أن ظل الورقة يظهر صحيحاً */
-        .paper-container::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: #ffffff;
-          z-index: -1;
+          overflow: hidden;
         }
 
-        /* ─── الترويسة الرسمية — مبنية بالكامل بـ HTML/CSS بدون صورة ─── */
+        /* ─── الترويسة الرسمية HTML/CSS — ممتدة من البداية للنهاية بدون قص ─── */
         .official-header {
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-          padding-bottom: 0;
-          border-bottom: 2.5px solid #0f172a;
-          margin-bottom: 8px;
           width: calc(100% + 36mm);
           margin-right: -18mm;
           margin-left: -18mm;
           margin-top: -12mm;
-          background: #fff;
+          margin-bottom: 8px;
+          border-bottom: 2.5px solid #0f172a;
+          background: #ffffff;
           overflow: hidden;
         }
-        /* الحد الزخرفي العلوي */
-        .header-border-top {
-          height: 9px;
+        /* شريط الزخرفة العلوي */
+        .header-deco-top {
+          width: 100%;
+          height: 14px;
           background: repeating-linear-gradient(
             90deg,
             #1a1a2e 0px, #1a1a2e 6px,
-            #c8a94a 6px, #c8a94a 12px,
-            #1a1a2e 12px, #1a1a2e 18px,
-            #8b1a1a 18px, #8b1a1a 24px
+            transparent 6px, transparent 10px
           );
-          opacity: 0.85;
+          position: relative;
+          overflow: hidden;
         }
-        /* منطقة المحتوى الرئيسي */
-        .header-main-content {
+        .header-deco-top::before {
+          content: 'ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ ﻡ ﻉ ﻉ ﻡ';
+          position: absolute;
+          top: -2px;
+          left: 0;
+          right: 0;
+          font-size: 14px;
+          letter-spacing: 2px;
+          color: #1a1a2e;
+          font-family: 'Amiri', serif;
+          white-space: nowrap;
+          overflow: hidden;
+          text-align: center;
+        }
+        /* الجسم الرئيسي للترويسة */
+        .header-body {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding: 6px 18mm;
-          gap: 8px;
-          background:
-            radial-gradient(ellipse at 50% 50%, rgba(200,169,74,0.06) 0%, transparent 70%),
-            #fff;
+          justify-content: center;
+          padding: 6px 20px 4px 20px;
+          gap: 0;
+          position: relative;
+        }
+        /* زخارف الجانب الأيمن */
+        .header-side-deco {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Amiri', serif;
+          font-size: 26px;
+          color: #1a1a2e;
+          letter-spacing: -1px;
+          line-height: 1;
+          opacity: 0.82;
+          text-align: center;
           direction: rtl;
-        }
-        /* نص شركة المدار - جهة اليمين */
-        .header-company-name-ar {
-          font-family: 'Amiri', 'Traditional Arabic', serif;
-          font-size: 28px;
-          font-weight: 900;
-          color: #0f172a;
-          line-height: 1.1;
+          overflow: hidden;
           white-space: nowrap;
-          letter-spacing: 1px;
         }
-        /* اللوجو والنص الإنجليزي في الوسط */
-        .header-center-block {
+        /* وسط الترويسة: اللوغو + الاسم */
+        .header-center {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 2px;
+          justify-content: center;
           flex-shrink: 0;
+          min-width: 260px;
+        }
+        .header-logo-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          margin-bottom: 1px;
         }
         .header-logo-img {
-          width: 64px;
-          height: 64px;
+          width: 52px;
+          height: 52px;
           object-fit: contain;
+          display: block;
         }
-        .header-company-name-en {
-          font-family: 'Cairo', sans-serif;
-          font-size: 11.5px;
-          font-weight: 800;
+        .header-ar-name {
+          font-family: 'Amiri', 'Traditional Arabic', serif;
+          font-size: 22px;
+          font-weight: 900;
           color: #0f172a;
-          letter-spacing: 2.5px;
-          white-space: nowrap;
-          text-transform: uppercase;
-        }
-        .header-reg-info {
-          font-family: 'Cairo', sans-serif;
-          font-size: 7px;
-          color: #334155;
+          text-align: center;
+          line-height: 1.15;
           letter-spacing: 0.5px;
           white-space: nowrap;
-          text-align: center;
         }
-        /* نص الشركة - جهة اليسار */
-        .header-company-name-ar-left {
-          font-family: 'Amiri', 'Traditional Arabic', serif;
-          font-size: 13px;
-          font-weight: 700;
+        .header-en-name {
+          font-family: 'Cairo', Arial, sans-serif;
+          font-size: 12px;
+          font-weight: 800;
           color: #1a1a2e;
-          line-height: 1.5;
-          text-align: left;
+          text-align: center;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          margin-top: 1px;
+          white-space: nowrap;
+        }
+        .header-reg-line {
+          font-family: 'Cairo', Arial, sans-serif;
+          font-size: 8.5px;
+          font-weight: 600;
+          color: #334155;
+          text-align: center;
+          letter-spacing: 0.5px;
+          margin-top: 2px;
           direction: ltr;
           white-space: nowrap;
         }
-        /* الحد الزخرفي السفلي */
-        .header-border-bottom {
-          height: 6px;
-          background: linear-gradient(90deg,
-            #8b1a1a 0%, #c8a94a 25%, #1a1a2e 50%, #c8a94a 75%, #8b1a1a 100%
-          );
-          opacity: 0.7;
+        /* شريط الزخرفة السفلي */
+        .header-deco-bottom {
+          width: 100%;
+          height: 10px;
+          position: relative;
+          overflow: hidden;
+          border-top: 1px solid #d1d5db;
+        }
+        .header-deco-bottom::before {
+          content: '~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~';
+          position: absolute;
+          top: 0px;
+          left: 0;
+          right: 0;
+          font-size: 10px;
+          letter-spacing: 3px;
+          color: #475569;
+          font-family: 'Amiri', serif;
+          white-space: nowrap;
+          overflow: hidden;
+          text-align: center;
+          line-height: 1;
         }
 
         /* شريط التاريخ والرقم الإشاري جهة اليسار أسفل الترويسة مباشرة */
@@ -465,13 +499,17 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
-          /* ضبط الترويسة عند الطباعة لتعويض padding الطباعة (12mm) */
+          /* ضبط الترويسة عند الطباعة */
           .official-header {
-            width: calc(100% + 24mm) !important;
-            margin-right: -12mm !important;
-            margin-left: -12mm !important;
-            margin-top: -8mm !important;
-            border-bottom: 2px solid #0f172a !important;
+            width: calc(100% + 28mm) !important;
+            margin-right: -14mm !important;
+            margin-left: -14mm !important;
+            margin-top: -10mm !important;
+            border-bottom: 2.5px solid #0f172a !important;
+          }
+          .header-deco-top, .header-deco-bottom {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .watermark-container {
             opacity: 0.055 !important;
@@ -515,29 +553,33 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         </div>
 
         <div style="position: relative; z-index: 1;">
-          <!-- الترويسة الرسمية — مبنية بالكامل HTML/CSS بدون صورة -->
+          <!-- الترويسة الرسمية HTML/CSS — كاملة بدون قص من البداية للنهاية -->
           <div class="official-header">
-            <div class="header-border-top"></div>
-            <div class="header-main-content">
-              <!-- اسم الشركة بالعربي — جهة اليمين -->
-              <div class="header-company-name-ar">المدار الليبي للتأمين</div>
-              <!-- اللوجو + الاسم الإنجليزي + السجل — في الوسط -->
-              <div class="header-center-block">
-                <img
-                  src="${window.location.origin}/img/logo.png"
-                  onerror="this.src='/img/official_logo.PNG'; this.onerror=null;"
-                  alt="شعار المدار الليبي للتأمين"
-                  class="header-logo-img"
-                />
-                <div class="header-company-name-en">ALMADAR LIBYAN INSURANCE</div>
-                <div class="header-reg-info">SHARES: 83748 — EQUITY CAPITAL (10) MILLION L.Y.D — COMMERCIAL REG.</div>
+            <!-- شريط الزخرفة العلوي -->
+            <div class="header-deco-top"></div>
+            <!-- جسم الترويسة الرئيسي -->
+            <div class="header-body">
+              <!-- زخارف الجانب الأيمن -->
+              <div class="header-side-deco">ﺑﺴﻢ ﺍﷲ ﺍﻟﺮﺣﻤﻦ &nbsp; ﻋﻠﻴﻜﻢ &nbsp; ﺍﻟﺴﻼﻡ &nbsp; ﺑﺴﻢ ﺍﷲ</div>
+              <!-- الوسط: اللوغو والاسم -->
+              <div class="header-center">
+                <div class="header-logo-row">
+                  <img
+                    src="${window.location.origin}/img/logo.png"
+                    onerror="this.src='/img/official_logo.PNG'; this.onerror=null;"
+                    alt="شعار المدار الليبي للتأمين"
+                    class="header-logo-img"
+                  />
+                </div>
+                <div class="header-ar-name">الـمـدار الـلـيـبـي لـلـتـأمـيـن</div>
+                <div class="header-en-name">ALMADAR LIBYAN INSURANCE</div>
+                <div class="header-reg-line">(8748) | رأس المال (10) مليون دينار | EQUITY CAPITAL (10) MILLION L.Y.D — COMMERCIAL REG</div>
               </div>
-              <!-- نص يسار — عنوان مختصر -->
-              <div class="header-company-name-ar-left">
-                شركة مساهمة<br/>متفرقة<br/>طرابلس — ليبيا
-              </div>
+              <!-- زخارف الجانب الأيسر -->
+              <div class="header-side-deco">ﺍﻟﺮﺣﻴﻢ &nbsp; ﻋﻠﻴﻜﻢ &nbsp; ﺍﻟﺴﻼﻡ &nbsp; ﺑﺴﻢ ﺍﷲ ﺍﻟﺮﺣﻤﻦ</div>
             </div>
-            <div class="header-border-bottom"></div>
+            <!-- شريط الزخرفة السفلي -->
+            <div class="header-deco-bottom"></div>
           </div>
 
           <!-- شريط التاريخ والرقم الإشاري جهة اليسار أسفل الخط الفاصل مباشرة -->
