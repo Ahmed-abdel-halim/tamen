@@ -160,49 +160,47 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           overflow: hidden;
         }
 
-        /* ─── الترويسة الرسمية (اللوجو على اليمين - التاريخ والإشاري على اليسار مع الخط الفاصل) ─── */
+        /* ─── الترويسة الرسمية (بانر المدار الرسمي مع خلفية الخط المزخرفة كأنها في الخلفية) ─── */
         .official-header {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #0f172a;
-          margin-bottom: 18px;
-        }
-
-        /* الطرف الأيمن: شعار الشركة */
-        .header-logo-box {
-          width: 80px;
-          height: 80px;
-          display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
+          padding-bottom: 4px;
+          border-bottom: 2px solid #0f172a;
+          margin-bottom: 8px;
+          width: 100%;
         }
-        .header-logo-box img {
-          max-width: 80px;
-          max-height: 80px;
+        .official-header-banner-img {
+          width: 100%;
+          max-height: 110px;
           object-fit: contain;
+          display: block;
+          margin: 0 auto;
         }
 
-        /* الطرف الأيسر: التاريخ والرقم الإشاري */
+        /* شريط التاريخ والرقم الإشاري جهة اليسار أسفل الترويسة مباشرة */
+        .letter-meta-strip {
+          display: flex;
+          justify-content: flex-end; /* محاذاة لجهة اليسار في نمط RTL */
+          margin-bottom: 10px;
+        }
         .header-meta-box {
           text-align: right;
           min-width: 185px;
           font-family: 'Amiri', serif;
           background: #f8fafc;
-          padding: 8px 14px;
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
-          flex-shrink: 0;
+          padding: 5px 12px;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
         }
         .meta-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           font-size: 13.5px;
-          line-height: 1.75;
+          line-height: 1.65;
         }
         .meta-lbl {
           font-weight: 900;
@@ -241,8 +239,8 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
 
         /* المخاطبة والموضوع */
         .recipient-box {
-          margin-top: 10px;
-          margin-bottom: 12px;
+          margin-top: 6px;
+          margin-bottom: 10px;
         }
         .addressed-to {
           font-size: 17.5px;
@@ -255,7 +253,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           font-size: 17.5px;
           font-weight: 900;
           color: #0f172a;
-          margin: 14px 0 16px 0;
+          margin: 10px 0 12px 0;
           text-decoration: underline;
           text-underline-offset: 5px;
           text-decoration-thickness: 1.5px;
@@ -264,19 +262,19 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           font-size: 15.5px;
           font-weight: 800;
           color: #0f172a;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         /* نص الخطاب الرسمي مطابق للأصل */
         .letter-content {
           font-size: 16.5px;
-          line-height: 2.25;
+          line-height: 2.15;
           color: #0f172a;
           text-align: justify;
-          margin-bottom: 25px;
+          margin-bottom: 18px;
         }
         .letter-content p {
-          margin: 0 0 14px 0;
+          margin: 0 0 10px 0;
           text-indent: 16px;
         }
         .highlight-bold {
@@ -287,10 +285,10 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         /* الخاتمة والسلام */
         .closing-section {
           text-align: center;
-          margin: 20px 0 35px 0;
+          margin: 12px 0 16px 0;
           font-size: 15.5px;
           font-weight: 800;
-          line-height: 1.9;
+          line-height: 1.8;
         }
         .closing-section .salam {
           font-size: 16.5px;
@@ -299,36 +297,38 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           letter-spacing: 1px;
         }
 
-        /* ─── قسم التوقيع (على جهة اليسار بناءً على الطلب) ─── */
+        /* ─── قسم التوقيع (مضموم على بعضه تماماً على جهة اليسار) ─── */
         .signatures-area {
           display: flex;
           justify-content: flex-end; /* محاذاة لجهة اليسار في نمط RTL */
           align-items: flex-start;
           padding-left: 25px;
           padding-right: 0;
-          margin-top: 15px;
-          margin-bottom: 25px;
+          margin-top: 6px;
+          margin-bottom: 10px;
           width: 100%;
         }
         .company-signature-box {
           text-align: center;
-          min-width: 230px;
+          min-width: 220px;
           margin-right: auto; /* يضمن دفع صندوق التوقيع لجهة اليسار */
           margin-left: 0;
         }
         .company-signature-role {
-          font-size: 17.5px;
+          font-size: 17px;
           font-weight: 900;
           color: #091e3a;
-          margin-bottom: 0;
+          margin-bottom: 1px;
+          line-height: 1.2;
         }
         .signature-manual-space {
-          height: 60px; /* مساحة خالية كافية للتوقيع والختم اليدوي الفعلي */
+          height: 4px; /* مضمومين ومدمجين على بعض تماماً بدون فراغ كبير */
         }
         .company-signature-name {
           font-size: 16.5px;
           font-weight: 900;
           color: #0f172a;
+          line-height: 1.2;
         }
 
         /* التذييل الرسمي السفلي */
@@ -422,14 +422,18 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         </div>
 
         <div style="position: relative; z-index: 1;">
-          <!-- الترويسة الرسمية: اللوجو على اليمين والتاريخ والإشاري على اليسار مع الخط الفاصل -->
+          <!-- الترويسة الرسمية (بانر المدار الرسمي مع الخلفية المزخرفة) -->
           <div class="official-header">
-            <!-- الطرف الأيمن: شعار الشركة -->
-            <div class="header-logo-box">
-              <img src="/img/logo.png" onerror="this.src='/img/official_logo.PNG'; this.onerror=null;" alt="شعار شركة المدار" />
-            </div>
+            <img 
+              src="${window.location.origin}/img/almadar_official_header_banner.png" 
+              onerror="this.src='/img/almadar_official_header_banner.png'; this.onerror=null;" 
+              alt="ترويسة المدار الليبي للتأمين الرسمية" 
+              class="official-header-banner-img" 
+            />
+          </div>
 
-            <!-- الطرف الأيسر: التاريخ والرقم الإشاري -->
+          <!-- شريط التاريخ والرقم الإشاري جهة اليسار أسفل الخط الفاصل مباشرة -->
+          <div class="letter-meta-strip">
             <div class="header-meta-box">
               <div class="meta-row">
                 <span class="meta-lbl">التاريخ :</span>
