@@ -1,5 +1,6 @@
 // src/utils/printCompulsoryDocumentRequestLetter.ts
 // طباعة الخطاب الرسمي المعتمد لتزويد وثائق التأمين الإجباري الموجه لهيئة الإشراف على التأمين
+import { ALMADAR_LETTERHEAD_BANNER } from './almadarBannerBase64';
 
 export interface CompulsoryDocumentRequestData {
   id: number;
@@ -177,9 +178,8 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         }
         .official-header-banner-img {
           width: 100%;
-          height: auto;
-          max-height: 130px;
-          object-fit: fill;  /* يملأ العرض الكامل بدون قص */
+          height: 105px;
+          object-fit: fill;  /* يملأ العرض الكامل من البداية للنهاية بدون قص */
           display: block;
         }
 
@@ -389,6 +389,12 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
             margin-top: -8mm !important;
             border-bottom: 2px solid #0f172a !important;
           }
+          .official-header-banner-img {
+            width: 100% !important;
+            height: 100px !important;
+            object-fit: fill !important;
+            display: block !important;
+          }
           .watermark-container {
             opacity: 0.055 !important;
             -webkit-print-color-adjust: exact !important;
@@ -434,8 +440,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           <!-- الترويسة الرسمية (بانر المدار الرسمي مع الخلفية المزخرفة) -->
           <div class="official-header">
             <img 
-              src="${window.location.origin}/img/almadar_official_header_banner.png" 
-              onerror="this.src='/img/almadar_official_header_banner.png'; this.onerror=null;" 
+              src="${ALMADAR_LETTERHEAD_BANNER}" 
               alt="ترويسة المدار الليبي للتأمين الرسمية" 
               class="official-header-banner-img" 
             />
