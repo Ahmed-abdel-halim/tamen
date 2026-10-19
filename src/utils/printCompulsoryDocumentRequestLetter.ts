@@ -160,107 +160,27 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           overflow: hidden;
         }
 
-        /* ─── الترويسة الرسمية — HTML مبني بالكامل يطابق الأصل تماماً ─── */
+        /* ─── الترويسة الرسمية — ممتدة من بداية الصفحة لنهايتها بالكامل ─── */
         .official-header {
-          width: calc(100% + 36mm);
-          margin-right: -18mm;
-          margin-left: -18mm;
-          margin-top: -12mm;
-          border-bottom: 2.5px solid #111;
-          margin-bottom: 10px;
-          background: #fff;
-          overflow: hidden;
-        }
-        .letterhead-box {
-          position: relative;
-          width: 100%;
-          border: 2px solid #111;
-          border-bottom: none;
-          background: #fff;
-          padding: 4px 0 6px 0;
-          overflow: hidden;
-        }
-        /* الخط المزخرف العلوي */
-        .zigzag-top, .zigzag-bottom {
-          width: 100%;
-          height: 10px;
-          display: block;
-          overflow: hidden;
-          line-height: 0;
-        }
-        .zigzag-top svg, .zigzag-bottom svg {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
-        /* قسم المحتوى الداخلي */
-        .letterhead-inner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 2px 8px 4px 8px;
-          position: relative;
-        }
-        /* النص العربي الكبير على اليسار */
-        .lh-side-ar {
-          font-family: 'Amiri', 'Traditional Arabic', serif;
-          font-size: 36px;
-          font-weight: 900;
-          color: #111;
-          line-height: 1;
-          white-space: nowrap;
-          flex-shrink: 0;
-          width: 90px;
-          text-align: center;
-          letter-spacing: -1px;
-        }
-        /* المركز */
-        .lh-center {
-          flex: 1;
-          text-align: center;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 1px;
-          padding: 0 4px;
+          padding-bottom: 4px;
+          border-bottom: 2px solid #0f172a;
+          margin-bottom: 8px;
+          /* تمدد الترويسة خارج حدود padding الحاوية لتملأ العرض الكامل للورقة */
+          width: calc(100% + 36mm); /* 18mm يمين + 18mm يسار */
+          margin-right: -18mm;
+          margin-left: -18mm;
+          margin-top: -12mm; /* تعويض padding العلوي للحاوية */
         }
-        .lh-globe {
-          width: 34px;
-          height: 34px;
-          margin: 0 auto 1px auto;
+        .official-header-banner-img {
+          width: 100%;
+          height: auto;
+          max-height: 130px;
+          object-fit: fill;  /* يملأ العرض الكامل بدون قص */
           display: block;
-        }
-        .lh-title-ar {
-          font-family: 'Amiri', 'Traditional Arabic', serif;
-          font-size: 22px;
-          font-weight: 900;
-          color: #111;
-          letter-spacing: 2px;
-          line-height: 1.1;
-          white-space: nowrap;
-        }
-        .lh-title-en {
-          font-family: Arial, 'Helvetica Neue', sans-serif;
-          font-size: 12px;
-          font-weight: 900;
-          color: #111;
-          letter-spacing: 3px;
-          line-height: 1.2;
-        }
-        .lh-sub-ar {
-          font-family: 'Cairo', Arial, sans-serif;
-          font-size: 8px;
-          color: #333;
-          line-height: 1.4;
-          direction: rtl;
-        }
-        .lh-sub-en {
-          font-family: Arial, sans-serif;
-          font-size: 7px;
-          color: #333;
-          letter-spacing: 0.5px;
-          line-height: 1.4;
         }
 
         /* شريط التاريخ والرقم الإشاري جهة اليسار أسفل الترويسة مباشرة */
@@ -511,49 +431,14 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         </div>
 
         <div style="position: relative; z-index: 1;">
-          <!-- الترويسة الرسمية مبنية بالكامل بدون صورة خارجية -->
+          <!-- الترويسة الرسمية (بانر المدار الرسمي مع الخلفية المزخرفة) -->
           <div class="official-header">
-            <div class="letterhead-box">
-              <!-- زخرفة علوية -->
-              <div class="zigzag-top">
-                <svg viewBox="0 0 1200 10" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                  <polyline points="0,10 7,0 14,10 21,0 28,10 35,0 42,10 49,0 56,10 63,0 70,10 77,0 84,10 91,0 98,10 105,0 112,10 119,0 126,10 133,0 140,10 147,0 154,10 161,0 168,10 175,0 182,10 189,0 196,10 203,0 210,10 217,0 224,10 231,0 238,10 245,0 252,10 259,0 266,10 273,0 280,10 287,0 294,10 301,0 308,10 315,0 322,10 329,0 336,10 343,0 350,10 357,0 364,10 371,0 378,10 385,0 392,10 399,0 406,10 413,0 420,10 427,0 434,10 441,0 448,10 455,0 462,10 469,0 476,10 483,0 490,10 497,0 504,10 511,0 518,10 525,0 532,10 539,0 546,10 553,0 560,10 567,0 574,10 581,0 588,10 595,0 602,10 609,0 616,10 623,0 630,10 637,0 644,10 651,0 658,10 665,0 672,10 679,0 686,10 693,0 700,10 707,0 714,10 721,0 728,10 735,0 742,10 749,0 756,10 763,0 770,10 777,0 784,10 791,0 798,10 805,0 812,10 819,0 826,10 833,0 840,10 847,0 854,10 861,0 868,10 875,0 882,10 889,0 896,10 903,0 910,10 917,0 924,10 931,0 938,10 945,0 952,10 959,0 966,10 973,0 980,10 987,0 994,10 1001,0 1008,10 1015,0 1022,10 1029,0 1036,10 1043,0 1050,10 1057,0 1064,10 1071,0 1078,10 1085,0 1092,10 1099,0 1106,10 1113,0 1120,10 1127,0 1134,10 1141,0 1148,10 1155,0 1162,10 1169,0 1176,10 1183,0 1190,10 1200,0" stroke="#111" stroke-width="1.5" fill="none"/>
-                </svg>
-              </div>
-
-              <!-- المحتوى الداخلي -->
-              <div class="letterhead-inner">
-                <!-- جانب أيسر: كلمة للتأمين كزخرفة -->
-                <div class="lh-side-ar" style="color:#111;font-size:38px;">للتأمين</div>
-                
-                <!-- المركز الرئيسي -->
-                <div class="lh-center">
-                  <!-- كرة الأرض (SVG مدمج) -->
-                  <svg class="lh-globe" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="30" cy="30" r="26" stroke="#111" stroke-width="2.5" fill="none"/>
-                    <ellipse cx="30" cy="30" rx="13" ry="26" stroke="#111" stroke-width="2" fill="none"/>
-                    <ellipse cx="30" cy="30" rx="26" ry="10" stroke="#111" stroke-width="1.5" fill="none"/>
-                    <line x1="4" y1="30" x2="56" y2="30" stroke="#111" stroke-width="1.5"/>
-                    <line x1="30" y1="4" x2="30" y2="56" stroke="#111" stroke-width="1.5"/>
-                    <circle cx="30" cy="30" r="4" stroke="#111" stroke-width="1.5" fill="#111"/>
-                  </svg>
-                  <div class="lh-title-ar">المَدَارُ اللِيبِيُّ للتّأمين</div>
-                  <div class="lh-title-en">ALMADAR LIBYAN INSURANCE</div>
-                  <div class="lh-sub-ar">(8748) رأس مال الشركة (10) مليون د.ل / سجل تجاري رقم</div>
-                  <div class="lh-sub-en">EQUITY CAPITAL (10) MILLION L.Y.D – COMMERCIAL REG</div>
-                </div>
-                
-                <!-- جانب أيمن: كلمة المدار كزخرفة -->
-                <div class="lh-side-ar" style="color:#111;font-size:38px;">المدار</div>
-              </div>
-
-              <!-- زخرفة سفلية -->
-              <div class="zigzag-bottom">
-                <svg viewBox="0 0 1200 10" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                  <polyline points="0,0 7,10 14,0 21,10 28,0 35,10 42,0 49,10 56,0 63,10 70,0 77,10 84,0 91,10 98,0 105,10 112,0 119,10 126,0 133,10 140,0 147,10 154,0 161,10 168,0 175,10 182,0 189,10 196,0 203,10 210,0 217,10 224,0 231,10 238,0 245,10 252,0 259,10 266,0 273,10 280,0 287,10 294,0 301,10 308,0 315,10 322,0 329,10 336,0 343,10 350,0 357,10 364,0 371,10 378,0 385,10 392,0 399,10 406,0 413,10 420,0 427,10 434,0 441,10 448,0 455,10 462,0 469,10 476,0 483,10 490,0 497,10 504,0 511,10 518,0 525,10 532,0 539,10 546,0 553,10 560,0 567,10 574,0 581,10 588,0 595,10 602,0 609,10 616,0 623,10 630,0 637,10 644,0 651,10 658,0 665,10 672,0 679,10 686,0 693,10 700,0 707,10 714,0 721,10 728,0 735,10 742,0 749,10 756,0 763,10 770,0 777,10 784,0 791,10 798,0 805,10 812,0 819,10 826,0 833,10 840,0 847,10 854,0 861,10 868,0 875,10 882,0 889,10 896,0 903,10 910,0 917,10 924,0 931,10 938,0 945,10 952,0 959,10 966,0 973,10 980,0 987,10 994,0 1001,10 1008,0 1015,10 1022,0 1029,10 1036,0 1043,10 1050,0 1057,10 1064,0 1071,10 1078,0 1085,10 1092,0 1099,10 1106,0 1113,10 1120,0 1127,10 1134,0 1141,10 1148,0 1155,10 1162,0 1169,10 1176,0 1183,10 1190,0 1200,10" stroke="#111" stroke-width="1.5" fill="none"/>
-                </svg>
-              </div>
-            </div>
+            <img 
+              src="${window.location.origin}/img/almadar_official_header_banner.png" 
+              onerror="this.src='/img/almadar_official_header_banner.png'; this.onerror=null;" 
+              alt="ترويسة المدار الليبي للتأمين الرسمية" 
+              class="official-header-banner-img" 
+            />
           </div>
 
           <!-- شريط التاريخ والرقم الإشاري جهة اليسار أسفل الخط الفاصل مباشرة -->
