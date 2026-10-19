@@ -1,6 +1,6 @@
 // src/utils/printCompulsoryDocumentRequestLetter.ts
 // طباعة الخطاب الرسمي المعتمد لتزويد وثائق التأمين الإجباري الموجه لهيئة الإشراف على التأمين
-import { ALMADAR_LETTERHEAD_BANNER } from './almadarBannerBase64';
+import { ALMADAR_LETTERHEAD_BANNER, ALMADAR_LOGO_BASE64 } from './almadarBannerBase64';
 
 export interface CompulsoryDocumentRequestData {
   id: number;
@@ -225,7 +225,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           transform: translate(-50%, -50%);
           width: 440px;
           max-width: 85%;
-          opacity: 0.055;
+          opacity: 0.085;
           pointer-events: none;
           z-index: 0;
           display: flex;
@@ -238,7 +238,6 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           width: 100%;
           height: auto;
           object-fit: contain;
-          filter: grayscale(15%);
         }
 
         /* المخاطبة والموضوع */
@@ -396,7 +395,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
             display: block !important;
           }
           .watermark-container {
-            opacity: 0.055 !important;
+            opacity: 0.085 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -433,7 +432,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
       <div class="paper-container">
         <!-- العلامة المائية الرسمية في الخلفية (المدار الليبي للتأمين) -->
         <div class="watermark-container">
-          <img src="/img/logo.png" onerror="this.src='/img/official_logo.PNG'; this.onerror=null;" alt="المدار الليبي للتأمين" />
+          <img src="${ALMADAR_LOGO_BASE64}" alt="المدار الليبي للتأمين" />
         </div>
 
         <div style="position: relative; z-index: 1;">
