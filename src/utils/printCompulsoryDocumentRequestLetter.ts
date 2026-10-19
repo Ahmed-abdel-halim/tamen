@@ -160,13 +160,29 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           overflow: hidden;
         }
 
-        /* ─── الترويسة: التاريخ والإشاري في أعلى اليسار ─── */
+        /* ─── الترويسة الرسمية (اللوجو على اليمين - التاريخ والإشاري على اليسار مع الخط الفاصل) ─── */
         .official-header {
           display: flex;
-          justify-content: flex-end; /* في نمط RTL يوجّه العنصر لأقصى اليسار */
+          justify-content: space-between;
           align-items: center;
-          padding-bottom: 8px;
-          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #0f172a;
+          margin-bottom: 18px;
+        }
+
+        /* الطرف الأيمن: شعار الشركة */
+        .header-logo-box {
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .header-logo-box img {
+          max-width: 80px;
+          max-height: 80px;
+          object-fit: contain;
         }
 
         /* الطرف الأيسر: التاريخ والرقم الإشاري */
@@ -178,8 +194,6 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           padding: 8px 14px;
           border-radius: 8px;
           border: 1px solid #e2e8f0;
-          margin-right: auto; /* يضمن الدفع لجهة اليسار */
-          margin-left: 0;
           flex-shrink: 0;
         }
         .meta-row {
@@ -376,6 +390,9 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
             background: transparent !important;
             border: 1px solid #94a3b8 !important;
           }
+          .official-header {
+            border-bottom: 2px solid #0f172a !important;
+          }
         }
       </style>
     </head>
@@ -405,8 +422,14 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         </div>
 
         <div style="position: relative; z-index: 1;">
-          <!-- الترويسة: التاريخ والإشاري في أعلى اليسار (تمت إزالة اسم الشركة بناءً على الطلب) -->
+          <!-- الترويسة الرسمية: اللوجو على اليمين والتاريخ والإشاري على اليسار مع الخط الفاصل -->
           <div class="official-header">
+            <!-- الطرف الأيمن: شعار الشركة -->
+            <div class="header-logo-box">
+              <img src="/img/logo.png" onerror="this.src='/img/official_logo.PNG'; this.onerror=null;" alt="شعار شركة المدار" />
+            </div>
+
+            <!-- الطرف الأيسر: التاريخ والرقم الإشاري -->
             <div class="header-meta-box">
               <div class="meta-row">
                 <span class="meta-lbl">التاريخ :</span>
