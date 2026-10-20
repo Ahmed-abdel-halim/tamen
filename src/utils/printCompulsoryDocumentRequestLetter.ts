@@ -1,6 +1,7 @@
 // src/utils/printCompulsoryDocumentRequestLetter.ts
 // طباعة الخطاب الرسمي المعتمد لتزويد وثائق التأمين الإجباري الموجه لهيئة الإشراف على التأمين
-import { ALMADAR_LETTERHEAD_BANNER, ALMADAR_LOGO_BASE64 } from './almadarBannerBase64';
+// معتمد بالكامل على قالب الورقة المعنونة الرسمية لشركة المدار الليبي للتأمين (معنونه_المدار_الليبي.docx)
+import { ALMADAR_LETTERHEAD_BANNER } from './almadarBannerBase64';
 
 export interface CompulsoryDocumentRequestData {
   id: number;
@@ -36,7 +37,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
     return;
   }
 
-  // Format Date (e.g. 27 / 9 / 2026م)
+  // تنسيق التاريخ (مثال: 3 / 9 / 2026م)
   let formattedDate = req.request_date;
   try {
     const d = new Date(req.request_date);
@@ -50,7 +51,7 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
   const subject = req.subject || 'الموضوع / طلب تزويد وثائق التأمين الاجباري';
   const signatoryName = req.signatory_name || 'محمد حوشي';
 
-  // Normalize signatory title to 'مدير الشؤون الإدارية'
+  // ضبط المسمى الوظيفي للموقع
   let signatoryTitle = req.signatory_title || 'مدير الشؤون الإدارية';
   if (signatoryTitle === 'مدير الإدارية' || signatoryTitle === 'مدير الادارية' || !signatoryTitle) {
     signatoryTitle = 'مدير الشؤون الإدارية';
@@ -60,6 +61,11 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
   const words = req.amount_in_words || 'ألف دينار ليبي';
   const docsCount = req.documents_count || 0;
 
+  // رابط صورة الورقة المعنونة الرسمية الكاملة المأخوذة من معنونه_المدار_الليبي.docx
+  const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
+  const letterheadUrl = origin ? `${origin}/img/almadar_official_letterhead.png` : '/img/almadar_official_letterhead.png';
+  const bannerUrl = origin ? `${origin}/img/almadar_letterhead_banner_new.png` : '/img/almadar_letterhead_banner_new.png';
+
   const html = `
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
@@ -68,42 +74,43 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
       <title>خطاب رسمي — طلب تزويد وثائق التأمين الإجباري (${refNumber})</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
       <style>
-        @page {
-          size: A4 portrait;
-          margin: 10mm 14mm 10mm 14mm;
-        }
         * {
           box-sizing: border-box;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
         html, body {
           margin: 0;
           padding: 0;
+          background: #334155;
           font-family: 'Amiri', 'Traditional Arabic', 'Times New Roman', serif;
-          color: #0f172a;
-          background: #525659;
           direction: rtl;
+          color: #0f172a;
+          -webkit-font-smoothing: antialiased;
         }
 
-        /* شريط التحكم بالشاشة */
+        /* ─── شريط التحكم بالشاشة ─── */
         .screen-toolbar {
           position: sticky;
           top: 0;
           background: #091e3a;
           color: #fff;
-          padding: 12px 24px;
+          padding: 10px 24px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+          box-shadow: 0 4px 15px rgba(0,0,0,0.35);
           z-index: 9999;
           font-family: 'Cairo', sans-serif;
         }
         .toolbar-title {
-          font-size: 14px;
+          font-size: 13.5px;
           font-weight: 800;
           display: flex;
           align-items: center;
@@ -112,10 +119,32 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         .toolbar-badge {
           background: #fcd34d;
           color: #091e3a;
-          padding: 3px 10px;
+          padding: 3px 9px;
           border-radius: 6px;
-          font-size: 12px;
+          font-size: 11.5px;
           font-weight: 900;
+        }
+        .toolbar-options {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          background: rgba(255, 255, 255, 0.12);
+          padding: 5px 14px;
+          border-radius: 8px;
+        }
+        .mode-label {
+          font-size: 12.5px;
+          font-weight: 700;
+          color: #f1f5f9;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          user-select: none;
+        }
+        .mode-label input {
+          cursor: pointer;
+          accent-color: #10b981;
         }
         .toolbar-actions {
           display: flex;
@@ -140,71 +169,129 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         }
         .btn-print:hover { background: #059669; }
         .btn-close {
-          background: #475569;
+          background: #64748b;
           color: #ffffff;
         }
-        .btn-close:hover { background: #334155; }
+        .btn-close:hover { background: #475569; }
 
-        /* حاوية الورقة الرسمية A4 - صفحة واحدة بالكامل */
+        /* ─── حاوية الورقة الرسمية القياسية A4 (210mm x 297mm) ─── */
         .paper-container {
           width: 210mm;
-          height: 296mm;
-          max-height: 296mm;
+          height: 297mm;
+          max-height: 297mm;
           margin: 15px auto;
-          background: #ffffff;
-          padding: 12mm 18mm 12mm 18mm;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+          background-color: #ffffff;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.45);
           position: relative;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
           overflow: hidden;
         }
 
-        /* ─── الترويسة الرسمية — ممتدة من بداية الصفحة لنهايتها بالكامل ─── */
-        .official-header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding-bottom: 4px;
-          border-bottom: 2px solid #0f172a;
-          margin-bottom: 8px;
-          /* تمدد الترويسة خارج حدود padding الحاوية لتملأ العرض الكامل للورقة */
-          width: calc(100% + 36mm); /* 18mm يمين + 18mm يسار */
-          margin-right: -18mm;
-          margin-left: -18mm;
-          margin-top: -12mm; /* تعويض padding العلوي للحاوية */
+        /* ─── 1. النمط الافتراضي المعتمد: الورقة المعنونة الكاملة من القالب ─── */
+        .paper-container.full-letterhead-mode {
+          background-image: url('${letterheadUrl}');
+          background-size: 210mm 297mm;
+          background-position: top center;
+          background-repeat: no-repeat;
         }
-        .official-header-banner-img {
-          width: 100%;
-          height: 105px;
-          object-fit: fill;  /* يملأ العرض الكامل من البداية للنهاية بدون قص */
-          display: block;
+        .full-letterhead-mode .banner-only-header,
+        .full-letterhead-mode .banner-only-footer {
+          display: none !important;
         }
 
-        /* شريط التاريخ والرقم الإشاري جهة اليسار أسفل الترويسة مباشرة */
-        .letter-meta-strip {
-          display: flex;
-          justify-content: flex-end; /* محاذاة لجهة اليسار في نمط RTL */
-          margin-bottom: 10px;
+        /* صندوق التاريخ والرقم الإشاري - جهة اليسار في الفراغ المخصص له تحت الترويسة */
+        .full-letterhead-mode .letter-meta-strip {
+          position: absolute;
+          top: 48mm;
+          left: 14mm;
+          z-index: 10;
         }
-        .header-meta-box {
+        .full-letterhead-mode .header-meta-box {
           text-align: right;
-          min-width: 185px;
+          min-width: 175px;
+          font-family: 'Amiri', serif;
+          background: rgba(255, 255, 255, 0.82);
+          padding: 4px 10px;
+          border-radius: 6px;
+          border: 1px solid #94a3b8;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        /* مساحة جسم الخطاب داخل الإطار المعنون بالكامل */
+        .full-letterhead-mode .letter-body-area {
+          position: absolute;
+          top: 72mm;
+          right: 20mm;
+          left: 20mm;
+          bottom: 38mm;
+          z-index: 10;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+
+        /* ─── 2. النمط البديل: الترويسة العلوية فقط (للطباعة على ورق معنون مسبقاً) ─── */
+        .paper-container.banner-only-mode {
+          background: #ffffff;
+          padding: 0 18mm 12mm 18mm;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .banner-only-mode .banner-only-header {
+          display: block;
+          width: calc(100% + 36mm);
+          margin-right: -18mm;
+          margin-left: -18mm;
+          margin-top: 0;
+          border-bottom: 2px solid #0f172a;
+          margin-bottom: 8px;
+        }
+        .banner-only-mode .banner-only-header-img {
+          width: 100%;
+          height: 108px;
+          object-fit: fill;
+          display: block;
+        }
+        .banner-only-mode .banner-only-footer {
+          display: block;
+          border-top: 1.5px solid #0f172a;
+          padding-top: 8px;
+          font-size: 10px;
+          font-family: 'Cairo', sans-serif;
+          color: #334155;
+          text-align: center;
+          line-height: 1.6;
+        }
+        .banner-only-mode .letter-meta-strip {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 8px;
+        }
+        .banner-only-mode .header-meta-box {
+          text-align: right;
+          min-width: 180px;
           font-family: 'Amiri', serif;
           background: #f8fafc;
-          padding: 5px 12px;
+          padding: 4px 10px;
           border-radius: 6px;
           border: 1px solid #cbd5e1;
         }
+        .banner-only-mode .letter-body-area {
+          position: static;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          flex: 1;
+        }
+
+        /* ─── تنسيق عناصر نص الخطاب المشتركة ─── */
         .meta-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           font-size: 13.5px;
-          line-height: 1.65;
+          line-height: 1.6;
         }
         .meta-lbl {
           font-weight: 900;
@@ -217,68 +304,49 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           font-size: 12.5px;
         }
 
-        /* ─── العلامة المائية في خلفية الخطاب (المدار الليبي للتأمين) ─── */
-        .watermark-container {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 440px;
-          max-width: 85%;
-          opacity: 0.085;
-          pointer-events: none;
-          z-index: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          user-select: none;
-        }
-        .watermark-container img {
-          width: 100%;
-          height: auto;
-          object-fit: contain;
-        }
-
-        /* المخاطبة والموضوع */
+        /* المخاطبة */
         .recipient-box {
-          margin-top: 6px;
-          margin-bottom: 10px;
+          margin-top: 2px;
+          margin-bottom: 8px;
         }
         .addressed-to {
-          font-size: 17.5px;
+          font-size: 18px;
           font-weight: 900;
           color: #091e3a;
           margin: 0;
+          line-height: 1.4;
         }
+
+        /* الموضوع */
         .subject-line {
           text-align: center;
-          font-size: 17.5px;
+          font-size: 18.5px;
           font-weight: 900;
           color: #0f172a;
-          margin: 10px 0 12px 0;
+          margin: 10px 0 14px 0;
           text-decoration: underline;
-          text-underline-offset: 5px;
+          text-underline-offset: 6px;
           text-decoration-thickness: 1.5px;
         }
+
+        /* التحية */
         .salutation {
-          font-size: 15.5px;
+          font-size: 16px;
           font-weight: 800;
           color: #0f172a;
           margin-bottom: 12px;
         }
 
-        /* نص الخطاب الرسمي مطابق للأصل */
+        /* نص الخطاب */
         .letter-content {
           font-size: 16.5px;
           line-height: 2.15;
           color: #0f172a;
           text-align: justify;
-          margin-bottom: 18px;
         }
         .letter-content p {
           margin: 0 0 10px 0;
-          text-indent: 16px;
+          text-indent: 18px;
         }
         .highlight-bold {
           font-weight: 900;
@@ -288,80 +356,51 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         /* الخاتمة والسلام */
         .closing-section {
           text-align: center;
-          margin: 12px 0 16px 0;
+          margin: 14px 0 10px 0;
           font-size: 15.5px;
           font-weight: 800;
           line-height: 1.8;
         }
         .closing-section .salam {
-          font-size: 16.5px;
+          font-size: 17px;
           font-weight: 900;
           margin-top: 4px;
           letter-spacing: 1px;
         }
 
-        /* ─── قسم التوقيع (مضموم على بعضه تماماً على جهة اليسار) ─── */
+        /* قسم التوقيع جهة اليسار */
         .signatures-area {
           display: flex;
-          justify-content: flex-end; /* محاذاة لجهة اليسار في نمط RTL */
-          align-items: flex-start;
-          padding-left: 25px;
-          padding-right: 0;
+          justify-content: flex-end; /* لجهة اليسار في RTL */
+          padding-left: 20px;
           margin-top: 6px;
-          margin-bottom: 10px;
-          width: 100%;
+          margin-bottom: 4px;
         }
         .company-signature-box {
           text-align: center;
           min-width: 220px;
-          margin-right: auto; /* يضمن دفع صندوق التوقيع لجهة اليسار */
-          margin-left: 0;
         }
         .company-signature-role {
           font-size: 17px;
           font-weight: 900;
           color: #091e3a;
-          margin-bottom: 1px;
-          line-height: 1.2;
+          margin-bottom: 2px;
         }
         .signature-manual-space {
-          height: 4px; /* مضمومين ومدمجين على بعض تماماً بدون فراغ كبير */
+          height: 28px; /* مساحة توقيع وختم حي */
         }
         .company-signature-name {
           font-size: 16.5px;
           font-weight: 900;
           color: #0f172a;
-          line-height: 1.2;
         }
 
-        /* التذييل الرسمي السفلي */
-        .official-footer {
-          border-top: 1.5px solid #0f172a;
-          padding-top: 8px;
-          font-size: 10px;
-          font-family: 'Cairo', sans-serif;
-          color: #334155;
-          text-align: center;
-          line-height: 1.6;
-        }
-        .footer-line-1 {
-          font-weight: 700;
-          color: #0f172a;
-          margin-bottom: 3px;
-        }
-        .footer-line-2 {
-          font-weight: 600;
-          direction: ltr;
-          display: flex;
-          justify-content: center;
-          gap: 15px;
-          flex-wrap: wrap;
-        }
-
-        /* إخفاء عناصر التحكم عند الطباعة وضمان صفحة واحدة فقط */
+        /* ─── إعدادات الطباعة الدقيقة وضمان صفحة واحدة A4 ─── */
         @media print {
           html, body {
             background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
             height: 100% !important;
             overflow: hidden !important;
           }
@@ -370,7 +409,6 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
           }
           .paper-container {
             margin: 0 !important;
-            padding: 8mm 12mm 8mm 12mm !important;
             box-shadow: none !important;
             border: none !important;
             width: 100% !important;
@@ -380,30 +418,12 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
-          /* ضبط الترويسة عند الطباعة لتعويض padding الطباعة (12mm) */
-          .official-header {
-            width: calc(100% + 24mm) !important;
-            margin-right: -12mm !important;
-            margin-left: -12mm !important;
-            margin-top: -8mm !important;
-            border-bottom: 2px solid #0f172a !important;
-          }
-          .official-header-banner-img {
-            width: 100% !important;
-            height: 100px !important;
-            object-fit: fill !important;
-            display: block !important;
-          }
-          .watermark-container {
-            opacity: 0.085 !important;
+          .full-letterhead-mode {
+            background-size: 210mm 297mm !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .watermark-container img {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .header-meta-box {
+          .full-letterhead-mode .header-meta-box {
             background: transparent !important;
             border: 1px solid #94a3b8 !important;
           }
@@ -411,12 +431,22 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
       </style>
     </head>
     <body>
-      <!-- شريط الطباعة العلوي للشاشة -->
+      <!-- شريط أدوات الشاشة للتحكم والطباعة -->
       <div class="screen-toolbar">
         <div class="toolbar-title">
           <span>📄 خطاب رسمي موجه إلى هيئة الإشراف على التأمين</span>
           <span class="toolbar-badge">إشاري: ${refNumber}</span>
           <span style="font-size:12px; color:#cbd5e1;">(عدد ${docsCount} وثيقة — بقيمة ${totalAmountFormatted} د.ل)</span>
+        </div>
+        <div class="toolbar-options">
+          <label class="mode-label" title="استخدام ورقة الشركة الرسمية المعنونة بالكامل (المأخوذة من معنونه_المدار_الليبي.docx) مع الإطار والترويسة والعلامة المائية والتذييل">
+            <input type="radio" name="printMode" value="full" checked onchange="setPrintMode('full')">
+            الورقة المعنونة الرسمية الكاملة (المعتمدة)
+          </label>
+          <label class="mode-label" title="استخدام الترويسة العلوية الجديدة والتذييل فقط (للطباعة على ورق مروس ومطبوع مسبقاً)">
+            <input type="radio" name="printMode" value="banner" onchange="setPrintMode('banner')">
+            الترويسة العلوية فقط
+          </label>
         </div>
         <div class="toolbar-actions">
           <button class="btn-action btn-print" onclick="window.print()">
@@ -428,97 +458,106 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         </div>
       </div>
 
-      <!-- الصفحة الرسمية A4 - صفحة واحدة -->
-      <div class="paper-container">
-        <!-- العلامة المائية الرسمية في الخلفية (المدار الليبي للتأمين) -->
-        <div class="watermark-container">
-          <img src="${ALMADAR_LOGO_BASE64}" alt="المدار الليبي للتأمين" />
+      <!-- حاوية ورقة الخطاب الرسمي A4 -->
+      <div id="paperContainer" class="paper-container full-letterhead-mode">
+        <!-- ترويسة نمط البانر فقط (تظهر عند اختيار نمط الترويسة العلوية فقط) -->
+        <div class="banner-only-header">
+          <img 
+            src="${bannerUrl}" 
+            alt="ترويسة المدار الليبي للتأمين الرسمية" 
+            class="banner-only-header-img"
+            onerror="this.src='${ALMADAR_LETTERHEAD_BANNER}'"
+          />
         </div>
 
-        <div style="position: relative; z-index: 1;">
-          <!-- الترويسة الرسمية (بانر المدار الرسمي مع الخلفية المزخرفة) -->
-          <div class="official-header">
-            <img 
-              src="${ALMADAR_LETTERHEAD_BANNER}" 
-              alt="ترويسة المدار الليبي للتأمين الرسمية" 
-              class="official-header-banner-img" 
-            />
-          </div>
-
-          <!-- شريط التاريخ والرقم الإشاري جهة اليسار أسفل الخط الفاصل مباشرة -->
-          <div class="letter-meta-strip">
-            <div class="header-meta-box">
-              <div class="meta-row">
-                <span class="meta-lbl">التاريخ :</span>
-                <span class="meta-val">${formattedDate}</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-lbl">الرقم الإشاري :</span>
-                <span class="meta-val">${refNumber}</span>
-              </div>
+        <!-- شريط التاريخ والرقم الإشاري (جهة اليسار تحت الترويسة) -->
+        <div class="letter-meta-strip">
+          <div class="header-meta-box">
+            <div class="meta-row">
+              <span class="meta-lbl">التاريخ :</span>
+              <span class="meta-val">${formattedDate}</span>
             </div>
-          </div>
-
-          <!-- المخاطبة -->
-          <div class="recipient-box">
-            <h2 class="addressed-to">${addressedTo}</h2>
-          </div>
-
-          <!-- الموضوع -->
-          <div class="subject-line">
-            ${subject}
-          </div>
-
-          <!-- التحية -->
-          <div class="salutation">
-            تحية طيبة و بعد ،،،
-          </div>
-
-          <!-- نص الخطاب الرسمي المطابق تماماً للوثيقة الورقية المرفقة -->
-          <div class="letter-content">
-            <p>
-              تهديكم شركة المدار الليبي للتأمين المساهمة المتمثلة في مجلس إدارتها أطيب التحيات.
-            </p>
-            <p>
-              نُفيدكم بأنه تمت إحالة مبلغ وقدره <span class="highlight-bold">( ${totalAmountFormatted} )</span> ${words} ، وذلك لغرض تزويدنا بوثائق التأمين الإجباري من المنظومة .
-            </p>
-            <p>
-              عليه نأمل منكم التكرم باتخاذ ما يلزم والتوجيه بتزويدنا بوثائق التأمين الإجباري المطلوبة في أقرب وقت .
-            </p>
-          </div>
-
-          <!-- الخاتمة والسلام -->
-          <div class="closing-section">
-            <div>وتفضلوا بقبول فائق الاحترام والتقدير</div>
-            <div class="salam">والســــــلام عليكــــــم</div>
+            <div class="meta-row">
+              <span class="meta-lbl">الرقم الإشاري :</span>
+              <span class="meta-val">${refNumber}</span>
+            </div>
           </div>
         </div>
 
-        <!-- الجزء السفلي: التوقيع الرسمي والتذييل (التوقيع على جهة اليسار) -->
-        <div style="position: relative; z-index: 1;">
-          <div class="signatures-area">
-            <!-- توقيع مدير الشؤون الإدارية (على جهة اليسار مع مساحة للتوقيع والختم الحي) -->
-            <div class="company-signature-box">
-              <div class="company-signature-role">${signatoryTitle}</div>
-              <div class="signature-manual-space"></div>
-              <div class="company-signature-name">${signatoryName}</div>
+        <!-- جسم ومحتوى الخطاب الرسمي -->
+        <div class="letter-body-area">
+          <div class="content-top-part">
+            <!-- المخاطبة -->
+            <div class="recipient-box">
+              <h2 class="addressed-to">${addressedTo}</h2>
+            </div>
+
+            <!-- الموضوع -->
+            <div class="subject-line">
+              ${subject}
+            </div>
+
+            <!-- التحية -->
+            <div class="salutation">
+              تحية طيبة و بعد ،،،
+            </div>
+
+            <!-- نص الخطاب الرسمي المطابق تماماً للوثيقة المعتمدة -->
+            <div class="letter-content">
+              <p>
+                تهديكم شركة المدار الليبي للتأمين المساهمة المتمثلة في مجلس إدارتها أطيب التحيات.
+              </p>
+              <p>
+                نُفيدكم بأنه تمت إحالة مبلغ وقدره <span class="highlight-bold">( ${totalAmountFormatted} )</span> ${words} ، وذلك لغرض تزويدنا بوثائق التأمين الإجباري من المنظومة .
+              </p>
+              <p>
+                عليه نأمل منكم التكرم باتخاذ ما يلزم والتوجيه بتزويدنا بوثائق التأمين الإجباري المطلوبة في أقرب وقت .
+              </p>
+            </div>
+
+            <!-- الخاتمة والسلام -->
+            <div class="closing-section">
+              <div>وتفضلوا بقبول فائق الاحترام والتقدير</div>
+              <div class="salam">والســــــلام عليكــــــم</div>
             </div>
           </div>
 
-          <!-- التذييل الرسمي المعتمد -->
-          <div class="official-footer">
-            <div class="footer-line-1">
-              الإدارة العامة: ليبيا &mdash; طرابلس &nbsp;|&nbsp; Public Administration: Libya. Tripoli
+          <!-- قسم التوقيع الرسمي (جهة اليسار) -->
+          <div class="content-bottom-part">
+            <div class="signatures-area">
+              <div class="company-signature-box">
+                <div class="company-signature-role">${signatoryTitle}</div>
+                <div class="signature-manual-space"></div>
+                <div class="company-signature-name">${signatoryName}</div>
+              </div>
             </div>
-            <div class="footer-line-2">
-              <span>Website: www.mli.ly</span> &bull;
-              <span>Email: info@mli.ly</span> &bull;
-              <span>Mobile: 00218920003366</span> &bull;
-              <span>P.O. Box: (83410)</span>
-            </div>
+          </div>
+        </div>
+
+        <!-- تذييل نمط البانر فقط -->
+        <div class="banner-only-footer">
+          <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+            الإدارة العامة: ليبيا – طرابلس - حي دمشق &nbsp;|&nbsp; Public Administration: Libya. Tripoli. hy demashk.
+          </div>
+          <div style="direction: ltr; display: flex; justify-content: center; gap: 15px; font-weight: 600;">
+            <span>Website: www.mli.ly</span> &bull;
+            <span>Email: info@mli.ly</span> &bull;
+            <span>Mobile: 00218920003366</span> &bull;
+            <span>P.O. Box: (83410)</span>
           </div>
         </div>
       </div>
+
+      <script>
+        function setPrintMode(mode) {
+          var container = document.getElementById('paperContainer');
+          if (mode === 'banner') {
+            container.className = 'paper-container banner-only-mode';
+          } else {
+            container.className = 'paper-container full-letterhead-mode';
+          }
+        }
+      </script>
     </body>
     </html>
   `;
