@@ -58,8 +58,9 @@ export default function CompulsoryDocumentRequestsTab() {
   const [addressedTo, setAddressedTo] = useState<string>('السيد / مدير عام هيئة الإشراف على التأمين');
   const [status, setStatus] = useState<'draft' | 'pending_approval' | 'pending_payment' | 'sent' | 'received' | 'canceled'>('draft');
   const [notes, setNotes] = useState<string>('');
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [deleteReceiptFile, setDeleteReceiptFile] = useState(false);
+  // Multiple Attachments State
+  const [selectedNewFiles, setSelectedNewFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<string[]>([]);
 
   // Receive Modal State
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -73,8 +74,33 @@ export default function CompulsoryDocumentRequestsTab() {
   const [receiveNotes, setReceiveNotes] = useState<string>('');
   const [submittingReceive, setSubmittingReceive] = useState(false);
 
-  // Image Preview Modal
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  // Gallery Preview Modal
+  const [previewGallery, setPreviewGallery] = useState<{
+    isOpen: boolean;
+    title: string;
+    files: string[];
+    activeIndex: number;
+  } | null>(null);
+
+  // Helper to extract all attachments list from request
+  const getRequestAttachments = (req: CompulsoryDocumentRequestData): string[] => {
+    if (req.attachments_list && Array.isArray(req.attachments_list) && req.attachments_list.length > 0) {
+      return req.attachments_list.filter(Boolean);
+    }
+    if (req.attachments && Array.isArray(req.attachments) && req.attachments.length > 0) {
+      return req.attachments.filter(Boolean);
+    }
+    if (typeof req.attachments === 'string') {
+      try {
+        const parsed = JSON.parse(req.attachments);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.filter(Boolean);
+      } catch (e) {}
+    }
+    if (req.payment_receipt_image) {
+      return [req.payment_receipt_image];
+    }
+    return [];
+  };
 
   // Calculate Total & Tafqeet in Realtime
   const calculatedTotal = useMemo(() => {
@@ -150,8 +176,8 @@ export default function CompulsoryDocumentRequestsTab() {
       setAddressedTo(req.addressed_to || 'السيد / مدير عام هيئة الإشراف على التأمين');
       setStatus(req.status || 'draft');
       setNotes(req.notes || '');
-      setReceiptFile(null);
-      setDeleteReceiptFile(false);
+      setExistingAttachments(getRequestAttachments(req));
+      setSelectedNewFiles([]);
     } else {
       setEditingRequest(null);
       setDocsCount(200);
@@ -169,8 +195,8 @@ export default function CompulsoryDocumentRequestsTab() {
       setAddressedTo('السيد / مدير عام هيئة الإشراف على التأمين');
       setStatus('draft');
       setNotes('');
-      setReceiptFile(null);
-      setDeleteReceiptFile(false);
+      setExistingAttachments([]);
+      setSelectedNewFiles([]);
     }
     setShowModal(true);
   };
@@ -201,11 +227,20 @@ export default function CompulsoryDocumentRequestsTab() {
       formData.append('status', status);
       if (notes) formData.append('notes', notes);
 
-      if (receiptFile) {
-        formData.append('payment_receipt_image', receiptFile);
-      }
-      if (deleteReceiptFile) {
+      // Multiple attachments handling
+      if (selectedNewFiles.length > 0) {
+        selectedNewFiles.forEach(file => {
+          formData.append('attachments[]', file);
+        });
+        formData.append('payment_receipt_image', selectedNewFiles[0]);
+      } else if (existingAttachments.length > 0) {
+        formData.append('payment_receipt_image', existingAttachments[0]);
+      } else {
         formData.append('delete_receipt_image', '1');
+      }
+
+      if (editingRequest) {
+        formData.append('existing_attachments', JSON.stringify(existingAttachments));
       }
 
       const url = editingRequest
@@ -848,28 +883,40 @@ export default function CompulsoryDocumentRequestsTab() {
                       )}
                     </td>
 
-                    {/* Receipt Image */}
+                    {/* Receipt Attachments */}
                     <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                      {r.payment_receipt_image ? (
-                        <button
-                          onClick={() => setPreviewImage(resolveImageUrl(r.payment_receipt_image))}
-                          style={{
-                            border: 'none',
-                            background: 'rgba(2, 132, 199, 0.1)',
-                            color: '#0284c7',
-                            padding: '5px 10px',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                            fontWeight: 800
-                          }}
-                          title="عرض إشعار أو صك السداد"
-                        >
-                          <i className="fa-solid fa-paperclip"></i> معاينة
-                        </button>
-                      ) : (
-                        <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>
-                      )}
+                      {(() => {
+                        const atts = getRequestAttachments(r);
+                        if (atts.length === 0) {
+                          return <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>;
+                        }
+                        return (
+                          <button
+                            onClick={() => setPreviewGallery({
+                              isOpen: true,
+                              title: `مرفقات الطلب: ${r.reference_number || r.request_number}`,
+                              files: atts,
+                              activeIndex: 0
+                            })}
+                            style={{
+                              border: 'none',
+                              background: 'rgba(2, 132, 199, 0.1)',
+                              color: '#0284c7',
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title={`معاينة المرفقات (${atts.length} ملف)`}
+                          >
+                            <i className="fa-solid fa-paperclip"></i> معاينة ({atts.length})
+                          </button>
+                        );
+                      })()}
                     </td>
 
                     {/* Actions */}
@@ -1146,23 +1193,164 @@ export default function CompulsoryDocumentRequestsTab() {
                   </select>
                 </div>
 
-                {/* Upload Receipt / Check File */}
+                {/* Upload Receipt / Check Files */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#334155', marginBottom: '5px' }}>إرفاق صورة صك / إيصال السداد:</label>
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={e => setReceiptFile(e.target.files ? e.target.files[0] : null)}
-                    style={{ width: '100%', fontSize: '12px' }}
-                  />
-                  {editingRequest?.payment_receipt_image && (
-                    <div style={{ marginTop: '4px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <a href={resolveImageUrl(editingRequest.payment_receipt_image)} target="_blank" rel="noreferrer" style={{ color: '#0284c7', fontWeight: 700 }}>
-                        عرض المرفق الحالي
-                      </a>
-                      <label style={{ color: '#ef4444', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={deleteReceiptFile} onChange={e => setDeleteReceiptFile(e.target.checked)} /> حذف المرفق
-                      </label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#334155', marginBottom: '5px' }}>
+                    <i className="fa-solid fa-paperclip" style={{ marginLeft: '5px', color: '#0284c7' }}></i>
+                    إرفاق صور الصكوك / إيصالات السداد / المستندات (يمكن اختيار أكثر من ملف):
+                  </label>
+                  
+                  <div style={{
+                    border: '2px dashed #cbd5e1',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    background: '#f8fafc',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,application/pdf"
+                      onChange={e => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          const newArr = Array.from(e.target.files);
+                          setSelectedNewFiles(prev => [...prev, ...newArr]);
+                          e.target.value = '';
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        opacity: 0,
+                        cursor: 'pointer',
+                        width: '100%',
+                        height: '100%'
+                      }}
+                    />
+                    <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '22px', color: '#0284c7', marginBottom: '4px' }}></i>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#091e3a' }}>
+                      انقر هنا أو اسحب الملفات لإضافتها
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                      يدعم الصور (PNG, JPG, WEBP) وملفات PDF (عدة ملفات)
+                    </div>
+                  </div>
+
+                  {/* List of Newly Selected Files */}
+                  {selectedNewFiles.length > 0 && (
+                    <div style={{ marginTop: '10px' }}>
+                      <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#0369a1', marginBottom: '6px' }}>
+                        الملفات الجديدة المحددة ({selectedNewFiles.length}):
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {selectedNewFiles.map((f, idx) => {
+                          const isPdf = f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+                          const sizeKb = Math.round(f.size / 1024);
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: '#f0f9ff',
+                                border: '1px solid #bae6fd',
+                                borderRadius: '8px',
+                                padding: '6px 10px',
+                                fontSize: '12px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                <i className={isPdf ? 'fa-solid fa-file-pdf' : 'fa-solid fa-file-image'} style={{ color: isPdf ? '#dc2626' : '#0284c7', fontSize: '15px' }}></i>
+                                <span style={{ fontWeight: 700, color: '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '300px' }}>
+                                  {f.name}
+                                </span>
+                                <span style={{ fontSize: '10.5px', color: '#64748b' }}>({sizeKb} KB)</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedNewFiles(prev => prev.filter((_, i) => i !== idx))}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  color: '#dc2626',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  width: '24px',
+                                  height: '24px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 900
+                                }}
+                                title="إزالة هذا الملف"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of Existing Attachments (if editing) */}
+                  {existingAttachments.length > 0 && (
+                    <div style={{ marginTop: '10px' }}>
+                      <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                        المرفقات الحالية المحفوظة ({existingAttachments.length}):
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {existingAttachments.map((path, idx) => {
+                          const isPdf = path.toLowerCase().endsWith('.pdf');
+                          const fileName = path.split('/').pop() || `مرفق ${idx + 1}`;
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                padding: '6px 10px',
+                                fontSize: '12px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                <i className={isPdf ? 'fa-solid fa-file-pdf' : 'fa-solid fa-file-image'} style={{ color: isPdf ? '#dc2626' : '#0d9488', fontSize: '15px' }}></i>
+                                <a
+                                  href={resolveImageUrl(path)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ fontWeight: 700, color: '#0284c7', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' }}
+                                  title="فتح المرفق في نافذة جديدة"
+                                >
+                                  {fileName} <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '10px' }}></i>
+                                </a>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setExistingAttachments(prev => prev.filter((_, i) => i !== idx))}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  color: '#dc2626',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '3px 8px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  fontWeight: 800
+                                }}
+                                title="حذف هذا المرفق"
+                              >
+                                حذف
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1371,17 +1559,339 @@ export default function CompulsoryDocumentRequestsTab() {
         </div>
       )}
 
-      {/* ─── Modal 3: Image Preview ─── */}
-      {previewImage && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
-            <button
-              onClick={() => setPreviewImage(null)}
-              style={{ position: 'absolute', top: '-40px', right: 0, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 900 }}
+      {/* ─── Modal 3: Rich Attachments Gallery Preview ─── */}
+      {previewGallery && previewGallery.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 1200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewGallery(null);
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '920px',
+              maxHeight: '94vh',
+              background: '#ffffff',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              border: '1px solid #e2e8f0'
+            }}
+          >
+            {/* Gallery Header */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 20px',
+                background: '#091e3a',
+                color: '#ffffff',
+                borderBottom: '1px solid #1e293b'
+              }}
             >
-              ✕
-            </button>
-            <img src={previewImage} alt="مرفق السداد" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <i className="fa-solid fa-paperclip" style={{ color: '#38bdf8', fontSize: '16px' }}></i>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>{previewGallery.title}</h4>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                    ملف {previewGallery.activeIndex + 1} من {previewGallery.files.length}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {previewGallery.files[previewGallery.activeIndex] && (
+                  <>
+                    <a
+                      href={resolveImageUrl(previewGallery.files[previewGallery.activeIndex])}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.12)',
+                        color: '#fff',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title="فتح في نافذة جديدة منفصلة"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square"></i> فتح بنافذة جديدة
+                    </a>
+                    <a
+                      href={resolveImageUrl(previewGallery.files[previewGallery.activeIndex])}
+                      download
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.2)',
+                        color: '#38bdf8',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title="تنزيل الملف على جهازك"
+                    >
+                      <i className="fa-solid fa-download"></i> تنزيل
+                    </a>
+                  </>
+                )}
+                <button
+                  onClick={() => setPreviewGallery(null)}
+                  style={{
+                    background: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    width: '32px',
+                    height: '32px',
+                    cursor: 'pointer',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="إغلاق"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Gallery Tabs if multiple files */}
+            {previewGallery.files.length > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  background: '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
+                  overflowX: 'auto',
+                  alignItems: 'center'
+                }}
+              >
+                <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#64748b', whiteSpace: 'nowrap' }}>الملفات:</span>
+                {previewGallery.files.map((file, idx) => {
+                  const isActive = idx === previewGallery.activeIndex;
+                  const isPdf = file.toLowerCase().endsWith('.pdf');
+                  const fname = file.split('/').pop() || `ملف ${idx + 1}`;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setPreviewGallery(prev => prev ? { ...prev, activeIndex: idx } : null)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: isActive ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                        background: isActive ? '#e0f2fe' : '#ffffff',
+                        color: isActive ? '#0369a1' : '#334155',
+                        fontWeight: isActive ? 800 : 600,
+                        fontSize: '11.5px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <i className={isPdf ? 'fa-solid fa-file-pdf' : 'fa-solid fa-file-image'} style={{ color: isPdf ? '#dc2626' : '#0284c7' }}></i>
+                      <span>{fname.length > 20 ? `${fname.substring(0, 17)}...` : fname}</span>
+                      <span style={{ fontSize: '10px', background: isActive ? '#0284c7' : '#94a3b8', color: '#fff', borderRadius: '10px', padding: '1px 5px' }}>{idx + 1}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Viewer Content Area */}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                background: '#0f172a',
+                padding: '16px',
+                minHeight: '420px',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Prev Button */}
+              {previewGallery.files.length > 1 && (
+                <button
+                  onClick={() => setPreviewGallery(prev => {
+                    if (!prev) return null;
+                    const newIndex = prev.activeIndex > 0 ? prev.activeIndex - 1 : prev.files.length - 1;
+                    return { ...prev, activeIndex: newIndex };
+                  })}
+                  style={{
+                    position: 'absolute',
+                    right: '16px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 10,
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '50%',
+                    width: '42px',
+                    height: '42px',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
+                  }}
+                  title="الملف السابق"
+                >
+                  <i className="fa-solid fa-chevron-right"></i>
+                </button>
+              )}
+
+              {/* Next Button */}
+              {previewGallery.files.length > 1 && (
+                <button
+                  onClick={() => setPreviewGallery(prev => {
+                    if (!prev) return null;
+                    const newIndex = prev.activeIndex < prev.files.length - 1 ? prev.activeIndex + 1 : 0;
+                    return { ...prev, activeIndex: newIndex };
+                  })}
+                  style={{
+                    position: 'absolute',
+                    left: '16px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 10,
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '50%',
+                    width: '42px',
+                    height: '42px',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
+                  }}
+                  title="الملف التالي"
+                >
+                  <i className="fa-solid fa-chevron-left"></i>
+                </button>
+              )}
+
+              {/* Active File Rendering */}
+              {(() => {
+                const activePath = previewGallery.files[previewGallery.activeIndex];
+                if (!activePath) return <div style={{ color: '#fff' }}>لا يوجد ملف للمعاينة</div>;
+                const fileUrl = resolveImageUrl(activePath);
+                const isPdf = activePath.toLowerCase().endsWith('.pdf');
+
+                if (isPdf) {
+                  return (
+                    <div style={{ width: '100%', height: '70vh', display: 'flex', flexDirection: 'column' }}>
+                      <iframe
+                        src={fileUrl}
+                        title="معاينة PDF"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: '#fff'
+                        }}
+                      />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img
+                      key={fileUrl}
+                      src={fileUrl}
+                      alt="مرفق السداد"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '72vh',
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.6)'
+                      }}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const fallbackElem = target.parentElement?.querySelector('.img-error-fallback') as HTMLElement;
+                        if (fallbackElem) fallbackElem.style.display = 'flex';
+                      }}
+                    />
+                    <div
+                      className="img-error-fallback"
+                      style={{
+                        display: 'none',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '30px',
+                        background: '#1e293b',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        textAlign: 'center',
+                        maxWidth: '400px'
+                      }}
+                    >
+                      <i className="fa-solid fa-triangle-exclamation fa-3x" style={{ color: '#f59e0b', marginBottom: '12px' }}></i>
+                      <div style={{ fontWeight: 800, fontSize: '14px', marginBottom: '6px' }}>تعذر عرض الصورة داخل المعاينة المباشرة</div>
+                      <div style={{ fontSize: '11.5px', color: '#94a3b8', marginBottom: '16px' }}>
+                        قد يكون مسار الملف مقيداً أو يتطلب فتحه مباشرة
+                      </div>
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: '#0284c7',
+                          color: '#fff',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          fontWeight: 800,
+                          fontSize: '12px'
+                        }}
+                      >
+                        <i className="fa-solid fa-arrow-up-right-from-square"></i> فتح الملف مباشرة
+                      </a>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}

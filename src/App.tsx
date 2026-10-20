@@ -586,12 +586,6 @@ const menuSections: SidebarSection[] = [
     ],
   },
   {
-    title: 'هيئة الإشراف على التأمين',
-    items: [
-      { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' },
-    ],
-  },
-  {
     title: 'الإعدادات',
     items: [
       {
@@ -1303,15 +1297,6 @@ const createMenuSections = (
       title: 'الشؤون المالية',
       items: finalReports,
     });
-
-    if (reportsItemsMap.has('/reports/insurance-supervision')) {
-      sections.push({
-        title: 'هيئة الإشراف على التأمين',
-        items: [
-          { label: 'هيئة الإشراف على التأمين', icon: 'fa-solid fa-building-columns', to: '/reports/insurance-supervision' }
-        ]
-      });
-    }
   }
 
   if (settingsItems.length > 0) {

@@ -15,6 +15,8 @@ export interface CompulsoryDocumentRequestData {
   payment_method?: string | null;
   payment_reference?: string | null;
   payment_receipt_image?: string | null;
+  attachments?: string[] | null;
+  attachments_list?: string[] | null;
   status: 'draft' | 'pending_approval' | 'pending_payment' | 'sent' | 'received' | 'canceled';
   signatory_name?: string | null;
   signatory_title?: string | null;
