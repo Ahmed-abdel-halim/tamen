@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from "../utils/excelGenerator";
@@ -58,8 +58,80 @@ export const isCanceledDocument = (doc: any): boolean => {
   return false;
 };
 
-export default function InsuranceDocumentsList({ isArchive = false }: { isArchive?: boolean } = {}) {
+export type InsuranceDocumentCategory = 'compulsory' | 'third_party' | 'foreign' | 'all';
+
+export interface InsuranceDocumentsListProps {
+  isArchive?: boolean;
+  documentCategory?: InsuranceDocumentCategory;
+}
+
+export default function InsuranceDocumentsList({ isArchive = false, documentCategory }: InsuranceDocumentsListProps = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const activeCategory: InsuranceDocumentCategory = documentCategory || (
+    location.pathname.startsWith('/third-party-insurance-documents')
+      ? 'third_party'
+      : location.pathname.startsWith('/foreign-car-insurance-documents')
+      ? 'foreign'
+      : location.pathname.startsWith('/insurance-documents')
+      ? 'compulsory'
+      : 'all'
+  );
+
+  const categoryMeta = useMemo(() => {
+    switch (activeCategory) {
+      case 'third_party':
+        return {
+          title: 'تأمين طرف ثالث سيارات',
+          breadcrumb: isArchive ? 'ارشيف الوثائق المنتهية / تأمين طرف ثالث سيارات' : 'تأمين طرف ثالث سيارات / قائمة الوثائق',
+          apiType: 'third_party',
+          excelTitle: 'شركة المدار الليبي للتأمين - تقرير تأمين طرف ثالث سيارات',
+          excelFileName: 'تقرير_تأمين_طرف_ثالث_سيارات',
+          createRoute: '/third-party-insurance-documents/create',
+          addBtnLabel: 'إضافة وثيقة طرف ثالث',
+          icon: 'fa-solid fa-handshake-simple',
+          allowSupervisionSync: false,
+        };
+      case 'foreign':
+        return {
+          title: 'تأمين سيارات أجنبية',
+          breadcrumb: isArchive ? 'ارشيف الوثائق المنتهية / تأمين سيارات أجنبية' : 'تأمين سيارات أجنبية / قائمة الوثائق',
+          apiType: 'foreign',
+          excelTitle: 'شركة المدار الليبي للتأمين - تقرير تأمين سيارات أجنبية',
+          excelFileName: 'تقرير_تأمين_سيارات_أجنبية',
+          createRoute: '/foreign-car-insurance-documents/create',
+          addBtnLabel: 'إضافة وثيقة سيارات أجنبية',
+          icon: 'fa-solid fa-car-side',
+          allowSupervisionSync: false,
+        };
+      case 'all':
+        return {
+          title: 'إدارة وثائق السيارات',
+          breadcrumb: isArchive ? 'ارشيف الوثائق المنتهية / وثائق السيارات' : 'وثائق السيارات / قائمة الوثائق',
+          apiType: '',
+          excelTitle: 'شركة المدار الليبي للتأمين - تقرير وثائق السيارات الشامل',
+          excelFileName: 'تقرير_وثائق_السيارات_الشامل',
+          createRoute: '/insurance-documents/create',
+          addBtnLabel: 'إضافة وثيقة جديدة',
+          icon: 'fa-solid fa-car',
+          allowSupervisionSync: false,
+        };
+      case 'compulsory':
+      default:
+        return {
+          title: 'تأمين السيارات الإجباري',
+          breadcrumb: isArchive ? 'ارشيف الوثائق المنتهية / تأمين السيارات الإجباري' : 'تأمين السيارات الإجباري / قائمة الوثائق',
+          apiType: 'compulsory',
+          excelTitle: 'شركة المدار الليبي للتأمين - تقرير تأمين السيارات الإجباري',
+          excelFileName: 'تقرير_تأمين_السيارات_الإجباري',
+          createRoute: '/insurance-documents/create?type=compulsory',
+          addBtnLabel: 'إضافة وثيقة إجباري',
+          icon: 'fa-solid fa-file-shield',
+          allowSupervisionSync: true,
+        };
+    }
+  }, [activeCategory, isArchive]);
   const [documents, setDocuments] = useState<InsuranceDocument[]>([]);
   const [totalDocuments, setTotalDocuments] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -106,7 +178,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
   useEffect(() => {
     fetchDocuments();
-  }, [currentPage, searchQuery, isArchive, filters, statusFilter]);
+  }, [currentPage, searchQuery, isArchive, filters, statusFilter, activeCategory]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -170,7 +242,8 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
 
       if (statusFilter === 'cancelled') {
         const cancelParams = new URLSearchParams();
-        cancelParams.append('type', 'insurance_documents');
+        cancelParams.append('type', 'insurance_documents');
+        if (categoryMeta.apiType) cancelParams.append('insurance_type', categoryMeta.apiType);
         if (searchQuery) cancelParams.append('search', searchQuery);
         if (filters.agentId) cancelParams.append('branch_agent_id', filters.agentId);
         if (filters.year) cancelParams.append('year', filters.year);
@@ -206,6 +279,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         setTotalDocuments(data.total || mappedDocs.length);
       } else {
         const params = new URLSearchParams();
+        if (categoryMeta.apiType) params.append('insurance_type', categoryMeta.apiType);
         if (isArchive) {
           params.append('archived', 'true');
         } else if (statusFilter) {
@@ -410,7 +484,8 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         if (statusFilter === 'cancelled') {
           // ======= جلب الوثائق الملغية بالتقسيم (1000 في كل صفحة) =======
           const cancelParams = new URLSearchParams();
-          cancelParams.append('type', 'insurance_documents');
+          cancelParams.append('type', 'insurance_documents');
+        if (categoryMeta.apiType) cancelParams.append('insurance_type', categoryMeta.apiType);
           if (searchQuery) cancelParams.append('search', searchQuery);
           if (filters.agentId) cancelParams.append('branch_agent_id', filters.agentId);
           if (filters.year) cancelParams.append('year', filters.year);
@@ -461,6 +536,9 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
         } else {
           // ======= جلب كل الوثائق بالتقسيم (1000 في كل صفحة) =======
           const params = new URLSearchParams();
+          if (categoryMeta.apiType) {
+            params.append('insurance_type', categoryMeta.apiType);
+          }
           if (isArchive) {
             params.append('archived', 'true');
           } else if (statusFilter) {
@@ -534,12 +612,12 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
       });
 
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير تأمين السيارات الإجباري',
+        title: categoryMeta.excelTitle,
         subtitle: `إجمالي الوثائق المصدرة: ${data.length} - تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-LY')}`,
         columns,
         data,
-        fileName: 'تقرير_تأمين_السيارات_الإجباري',
-        qrData: `تقرير تأمين السيارات الإجباري - شركة المدار الليبي\nعدد الوثائق: ${data.length}\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: categoryMeta.excelFileName,
+        qrData: `${categoryMeta.title} - شركة المدار الليبي\nعدد الوثائق: ${data.length}\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast(`تم تصدير ${data.length} وثيقة بنجاح`, 'success');
@@ -553,7 +631,10 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
   return (
     <section className="users-management">
       <div className="users-breadcrumb" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
-        <span>{isArchive ? 'ارشيف الوثائق المنتهيه / تأمين السيارات الإجباري' : 'تأمين السيارات الإجباري / قائمة الوثائق'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+          <i className={categoryMeta.icon} style={{ color: '#0284c7' }}></i>
+          {categoryMeta.breadcrumb}
+        </span>
         {!isArchive && (
           <DocumentStatusFilter
             status={statusFilter}
@@ -605,10 +686,11 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
           {!isArchive && !isAgentCancelled && (
             <button
               className="primary add-user-btn"
-              onClick={() => navigate('/insurance-documents/create')}
+              onClick={() => navigate(categoryMeta.createRoute)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <i className="fa-solid fa-plus"></i>
-              إضافة وثيقة
+              {categoryMeta.addBtnLabel}
             </button>
           )}
           {!isArchive && isAgentCancelled && (
@@ -622,7 +704,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
               الإصدار موقوف (وكالة ملغية)
             </button>
           )}
-          {!isArchive && isAdmin && (
+          {!isArchive && isAdmin && categoryMeta.allowSupervisionSync && (
             <button
               className="primary add-user-btn"
               onClick={handleGlobalSync}
@@ -642,7 +724,7 @@ export default function InsuranceDocumentsList({ isArchive = false }: { isArchiv
             {exportingExcel ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-file-excel"></i>}
             {exportingExcel ? ' جاري التصدير...' : ' تصدير إكسل'}
           </button>
-          {isAdmin && (
+          {isAdmin && categoryMeta.allowSupervisionSync && (
             <button
               className="primary add-user-btn"
               onClick={() => setShowTermsModal(true)}

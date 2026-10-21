@@ -228,8 +228,8 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     'وثائق تأمين السيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
     'تأمين سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
     'تأمين سيارة جمرك': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين سيارات أجنبية': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين طرف ثالث سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين طرف ثالث سيارات': { label: 'تأمين طرف ثالث سيارات', icon: 'fa-solid fa-handshake-simple', route: '/third-party-insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين سيارات أجنبية': { label: 'تأمين سيارات أجنبية', icon: 'fa-solid fa-car-side', route: '/foreign-car-insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', route: '/international-insurance-documents', color: 'green', statisticsKey: 'international_insurance_documents' },
     'تأمين المسافرين': { label: 'وثيقة تأمين مسافرين', icon: 'fa-solid fa-plane', route: '/travel-insurance-documents', color: 'green', statisticsKey: 'travel_insurance_documents' },
     'تأمين زائرين ليبيا': { label: 'وثيقة تأمين مسافرين', icon: 'fa-solid fa-plane', route: '/travel-insurance-documents', color: 'green', statisticsKey: 'travel_insurance_documents' },
@@ -245,6 +245,8 @@ export function DashboardPanels({}: DashboardPanelsProps) {
   // ترتيب ثابت للعناصر حسب السايدبار الأصلي
   const sidebarOrder: string[] = [
     '/insurance-documents',
+    '/third-party-insurance-documents',
+    '/foreign-car-insurance-documents',
     '/international-insurance-documents',
     '/travel-insurance-documents',
     '/resident-insurance-documents',
@@ -261,6 +263,20 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       route: '/insurance-documents', 
       color: 'green', 
       statistics: statistics.insurance_documents?.toString() || '0' 
+    },
+    { 
+      label: 'تأمين طرف ثالث سيارات', 
+      icon: 'fa-solid fa-handshake-simple', 
+      route: '/third-party-insurance-documents', 
+      color: 'green', 
+      statistics: 'عرض' 
+    },
+    { 
+      label: 'تأمين سيارات أجنبية', 
+      icon: 'fa-solid fa-car-side', 
+      route: '/foreign-car-insurance-documents', 
+      color: 'green', 
+      statistics: 'عرض' 
     },
     { 
       label: 'تأمين السيارات الدولي', 

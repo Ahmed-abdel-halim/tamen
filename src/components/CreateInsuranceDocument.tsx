@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 
@@ -407,14 +407,38 @@ export const EidcApiServiceMapping = {
   }
 };
 
-export default function CreateInsuranceDocument() {
+interface CreateInsuranceDocumentProps {
+  defaultType?: 'compulsory' | 'third_party' | 'foreign';
+}
+
+export default function CreateInsuranceDocument({ defaultType }: CreateInsuranceDocumentProps = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const resolveInitialInsuranceType = (): 'تأمين إجباري سيارات' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية' | 'تأمين سيارة جمرك' => {
+    if (defaultType === 'third_party') return 'تأمين طرف ثالث سيارات';
+    if (defaultType === 'foreign') return 'تأمين سيارات أجنبية';
+    if (defaultType === 'compulsory') return 'تأمين إجباري سيارات';
+
+    const param = (searchParams.get('type') || searchParams.get('insurance_type') || '').toLowerCase();
+    if (param.includes('third') || param.includes('طرف')) return 'تأمين طرف ثالث سيارات';
+    if (param.includes('foreign') || param.includes('أجنب') || param.includes('اجنب')) return 'تأمين سيارات أجنبية';
+    if (param.includes('compulsory') || param.includes('إجبار') || param.includes('اجبار')) return 'تأمين إجباري سيارات';
+
+    const p = location.pathname.toLowerCase();
+    if (p.includes('third-party')) return 'تأمين طرف ثالث سيارات';
+    if (p.includes('foreign-car') || p.includes('foreign')) return 'تأمين سيارات أجنبية';
+
+    return 'تأمين إجباري سيارات';
+  };
+
   const [plates, setPlates] = useState<Plate[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [_authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
+  const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const prevEnginePowerRef = useRef<string>('');
   const [formData, setFormData] = useState({
-    insurance_type: 'تأمين إجباري سيارات' as 'تأمين إجباري سيارات' | 'تأمين طرف ثالث سيارات' | 'تأمين سيارات أجنبية' | 'تأمين سيارة جمرك',
+    insurance_type: resolveInitialInsuranceType(),
     plate_id: '',
     port: '',
     start_date: '',
@@ -567,6 +591,51 @@ export default function CreateInsuranceDocument() {
       console.error('Error loading user permissions:', error);
       setAuthorizedDocuments(null);
     }
+  };
+
+  const allowedInsuranceTypes = useMemo(() => {
+    if (!authorizedDocuments) {
+      return [
+        { value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' },
+        { value: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' },
+        { value: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' },
+      ];
+    }
+
+    const hasCompulsory = authorizedDocuments.some(d => 
+      ['تأمين السيارات الإجباري', 'تأمين سيارات إجباري', 'وثائق تأمين السيارات', 'تأمين سيارات', 'تأمين سيارة جمرك'].includes(d)
+    );
+    const hasThirdParty = authorizedDocuments.includes('تأمين طرف ثالث سيارات');
+    const hasForeign = authorizedDocuments.includes('تأمين سيارات أجنبية');
+
+    const options = [];
+    if (hasCompulsory) options.push({ value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' });
+    if (hasThirdParty) options.push({ value: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' });
+    if (hasForeign) options.push({ value: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' });
+
+    if (options.length === 0) {
+      options.push({ value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' });
+    }
+    return options;
+  }, [authorizedDocuments]);
+
+  useEffect(() => {
+    if (allowedInsuranceTypes.length > 0) {
+      const isCurrentAllowed = allowedInsuranceTypes.some(opt => opt.value === formData.insurance_type);
+      if (!isCurrentAllowed) {
+        setFormData(prev => ({ ...prev, insurance_type: allowedInsuranceTypes[0].value as any }));
+      }
+    }
+  }, [allowedInsuranceTypes]);
+
+  const getReturnUrl = () => {
+    if (formData.insurance_type === 'تأمين طرف ثالث سيارات') {
+      return '/third-party-insurance-documents';
+    }
+    if (formData.insurance_type === 'تأمين سيارات أجنبية') {
+      return '/foreign-car-insurance-documents';
+    }
+    return '/insurance-documents';
   };
 
 
@@ -2711,7 +2780,7 @@ export default function CreateInsuranceDocument() {
 
       showToast('تم إنشاء الوثيقة بنجاح', 'success');
       setTimeout(() => {
-        navigate('/insurance-documents');
+        navigate(getReturnUrl());
       }, 1000);
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء إنشاء الوثيقة', 'error');
@@ -2999,9 +3068,9 @@ export default function CreateInsuranceDocument() {
                   onChange={(e) => setFormData({ ...formData, insurance_type: e.target.value as any })}
                   style={{ padding: '0 12px', fontSize: '14px', border: '1.5px solid #2563eb', borderRadius: '6px', fontWeight: '600', height: '40px', background: 'var(--input-bg, #fff)', color: 'var(--text)' }}
                 >
-                  <option value="تأمين إجباري سيارات">تأمين إجباري سيارات</option>
-                  <option value="تأمين طرف ثالث سيارات">تأمين طرف ثالث سيارات</option>
-                  <option value="تأمين سيارات أجنبية">تأمين سيارات أجنبية</option>
+                  {allowedInsuranceTypes.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="form-group span-2" style={{ display: 'flex', alignItems: 'center', color: 'var(--muted, #64748b)', fontSize: '0.8rem', padding: '0 10px' }}>
@@ -3773,7 +3842,7 @@ export default function CreateInsuranceDocument() {
                     <button type="submit" disabled={submitting} className="btn-submit" style={{ width: '100%', maxWidth: '300px', height: '55px', borderRadius: '10px' }}>
                       <i className="fa-solid fa-save"></i> {submitting ? 'جاري الحفظ...' : 'حفظ الوثيقة'}
                     </button>
-                    <button type="button" onClick={() => navigate('/insurance-documents')} className="btn-cancel" style={{ height: '55px', borderRadius: '10px', width: '100%', maxWidth: '150px' }}>إلغاء</button>
+                    <button type="button" onClick={() => navigate(getReturnUrl())} className="btn-cancel" style={{ height: '55px', borderRadius: '10px', width: '100%', maxWidth: '150px' }}>إلغاء</button>
                   </div>
                 </div>
               </form>

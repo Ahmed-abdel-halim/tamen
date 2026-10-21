@@ -630,6 +630,16 @@ export default function EditInsuranceDocument() {
   const isThirdPartyInsurance = formData.insurance_type === 'تأمين طرف ثالث سيارات';
   const isForeignCarInsurance = formData.insurance_type === 'تأمين سيارات أجنبية';
 
+  const getReturnUrl = () => {
+    if (formData.insurance_type === 'تأمين طرف ثالث سيارات') {
+      return '/third-party-insurance-documents';
+    }
+    if (formData.insurance_type === 'تأمين سيارات أجنبية') {
+      return '/foreign-car-insurance-documents';
+    }
+    return '/insurance-documents';
+  };
+
   // Get city code helper
   const selectedPlateObj = plates.find(p => p.id.toString() === formData.plate_id);
   const cityCode = selectedPlateObj ? selectedPlateObj.plate_number : "";
@@ -1889,7 +1899,7 @@ export default function EditInsuranceDocument() {
 
       showToast('تم تحديث الوثيقة بنجاح', 'success');
       setTimeout(() => {
-        navigate('/insurance-documents');
+        navigate(getReturnUrl());
       }, 1000);
     } catch (error: any) {
       showToast(error.message || 'حدث خطأ أثناء تحديث الوثيقة', 'error');
@@ -2508,7 +2518,7 @@ export default function EditInsuranceDocument() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate('/insurance-documents')}
+                        onClick={() => navigate(getReturnUrl())}
                         disabled={submitting}
                         className="btn-cancel"
                         style={{ width: '100%', maxWidth: '150px', height: '55px', borderRadius: '12px', background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', fontWeight: 'bold', cursor: 'pointer' }}

@@ -208,8 +208,8 @@ function hasAccessToRoute(
     'وثائق تأمين السيارات': ['/insurance-documents'],
     'تأمين سيارات': ['/insurance-documents'],
     'تأمين سيارة جمرك': ['/insurance-documents'],
-    'تأمين سيارات أجنبية': ['/insurance-documents'],
-    'تأمين طرف ثالث سيارات': ['/insurance-documents'],
+    'تأمين سيارات أجنبية': ['/foreign-car-insurance-documents'],
+    'تأمين طرف ثالث سيارات': ['/third-party-insurance-documents'],
     'تأمين سيارات دولي': ['/international-insurance-documents'],
     'تأمين المسافرين': ['/travel-insurance-documents'],
     'تأمين زائرين ليبيا': ['/travel-insurance-documents'],
@@ -398,6 +398,17 @@ function hasAccessToRoute(
     }
   }
 
+  // إذا كان المسار تفاصيل أو تعديل أو نقل ملكية لوثيقة سيارة، يكفي امتلاك أي صلاحية من صلاحيات وثائق السيارات
+  const isCarDocDetail = path.startsWith('/insurance-documents/') && !path.startsWith('/insurance-documents/create');
+  if (isCarDocDetail) {
+    const hasAnyCarPermission = authorizedDocs.some(doc =>
+      ['تأمين السيارات الإجباري', 'تأمين سيارات إجباري', 'وثائق تأمين السيارات', 'تأمين سيارات', 'تأمين سيارة جمرك', 'تأمين سيارات أجنبية', 'تأمين طرف ثالث سيارات'].includes(doc)
+    );
+    if (hasAnyCarPermission) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -481,6 +492,8 @@ const menuSections: SidebarSection[] = [
         label: 'إدارة الوثائق', icon: 'fa-solid fa-folder-open', children: [
           { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests' },
           { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+          { label: 'تأمين طرف ثالث سيارات', icon: 'fa-solid fa-handshake-simple', to: '/third-party-insurance-documents' },
+          { label: 'تأمين سيارات أجنبية', icon: 'fa-solid fa-car-side', to: '/foreign-car-insurance-documents' },
           {
             label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', children: [
               { label: 'وثائق التأمين الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
@@ -715,8 +728,8 @@ const createMenuSections = (
     'وثائق تأمين السيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
     'تأمين سيارة جمرك': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين سيارات أجنبية': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
-    'تأمين طرف ثالث سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-file-shield', to: '/insurance-documents' },
+    'تأمين طرف ثالث سيارات': { label: 'تأمين طرف ثالث سيارات', icon: 'fa-solid fa-handshake-simple', to: '/third-party-insurance-documents' },
+    'تأمين سيارات أجنبية': { label: 'تأمين سيارات أجنبية', icon: 'fa-solid fa-car-side', to: '/foreign-car-insurance-documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', to: '/international-insurance-documents' },
     'تأمين المسافرين': { label: 'وثائق تأمين المسافرين', icon: 'fa-solid fa-plane', to: '/travel-insurance-documents' },
     'تأمين الهياكل البحرية': { label: 'تأمين الهياكل البحرية', icon: 'fa-solid fa-ship', to: '/marine-structure-insurance-documents' },
@@ -915,6 +928,8 @@ const createMenuSections = (
   const sidebarOrder: string[] = [
     '/document-requests',
     '/insurance-documents',
+    '/third-party-insurance-documents',
+    '/foreign-car-insurance-documents',
     '/international-insurance-documents',
     '/travel-insurance-documents',
     '/resident-insurance-documents',
@@ -1830,12 +1845,20 @@ export default function App() {
                   <Route path="/website-settings" element={isAdmin ? <WebsiteSettingsManagement /> : <Navigate to="/dashboard" />} />
                   <Route path="/public-insurance-requests" element={isAdmin ? <PublicInsuranceRequestsList /> : <Navigate to="/dashboard" />} />
                   {/* إدارة تأمين السيارات الإجباري */}
-                  <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList /></AuthorizedRoute>} />
+                  <Route path="/insurance-documents" element={<AuthorizedRoute requiredPath="/insurance-documents"><InsuranceDocumentsList documentCategory="compulsory" /></AuthorizedRoute>} />
                   <Route path="/canceled-documents" element={<AuthorizedRoute requiredPath="/canceled-documents"><CanceledDocumentsList /></AuthorizedRoute>} />
-                  <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument /></AuthorizedRoute>} />
+                  <Route path="/insurance-documents/create" element={<AuthorizedRoute requiredPath="/insurance-documents"><CreateInsuranceDocument defaultType="compulsory" /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/:id" element={<AuthorizedRoute requiredPath="/insurance-documents"><ViewInsuranceDocument /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/:id/edit" element={<AuthorizedRoute requiredPath="/insurance-documents"><EditInsuranceDocument /></AuthorizedRoute>} />
                   <Route path="/insurance-documents/:id/transfer-ownership" element={<AuthorizedRoute requiredPath="/insurance-documents"><TransferOwnershipInsuranceDocument /></AuthorizedRoute>} />
+
+                  {/* إدارة تأمين طرف ثالث سيارات */}
+                  <Route path="/third-party-insurance-documents" element={<AuthorizedRoute requiredPath="/third-party-insurance-documents"><InsuranceDocumentsList documentCategory="third_party" /></AuthorizedRoute>} />
+                  <Route path="/third-party-insurance-documents/create" element={<AuthorizedRoute requiredPath="/third-party-insurance-documents"><CreateInsuranceDocument defaultType="third_party" /></AuthorizedRoute>} />
+
+                  {/* إدارة تأمين سيارات أجنبية */}
+                  <Route path="/foreign-car-insurance-documents" element={<AuthorizedRoute requiredPath="/foreign-car-insurance-documents"><InsuranceDocumentsList documentCategory="foreign" /></AuthorizedRoute>} />
+                  <Route path="/foreign-car-insurance-documents/create" element={<AuthorizedRoute requiredPath="/foreign-car-insurance-documents"><CreateInsuranceDocument defaultType="foreign" /></AuthorizedRoute>} />
                   {/* إدارة تأمين السيارات الدولي */}
                   <Route path="/international-insurance-documents" element={<AuthorizedRoute requiredPath="/international-insurance-documents"><InternationalInsuranceList /></AuthorizedRoute>} />
                   <Route path="/international-insurance-documents/lifo-dashboard" element={isAdmin ? <LifoReportsDashboard /> : <Navigate to="/dashboard" />} />

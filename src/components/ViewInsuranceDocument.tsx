@@ -46,6 +46,16 @@ export default function ViewInsuranceDocument() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
+  const getReturnUrl = () => {
+    if (document?.insurance_type === 'تأمين طرف ثالث سيارات') {
+      return '/third-party-insurance-documents';
+    }
+    if (document?.insurance_type === 'تأمين سيارات أجنبية') {
+      return '/foreign-car-insurance-documents';
+    }
+    return '/insurance-documents';
+  };
+
   useEffect(() => {
     loadUserPermissions();
     if (id) { fetchDocument(); fetchOwnershipTransferHistory(); }
@@ -62,7 +72,7 @@ export default function ViewInsuranceDocument() {
     try {
       const res = await fetch(`${API_BASE_URL}/insurance-documents/${id}`, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) {
-        if (res.status === 404) { showToast('الوثيقة غير موجودة', 'error'); setTimeout(() => navigate('/insurance-documents'), 2000); return; }
+        if (res.status === 404) { showToast('الوثيقة غير موجودة', 'error'); setTimeout(() => navigate(getReturnUrl()), 2000); return; }
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       setDocument(await res.json());
@@ -162,7 +172,7 @@ export default function ViewInsuranceDocument() {
       <div className="users-card" style={{ textAlign: 'center', padding: '40px' }}>
         <i className="fa-solid fa-file-circle-xmark" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '16px' }}></i>
         <p style={{ marginBottom: '16px', color: 'var(--text)' }}>الوثيقة غير موجودة</p>
-        <button onClick={() => navigate('/insurance-documents')} className="btn-submit">العودة إلى القائمة</button>
+        <button onClick={() => navigate(getReturnUrl())} className="btn-submit">العودة إلى القائمة</button>
       </div>
     </section>
   );
@@ -196,7 +206,7 @@ export default function ViewInsuranceDocument() {
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
-              { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate('/insurance-documents') },
+              { label: 'العودة', icon: 'fa-arrow-right', bg: 'var(--panel)', border: 'var(--border)', color: 'var(--text)', onClick: () => navigate(getReturnUrl()) },
               ...((!isMandatory || !isAuthorityLinked || hasTransfer) ? [{ label: hasTransfer ? 'طباعة الوثيقة (المنظومة - بعد نقل الملكية)' : 'طباعة الوثيقة', icon: 'fa-print', bg: '#0f766e', border: '#0f766e', color: '#fff', onClick: handlePrint }] : []),
               ...(document.eidc_pdf_url && !hasTransfer ? [{
                 label: isMandatory ? 'طباعة وثيقة الهيئة' : 'وثيقة الهيئة (PDF)',
