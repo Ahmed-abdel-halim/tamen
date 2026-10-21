@@ -817,8 +817,23 @@ export default function InventoryManagement() {
 
   const isItemFixed = (inventoryType?: string) => {
     if (!inventoryType) return false;
-    const lower = inventoryType.toLowerCase();
+    const lower = String(inventoryType).toLowerCase();
     return lower === 'fixed' || lower.includes('ثابت');
+  };
+
+  const getItemPrice = (item?: StoreItem | null) => {
+    if (!item) return null;
+    const value = item.price ?? item.unit_price;
+    if (value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const getItemInCustodyQty = (itemId: number) => {
+    if (!Array.isArray(custodies)) return 0;
+    return custodies
+      .filter(c => (c.item_id === itemId || c.item?.id === itemId) && c.status === 'active')
+      .reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
   };
 
   const handleQuickAssignItem = (item: StoreItem) => {
@@ -835,23 +850,28 @@ export default function InventoryManagement() {
     showToast(`تم فتح نموذج الصرف وتجهيز الصنف: ${item.name}`, 'success');
   };
 
-  const filteredItems = items.filter((i) => {
+  const filteredItems = (Array.isArray(items) ? items : []).filter((i) => {
+    if (!i) return false;
     const term = searchTerm.trim().toLowerCase();
+    const itemName = i.name || '';
+    const location = i.stocks?.[0]?.warehouse_location || '';
+    const catName = getCategoryName(i.category) || '';
+
     const matchesSearch = !term || 
-      i.name.toLowerCase().includes(term) ||
-      (i.stocks?.[0]?.warehouse_location && i.stocks[0].warehouse_location.toLowerCase().includes(term)) ||
-      getCategoryName(i.category).toLowerCase().includes(term);
+      itemName.toLowerCase().includes(term) ||
+      location.toLowerCase().includes(term) ||
+      catName.toLowerCase().includes(term);
 
     const matchesType = filterInventoryType === 'all' || i.inventory_type === filterInventoryType || getInventoryTypeName(i.inventory_type) === filterInventoryType;
-    const matchesCategory = filterCategory === 'all' || i.category === filterCategory || getCategoryName(i.category) === filterCategory;
+    const matchesCategory = filterCategory === 'all' || i.category === filterCategory || catName === filterCategory;
     const inWarehouseQty = i.stocks?.[0]?.quantity || 0;
     const inCustodyQty = getItemInCustodyQty(i.id);
-    const isLow = inWarehouseQty <= i.min_threshold;
+    const isLow = inWarehouseQty <= (i.min_threshold ?? 0);
     const matchesQty =
       filterQuantityStatus === 'all' ||
       (filterQuantityStatus === 'out' && inWarehouseQty <= 0) ||
       (filterQuantityStatus === 'low' && inWarehouseQty > 0 && isLow) ||
-      (filterQuantityStatus === 'available' && inWarehouseQty > i.min_threshold);
+      (filterQuantityStatus === 'available' && inWarehouseQty > (i.min_threshold ?? 0));
 
     const matchesQuickFilter = (() => {
       if (quickFilter === 'all') return true;
@@ -865,7 +885,7 @@ export default function InventoryManagement() {
 
     return matchesSearch && matchesType && matchesCategory && matchesQty && matchesQuickFilter;
   }).sort((a, b) => {
-    if (sortBy === 'name') return a.name.localeCompare(b.name, 'ar');
+    if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '', 'ar');
     const inWarehouseA = a.stocks?.[0]?.quantity || 0;
     const inCustodyA = getItemInCustodyQty(a.id);
     const totalQtyA = inWarehouseA + inCustodyA;
@@ -938,19 +958,6 @@ export default function InventoryManagement() {
 
     return matchesType && matchesRecipientType && matchesItem && matchesRecipient && matchesFrom && matchesTo;
   });
-
-  const getItemPrice = (item: StoreItem) => {
-    const value = item.price ?? item.unit_price;
-    if (value === null || value === undefined) return null;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  };
-
-  const getItemInCustodyQty = (itemId: number) => {
-    return custodies
-      .filter(c => (c.item_id === itemId || c.item?.id === itemId) && c.status === 'active')
-      .reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
-  };
 
   const handlePrintMainInventoryReport = () => {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1273,18 +1280,21 @@ export default function InventoryManagement() {
     printWindow.document.close();
   };
 
-  const totalWarehouseQty = items.reduce((acc, item) => acc + (Number(item.stocks?.[0]?.quantity) || 0), 0);
-  const activeCustodyCount = custodies.filter(c => c.status === 'active').reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
-  const activeFixedCustodyCount = custodies.filter(c => c.status === 'active' && isItemFixed(c.item?.inventory_type)).reduce((acc, c) => acc + (Number(c.quantity) || 0), 0);
-  const lowStockCount = items.filter(item => (item.stocks?.[0]?.quantity || 0) <= item.min_threshold).length;
+  const safeItems = Array.isArray(items) ? items : [];
+  const safeCustodies = Array.isArray(custodies) ? custodies : [];
 
-  const totalWarehouseValue = items.reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item.stocks?.[0]?.quantity || 0)), 0);
-  const fixedWarehouseValue = items.filter(item => isItemFixed(item.inventory_type)).reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item.stocks?.[0]?.quantity || 0)), 0);
-  const consumablesValue = items.filter(item => !isItemFixed(item.inventory_type)).reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item.stocks?.[0]?.quantity || 0)), 0);
+  const totalWarehouseQty = safeItems.reduce((acc, item) => acc + (Number(item?.stocks?.[0]?.quantity) || 0), 0);
+  const activeCustodyCount = safeCustodies.filter(c => c?.status === 'active').reduce((acc, c) => acc + (Number(c?.quantity) || 0), 0);
+  const activeFixedCustodyCount = safeCustodies.filter(c => c?.status === 'active' && isItemFixed(c?.item?.inventory_type)).reduce((acc, c) => acc + (Number(c?.quantity) || 0), 0);
+  const lowStockCount = safeItems.filter(item => (item?.stocks?.[0]?.quantity || 0) <= (item?.min_threshold ?? 0)).length;
 
-  const fixedCustodyValue = custodies
-    .filter(c => c.status === 'active' && isItemFixed(c.item?.inventory_type))
-    .reduce((acc, c) => acc + ((getItemPrice(c.item) || 0) * (Number(c.quantity) || 0)), 0);
+  const totalWarehouseValue = safeItems.reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item?.stocks?.[0]?.quantity || 0)), 0);
+  const fixedWarehouseValue = safeItems.filter(item => isItemFixed(item?.inventory_type)).reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item?.stocks?.[0]?.quantity || 0)), 0);
+  const consumablesValue = safeItems.filter(item => !isItemFixed(item?.inventory_type)).reduce((acc, item) => acc + ((getItemPrice(item) || 0) * (item?.stocks?.[0]?.quantity || 0)), 0);
+
+  const fixedCustodyValue = safeCustodies
+    .filter(c => c?.status === 'active' && isItemFixed(c?.item?.inventory_type))
+    .reduce((acc, c) => acc + ((getItemPrice(c?.item) || 0) * (Number(c?.quantity) || 0)), 0);
 
   const totalFixedAssetsValue = fixedWarehouseValue + fixedCustodyValue;
   const totalAllAssetsValue = totalWarehouseValue + fixedCustodyValue;
