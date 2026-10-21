@@ -380,21 +380,29 @@ export function printCompulsoryDocumentRequestLetter(req: CompulsoryDocumentRequ
         }
         .company-signature-box {
           text-align: center;
-          min-width: 220px;
+          min-width: 200px;
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
         }
         .company-signature-role {
           font-size: 17px;
           font-weight: 900;
           color: #091e3a;
-          margin-bottom: 2px;
+          line-height: 1.25;
+          margin: 0;
+          padding: 0;
         }
         .signature-manual-space {
-          height: 28px; /* مساحة توقيع وختم حي */
+          height: 4px; /* مسافة متقاربة ومضمومة */
         }
         .company-signature-name {
           font-size: 16.5px;
           font-weight: 900;
           color: #0f172a;
+          line-height: 1.25;
+          margin: 0;
+          padding: 0;
         }
 
         /* ─── إعدادات الطباعة الدقيقة وضمان صفحة واحدة A4 ─── */
