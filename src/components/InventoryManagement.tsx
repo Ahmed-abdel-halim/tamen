@@ -87,6 +87,10 @@ export default function InventoryManagement() {
   const [filterInventoryType, setFilterInventoryType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterQuantityStatus, setFilterQuantityStatus] = useState<'all' | 'low' | 'available' | 'out'>('all');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'fixed' | 'consumable' | 'low' | 'out' | 'custody'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'qty_desc' | 'qty_asc' | 'val_desc' | 'val_asc'>('name');
+  const [selectedDetailItem, setSelectedDetailItem] = useState<StoreItem | null>(null);
   const [custodyFilterType, setCustodyFilterType] = useState<string>('all');
   const [custodyFilterStatus, setCustodyFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [custodyFilterRecipientType, setCustodyFilterRecipientType] = useState<'all' | 'agent' | 'employee'>('all');
@@ -165,7 +169,7 @@ export default function InventoryManagement() {
   // Reset page numbers when filters change
   useEffect(() => {
     setStorePage(1);
-  }, [searchTerm, filterInventoryType, filterCategory, filterQuantityStatus]);
+  }, [searchTerm, filterInventoryType, filterCategory, filterQuantityStatus, quickFilter, sortBy]);
 
   useEffect(() => {
     setCustodyPage(1);
@@ -784,19 +788,101 @@ export default function InventoryManagement() {
   };
   const getRecipientTypeName = (type: string) => (type === 'agent' || type.includes('BranchAgent') ? 'وكيل / فرع' : 'موظف عام');
 
+  const getItemIcon = (category: string, type?: string) => {
+    const cat = (category || '').toLowerCase();
+    const t = (type || '').toLowerCase();
+    if (cat.includes('إلكترون') || cat.includes('الكترون') || cat.includes('electronic') || cat.includes('حاسوب') || cat.includes('كمبيوتر') || cat.includes('طابع')) {
+      return 'fa-laptop';
+    }
+    if (cat.includes('أثاث') || cat.includes('اثاث') || cat.includes('furniture') || cat.includes('مكتب') || cat.includes('كرسي')) {
+      return 'fa-couch';
+    }
+    if (cat.includes('ورق') || cat.includes('دفاتر') || cat.includes('مطبوع') || cat.includes('paper') || cat.includes('سجل')) {
+      return 'fa-file-lines';
+    }
+    if (cat.includes('سيار') || cat.includes('مركب') || cat.includes('vehicle')) {
+      return 'fa-car';
+    }
+    if (cat.includes('قرطاس') || cat.includes('أقلام') || cat.includes('اقلام')) {
+      return 'fa-pen-ruler';
+    }
+    if (cat.includes('أمن') || cat.includes('كامير') || cat.includes('شبك')) {
+      return 'fa-video';
+    }
+    if (t.includes('fixed') || t.includes('ثابت')) {
+      return 'fa-vault';
+    }
+    return 'fa-box-archive';
+  };
+
+  const isItemFixed = (inventoryType?: string) => {
+    if (!inventoryType) return false;
+    const lower = inventoryType.toLowerCase();
+    return lower === 'fixed' || lower.includes('ثابت');
+  };
+
+  const handleQuickAssignItem = (item: StoreItem) => {
+    setAssignmentItems([{
+      inventory_type: item.inventory_type || '',
+      item_id: String(item.id),
+      quantity: 1,
+      serial_start: '',
+      serial_end: '',
+      condition: 'new',
+      notes: ''
+    }]);
+    setActiveTab('assign');
+    showToast(`تم فتح نموذج الصرف وتجهيز الصنف: ${item.name}`, 'success');
+  };
 
   const filteredItems = items.filter((i) => {
-    const matchesSearch = i.name.includes(searchTerm.trim());
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = !term || 
+      i.name.toLowerCase().includes(term) ||
+      (i.stocks?.[0]?.warehouse_location && i.stocks[0].warehouse_location.toLowerCase().includes(term)) ||
+      getCategoryName(i.category).toLowerCase().includes(term);
+
     const matchesType = filterInventoryType === 'all' || i.inventory_type === filterInventoryType || getInventoryTypeName(i.inventory_type) === filterInventoryType;
     const matchesCategory = filterCategory === 'all' || i.category === filterCategory || getCategoryName(i.category) === filterCategory;
-    const qty = i.stocks?.[0]?.quantity || 0;
-    const isLow = qty <= i.min_threshold;
+    const inWarehouseQty = i.stocks?.[0]?.quantity || 0;
+    const inCustodyQty = getItemInCustodyQty(i.id);
+    const isLow = inWarehouseQty <= i.min_threshold;
     const matchesQty =
       filterQuantityStatus === 'all' ||
-      (filterQuantityStatus === 'out' && qty <= 0) ||
-      (filterQuantityStatus === 'low' && qty > 0 && isLow) ||
-      (filterQuantityStatus === 'available' && qty > i.min_threshold);
-    return matchesSearch && matchesType && matchesCategory && matchesQty;
+      (filterQuantityStatus === 'out' && inWarehouseQty <= 0) ||
+      (filterQuantityStatus === 'low' && inWarehouseQty > 0 && isLow) ||
+      (filterQuantityStatus === 'available' && inWarehouseQty > i.min_threshold);
+
+    const matchesQuickFilter = (() => {
+      if (quickFilter === 'all') return true;
+      if (quickFilter === 'fixed') return isItemFixed(i.inventory_type);
+      if (quickFilter === 'consumable') return !isItemFixed(i.inventory_type);
+      if (quickFilter === 'low') return inWarehouseQty > 0 && isLow;
+      if (quickFilter === 'out') return inWarehouseQty <= 0;
+      if (quickFilter === 'custody') return inCustodyQty > 0;
+      return true;
+    })();
+
+    return matchesSearch && matchesType && matchesCategory && matchesQty && matchesQuickFilter;
+  }).sort((a, b) => {
+    if (sortBy === 'name') return a.name.localeCompare(b.name, 'ar');
+    const inWarehouseA = a.stocks?.[0]?.quantity || 0;
+    const inCustodyA = getItemInCustodyQty(a.id);
+    const totalQtyA = inWarehouseA + inCustodyA;
+    const priceA = getItemPrice(a) || 0;
+    const totalValA = priceA * totalQtyA;
+
+    const inWarehouseB = b.stocks?.[0]?.quantity || 0;
+    const inCustodyB = getItemInCustodyQty(b.id);
+    const totalQtyB = inWarehouseB + inCustodyB;
+    const priceB = getItemPrice(b) || 0;
+    const totalValB = priceB * totalQtyB;
+
+    if (sortBy === 'qty_desc') return totalQtyB - totalQtyA;
+    if (sortBy === 'qty_asc') return totalQtyA - totalQtyB;
+    if (sortBy === 'val_desc') return totalValB - totalValA;
+    if (sortBy === 'val_asc') return totalValA - totalValB;
+    return 0;
   });
   const custodyGroups = Object.values(
     custodies.reduce((acc, custody) => {
@@ -1175,11 +1261,6 @@ export default function InventoryManagement() {
             </thead>
             <tbody>
               ${rows.length ? rows : `<tr><td colspan="13" style="text-align: center; padding: 20px; color: #64748b;">لا توجد عهد مطابقة للفلاتر المحددة</td></tr>`}
-              <tr class="total-row">
-                <td colspan="11" style="text-align: left; padding-left: 20px;">المجموع العام</td>
-                <td>${grandTotalValue.toLocaleString()} د.ل</td>
-                <td></td>
-              </tr>
             </tbody>
           </table>
           <div class="footer-note">تاريخ الاستخراج: ${new Date().toLocaleString('ar-LY')}</div>
@@ -1190,12 +1271,6 @@ export default function InventoryManagement() {
 
     printWindow.document.write(html);
     printWindow.document.close();
-  };
-
-  const isItemFixed = (inventoryType?: string) => {
-    if (!inventoryType) return false;
-    const lower = inventoryType.toLowerCase();
-    return lower === 'fixed' || lower.includes('ثابت');
   };
 
   const totalWarehouseQty = items.reduce((acc, item) => acc + (Number(item.stocks?.[0]?.quantity) || 0), 0);
@@ -1223,78 +1298,94 @@ export default function InventoryManagement() {
 
         <ReadOnlyNotice message="وضع القراءة فقط: يمكنك جرد المخزن، استعراض العهد الحالية وسجل الحركات، واستخدام الفلاتر وطباعة الإيصالات والتقارير وتصدير Excel. إضافة الأصناف وصرف العهد واسترجاعها مقيد بحسب صلاحياتك." />
 
-        {/* Premium KPI Stats Cards Grid */}
+        {/* Executive KPI Stats Cards Grid (5-Card Balanced High-Tech Ribbon) */}
         <div className="premium-stats-grid">
+          {/* Card 1: Warehouse Stock */}
           <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-total">
+            <div className="premium-stat-icon-wrapper kpi-cyan">
               <i className="fa-solid fa-warehouse"></i>
             </div>
             <div className="premium-stat-info">
-              <div className="premium-stat-value">{totalWarehouseQty.toLocaleString()}</div>
-              <div className="premium-stat-label">المخزون المتوفر بالمخزن</div>
+              <div className="kpi-badge-row">
+                <span className="kpi-mini-badge badge-blue">مخزن رئيسي</span>
+              </div>
+              <div className="premium-stat-value">
+                {totalWarehouseQty.toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>وحدة</span>
+              </div>
+              <div className="premium-stat-label">المخزون المتوفر بالمستودع</div>
+              <div className="premium-stat-sublabel">{items.length} صنف مسجل بالنظام</div>
             </div>
           </div>
 
+          {/* Card 2: Active Custody */}
           <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-total" style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
+            <div className="premium-stat-icon-wrapper kpi-fixed">
+              <i className="fa-solid fa-user-shield"></i>
+            </div>
+            <div className="premium-stat-info">
+              <div className="kpi-badge-row">
+                <span className="kpi-mini-badge badge-purple">بالعهدة النشطة</span>
+              </div>
+              <div className="premium-stat-value">
+                {activeCustodyCount.toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>قطعة</span>
+              </div>
+              <div className="premium-stat-label">إجمالي المصروف كعهدة</div>
+              <div className="premium-stat-sublabel">أصول ثابتة: {activeFixedCustodyCount.toLocaleString()}</div>
+            </div>
+          </div>
+
+          {/* Card 3: Grand Total Assets Value */}
+          <div className="premium-stat-card">
+            <div className="premium-stat-icon-wrapper kpi-total">
               <i className="fa-solid fa-coins"></i>
             </div>
             <div className="premium-stat-info">
-              <div className="premium-stat-value">{totalAllAssetsValue.toLocaleString()} د.ل</div>
-              <div className="premium-stat-label">إجمالي قيمة الموجودات الكلية</div>
+              <div className="kpi-badge-row">
+                <span className="kpi-mini-badge badge-emerald">الموجودات الكلية</span>
+              </div>
+              <div className="premium-stat-value">
+                {totalAllAssetsValue.toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>د.ل</span>
+              </div>
+              <div className="premium-stat-label">القيمة التقديرية الكلية</div>
+              <div className="premium-stat-sublabel">مخزن: {totalWarehouseValue.toLocaleString()} د.ل</div>
             </div>
           </div>
 
+          {/* Card 4: Fixed Capital Assets */}
           <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-fixed" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+            <div className="premium-stat-icon-wrapper kpi-gold">
               <i className="fa-solid fa-vault"></i>
             </div>
             <div className="premium-stat-info">
-              <div className="premium-stat-value">{totalFixedAssetsValue.toLocaleString()} د.ل</div>
-              <div className="premium-stat-label">إجمالي الأصول الثابتة (الكلية)</div>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>
-                مخزن: {fixedWarehouseValue.toLocaleString()} | عهدة: {fixedCustodyValue.toLocaleString()}
+              <div className="kpi-badge-row">
+                <span className="kpi-mini-badge badge-amber">أصول رأسمالية</span>
               </div>
+              <div className="premium-stat-value">
+                {totalFixedAssetsValue.toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>د.ل</span>
+              </div>
+              <div className="premium-stat-label">قيمة الأصول الثابتة</div>
+              <div className="premium-stat-sublabel">المستهلكات: {consumablesValue.toLocaleString()} د.ل</div>
             </div>
           </div>
 
-          <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-consumable" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-              <i className="fa-solid fa-cart-shopping"></i>
-            </div>
-            <div className="premium-stat-info">
-              <div className="premium-stat-value">{consumablesValue.toLocaleString()} د.ل</div>
-              <div className="premium-stat-label">قيمة المستهلكات بالمخزن</div>
-            </div>
-          </div>
-
-          <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-fixed">
-              <i className="fa-solid fa-couch"></i>
-            </div>
-            <div className="premium-stat-info">
-              <div className="premium-stat-value">{activeFixedCustodyCount.toLocaleString()}</div>
-              <div className="premium-stat-label">قطع الأصول بالعهدة النشطة</div>
-            </div>
-          </div>
-
-          <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-consumable">
-              <i className="fa-solid fa-box-open"></i>
-            </div>
-            <div className="premium-stat-info">
-              <div className="premium-stat-value">{activeCustodyCount.toLocaleString()}</div>
-              <div className="premium-stat-label">إجمالي القطع المصروفة كعهدة</div>
-            </div>
-          </div>
-
-          <div className="premium-stat-card">
-            <div className="premium-stat-icon-wrapper kpi-alert">
+          {/* Card 5: Low Stock Warning */}
+          <div className={`premium-stat-card ${lowStockCount > 0 ? 'stat-has-alert' : ''}`}>
+            <div className={`premium-stat-icon-wrapper kpi-alert ${lowStockCount > 0 ? 'pulse-alert-icon' : ''}`}>
               <i className="fa-solid fa-triangle-exclamation"></i>
             </div>
             <div className="premium-stat-info">
-              <div className="premium-stat-value">{lowStockCount.toLocaleString()}</div>
+              <div className="kpi-badge-row">
+                <span className={`kpi-mini-badge ${lowStockCount > 0 ? 'badge-rose' : 'badge-emerald'}`}>
+                  {lowStockCount > 0 ? '⚠️ تنبيه نواقص' : '✔️ مستوى آمن'}
+                </span>
+              </div>
+              <div className="premium-stat-value" style={{ color: lowStockCount > 0 ? '#ef4444' : 'var(--text)' }}>
+                {lowStockCount.toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>صنف</span>
+              </div>
               <div className="premium-stat-label">أصناف تحت حد الطلب</div>
+              <div className="premium-stat-sublabel">
+                {lowStockCount > 0 ? 'تحتاج توريد وشراء عاجل' : 'كافة الأصناف بحدود آمنة'}
+              </div>
             </div>
           </div>
         </div>
@@ -1303,18 +1394,31 @@ export default function InventoryManagement() {
         <div className="premium-tabs-container">
           <div className="premium-tabs-nav">
             <button className={`premium-tab-btn ${activeTab === 'store' ? 'active' : ''}`} onClick={() => setActiveTab('store')}>
-              <i className="fa-solid fa-box"></i> المخزن الرئيسي
+              <i className="fa-solid fa-box-archive"></i>
+              <span>المخزن الرئيسي</span>
+              <span style={{ fontSize: '0.75rem', padding: '1px 7px', borderRadius: '10px', background: activeTab === 'store' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)', fontWeight: 800 }}>
+                {items.length}
+              </span>
             </button>
             <button className={`premium-tab-btn ${activeTab === 'custody' ? 'active' : ''}`} onClick={() => setActiveTab('custody')}>
-              <i className="fa-solid fa-user-check"></i> العهد الحالية
+              <i className="fa-solid fa-user-check"></i>
+              <span>العهد الحالية</span>
+              <span style={{ fontSize: '0.75rem', padding: '1px 7px', borderRadius: '10px', background: activeTab === 'custody' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)', fontWeight: 800 }}>
+                {custodies.filter(c => c.status === 'active').length}
+              </span>
             </button>
             {canEdit && (
               <button className={`premium-tab-btn ${activeTab === 'assign' ? 'active' : ''}`} onClick={() => setActiveTab('assign')}>
-                <i className="fa-solid fa-arrow-up-right-from-square"></i> صرف عهدة
+                <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                <span>صرف عهدة</span>
               </button>
             )}
             <button className={`premium-tab-btn ${activeTab === 'log' ? 'active' : ''}`} onClick={() => setActiveTab('log')}>
-              <i className="fa-solid fa-clock-rotate-left"></i> سجل الحركات
+              <i className="fa-solid fa-clock-rotate-left"></i>
+              <span>سجل الحركات</span>
+              <span style={{ fontSize: '0.75rem', padding: '1px 7px', borderRadius: '10px', background: activeTab === 'log' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)', fontWeight: 800 }}>
+                {movements.length}
+              </span>
             </button>
           </div>
           <button 
@@ -1329,19 +1433,93 @@ export default function InventoryManagement() {
 
         {/* Tab Contents */}
         {activeTab === 'store' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Premium Filter Bar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* 1. Quick One-Click Filter Chips */}
+            <div className="inventory-quick-filters">
+              <button 
+                type="button"
+                className={`quick-filter-chip ${quickFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setQuickFilter('all')}
+              >
+                <i className="fa-solid fa-layer-group"></i>
+                <span>جميع الأصناف</span>
+                <span className="chip-count">{items.length}</span>
+              </button>
+              <button 
+                type="button"
+                className={`quick-filter-chip chip-purple ${quickFilter === 'fixed' ? 'active' : ''}`}
+                onClick={() => setQuickFilter('fixed')}
+              >
+                <i className="fa-solid fa-vault"></i>
+                <span>أصول ثابتة</span>
+                <span className="chip-count">{items.filter(i => isItemFixed(i.inventory_type)).length}</span>
+              </button>
+              <button 
+                type="button"
+                className={`quick-filter-chip ${quickFilter === 'consumable' ? 'active' : ''}`}
+                onClick={() => setQuickFilter('consumable')}
+              >
+                <i className="fa-solid fa-box-open"></i>
+                <span>مستهلكات</span>
+                <span className="chip-count">{items.filter(i => !isItemFixed(i.inventory_type)).length}</span>
+              </button>
+              <button 
+                type="button"
+                className={`quick-filter-chip chip-warning ${quickFilter === 'low' ? 'active' : ''}`}
+                onClick={() => setQuickFilter('low')}
+              >
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                <span>تحت حد الطلب</span>
+                <span className="chip-count">{lowStockCount}</span>
+              </button>
+              <button 
+                type="button"
+                className={`quick-filter-chip chip-danger ${quickFilter === 'out' ? 'active' : ''}`}
+                onClick={() => setQuickFilter('out')}
+              >
+                <i className="fa-solid fa-ban"></i>
+                <span>نافد من المخزن</span>
+                <span className="chip-count">{items.filter(i => (i.stocks?.[0]?.quantity || 0) <= 0).length}</span>
+              </button>
+              <button 
+                type="button"
+                className={`quick-filter-chip chip-purple ${quickFilter === 'custody' ? 'active' : ''}`}
+                onClick={() => setQuickFilter('custody')}
+              >
+                <i className="fa-solid fa-user-check"></i>
+                <span>مصروف كعهدة</span>
+                <span className="chip-count">{items.filter(i => getItemInCustodyQty(i.id) > 0).length}</span>
+              </button>
+            </div>
+
+            {/* 2. Sleek Control & Filter Bar */}
             <div className="premium-filter-bar">
+              {/* Search with Instant Clear */}
               <div className="premium-filter-group filter-span-2">
-                <label><i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--accent-cyan)' }}></i> بحث عن صنف</label>
-                <input 
-                  type="text" 
-                  placeholder="بحث باسم الصنف..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="premium-filter-input"
-                />
+                <label><i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--accent-cyan)' }}></i> بحث في المخزن والأصول</label>
+                <div className="inventory-search-wrapper">
+                  <input 
+                    type="text" 
+                    placeholder="ابحث باسم الصنف، التصنيف، موقع التخزين..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="premium-filter-input"
+                    style={{ paddingLeft: searchTerm ? '32px' : '12px' }}
+                  />
+                  {searchTerm && (
+                    <button 
+                      type="button"
+                      className="inventory-clear-search"
+                      onClick={() => setSearchTerm('')}
+                      title="مسح البحث"
+                    >
+                      <i className="fa-solid fa-circle-xmark"></i>
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Inventory Type Select */}
               <div className="premium-filter-group">
                 <label><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-cyan)' }}></i> نوع المخزون</label>
                 <select 
@@ -1349,12 +1527,14 @@ export default function InventoryManagement() {
                   onChange={(e) => setFilterInventoryType(e.target.value)}
                   className="premium-filter-select"
                 >
-                  <option value="all">الكل</option>
+                  <option value="all">كل الأنواع</option>
                   {inventoryTypeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
+
+              {/* Category Select */}
               <div className="premium-filter-group">
                 <label><i className="fa-solid fa-tags" style={{ color: 'var(--accent-cyan)' }}></i> التصنيف</label>
                 <select 
@@ -1368,6 +1548,8 @@ export default function InventoryManagement() {
                   ))}
                 </select>
               </div>
+
+              {/* Quantity Status Select */}
               <div className="premium-filter-group">
                 <label><i className="fa-solid fa-circle-exclamation" style={{ color: 'var(--accent-cyan)' }}></i> حالة الكمية</label>
                 <select 
@@ -1376,25 +1558,69 @@ export default function InventoryManagement() {
                   className="premium-filter-select"
                 >
                   <option value="all">الكل</option>
-                  <option value="available">متوفر</option>
-                  <option value="low">قرب النفاد</option>
-                  <option value="out">نافد</option>
+                  <option value="available">متوفر بالمخزن</option>
+                  <option value="low">قرب النفاد (تحت حد الطلب)</option>
+                  <option value="out">نافد تماماً</option>
+                </select>
+              </div>
+
+              {/* Sort By Select */}
+              <div className="premium-filter-group">
+                <label><i className="fa-solid fa-arrow-down-short-wide" style={{ color: 'var(--accent-cyan)' }}></i> ترتيب النتائج</label>
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="premium-filter-select"
+                >
+                  <option value="name">الاسم أبجدياً (أ - ي)</option>
+                  <option value="qty_desc">إجمالي الكمية (الأعلى أولاً)</option>
+                  <option value="qty_asc">إجمالي الكمية (الأقل أولاً)</option>
+                  <option value="val_desc">القيمة الإجمالية (الأعلى أولاً)</option>
+                  <option value="val_asc">القيمة الإجمالية (الأقل أولاً)</option>
                 </select>
               </div>
               
+              {/* Bottom Actions Row with View Switcher */}
               <div className="premium-filter-actions-row">
-                <button 
-                  type="button" 
-                  className="premium-reset-btn" 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setFilterInventoryType('all');
-                    setFilterCategory('all');
-                    setFilterQuantityStatus('all');
-                  }}
-                >
-                  <i className="fa-solid fa-arrows-rotate"></i> تصفير الفلاتر
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button 
+                    type="button" 
+                    className="premium-reset-btn" 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterInventoryType('all');
+                      setFilterCategory('all');
+                      setFilterQuantityStatus('all');
+                      setQuickFilter('all');
+                      setSortBy('name');
+                    }}
+                    title="إعادة ضبط كافة الفلاتر والبحث"
+                  >
+                    <i className="fa-solid fa-arrows-rotate"></i> تصفير الفلاتر
+                  </button>
+
+                  {/* View Mode Toggle: Table / Cards */}
+                  <div className="inventory-view-toggle">
+                    <button 
+                      type="button" 
+                      className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                      onClick={() => setViewMode('table')}
+                      title="عرض جدولي مفصل"
+                    >
+                      <i className="fa-solid fa-table-list"></i>
+                      <span>جدول</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`view-toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
+                      onClick={() => setViewMode('cards')}
+                      title="عرض كروت وبطاقات تفاعلية"
+                    >
+                      <i className="fa-solid fa-grip"></i>
+                      <span>بطاقات</span>
+                    </button>
+                  </div>
+                </div>
                 
                 <div className="premium-action-buttons-group">
                   <button 
@@ -1475,166 +1701,405 @@ export default function InventoryManagement() {
                   </button>
                   {canEdit && (
                     <button 
-                      type="button"
+                      type="button" 
                       className="premium-primary-btn" 
                       onClick={openAddItemModal}
+                      style={{ background: 'linear-gradient(135deg, #014cb1, #06b6d4)', boxShadow: '0 4px 15px rgba(6, 182, 212, 0.3)' }}
                     >
-                      <i className="fa-solid fa-plus"></i> إضافة صنف
+                      <i className="fa-solid fa-circle-plus"></i> إضافة صنف جديد
                     </button>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Store Table */}
+            {/* 3. Items View: Table or Cards Grid */}
             {loading ? (
-              <p style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>جار التحميل...</p>
-            ) : (
+              <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2.5rem', color: 'var(--accent-cyan)', marginBottom: '14px', display: 'block' }}></i>
+                <p style={{ color: 'var(--muted)', fontWeight: 700, margin: 0 }}>جاري تحميل بيانات المخزن والأصول...</p>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                <i className="fa-solid fa-boxes-stacked" style={{ fontSize: '3rem', color: 'var(--muted)', marginBottom: '14px', opacity: 0.4, display: 'block' }}></i>
+                <h4 style={{ color: 'var(--text)', fontWeight: 800, margin: '0 0 6px 0' }}>لا توجد أصناف مطابقة للبحث أو الفلتر المختار</h4>
+                <p style={{ color: 'var(--muted)', fontSize: '0.88rem', margin: 0 }}>جرّب تغيير كلمات البحث أو النقر على "تصفير الفلاتر" لإعادة عرض كافة الأصناف</p>
+              </div>
+            ) : viewMode === 'table' ? (
+              /* Table View */
               <div className="premium-card-table-wrapper">
-                <div className="premium-table-header-row">
+                <div className="premium-table-header-row" style={{ background: 'var(--card-bg)', flexWrap: 'wrap', gap: '10px' }}>
                   <h3 className="premium-table-title">
                     <i className="fa-solid fa-boxes-stacked" style={{ color: 'var(--accent-cyan)' }}></i>
-                    قائمة جرد وموجودات المخزن الرئيسي والأصول ({filteredItems.length} صنف)
+                    <span>قائمة جرد وموجودات المخزن الرئيسي والأصول</span>
+                    <span style={{ fontSize: '0.82rem', padding: '2px 10px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--accent-cyan)', fontWeight: 800 }}>
+                      {filteredItems.length} صنف
+                    </span>
                   </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--muted)', fontWeight: 600 }}>إجمالي القيمة المعروضة:</span>
+                    <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 12px', borderRadius: '12px' }}>
+                      {filteredItems.reduce((acc, it) => {
+                        const p = getItemPrice(it) || 0;
+                        const qty = (it.stocks?.[0]?.quantity || 0) + getItemInCustodyQty(it.id);
+                        return acc + (p * qty);
+                      }, 0).toLocaleString()} د.ل
+                    </span>
+                  </div>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table className="premium-table">
                     <thead>
                       <tr>
                         <th style={{ width: '3%' }}>#</th>
-                        <th style={{ width: '18%' }}>الصنف</th>
-                        <th style={{ width: '9%' }}>نوع المخزون</th>
-                        <th style={{ width: '9%' }}>التصنيف</th>
-                        <th style={{ width: '8%' }}>سعر الصنف</th>
-                        <th style={{ width: '7%' }}>نسبة الاستهلاك</th>
-                        <th style={{ width: '7%' }}>بالمخزن</th>
-                        <th style={{ width: '7%' }}>بالعهدة</th>
-                        <th style={{ width: '8%' }}>إجمالي الكمية</th>
-                        <th style={{ width: '12%' }}>إجمالي القيمة الكلية</th>
-                        <th style={{ width: '4%' }}>الوحدة</th>
-                        <th style={{ width: '8%' }}>موقع التخزين</th>
-                        <th style={{ width: '6%' }}>الإجراءات</th>
+                        <th style={{ width: '22%' }}>الصنف والمواصفات</th>
+                        <th style={{ width: '10%' }}>نوع المخزون</th>
+                        <th style={{ width: '9%' }}>سعر الصنف</th>
+                        <th style={{ width: '8%' }}>الاستهلاك</th>
+                        <th style={{ width: '18%' }}>المخزون والتوزيع</th>
+                        <th style={{ width: '12%' }}>إجمالي القيمة</th>
+                        <th style={{ width: '9%' }}>موقع التخزين</th>
+                        <th style={{ width: '9%', textAlign: 'center' }}>الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredItems.length === 0 ? (
-                        <tr>
-                          <td colSpan={13} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
-                            <i className="fa-solid fa-box-open" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', opacity: 0.5 }}></i>
-                            لا توجد أصناف في المخزن تناسب بحثك
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredItems.slice((storePage - 1) * PAGE_SIZE, storePage * PAGE_SIZE).map((item, index) => {
-                          const itemIndex = (storePage - 1) * PAGE_SIZE + index;
-                          const inWarehouseQty = item.stocks?.[0]?.quantity || 0;
-                          const inCustodyQty = getItemInCustodyQty(item.id);
-                          const totalQty = inWarehouseQty + inCustodyQty;
-                          const isLow = inWarehouseQty <= item.min_threshold;
-                          const price = getItemPrice(item);
-                          const totalVal = price !== null ? price * totalQty : null;
-                          const warehouseVal = price !== null ? price * inWarehouseQty : null;
-                          const custodyVal = price !== null ? price * inCustodyQty : null;
-                          const isFixed = isItemFixed(item.inventory_type);
-                          return (
-                            <tr key={item.id}>
-                              <td>{itemIndex + 1}</td>
-                              <td style={{ fontWeight: 'bold', color: 'var(--text)' }}>{item.name}</td>
-                              <td>
-                                <span className={`premium-badge ${getInventoryTypeBadgeClass(item.inventory_type)}`}>
-                                  {getInventoryTypeName(item.inventory_type)}
-                                </span>
-                              </td>
-                              <td>{getCategoryName(item.category)}</td>
-                              <td>
-                                {price !== null ? (
-                                  <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
-                                    {price.toLocaleString()} د.ل
-                                  </span>
-                                ) : (
-                                  <span style={{ color: 'var(--muted)' }}>-</span>
-                                )}
-                              </td>
-                              <td>
-                                {isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null ? (
-                                  <span style={{ color: 'var(--text)', fontWeight: 'bold' }}>
-                                    {Number(item.depreciation_rate)}%
-                                  </span>
-                                ) : (
-                                  <span style={{ color: 'var(--muted)' }}>-</span>
-                                )}
-                              </td>
-                              <td>
-                                <span className={`premium-badge ${isLow ? (inWarehouseQty === 0 ? 'badge-danger' : 'badge-warning') : 'badge-success'}`}>
-                                  {inWarehouseQty} {isLow ? (inWarehouseQty === 0 ? '(نافد)' : '(منخفض)') : ''}
-                                </span>
-                              </td>
-                              <td>
-                                {inCustodyQty > 0 ? (
-                                  <span className="premium-badge badge-purple" title="كمية مسلمة كعهدة نشطة للموظفين">
-                                    {inCustodyQty}
-                                  </span>
-                                ) : (
-                                  <span style={{ color: 'var(--muted)' }}>0</span>
-                                )}
-                              </td>
-                              <td>
-                                <span style={{ fontWeight: 800, color: 'var(--text)' }}>
-                                  {totalQty}
-                                </span>
-                              </td>
-                              <td>
-                                {totalVal !== null ? (
-                                  <div>
-                                    <span style={{ fontWeight: 'bold', color: 'var(--text)', display: 'block' }}>
-                                      {totalVal.toLocaleString()} د.ل
-                                    </span>
-                                    {inCustodyQty > 0 && (
-                                      <span style={{ fontSize: '10.5px', color: 'var(--muted)', display: 'block' }}>
-                                        (مخزن: {warehouseVal?.toLocaleString()} | عهدة: {custodyVal?.toLocaleString()})
-                                      </span>
-                                    )}
+                      {filteredItems.slice((storePage - 1) * PAGE_SIZE, storePage * PAGE_SIZE).map((item, index) => {
+                        const itemIndex = (storePage - 1) * PAGE_SIZE + index;
+                        const inWarehouseQty = item.stocks?.[0]?.quantity || 0;
+                        const inCustodyQty = getItemInCustodyQty(item.id);
+                        const totalQty = inWarehouseQty + inCustodyQty;
+                        const isLow = inWarehouseQty <= item.min_threshold;
+                        const isOut = inWarehouseQty <= 0;
+                        const price = getItemPrice(item);
+                        const totalVal = price !== null ? price * totalQty : null;
+                        const warehouseVal = price !== null ? price * inWarehouseQty : null;
+                        const custodyVal = price !== null ? price * inCustodyQty : null;
+                        const isFixed = isItemFixed(item.inventory_type);
+                        const warehousePercent = totalQty > 0 ? (inWarehouseQty / totalQty) * 100 : 0;
+                        const custodyPercent = totalQty > 0 ? (inCustodyQty / totalQty) * 100 : 0;
+
+                        return (
+                          <tr key={item.id}>
+                            <td>{itemIndex + 1}</td>
+                            <td>
+                              <div className="inventory-item-cell">
+                                <div className="item-icon-box" title={getCategoryName(item.category)}>
+                                  <i className={`fa-solid ${getItemIcon(item.category, item.inventory_type)}`}></i>
+                                </div>
+                                <div className="item-text-info">
+                                  <span className="item-title-text">{item.name}</span>
+                                  <div className="item-subtitle-meta">
+                                    <span>{getCategoryName(item.category)}</span>
+                                    <span>•</span>
+                                    <span>{item.unit || 'قطعة'}</span>
                                   </div>
-                                ) : (
-                                  <span style={{ color: 'var(--muted)' }}>-</span>
-                                )}
-                              </td>
-                              <td>{item.unit}</td>
-                              <td>{item.stocks?.[0]?.warehouse_location || '-'}</td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  {canEdit ? (
-                                    <>
-                                      <button
-                                        className="action-btn edit"
-                                        onClick={() => openEditItemModal(item)}
-                                        title="تعديل الصنف"
-                                        aria-label="تعديل الصنف"
-                                        style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                      >
-                                        <i className="fa-solid fa-pen-to-square"></i>
-                                      </button>
-                                      <button
-                                        className="action-btn delete"
-                                        onClick={() => handleDeleteItem(item)}
-                                        title="حذف الصنف"
-                                        aria-label="حذف الصنف"
-                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
-                                      >
-                                        <i className="fa-solid fa-trash"></i>
-                                      </button>
-                                    </>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`premium-badge ${getInventoryTypeBadgeClass(item.inventory_type)}`}>
+                                <i className={`fa-solid ${isFixed ? 'fa-vault' : 'fa-box-open'}`} style={{ fontSize: '0.75rem' }}></i>
+                                {getInventoryTypeName(item.inventory_type)}
+                              </span>
+                            </td>
+                            <td>
+                              {price !== null ? (
+                                <span style={{ fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                                  {price.toLocaleString()} <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>د.ل</span>
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--muted)' }}>-</span>
+                              )}
+                            </td>
+                            <td>
+                              {isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null ? (
+                                <span style={{ color: 'var(--text)', fontWeight: 700, background: 'var(--input-bg)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.82rem' }}>
+                                  {Number(item.depreciation_rate)}% سنوي
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--muted)' }}>-</span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="stock-distribution-cell">
+                                <div className="stock-numbers-row">
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ color: 'var(--muted)' }}>بالمخزن:</span>
+                                    <span className={`premium-badge ${isOut ? 'badge-danger' : isLow ? 'badge-warning' : 'badge-success'}`} style={{ padding: '1px 8px', fontSize: '0.75rem' }}>
+                                      {inWarehouseQty} {isOut ? '(نافد)' : isLow ? '(منخفض)' : ''}
+                                    </span>
+                                  </span>
+                                  {inCustodyQty > 0 ? (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ color: 'var(--muted)' }}>عهدة:</span>
+                                      <span className="premium-badge badge-purple" style={{ padding: '1px 8px', fontSize: '0.75rem' }}>
+                                        {inCustodyQty}
+                                      </span>
+                                    </span>
                                   ) : (
-                                    <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>عرض فقط</span>
+                                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                                      الإجمالي: <strong>{totalQty}</strong>
+                                    </span>
                                   )}
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
+                                {/* Visual Stock Distribution Multi-Bar */}
+                                <div className="stock-multi-bar" title={`بالمخزن: ${inWarehouseQty} | بالعهدة: ${inCustodyQty}`}>
+                                  <div 
+                                    className={`bar-segment-warehouse ${isOut ? 'bar-out' : isLow ? 'bar-low' : ''}`} 
+                                    style={{ width: `${warehousePercent}%` }}
+                                  ></div>
+                                  <div 
+                                    className="bar-segment-custody" 
+                                    style={{ width: `${custodyPercent}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              {totalVal !== null ? (
+                                <div>
+                                  <span style={{ fontWeight: 800, color: 'var(--text)', display: 'block', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
+                                    {totalVal.toLocaleString()} <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>د.ل</span>
+                                  </span>
+                                  {inCustodyQty > 0 && (
+                                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', marginTop: '1px' }}>
+                                      (مخزن: {warehouseVal?.toLocaleString()} | عهدة: {custodyVal?.toLocaleString()})
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--muted)' }}>-</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className="location-pill" title={item.stocks?.[0]?.warehouse_location || 'المستودع الرئيسي'}>
+                                <i className="fa-solid fa-location-dot" style={{ color: 'var(--accent-cyan)', fontSize: '0.75rem' }}></i>
+                                <span style={{ maxWidth: '85px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {item.stocks?.[0]?.warehouse_location || 'المستودع'}
+                                </span>
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                {/* Quick Preview Modal Button */}
+                                <button
+                                  type="button"
+                                  className="action-btn-circle btn-view"
+                                  onClick={() => setSelectedDetailItem(item)}
+                                  title="معاينة بطاقة الصنف وتفاصيل العهدة"
+                                >
+                                  <i className="fa-solid fa-eye"></i>
+                                </button>
+
+                                {/* Direct Issue Custody Button */}
+                                {canEdit && inWarehouseQty > 0 && (
+                                  <button
+                                    type="button"
+                                    className="action-btn-circle btn-assign"
+                                    onClick={() => handleQuickAssignItem(item)}
+                                    title="صرف عهدة مباشرة من هذا الصنف"
+                                  >
+                                    <i className="fa-solid fa-share-from-square"></i>
+                                  </button>
+                                )}
+
+                                {/* Edit Button */}
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    className="action-btn-circle btn-edit"
+                                    onClick={() => openEditItemModal(item)}
+                                    title="تعديل الصنف"
+                                  >
+                                    <i className="fa-solid fa-pen-to-square"></i>
+                                  </button>
+                                )}
+
+                                {/* Delete Button */}
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    className="action-btn-circle btn-delete"
+                                    onClick={() => handleDeleteItem(item)}
+                                    title="حذف الصنف"
+                                  >
+                                    <i className="fa-solid fa-trash-can"></i>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
+                </div>
+                {renderPagination(storePage, filteredItems.length, setStorePage)}
+              </div>
+            ) : (
+              /* Modern Interactive Cards Grid View */
+              <div>
+                <div className="inventory-cards-grid">
+                  {filteredItems.slice((storePage - 1) * PAGE_SIZE, storePage * PAGE_SIZE).map((item) => {
+                    const inWarehouseQty = item.stocks?.[0]?.quantity || 0;
+                    const inCustodyQty = getItemInCustodyQty(item.id);
+                    const totalQty = inWarehouseQty + inCustodyQty;
+                    const isLow = inWarehouseQty <= item.min_threshold;
+                    const isOut = inWarehouseQty <= 0;
+                    const price = getItemPrice(item);
+                    const totalVal = price !== null ? price * totalQty : null;
+                    const isFixed = isItemFixed(item.inventory_type);
+                    const warehousePercent = totalQty > 0 ? (inWarehouseQty / totalQty) * 100 : 0;
+                    const custodyPercent = totalQty > 0 ? (inCustodyQty / totalQty) * 100 : 0;
+
+                    return (
+                      <div key={item.id} className="inventory-card">
+                        {/* Card Header */}
+                        <div>
+                          <div className="card-header-row">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div className="item-icon-box" style={{ width: '46px', height: '46px', fontSize: '1.3rem' }}>
+                                <i className={`fa-solid ${getItemIcon(item.category, item.inventory_type)}`}></i>
+                              </div>
+                              <div>
+                                <h4 className="card-item-title">{item.name}</h4>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '2px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <span>{getCategoryName(item.category)}</span>
+                                  <span>•</span>
+                                  <span>{item.unit || 'قطعة'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <span className={`premium-badge ${getInventoryTypeBadgeClass(item.inventory_type)}`} style={{ padding: '3px 10px', fontSize: '0.75rem' }}>
+                              {getInventoryTypeName(item.inventory_type)}
+                            </span>
+                          </div>
+
+                          {/* Visual Stock Health & Segmented Bar */}
+                          <div style={{ marginTop: '16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 700 }}>حالة المخزون</span>
+                              <span className={`premium-badge ${isOut ? 'badge-danger' : isLow ? 'badge-warning' : 'badge-success'}`} style={{ padding: '1px 8px', fontSize: '0.72rem' }}>
+                                {isOut ? 'نافد تماماً' : isLow ? 'قرب النفاد' : 'متوفر بالمستودع'}
+                              </span>
+                            </div>
+                            <div className="stock-multi-bar" style={{ height: '7px' }}>
+                              <div 
+                                className={`bar-segment-warehouse ${isOut ? 'bar-out' : isLow ? 'bar-low' : ''}`} 
+                                style={{ width: `${warehousePercent}%` }}
+                              ></div>
+                              <div 
+                                className="bar-segment-custody" 
+                                style={{ width: `${custodyPercent}%` }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* 3-Column Metrics Grid */}
+                          <div className="card-metrics-box" style={{ marginTop: '14px' }}>
+                            <div className="card-metric-item">
+                              <span className="card-metric-title">بالمخزن</span>
+                              <span className="card-metric-num" style={{ color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981' }}>
+                                {inWarehouseQty}
+                              </span>
+                            </div>
+                            <div className="card-metric-item">
+                              <span className="card-metric-title">بالعهدة</span>
+                              <span className="card-metric-num" style={{ color: '#8b5cf6' }}>
+                                {inCustodyQty}
+                              </span>
+                            </div>
+                            <div className="card-metric-item">
+                              <span className="card-metric-title">الإجمالي</span>
+                              <span className="card-metric-num">
+                                {totalQty}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Financial & Location Strip */}
+                          <div className="card-financial-strip" style={{ marginTop: '12px' }}>
+                            <div>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--muted)', display: 'block' }}>السعر الفردي</span>
+                              <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.88rem' }}>
+                                {price !== null ? `${price.toLocaleString()} د.ل` : '—'}
+                              </span>
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--muted)', display: 'block' }}>إجمالي القيمة</span>
+                              <span style={{ fontWeight: 900, color: '#10b981', fontSize: '0.98rem' }}>
+                                {totalVal !== null ? `${totalVal.toLocaleString()} د.ل` : '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Footer Actions */}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <span className="location-pill">
+                              <i className="fa-solid fa-location-dot" style={{ color: 'var(--accent-cyan)', fontSize: '0.75rem' }}></i>
+                              <span>{item.stocks?.[0]?.warehouse_location || 'المستودع الرئيسي'}</span>
+                            </span>
+                            {isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 600 }}>
+                                إهلاك: {Number(item.depreciation_rate)}%
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="card-actions-row">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDetailItem(item)}
+                              style={{ 
+                                display: 'inline-flex', alignItems: 'center', gap: '6px', 
+                                border: '1px solid var(--border)', background: 'var(--card-bg)', 
+                                padding: '6px 14px', borderRadius: '8px', fontSize: '0.82rem', 
+                                fontWeight: 700, color: 'var(--text)', cursor: 'pointer', transition: 'all 0.2s' 
+                              }}
+                            >
+                              <i className="fa-solid fa-eye" style={{ color: 'var(--accent-cyan)' }}></i>
+                              <span>تفاصيل</span>
+                            </button>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {canEdit && inWarehouseQty > 0 && (
+                                <button
+                                  type="button"
+                                  className="action-btn-circle btn-assign"
+                                  onClick={() => handleQuickAssignItem(item)}
+                                  title="صرف عهدة"
+                                >
+                                  <i className="fa-solid fa-share-from-square"></i>
+                                </button>
+                              )}
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  className="action-btn-circle btn-edit"
+                                  onClick={() => openEditItemModal(item)}
+                                  title="تعديل الصنف"
+                                >
+                                  <i className="fa-solid fa-pen-to-square"></i>
+                                </button>
+                              )}
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  className="action-btn-circle btn-delete"
+                                  onClick={() => handleDeleteItem(item)}
+                                  title="حذف الصنف"
+                                >
+                                  <i className="fa-solid fa-trash-can"></i>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
                 {renderPagination(storePage, filteredItems.length, setStorePage)}
               </div>
@@ -2768,6 +3233,240 @@ export default function InventoryManagement() {
           </div>
         </div>
       )}
+
+      {/* Item Quick Specs & Custody Holders Modal */}
+      {selectedDetailItem && (() => {
+        const item = selectedDetailItem;
+        const inWarehouseQty = item.stocks?.[0]?.quantity || 0;
+        const inCustodyQty = getItemInCustodyQty(item.id);
+        const totalQty = inWarehouseQty + inCustodyQty;
+        const isLow = inWarehouseQty <= item.min_threshold;
+        const isOut = inWarehouseQty <= 0;
+        const price = getItemPrice(item);
+        const totalVal = price !== null ? price * totalQty : null;
+        const isFixed = isItemFixed(item.inventory_type);
+        const warehousePercent = totalQty > 0 ? (inWarehouseQty / totalQty) * 100 : 0;
+        const custodyPercent = totalQty > 0 ? (inCustodyQty / totalQty) * 100 : 0;
+        const activeItemCustodies = custodies.filter(c => (c.item_id === item.id || c.item?.id === item.id) && c.status === 'active');
+
+        return (
+          <div className="modal-overlay" onClick={() => setSelectedDetailItem(null)}>
+            <div 
+              className="modal-content inventory-detail-modal-container" 
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              {/* Modal Header */}
+              <div className="modal-header" style={{ padding: '16px 24px', background: 'var(--card-bg)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="item-icon-box" style={{ width: '44px', height: '44px', fontSize: '1.25rem' }}>
+                    <i className={`fa-solid ${getItemIcon(item.category, item.inventory_type)}`}></i>
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text)' }}>{item.name}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <span className={`premium-badge ${getInventoryTypeBadgeClass(item.inventory_type)}`} style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
+                        {getInventoryTypeName(item.inventory_type)}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>• {getCategoryName(item.category)}</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>• وحدة القياس: {item.unit || 'قطعة'}</span>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  className="modal-close" 
+                  onClick={() => setSelectedDetailItem(null)}
+                  title="إغلاق النافذة"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div style={{ overflowY: 'auto', padding: '0 0 20px 0', flex: 1 }}>
+                {/* 4-Item KPI Specs Ribbon */}
+                <div className="detail-specs-grid">
+                  <div className="detail-spec-card">
+                    <span className="detail-spec-label">المتوفر بالمستودع</span>
+                    <span className="detail-spec-value" style={{ color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981' }}>
+                      {inWarehouseQty} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{item.unit || 'قطعة'}</span>
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                      حد الطلب الأدنى: {item.min_threshold}
+                    </span>
+                  </div>
+
+                  <div className="detail-spec-card">
+                    <span className="detail-spec-label">المصروف كعهدة</span>
+                    <span className="detail-spec-value" style={{ color: '#8b5cf6' }}>
+                      {inCustodyQty} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{item.unit || 'قطعة'}</span>
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                      {activeItemCustodies.length} مستلم نشط
+                    </span>
+                  </div>
+
+                  <div className="detail-spec-card">
+                    <span className="detail-spec-label">السعر الفردي التقديري</span>
+                    <span className="detail-spec-value">
+                      {price !== null ? `${price.toLocaleString()} د.ل` : '—'}
+                    </span>
+                    {isFixed && item.depreciation_rate !== undefined && item.depreciation_rate !== null && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                        نسبة الإهلاك: {Number(item.depreciation_rate)}% سنوي
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="detail-spec-card">
+                    <span className="detail-spec-label">إجمالي القيمة الكلية</span>
+                    <span className="detail-spec-value" style={{ color: '#10b981' }}>
+                      {totalVal !== null ? `${totalVal.toLocaleString()} د.ل` : '—'}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                      مخزن: {price !== null ? (price * inWarehouseQty).toLocaleString() : 0} د.ل
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stock Health Bar & Location */}
+                <div style={{ padding: '0 24px', marginBottom: '20px' }}>
+                  <div style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>توزيع المخزون والعهدة</span>
+                      <div style={{ display: 'flex', gap: '14px', fontSize: '0.78rem' }}>
+                        <span style={{ color: '#10b981', fontWeight: 700 }}>■ بالمخزن ({Math.round(warehousePercent)}%)</span>
+                        <span style={{ color: '#8b5cf6', fontWeight: 700 }}>■ بالعهدة ({Math.round(custodyPercent)}%)</span>
+                      </div>
+                    </div>
+                    <div className="stock-multi-bar" style={{ height: '10px', borderRadius: '5px' }}>
+                      <div className={`bar-segment-warehouse ${isOut ? 'bar-out' : isLow ? 'bar-low' : ''}`} style={{ width: `${warehousePercent}%` }}></div>
+                      <div className="bar-segment-custody" style={{ width: `${custodyPercent}%` }}></div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.82rem', color: 'var(--muted)' }}>
+                      <span>موقع التخزين بالمستودع: <strong style={{ color: 'var(--text)' }}>{item.stocks?.[0]?.warehouse_location || 'المستودع الرئيسي'}</strong></span>
+                      <span>إجمالي الموجودات: <strong style={{ color: 'var(--text)' }}>{totalQty} {item.unit || 'قطعة'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Custodies Section */}
+                <div style={{ padding: '0 24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-users" style={{ color: '#8b5cf6' }}></i>
+                      <span>العهد النشطة المصروفة من هذا الصنف</span>
+                      <span style={{ fontSize: '0.78rem', padding: '1px 8px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', fontWeight: 800 }}>
+                        {activeItemCustodies.length}
+                      </span>
+                    </h4>
+                    {canEdit && inWarehouseQty > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDetailItem(null);
+                          handleQuickAssignItem(item);
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <i className="fa-solid fa-share-from-square"></i>
+                        <span>صرف عهدة جديدة</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {activeItemCustodies.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                      <i className="fa-solid fa-box-open" style={{ fontSize: '1.8rem', color: 'var(--muted)', opacity: 0.5, marginBottom: '6px', display: 'block' }}></i>
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--muted)', fontWeight: 600 }}>
+                        لا توجد عهد نشطة مصروفة حالياً لهذا الصنف. كافة الكميات متوفرة بالمستودع.
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                      <table className="premium-table" style={{ margin: 0, fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr>
+                            <th>المستلم</th>
+                            <th>النوع</th>
+                            <th>الكمية</th>
+                            <th>الرقم التسلسلي</th>
+                            <th>تاريخ الصرف</th>
+                            <th>الحالة</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeItemCustodies.map((c) => (
+                            <tr key={c.id}>
+                              <td style={{ fontWeight: 700 }}>
+                                {c.recipient?.agency_name || c.recipient?.name || 'مستلم مجهول'}
+                              </td>
+                              <td>{getRecipientTypeName(c.recipient_type)}</td>
+                              <td style={{ fontWeight: 800, color: '#8b5cf6' }}>{c.quantity} {item.unit}</td>
+                              <td style={{ fontFamily: 'monospace', color: 'var(--muted)' }}>
+                                {c.serial_start || '—'}
+                              </td>
+                              <td>{new Date(c.assigned_at).toLocaleDateString('ar-LY')}</td>
+                              <td>
+                                <span className="premium-badge badge-success" style={{ padding: '1px 8px', fontSize: '0.72rem' }}>
+                                  نشطة
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card-bg)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                  رقم تعريف الصنف بالنظام: #{item.id}
+                </span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDetailItem(null);
+                        openEditItemModal(item);
+                      }}
+                      className="premium-secondary-btn"
+                      style={{ height: '36px', fontSize: '0.82rem', padding: '0 14px' }}
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i> تعديل بيانات الصنف
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDetailItem(null)}
+                    className="premium-primary-btn"
+                    style={{ height: '36px', fontSize: '0.82rem', padding: '0 18px' }}
+                  >
+                    إغلاق
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </section>
   );
