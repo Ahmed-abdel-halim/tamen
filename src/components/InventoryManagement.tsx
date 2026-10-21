@@ -83,7 +83,8 @@ export default function InventoryManagement() {
   const [storePage, setStorePage] = useState(1);
   const [custodyPage, setCustodyPage] = useState(1);
   const [logPage, setLogPage] = useState(1);
-  const PAGE_SIZE = 15;
+  const [pageSize, setPageSize] = useState(8);
+  const PAGE_SIZE = pageSize;
   const [filterInventoryType, setFilterInventoryType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterQuantityStatus, setFilterQuantityStatus] = useState<'all' | 'low' | 'available' | 'out'>('all');
@@ -184,30 +185,52 @@ export default function InventoryManagement() {
   }, []);
 
   const renderPagination = (currentPage: number, totalItems: number, onPageChange: (p: number) => void) => {
-    const totalPages = Math.ceil(totalItems / PAGE_SIZE);
-    if (totalPages <= 1) return null;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    if (totalPages <= 1 && totalItems <= 8) return null;
 
-    const startIdx = (currentPage - 1) * PAGE_SIZE + 1;
-    const endIdx = Math.min(currentPage * PAGE_SIZE, totalItems);
+    const startIdx = (currentPage - 1) * pageSize + 1;
+    const endIdx = Math.min(currentPage * pageSize, totalItems);
 
     return (
-      <div className="premium-pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '10px 15px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-          عرض {startIdx} - {endIdx} من {totalItems} عنصر
+      <div className="premium-pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '6px 12px', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: 'var(--muted)' }}>
+          <span>عرض {startIdx} - {endIdx} من {totalItems} عنصر</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', borderRight: '1px solid var(--border)', paddingRight: '10px' }}>
+            <span>عرض:</span>
+            {[8, 15, 25].map(size => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => { setPageSize(size); onPageChange(1); }}
+                style={{
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border)',
+                  background: pageSize === size ? 'var(--accent-cyan)' : 'var(--input-bg)',
+                  color: pageSize === size ? '#fff' : 'var(--text)',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '5px' }}>
+        <div style={{ display: 'flex', gap: '4px' }}>
           <button
             type="button"
             disabled={currentPage === 1}
             onClick={() => onPageChange(currentPage - 1)}
-            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
+            style={{ padding: '4px 8px', borderRadius: '5px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, fontSize: '0.78rem' }}
           >
             السابق
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
             if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
               if (p === 2 || p === totalPages - 1) {
-                return <span key={p} style={{ padding: '6px', color: 'var(--muted)' }}>...</span>;
+                return <span key={p} style={{ padding: '2px 4px', color: 'var(--muted)', fontSize: '0.75rem' }}>...</span>;
               }
               return null;
             }
@@ -217,13 +240,14 @@ export default function InventoryManagement() {
                 type="button"
                 onClick={() => onPageChange(p)}
                 style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  borderRadius: '5px',
                   border: '1px solid var(--border)',
                   background: currentPage === p ? 'var(--accent-cyan)' : 'var(--card-bg)',
                   color: currentPage === p ? '#fff' : 'var(--text)',
                   cursor: 'pointer',
-                  fontWeight: currentPage === p ? 'bold' : 'normal'
+                  fontWeight: currentPage === p ? 'bold' : 'normal',
+                  fontSize: '0.78rem'
                 }}
               >
                 {p}
@@ -234,7 +258,7 @@ export default function InventoryManagement() {
             type="button"
             disabled={currentPage === totalPages}
             onClick={() => onPageChange(currentPage + 1)}
-            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
+            style={{ padding: '4px 8px', borderRadius: '5px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, fontSize: '0.78rem' }}
           >
             التالي
           </button>
@@ -1300,9 +1324,9 @@ export default function InventoryManagement() {
   const totalAllAssetsValue = totalWarehouseValue + fixedCustodyValue;
 
   return (
-    <section className="users-management">
+    <section className="users-management" style={{ gap: '10px' }}>
       <div className="inventory-dashboard-wrapper">
-        <div className="users-breadcrumb">
+        <div className="users-breadcrumb" style={{ marginBottom: '2px', fontSize: '15px' }}>
           <span>الشؤون المالية / إدارة المخازن والعهدة المالية</span>
         </div>
 
@@ -1311,7 +1335,7 @@ export default function InventoryManagement() {
         {/* Executive KPI Stats Cards Grid (5-Card Balanced High-Tech Ribbon) */}
         <div className="premium-stats-grid">
           {/* Card 1: Warehouse Stock */}
-          <div className="premium-stat-card">
+          <div className="premium-stat-card kpi-card-cyan">
             <div className="premium-stat-icon-wrapper kpi-cyan">
               <i className="fa-solid fa-warehouse"></i>
             </div>
@@ -1328,7 +1352,7 @@ export default function InventoryManagement() {
           </div>
 
           {/* Card 2: Active Custody */}
-          <div className="premium-stat-card">
+          <div className="premium-stat-card kpi-card-purple">
             <div className="premium-stat-icon-wrapper kpi-fixed">
               <i className="fa-solid fa-user-shield"></i>
             </div>
@@ -1345,7 +1369,7 @@ export default function InventoryManagement() {
           </div>
 
           {/* Card 3: Grand Total Assets Value */}
-          <div className="premium-stat-card">
+          <div className="premium-stat-card kpi-card-emerald">
             <div className="premium-stat-icon-wrapper kpi-total">
               <i className="fa-solid fa-coins"></i>
             </div>
@@ -1362,7 +1386,7 @@ export default function InventoryManagement() {
           </div>
 
           {/* Card 4: Fixed Capital Assets */}
-          <div className="premium-stat-card">
+          <div className="premium-stat-card kpi-card-amber">
             <div className="premium-stat-icon-wrapper kpi-gold">
               <i className="fa-solid fa-vault"></i>
             </div>
@@ -1379,7 +1403,7 @@ export default function InventoryManagement() {
           </div>
 
           {/* Card 5: Low Stock Warning */}
-          <div className={`premium-stat-card ${lowStockCount > 0 ? 'stat-has-alert' : ''}`}>
+          <div className={`premium-stat-card kpi-card-rose ${lowStockCount > 0 ? 'stat-has-alert' : ''}`}>
             <div className={`premium-stat-icon-wrapper kpi-alert ${lowStockCount > 0 ? 'pulse-alert-icon' : ''}`}>
               <i className="fa-solid fa-triangle-exclamation"></i>
             </div>
@@ -1389,7 +1413,7 @@ export default function InventoryManagement() {
                   {lowStockCount > 0 ? '⚠️ تنبيه نواقص' : '✔️ مستوى آمن'}
                 </span>
               </div>
-              <div className="premium-stat-value" style={{ color: lowStockCount > 0 ? '#ef4444' : 'var(--text)' }}>
+              <div className="premium-stat-value">
                 {lowStockCount.toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>صنف</span>
               </div>
               <div className="premium-stat-label">أصناف تحت حد الطلب</div>
@@ -1443,7 +1467,7 @@ export default function InventoryManagement() {
 
         {/* Tab Contents */}
         {activeTab === 'store' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {/* 1. Quick One-Click Filter Chips */}
             <div className="inventory-quick-filters">
               <button 
@@ -1757,7 +1781,7 @@ export default function InventoryManagement() {
                     </span>
                   </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'hidden', width: '100%' }}>
                   <table className="premium-table">
                     <thead>
                       <tr>
@@ -2118,7 +2142,7 @@ export default function InventoryManagement() {
         )}
 
         {activeTab === 'custody' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {/* Premium Filter Bar */}
             <div className="premium-filter-bar" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
               <div className="premium-filter-group">
