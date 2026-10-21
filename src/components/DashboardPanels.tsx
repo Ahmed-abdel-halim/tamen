@@ -178,6 +178,27 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         });
         if (res.ok) {
           const data = await res.json();
+
+          // Fallback in case backend cache or pre-update API does not have these keys yet
+          if (data.third_party_insurance_documents === undefined) {
+            try {
+              const tpRes = await fetch(`${API_BASE_URL}/insurance-documents?insurance_type=third_party&per_page=1`, { headers });
+              if (tpRes.ok) {
+                const tpData = await tpRes.json();
+                data.third_party_insurance_documents = tpData.total ?? 0;
+              }
+            } catch (e) {}
+          }
+          if (data.foreign_car_insurance_documents === undefined) {
+            try {
+              const fcRes = await fetch(`${API_BASE_URL}/insurance-documents?insurance_type=foreign&per_page=1`, { headers });
+              if (fcRes.ok) {
+                const fcData = await fcRes.json();
+                data.foreign_car_insurance_documents = fcData.total ?? 0;
+              }
+            } catch (e) {}
+          }
+
           setStatistics(data);
         }
       } catch (error) {
@@ -228,8 +249,8 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     'وثائق تأمين السيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
     'تأمين سيارات': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
     'تأمين سيارة جمرك': { label: 'تأمين السيارات الإجباري', icon: 'fa-solid fa-car', route: '/insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين طرف ثالث سيارات': { label: 'تأمين طرف ثالث سيارات', icon: 'fa-solid fa-handshake-simple', route: '/third-party-insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
-    'تأمين سيارات أجنبية': { label: 'تأمين سيارات أجنبية', icon: 'fa-solid fa-car-side', route: '/foreign-car-insurance-documents', color: 'green', statisticsKey: 'insurance_documents' },
+    'تأمين طرف ثالث سيارات': { label: 'تأمين طرف ثالث سيارات', icon: 'fa-solid fa-handshake-simple', route: '/third-party-insurance-documents', color: 'green', statisticsKey: 'third_party_insurance_documents' },
+    'تأمين سيارات أجنبية': { label: 'تأمين سيارات أجنبية', icon: 'fa-solid fa-car-side', route: '/foreign-car-insurance-documents', color: 'green', statisticsKey: 'foreign_car_insurance_documents' },
     'تأمين سيارات دولي': { label: 'تأمين السيارات الدولي', icon: 'fa-solid fa-globe', route: '/international-insurance-documents', color: 'green', statisticsKey: 'international_insurance_documents' },
     'تأمين المسافرين': { label: 'وثيقة تأمين مسافرين', icon: 'fa-solid fa-plane', route: '/travel-insurance-documents', color: 'green', statisticsKey: 'travel_insurance_documents' },
     'تأمين زائرين ليبيا': { label: 'وثيقة تأمين مسافرين', icon: 'fa-solid fa-plane', route: '/travel-insurance-documents', color: 'green', statisticsKey: 'travel_insurance_documents' },
@@ -262,28 +283,28 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       icon: 'fa-solid fa-car', 
       route: '/insurance-documents', 
       color: 'green', 
-      statistics: statistics.insurance_documents?.toString() || '0' 
+      statistics: (statistics.insurance_documents ?? 0).toString() 
     },
     { 
       label: 'تأمين طرف ثالث سيارات', 
       icon: 'fa-solid fa-handshake-simple', 
       route: '/third-party-insurance-documents', 
       color: 'green', 
-      statistics: 'عرض' 
+      statistics: (statistics.third_party_insurance_documents ?? 0).toString() 
     },
     { 
       label: 'تأمين سيارات أجنبية', 
       icon: 'fa-solid fa-car-side', 
       route: '/foreign-car-insurance-documents', 
       color: 'green', 
-      statistics: 'عرض' 
+      statistics: (statistics.foreign_car_insurance_documents ?? 0).toString() 
     },
     { 
       label: 'تأمين السيارات الدولي', 
       icon: 'fa-solid fa-globe', 
       route: '/international-insurance-documents', 
       color: 'green', 
-      statistics: statistics.international_insurance_documents?.toString() || '0' 
+      statistics: (statistics.international_insurance_documents ?? 0).toString() 
     },
     { 
       label: 'وثيقة تأمين مسافرين', 
