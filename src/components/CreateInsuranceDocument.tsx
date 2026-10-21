@@ -435,7 +435,7 @@ export default function CreateInsuranceDocument({ defaultType }: CreateInsurance
 
   const [plates, setPlates] = useState<Plate[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
+  const [_authorizedDocuments, setAuthorizedDocuments] = useState<string[] | null>(null);
   const prevEnginePowerRef = useRef<string>('');
   const [formData, setFormData] = useState({
     insurance_type: resolveInitialInsuranceType(),
@@ -593,40 +593,14 @@ export default function CreateInsuranceDocument({ defaultType }: CreateInsurance
     }
   };
 
-  const allowedInsuranceTypes = useMemo(() => {
-    if (!authorizedDocuments) {
-      return [
-        { value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' },
-        { value: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' },
-        { value: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' },
-      ];
-    }
 
-    const hasCompulsory = authorizedDocuments.some(d => 
-      ['تأمين السيارات الإجباري', 'تأمين سيارات إجباري', 'وثائق تأمين السيارات', 'تأمين سيارات', 'تأمين سيارة جمرك'].includes(d)
-    );
-    const hasThirdParty = authorizedDocuments.includes('تأمين طرف ثالث سيارات');
-    const hasForeign = authorizedDocuments.includes('تأمين سيارات أجنبية');
-
-    const options = [];
-    if (hasCompulsory) options.push({ value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' });
-    if (hasThirdParty) options.push({ value: 'تأمين طرف ثالث سيارات', label: 'تأمين طرف ثالث سيارات' });
-    if (hasForeign) options.push({ value: 'تأمين سيارات أجنبية', label: 'تأمين سيارات أجنبية' });
-
-    if (options.length === 0) {
-      options.push({ value: 'تأمين إجباري سيارات', label: 'تأمين إجباري سيارات' });
-    }
-    return options;
-  }, [authorizedDocuments]);
 
   useEffect(() => {
-    if (allowedInsuranceTypes.length > 0) {
-      const isCurrentAllowed = allowedInsuranceTypes.some(opt => opt.value === formData.insurance_type);
-      if (!isCurrentAllowed) {
-        setFormData(prev => ({ ...prev, insurance_type: allowedInsuranceTypes[0].value as any }));
-      }
+    const resolved = resolveInitialInsuranceType();
+    if (resolved && resolved !== formData.insurance_type) {
+      setFormData(prev => ({ ...prev, insurance_type: resolved }));
     }
-  }, [allowedInsuranceTypes]);
+  }, [location.pathname, searchParams, defaultType]);
 
   const getReturnUrl = () => {
     if (formData.insurance_type === 'تأمين طرف ثالث سيارات') {
@@ -3057,24 +3031,54 @@ export default function CreateInsuranceDocument({ defaultType }: CreateInsurance
               `}</style>
 
 
-            <div className="modern-grid-4" style={{ marginBottom: '8px', background: 'var(--panel, #f8fafc)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border, #e2e8f0)' }}>
-              <div className="form-group span-2">
-                <label htmlFor="main_insurance_type" style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text, #1e293b)', marginBottom: '4px', display: 'block' }}>
-                  <i className="fa-solid fa-list-check" style={{ color: '#2563eb', marginLeft: '8px' }}></i> اختر نوع التأمين المطلوب <span className="required">*</span>
-                </label>
-                <select
-                  id="main_insurance_type"
-                  value={formData.insurance_type}
-                  onChange={(e) => setFormData({ ...formData, insurance_type: e.target.value as any })}
-                  style={{ padding: '0 12px', fontSize: '14px', border: '1.5px solid #2563eb', borderRadius: '6px', fontWeight: '600', height: '40px', background: 'var(--input-bg, #fff)', color: 'var(--text)' }}
-                >
-                  {allowedInsuranceTypes.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+            {/* عرض نوع التأمين الحالي بشكل ثابت ومحدد لكل قسم */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--panel, #ffffff)',
+              padding: '12px 18px',
+              borderRadius: '10px',
+              border: '1px solid var(--border, #e2e8f0)',
+              marginBottom: '10px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: isThirdPartyInsurance ? '#f0fdf4' : isForeignCarInsurance ? '#fffbeb' : '#eff6ff',
+                  color: isThirdPartyInsurance ? '#16a34a' : isForeignCarInsurance ? '#d97706' : '#2563eb',
+                  fontSize: '1.2rem',
+                  border: `1px solid ${isThirdPartyInsurance ? '#bbf7d0' : isForeignCarInsurance ? '#fde68a' : '#bfdbfe'}`
+                }}>
+                  <i className={isThirdPartyInsurance ? 'fa-solid fa-handshake-simple' : isForeignCarInsurance ? 'fa-solid fa-car-side' : 'fa-solid fa-file-shield'}></i>
+                </span>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted, #64748b)', fontWeight: '600' }}>نوع الوثيقة المحدد</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text, #1e293b)' }}>
+                    {formData.insurance_type}
+                  </div>
+                </div>
               </div>
-              <div className="form-group span-2" style={{ display: 'flex', alignItems: 'center', color: 'var(--muted, #64748b)', fontSize: '0.8rem', padding: '0 10px' }}>
-                <p><i className="fa-solid fa-circle-info"></i> اختر نوع التأمين لعرض الحقول المطلوبة.</p>
+              <div style={{
+                fontSize: '0.82rem',
+                color: isThirdPartyInsurance ? '#16a34a' : isForeignCarInsurance ? '#d97706' : '#2563eb',
+                background: isThirdPartyInsurance ? '#f0fdf4' : isForeignCarInsurance ? '#fffbeb' : '#eff6ff',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontWeight: '700',
+                border: `1px solid ${isThirdPartyInsurance ? '#bbf7d0' : isForeignCarInsurance ? '#fde68a' : '#bfdbfe'}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <i className="fa-solid fa-lock"></i>
+                <span>قسم محدد تلقائياً</span>
               </div>
             </div>
 
