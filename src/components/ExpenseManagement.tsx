@@ -6,6 +6,8 @@ import { generatePremiumExcel } from '../utils/excelGenerator';
 import { API_BASE_URL, resolveImageUrl } from '../config/api';
 import UnionReconciliationTab from './UnionReconciliationTab';
 import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
+import { tafqeetDinar } from '../utils/printInsuranceSupervisionReport';
+import { ALMADAR_LETTERHEAD_BANNER } from '../utils/almadarBannerBase64';
 
 interface ExpenseItem {
   item_number?: string;
@@ -143,259 +145,760 @@ export default function ExpenseManagement({
     const printWindow = window.open('', '', 'width=1200,height=900');
     if (!printWindow) return;
 
-    const qrData = `وصل رصيد اتحاد رقم: ${u.request_number}\nعدد البطاقات: ${u.cards_count}\nالمبلغ المدفوع: ${u.amount_paid} د.ل\nالتاريخ: ${u.purchase_date}`;
+    const qrData = `شركة المدار الليبي للتأمين | إيصال شراء رصيد الاتحاد - البطاقة البرتقالية\nرقم الطلب: ${u.request_number || '—'}\nعدد البطاقات: ${u.cards_count}\nالمبلغ المدفوع: ${parseFloat(u.amount_paid?.toString() || '0').toLocaleString()} د.ل\nالتاريخ: ${u.purchase_date ? u.purchase_date.split('T')[0] : '—'}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
 
-    printWindow.document.write(`
-      <html dir="rtl">
-      <head>
-        <title>وصل رصيد اتحاد #${u.request_number}</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-          @media print { 
-            @page { margin: 10mm; size: A4; } 
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          }
-          body { 
-            font-family: 'Cairo', sans-serif; 
-            margin: 0; 
-            padding: 10px; 
-            color: #000;
-            background: #fff;
-          }
-          .main-border {
-            border: 2px solid #000;
-            padding: 15px;
-            min-height: 250mm;
-            position: relative;
-          }
-          .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-          }
-          .header-table td {
-            border: 1px solid #000;
-            padding: 10px;
-            vertical-align: middle;
-          }
-          .logo-cell { width: 20%; text-align: center; }
-          .title-cell { width: 60%; text-align: center; background: #f8f9fa; }
-          .qr-cell { width: 20%; text-align: center; }
-          
-          .doc-title {
-            font-size: 20px;
-            font-weight: 900;
-            margin: 0;
-            color: #000;
-          }
+    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
+    const bannerUrl = origin ? `${origin}/img/almadar_letterhead_banner_new.png` : '/img/almadar_letterhead_banner_new.png';
 
-          .section-title {
-            background: #e2e8f0;
-            border: 1.5px solid #000;
-            padding: 6px 15px;
-            font-weight: 900;
-            font-size: 15px;
-            margin: 20px 0 0 0;
-            text-align: center;
-          }
+    const sup = parseFloat(u.supervision_fee_per_card?.toString() || (u.purchase_date && u.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
+    const totSup = u.total_supervision_fee ? parseFloat(u.total_supervision_fee.toString()) : (u.cards_count * sup);
+    const amountNum = parseFloat(u.amount_paid?.toString() || '0') || 0;
+    const tafqeetText = tafqeetDinar(amountNum);
+    const dateFormatted = u.purchase_date ? u.purchase_date.split('T')[0] : '—';
+    const depositDateFormatted = u.deposit_date ? u.deposit_date.split('T')[0] : '—';
+    const printDate = new Date().toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const hasDepositInfo = !!(u.depositor_name || u.deposit_date || u.bank_account_number || u.deposit_amount);
 
-          .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 0;
-          }
-          .data-table td {
-            border: 1px solid #000;
-            padding: 8px 12px;
-            font-size: 13px;
-          }
-          .label {
-            background: #f8f9fa;
-            font-weight: 800;
-            width: 25%;
-          }
-          .value {
-            width: 25%;
-            font-weight: 600;
-          }
+    printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>إيصال شراء رصيد الاتحاد — البطاقة البرتقالية (#${u.request_number || '—'})</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f1f5f9;
+      font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      direction: rtl;
+      color: #0f172a;
+      font-size: 8pt;
+      line-height: 1.25;
+      -webkit-font-smoothing: antialiased;
+    }
 
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: -1px;
-          }
-          .items-table th, .items-table td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: center;
-            font-size: 13px;
-          }
-          .items-table th {
-            background: #f1f5f9;
-            font-weight: 900;
-          }
+    /* شريط الأدوات العلوي للمعاينة على الشاشة */
+    .screen-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: #091e3a;
+      color: #ffffff;
+      padding: 8px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      border-bottom: 2px solid #ea580c;
+    }
+    .toolbar-title {
+      font-weight: 800;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #f8fafc;
+    }
+    .toolbar-badge {
+      background: #ea580c;
+      color: #ffffff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #f1f5f9;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 5px 12px;
+      border-radius: 6px;
+      user-select: none;
+      font-weight: 600;
+    }
+    .toggle-label input {
+      accent-color: #ea580c;
+      cursor: pointer;
+    }
+    .btn-action {
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-family: 'Cairo', sans-serif;
+      font-weight: 800;
+      font-size: 12.5px;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-print {
+      background: #10b981;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    }
+    .btn-print:hover { background: #059669; }
+    .btn-close {
+      background: #475569;
+      color: #fff;
+    }
+    .btn-close:hover { background: #334155; }
 
-          .total-row {
-            background: #f8f9fa;
-            font-weight: 900;
-            font-size: 15px;
-          }
+    /* الحاوية القياسية لورقة A4 (210mm × 297mm) */
+    .sheet-wrapper {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      margin: 10px auto;
+      background: #ffffff;
+      padding: 6mm 10mm 5mm 10mm;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      position: relative;
+      box-sizing: border-box;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
 
-          .signature-box {
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-          }
-          .sig-item {
-            border: 1.5px solid #000;
-            padding: 15px 10px;
-            text-align: center;
-          }
-          .sig-line {
-            border-top: 1px dashed #000;
-            margin-top: 35px;
-            padding-top: 5px;
-            font-size: 12px;
-            font-weight: 800;
-          }
+    /* الإطار المزدوج الفاخر */
+    .doc-outer-border {
+      position: absolute;
+      top: 3.5mm;
+      bottom: 3.5mm;
+      left: 3.5mm;
+      right: 3.5mm;
+      border: 2px solid #091e3a;
+      border-radius: 5px;
+      pointer-events: none;
+    }
+    .doc-inner-border {
+      position: absolute;
+      top: 5mm;
+      bottom: 5mm;
+      left: 5mm;
+      right: 5mm;
+      border: 0.75px solid #cbd5e1;
+      border-radius: 3.5px;
+      pointer-events: none;
+    }
 
-          .footer-meta {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-            border-top: 2px solid #000;
-            padding-top: 10px;
-          }
-        </style>
-      </head>
-      <body onload="window.print(); window.onafterprint = () => window.close();">
-        <div class="main-border">
-          <table class="header-table">
-            <tr>
-              <td class="logo-cell"><img src="/img/logo.png" style="width: 80px;"></td>
-              <td class="title-cell">
-                <div style="font-size: 14px; font-weight: 800; margin-bottom: 5px;">شركة المدار الليبي للتأمين</div>
-                <h1 class="doc-title">إيـصـال شـراء رصـيـد (الـبـرتـقـالـيـة)</h1>
-                <div style="font-size: 12px; margin-top: 5px;">إدارة البطاقات الموحدة - رصيد الاتحاد</div>
-              </td>
-              <td class="qr-cell"><img src="${qrApiUrl}" style="width: 80px;"></td>
-            </tr>
-          </table>
+    /* العلامة المائية الرسمية */
+    .watermark-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.035;
+      pointer-events: none;
+      z-index: 0;
+      text-align: center;
+    }
+    .watermark-container img {
+      width: 380px;
+      height: auto;
+      filter: grayscale(100%);
+    }
 
-          <div class="section-title">بيانات طلب الرصيد</div>
-          <table class="data-table">
-            <tr>
-              <td class="label">رقم الطلب:</td>
-              <td class="value">${u.request_number || '—'}</td>
-              <td class="label">تاريخ الطلب:</td>
-              <td class="value">${u.purchase_date ? u.purchase_date.split('T')[0] : '—'}</td>
-            </tr>
-            <tr>
-              <td class="label">طريقة الدفع:</td>
-              <td class="value">${u.payment_method}</td>
-              <td class="label">عدد البطاقات:</td>
-              <td class="value">${u.cards_count} بطاقة</td>
-            </tr>
-          </table>
+    .content-body {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
 
-          ${(u.depositor_name || u.deposit_date || u.bank_account_number || u.deposit_amount) ? `
-          <div class="section-title">بيانات الإيداع والتحويل المصرفي</div>
-          <table class="data-table">
-            <tr>
-              <td class="label">اسم الواصل / المودع:</td>
-              <td class="value">${u.depositor_name || '—'}</td>
-              <td class="label">تاريخ الإيداع:</td>
-              <td class="value">${u.deposit_date ? u.deposit_date.split('T')[0] : '—'}</td>
-            </tr>
-            <tr>
-              <td class="label">رقم الحساب المصرفي:</td>
-              <td class="value">${u.bank_account_number || '—'}</td>
-              <td class="label">قيمة الإيداع:</td>
-              <td class="value" style="font-weight: 800; color: #014cb1;">${u.deposit_amount ? `${parseFloat(u.deposit_amount.toString()).toLocaleString()} د.ل` : '—'}</td>
-            </tr>
-          </table>
-          ` : ''}
+    /* ─── الترويسة المعتمدة من معنونه_المدار_الليبي.docx ─── */
+    .header-banner-container {
+      width: 100%;
+      text-align: center;
+      margin-bottom: 4px;
+      border-bottom: 2px solid #091e3a;
+      padding-bottom: 3px;
+    }
+    .header-banner-img {
+      width: 100%;
+      max-height: 42mm;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
 
-          <div class="section-title">تفاصيل الحصص والودائع</div>
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th style="width: 45%;">البيان</th>
-                <th style="width: 15%;">الكمية</th>
-                <th style="width: 20%;">سعر الوحدة</th>
-                <th style="width: 20%;">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="text-align: right;">شراء رصيد بطاقات اتحاد</td>
-                <td>${u.cards_count}</td>
-                <td>${u.card_price} د.ل</td>
-                <td style="font-weight: 700;">${(u.cards_count * u.card_price).toLocaleString()} د.ل</td>
-              </tr>
-              <tr>
-                <td style="text-align: right;">خصم الاتحاد (المصروفات)</td>
-                <td>${u.cards_count}</td>
-                <td>${u.union_fee_per_card} د.ل</td>
-                <td>${(u.cards_count * u.union_fee_per_card).toLocaleString()} د.ل</td>
-              </tr>
-              ${(() => {
-                const sup = parseFloat(u.supervision_fee_per_card?.toString() || (u.purchase_date && u.purchase_date >= '2026-08-01' ? '2' : '0')) || 0;
-                const totSup = u.total_supervision_fee ? parseFloat(u.total_supervision_fee.toString()) : (u.cards_count * sup);
-                if (totSup > 0) {
-                  return `
-                  <tr>
-                    <td style="text-align: right; color: #7c3aed; font-weight: 700;">خصم هيئة الإشراف على التأمين</td>
-                    <td>${u.cards_count}</td>
-                    <td>${sup} د.ل</td>
-                    <td style="font-weight: 700; color: #7c3aed;">${totSup.toLocaleString()} د.ل</td>
-                  </tr>
-                  `;
-                }
-                return '';
-              })()}
-              <tr>
-                <td style="text-align: right;">وديعة الشركة</td>
-                <td>${u.cards_count}</td>
-                <td>${u.company_deposit_per_card} د.ل</td>
-                <td>${(u.cards_count * u.company_deposit_per_card).toLocaleString()} د.ل</td>
-              </tr>
-              <tr class="total-row">
-                <td colspan="3" style="text-align: left; padding-left: 20px;">صافي المبلغ المدفوع:</td>
-                <td style="font-size: 16px;">${parseFloat(u.amount_paid.toString()).toLocaleString()} د.ل</td>
-              </tr>
-            </tbody>
-          </table>
+    /* شريط البيانات والتوثيق العلوي */
+    .meta-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 4px 10px;
+      margin-bottom: 5px;
+      font-size: 7.5pt;
+    }
+    .meta-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .meta-lbl {
+      color: #64748b;
+      font-weight: 700;
+    }
+    .meta-val {
+      color: #091e3a;
+      font-weight: 800;
+    }
+    .meta-badge {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fdba74;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 900;
+    }
 
-          <div class="section-title">ملاحظات</div>
-          <div style="border: 1px solid #000; padding: 10px; min-height: 50px; font-size: 13px;">
-            ${u.notes || 'لا توجد ملاحظات'}
+    /* شريط العنوان المذهّب للإيصال */
+    .report-title-banner {
+      background: linear-gradient(135deg, #091e3a 0%, #1e3a8a 70%, #ea580c 100%);
+      color: #ffffff;
+      padding: 5px 12px;
+      border-radius: 6px;
+      text-align: center;
+      margin-bottom: 5px;
+      border: 1px solid #091e3a;
+      box-shadow: 0 2px 4px rgba(9,30,58,0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .report-title-text {
+      font-size: 11pt;
+      font-weight: 900;
+      letter-spacing: -0.2px;
+      margin: 0;
+      color: #ffffff;
+    }
+    .report-subtitle-text {
+      font-size: 7.2pt;
+      color: #fed7aa;
+      font-weight: 700;
+    }
+
+    /* بطاقة المبلغ الصافي والتفقيط */
+    .amount-highlight-card {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+      border: 1.5px solid #16a34a;
+      border-right: 5px solid #16a34a;
+      border-radius: 6px;
+      padding: 5px 10px;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .amount-right-box {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .amount-label {
+      font-size: 8pt;
+      font-weight: 800;
+      color: #166534;
+    }
+    .amount-number {
+      font-size: 15pt;
+      font-weight: 900;
+      color: #15803d;
+      direction: ltr;
+      display: inline-block;
+    }
+    .amount-curr {
+      font-size: 8.5pt;
+      font-weight: 800;
+      color: #166534;
+    }
+    .amount-cards-pill {
+      background: #ea580c;
+      color: #ffffff;
+      font-size: 7.8pt;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+    .tafqeet-text {
+      font-size: 7.5pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      font-style: italic;
+    }
+
+    /* عناوين الأقسام */
+    .sec-header {
+      font-size: 8pt;
+      font-weight: 800;
+      color: #091e3a;
+      margin: 4px 0 2px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 2px;
+    }
+    .sec-header-icon {
+      color: #ea580c;
+    }
+
+    /* جداول البيانات الرسمية */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4px;
+      font-size: 7.4pt;
+    }
+    .data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 3.5px 6px;
+      vertical-align: middle;
+    }
+    .td-lbl {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #475569;
+      width: 18%;
+    }
+    .td-val {
+      font-weight: 800;
+      color: #091e3a;
+      width: 32%;
+    }
+
+    /* جدول الحصص والرسوم */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4px;
+      font-size: 7.4pt;
+    }
+    .items-table th {
+      background: #091e3a;
+      color: #ffffff;
+      font-weight: 800;
+      padding: 4px 6px;
+      border: 1px solid #091e3a;
+      text-align: center;
+      font-size: 7.2pt;
+    }
+    .items-table td {
+      padding: 3.5px 6px;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .items-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    .total-highlight-row td {
+      background: #f1f5f9 !important;
+      font-weight: 900;
+      font-size: 8.5pt;
+      color: #091e3a;
+      border-top: 2px solid #091e3a;
+      border-bottom: 2px solid #091e3a;
+    }
+
+    /* الملاحظات */
+    .notes-box {
+      background: #fafafa;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin-bottom: 4px;
+      font-size: 7pt;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .notes-lbl {
+      font-weight: 800;
+      color: #091e3a;
+      white-space: nowrap;
+    }
+    .notes-val {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    /* التوقيعات والاعتماد */
+    .signatures-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr) 110px;
+      gap: 8px;
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1.5px solid #cbd5e1;
+      page-break-inside: avoid;
+    }
+    .sig-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 4px;
+      text-align: center;
+      background: #ffffff;
+    }
+    .sig-title {
+      font-size: 7.2pt;
+      font-weight: 800;
+      color: #091e3a;
+      margin-bottom: 18px;
+      display: block;
+    }
+    .sig-line {
+      font-size: 6.5pt;
+      color: #94a3b8;
+      border-top: 1px dotted #94a3b8;
+      padding-top: 2px;
+      margin: 0 6px;
+    }
+    .stamp-box {
+      border: 1.5px dashed #091e3a;
+      border-radius: 5px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 6.8pt;
+      font-weight: 800;
+      color: #091e3a;
+      height: 48px;
+    }
+
+    /* التذييل الرسمي المعتمد من معنونه_المدار_الليبي.docx */
+    .official-footer {
+      border-top: 1.5px solid #091e3a;
+      padding-top: 3px;
+      margin-top: 4px;
+      font-size: 6.4pt;
+      color: #475569;
+      page-break-inside: avoid;
+      line-height: 1.25;
+      text-align: center;
+    }
+    .footer-line-1 {
+      font-weight: 700;
+      color: #091e3a;
+      margin-bottom: 1px;
+    }
+    .footer-line-2 {
+      color: #64748b;
+      font-weight: 600;
+      direction: ltr;
+    }
+    .footer-sys {
+      font-size: 5.8pt;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    /* ضبط الطباعة */
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .screen-toolbar {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        padding: 5mm 9mm 4mm 9mm !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- شريط الأدوات للمعاينة على الشاشة -->
+  <div class="screen-toolbar">
+    <div class="toolbar-title">
+      <span>🧾 إيـصـال شـراء رصـيـد الاتحاد — الـبـطـاقـة الـبـرتـقـالـيـة</span>
+      <span class="toolbar-badge">طلب رقم: #${u.request_number || '—'}</span>
+    </div>
+    <div class="toolbar-actions">
+      <label class="toggle-label" title="عند الطباعة على ورق يحمل ترويسة وتذييل الشركة مطبوعين مسبقاً">
+        <input 
+          type="checkbox" 
+          id="toggleHeader" 
+          onchange="
+            const b = document.getElementById('headerBanner');
+            const f = document.getElementById('officialFooter');
+            if (b) b.style.display = this.checked ? 'none' : 'block';
+            if (f) f.style.display = this.checked ? 'none' : 'flex';
+          " 
+        />
+        <span>إخفاء الترويسة (للطباعة على ورق معنون مسبقاً)</span>
+      </label>
+      <button class="btn-action btn-print" onclick="window.print()">
+        🖨️ طباعة الإيصال (ورقة واحدة A4)
+      </button>
+      <button class="btn-action btn-close" onclick="window.close()">
+        ✕ إغلاق
+      </button>
+    </div>
+  </div>
+
+  <!-- ورقة الإيصال الرسمية A4 القياسية -->
+  <div class="sheet-wrapper">
+    <div class="doc-outer-border"></div>
+    <div class="doc-inner-border"></div>
+
+    <div class="watermark-container">
+      <img src="/img/almadar_header.jpeg" onerror="this.src='/img/logo.png'; this.onerror=null;" alt="Watermark" />
+    </div>
+
+    <div class="content-body">
+      <!-- الجزء العلوي -->
+      <div>
+        <!-- الترويسة المعتمدة من معنونه_المدار_الليبي.docx -->
+        <div id="headerBanner" class="header-banner-container">
+          <img 
+            src="${bannerUrl}" 
+            alt="شركة المدار الليبي للتأمين - الترويسة المعتمدة" 
+            class="header-banner-img"
+            onerror="this.src='${ALMADAR_LETTERHEAD_BANNER}'"
+          />
+        </div>
+
+        <!-- شريط البيانات والتوثيق العلوي -->
+        <div class="meta-strip">
+          <div class="meta-col">
+            <div class="meta-item">
+              <span class="meta-lbl">رقم الإيصال / الطلب:</span>
+              <span class="meta-badge">#${u.request_number || '—'}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-lbl">طريقة السداد:</span>
+              <span class="meta-val">${u.payment_method || '—'}</span>
+            </div>
           </div>
 
-          <div class="signature-box">
-            <div class="sig-item">
-              <div style="font-weight: 900;">الموظف المختص</div>
-              <div class="sig-line">توقيع / ختم</div>
+          <div class="meta-col">
+            <div class="meta-item">
+              <span class="meta-lbl">تاريخ المعاملة:</span>
+              <span class="meta-val">${dateFormatted}</span>
             </div>
-            <div class="sig-item">
-              <div style="font-weight: 900;">المدير المالي</div>
-              <div class="sig-line">توقيع / ختم</div>
+            <div class="meta-item">
+              <span class="meta-lbl">تاريخ الاستخراج:</span>
+              <span class="meta-val">${printDate}</span>
             </div>
           </div>
 
-          <div class="footer-meta">
-            تم استخراج هذا المستند آلياً من نظام المدار الليبي للتأمين - بتاريخ ${new Date().toLocaleString('ar-LY')}
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="text-align:center;">
+              <div style="font-size:6.2pt; font-weight:800; color:#091e3a; margin-bottom:1px;">تحقق رقمي</div>
+              <img src="${qrApiUrl}" style="width:38px; height:38px; border:1px solid #cbd5e1; border-radius:3px; padding:1px; background:#fff;" alt="QR" />
+            </div>
           </div>
         </div>
-      </body>
-      </html>
-    `);
+
+        <!-- شريط عنوان الإيصال -->
+        <div class="report-title-banner">
+          <div>
+            <h1 class="report-title-text">إيـصـال شـراء رصـيـد الاتحاد — الـبـطـاقـة الـبـرتـقـالـيـة</h1>
+          </div>
+          <div class="report-subtitle-text">
+            إدارة البطاقات الموحدة — الإدارة العامة للشؤون المالية والمحاسبية
+          </div>
+        </div>
+
+        <!-- بطاقة المبلغ الإجمالي والتفقيط -->
+        <div class="amount-highlight-card">
+          <div class="amount-right-box">
+            <span class="amount-label">صافي المبلغ المدفوع:</span>
+            <span class="amount-number">${amountNum.toLocaleString()}</span>
+            <span class="amount-curr">دينار ليبي</span>
+            <span class="amount-cards-pill">${u.cards_count} بطاقة</span>
+          </div>
+          <div class="tafqeet-text">
+            <span>فقط ${tafqeetText} لا غير</span>
+          </div>
+        </div>
+
+        <!-- بيانات طلب الرصيد -->
+        <div class="sec-header">
+          <span class="sec-header-icon">▪</span>
+          <span>بيانات طلب الرصيد والكمية</span>
+        </div>
+        <table class="data-table">
+          <tr>
+            <td class="td-lbl">رقم الطلب:</td>
+            <td class="td-val">${u.request_number || '—'}</td>
+            <td class="td-lbl">تاريخ الطلب:</td>
+            <td class="td-val">${dateFormatted}</td>
+          </tr>
+          <tr>
+            <td class="td-lbl">طريقة الدفع:</td>
+            <td class="td-val">${u.payment_method || '—'}</td>
+            <td class="td-lbl">عدد البطاقات:</td>
+            <td class="td-val" style="color:#c2410c; font-weight:900;">${u.cards_count} بطاقة موحدة</td>
+          </tr>
+        </table>
+
+        <!-- بيانات الإيداع والتحويل المصرفي (إذا توفرت) -->
+        ${hasDepositInfo ? `
+        <div class="sec-header">
+          <span class="sec-header-icon">▪</span>
+          <span>بيانات الإيداع والتحويل المصرفي</span>
+        </div>
+        <table class="data-table">
+          <tr>
+            <td class="td-lbl">اسم الواصل / المودع:</td>
+            <td class="td-val">${u.depositor_name || '—'}</td>
+            <td class="td-lbl">تاريخ الإيداع:</td>
+            <td class="td-val">${depositDateFormatted}</td>
+          </tr>
+          <tr>
+            <td class="td-lbl">رقم الحساب المصرفي:</td>
+            <td class="td-val" style="direction:ltr; text-align:right;">${u.bank_account_number || '—'}</td>
+            <td class="td-lbl">قيمة الإيداع المصرفي:</td>
+            <td class="td-val" style="color:#0284c7; font-weight:900;">${u.deposit_amount ? `${parseFloat(u.deposit_amount.toString()).toLocaleString()} د.ل` : '—'}</td>
+          </tr>
+        </table>
+        ` : ''}
+
+        <!-- تفاصيل الحصص والودائع -->
+        <div class="sec-header">
+          <span class="sec-header-icon">▪</span>
+          <span>تفاصيل الحصص والودائع والرسوم المقررة</span>
+        </div>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="width: 46%;">البيان التفصيلي</th>
+              <th style="width: 14%;">الكمية</th>
+              <th style="width: 20%;">سعر الوحدة (د.ل)</th>
+              <th style="width: 20%;">الإجمالي (د.ل)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align: right; font-weight:700;">شراء رصيد بطاقات اتحاد (الرصيد الأساسي)</td>
+              <td>${u.cards_count}</td>
+              <td style="direction:ltr;">${u.card_price}</td>
+              <td style="font-weight: 800; direction:ltr;">${(u.cards_count * u.card_price).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style="text-align: right;">خصم الاتحاد العام العربي للتأمين (المصروفات)</td>
+              <td>${u.cards_count}</td>
+              <td style="direction:ltr;">${u.union_fee_per_card}</td>
+              <td style="direction:ltr;">${(u.cards_count * u.union_fee_per_card).toLocaleString()}</td>
+            </tr>
+            ${totSup > 0 ? `
+            <tr>
+              <td style="text-align: right; color:#7c3aed; font-weight:700;">خصم هيئة الإشراف على التأمين (المقرر قانوناً)</td>
+              <td style="color:#7c3aed;">${u.cards_count}</td>
+              <td style="color:#7c3aed; direction:ltr;">${sup}</td>
+              <td style="font-weight: 800; color:#7c3aed; direction:ltr;">${totSup.toLocaleString()}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="text-align: right;">وديعة الشركة المعتمدة</td>
+              <td>${u.cards_count}</td>
+              <td style="direction:ltr;">${u.company_deposit_per_card}</td>
+              <td style="direction:ltr;">${(u.cards_count * u.company_deposit_per_card).toLocaleString()}</td>
+            </tr>
+            <tr class="total-highlight-row">
+              <td colspan="3" style="text-align: left; padding-left: 20px;">إجمالي صافي المبلغ المستحق والمدفوع:</td>
+              <td style="color:#15803d; direction:ltr;">${amountNum.toLocaleString()} د.ل</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ملاحظات -->
+        <div class="notes-box">
+          <span class="notes-lbl">ملاحظات / إشعار:</span>
+          <span class="notes-val">${u.notes ? u.notes : 'يُعد هذا السند إيصالاً رسمياً معتمداً لعملية شراء رصيد البطاقة البرتقالية، وتم تقييده في السجلات المالية والمحاسبية لشركة المدار الليبي للتأمين.'}</span>
+        </div>
+      </div>
+
+      <!-- الجزء السفلي: التوقيعات والتذييل -->
+      <div>
+        <!-- منطقة التوقيعات والاعتماد -->
+        <div class="signatures-grid">
+          <div class="sig-card">
+            <span class="sig-title">الموظف المختص (إعداد)</span>
+            <div class="sig-line">التوقيع والتاريخ</div>
+          </div>
+          <div class="sig-card">
+            <span class="sig-title">رئيس قسم الحسابات</span>
+            <div class="sig-line">التوقيع والتاريخ</div>
+          </div>
+          <div class="sig-card">
+            <span class="sig-title">المدير المالي (اعتماد)</span>
+            <div class="sig-line">التوقيع والتاريخ</div>
+          </div>
+          <div class="stamp-box">
+            <span>خاتم الشركة</span>
+            <span style="font-size:5.5pt; color:#64748b; margin-top:2px;">المعتمد</span>
+          </div>
+        </div>
+
+        <!-- التذييل الرسمي المعتمد من معنونه_المدار_الليبي.docx -->
+        <div id="officialFooter" class="official-footer">
+          <div class="footer-line-1">
+            الإدارة العامــة: ليبيا – طرابلـس - حي دمشق | Public Administration: Libya. Tripoli. Hy Demashk.
+          </div>
+          <div class="footer-line-2">
+            الموقع الالكتروني: www.mli.ly | البريد الالكتروني: info@mli.ly | مـوبايـل: 00218920003366 | صندوق بريــد: (83410) P.O. BOX
+          </div>
+          <div class="footer-sys">
+            تم استخراج وطباعة هذا المستند آلياً عبر منظومة التأمين الرسمية — شركة المدار الليبي للتأمين المساهمة
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`);
     printWindow.document.close();
   };
 
