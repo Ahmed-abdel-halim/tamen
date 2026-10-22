@@ -188,11 +188,11 @@ export const PERMISSION_GROUPS = [
   },
   {
     id: 'branches_agents',
-    title: 'إدارة الفروع والوكلاء',
-    icon: 'fa-building',
+    title: 'إدارة الوكلاء',
+    icon: 'fa-user-tie',
     color: '#0d9488',
     permissions: [
-      { id: 'قائمة الفروع والوكلاء', label: 'قائمة الفروع والوكلاء' },
+      { id: 'قائمة الوكلاء', label: 'قائمة الوكلاء' },
       { id: 'الوكلاء الجدد', label: 'الوكلاء الجدد' },
       { id: 'إلغاء الوكالات', label: 'إلغاء الوكالات (الغاء الوكيل)' },
       { id: 'طلبات الوكلاء', label: 'طلبات الوكلاء (طلبات الوكيل)' },
@@ -201,7 +201,7 @@ export const PERMISSION_GROUPS = [
       { id: 'تسديد كشف حساب الوكيل', label: 'تسديد كشف حساب الوكيل - للمحاسب (تسديد الشهور فقط دون إلغاء استلامات الشهور السابقة/المدققة)' },
       { id: 'إدارة الوكيل', label: 'إدارة الوكيل (كشف الحساب والنوافذ المنبثقة: الإلغاء، الطلبات، التعديل)' },
       { id: 'كشف الحساب الشهري للوكيل', label: 'كشف الحساب الشهري للوكيل' },
-      { id: 'إدارة الفروع والوكلاء', label: 'إدارة الفروع والوكلاء (صلاحية كاملة)' }
+      { id: 'إدارة الوكلاء', label: 'إدارة الوكلاء (صلاحية كاملة)' }
     ]
   },
   {
@@ -2415,11 +2415,18 @@ export default function UsersList() {
                   </p>
                   <div className="permissions-accordion-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     {PERMISSION_GROUPS.map((group) => {
-                      const groupActiveCount = group.permissions.filter(p => 
-                        p.id === 'تأمين سيارات إجباري' || p.id === 'تأمين السيارات الإجباري'
-                          ? (formData.authorized_documents.includes('تأمين سيارات إجباري') || formData.authorized_documents.includes('تأمين السيارات الإجباري'))
-                          : formData.authorized_documents.includes(p.id)
-                      ).length;
+                      const groupActiveCount = group.permissions.filter(p => {
+                        if (p.id === 'تأمين سيارات إجباري' || p.id === 'تأمين السيارات الإجباري') {
+                          return formData.authorized_documents.includes('تأمين سيارات إجباري') || formData.authorized_documents.includes('تأمين السيارات الإجباري');
+                        }
+                        if (p.id === 'إدارة الوكلاء' || p.id === 'إدارة الفروع والوكلاء') {
+                          return formData.authorized_documents.includes('إدارة الوكلاء') || formData.authorized_documents.includes('إدارة الفروع والوكلاء');
+                        }
+                        if (p.id === 'قائمة الوكلاء' || p.id === 'قائمة الفروع والوكلاء') {
+                          return formData.authorized_documents.includes('قائمة الوكلاء') || formData.authorized_documents.includes('قائمة الفروع والوكلاء');
+                        }
+                        return formData.authorized_documents.includes(p.id);
+                      }).length;
                       const totalGroupCount = group.permissions.length;
                       const isExpanded = !!expandedCategories[group.id];
                       const isAllSelected = groupActiveCount === totalGroupCount;
@@ -2430,7 +2437,12 @@ export default function UsersList() {
                         const groupPermIds = group.permissions.map(p => p.id);
                         if (isAllSelected) {
                           // إلغاء تحديد الكل في هذه المجموعة
-                          updatedList = updatedList.filter(d => !groupPermIds.includes(d) && !(groupPermIds.includes('تأمين سيارات إجباري') && (d === 'تأمين سيارات إجباري' || d === 'تأمين السيارات الإجباري')));
+                          updatedList = updatedList.filter(d => 
+                            !groupPermIds.includes(d) && 
+                            !(groupPermIds.includes('تأمين سيارات إجباري') && (d === 'تأمين سيارات إجباري' || d === 'تأمين السيارات الإجباري')) &&
+                            !(groupPermIds.includes('إدارة الوكلاء') && (d === 'إدارة الوكلاء' || d === 'إدارة الفروع والوكلاء')) &&
+                            !(groupPermIds.includes('قائمة الوكلاء') && (d === 'قائمة الوكلاء' || d === 'قائمة الفروع والوكلاء'))
+                          );
                         } else {
                           // تحديد الكل في هذه المجموعة
                           groupPermIds.forEach(id => {
@@ -2439,6 +2451,12 @@ export default function UsersList() {
                             }
                             if (id === 'تأمين سيارات إجباري' && !updatedList.includes('تأمين السيارات الإجباري')) {
                               updatedList.push('تأمين السيارات الإجباري');
+                            }
+                            if (id === 'إدارة الوكلاء' && !updatedList.includes('إدارة الفروع والوكلاء')) {
+                              updatedList.push('إدارة الفروع والوكلاء');
+                            }
+                            if (id === 'قائمة الوكلاء' && !updatedList.includes('قائمة الفروع والوكلاء')) {
+                              updatedList.push('قائمة الفروع والوكلاء');
                             }
                           });
                         }
@@ -2543,6 +2561,10 @@ export default function UsersList() {
                                 {group.permissions.map((p) => {
                                   const isChecked = p.id === 'تأمين سيارات إجباري' || p.id === 'تأمين السيارات الإجباري'
                                     ? (formData.authorized_documents.includes('تأمين سيارات إجباري') || formData.authorized_documents.includes('تأمين السيارات الإجباري'))
+                                    : (p.id === 'إدارة الوكلاء' || p.id === 'إدارة الفروع والوكلاء')
+                                    ? (formData.authorized_documents.includes('إدارة الوكلاء') || formData.authorized_documents.includes('إدارة الفروع والوكلاء'))
+                                    : (p.id === 'قائمة الوكلاء' || p.id === 'قائمة الفروع والوكلاء')
+                                    ? (formData.authorized_documents.includes('قائمة الوكلاء') || formData.authorized_documents.includes('قائمة الفروع والوكلاء'))
                                     : formData.authorized_documents.includes(p.id);
 
                                   return (
@@ -2572,6 +2594,20 @@ export default function UsersList() {
                                               if (!list.includes('تأمين السيارات الإجباري')) list.push('تأمين السيارات الإجباري');
                                             } else {
                                               list = list.filter(d => d !== 'تأمين سيارات إجباري' && d !== 'تأمين السيارات الإجباري');
+                                            }
+                                          } else if (p.id === 'إدارة الوكلاء' || p.id === 'إدارة الفروع والوكلاء') {
+                                            if (e.target.checked) {
+                                              if (!list.includes('إدارة الوكلاء')) list.push('إدارة الوكلاء');
+                                              if (!list.includes('إدارة الفروع والوكلاء')) list.push('إدارة الفروع والوكلاء');
+                                            } else {
+                                              list = list.filter(d => d !== 'إدارة الوكلاء' && d !== 'إدارة الفروع والوكلاء');
+                                            }
+                                          } else if (p.id === 'قائمة الوكلاء' || p.id === 'قائمة الفروع والوكلاء') {
+                                            if (e.target.checked) {
+                                              if (!list.includes('قائمة الوكلاء')) list.push('قائمة الوكلاء');
+                                              if (!list.includes('قائمة الفروع والوكلاء')) list.push('قائمة الفروع والوكلاء');
+                                            } else {
+                                              list = list.filter(d => d !== 'قائمة الوكلاء' && d !== 'قائمة الفروع والوكلاء');
                                             }
                                           } else {
                                             list = e.target.checked 

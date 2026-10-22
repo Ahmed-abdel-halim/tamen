@@ -353,7 +353,7 @@ export default function ExcelImportPage() {
 
             {importResult.agents_created > 0 && (
               <div style={{ background:'#1e1b4b', border:'1px solid #6366f1', borderRadius:10, padding:'12px 16px', marginBottom:24, color:'#a5b4fc', fontSize:14 }}>
-                💡 الوكلاء الجدد تم إنشاؤهم بحالة <strong>غير نشط</strong> — يرجى مراجعتهم وتفعيلهم من قائمة الفروع والوكلاء.
+                💡 الوكلاء الجدد تم إنشاؤهم بحالة <strong>غير نشط</strong> — يرجى مراجعتهم وتفعيلهم من قائمة الوكلاء.
               </div>
             )}
 

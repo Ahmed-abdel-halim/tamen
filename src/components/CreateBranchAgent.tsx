@@ -424,10 +424,10 @@ export default function CreateBranchAgent() {
     <section className="users-management">
       <div className="users-breadcrumb">
         <span onClick={() => navigate('/branches-agents')} className="breadcrumb-link">
-          الفروع والوكلاء
+          الوكلاء
         </span>
         <span> / </span>
-        <span>إضافة فرع أو وكيل جديد</span>
+        <span>إضافة وكيل جديد</span>
       </div>
 
       <div className="users-card">

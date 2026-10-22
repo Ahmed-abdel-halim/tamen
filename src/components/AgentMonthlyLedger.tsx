@@ -725,7 +725,7 @@ export default function AgentMonthlyLedger() {
       <body>
       <div class="page-container">
         <div class="header">
-          <div class="header-info"><h1>بيانات الوكيل المعتمد</h1><p>قسم الفروع والوكلاء</p></div>
+          <div class="header-info"><h1>بيانات الوكيل المعتمد</h1><p>قسم الوكلاء</p></div>
           <div class="header-branding">
             <div class="brand-text"><div>المدار الليبي <span style="color:#1e40af">للتأمين</span></div><div><span style="color:#1e40af">ALMADAR</span> <span style="color:#139625">LIBYAN INSURANCE</span></div></div>
             <img src="${logoSrc}" alt="Logo" />
@@ -752,7 +752,7 @@ export default function AgentMonthlyLedger() {
         </div>
         <div class="footer">
           <div class="sig-block"><div class="sig-line">توقيع الوكيل المعتمد</div></div>
-          <div class="sig-block"><div class="sig-line">مدير إدارة الفروع والوكلاء</div></div>
+          <div class="sig-block"><div class="sig-line">مدير إدارة الوكلاء</div></div>
         </div>
         <div class="print-date">تاريخ الطباعة: ${printDate}</div>
       </div>
@@ -786,7 +786,7 @@ export default function AgentMonthlyLedger() {
           <div class="badge-type">بطاقة وكيل معتمد</div>
           <div class="header-box"><div class="logo-wrapper"><img src="${logoSrc}" alt="Logo" /></div></div>
           <div class="employee-info"><div class="emp-name">${ba.agent_name}</div><div class="emp-role">وكيل معتمد</div></div>
-          <div class="footer-note">إدارة الفروع والوكلاء - المدار الليبي للتأمين</div>
+          <div class="footer-note">إدارة الوكلاء - المدار الليبي للتأمين</div>
         </div>
       </div>
     </body></html>`);
@@ -8645,7 +8645,7 @@ export default function AgentMonthlyLedger() {
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>
-                    طلبات الوكيل والفروع
+                    طلبات الوكيل
                   </h3>
                   <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
                     سجل ومتابعة طلبات المخزون والدعم والتسويات

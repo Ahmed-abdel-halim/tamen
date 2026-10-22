@@ -553,7 +553,7 @@ export default function AgentSalariesModal({ agent, onClose }: AgentSalariesModa
         <div class="hdr">
           <div>
             <h1 class="hdr-title">شركة المدار الليبي للتأمين</h1>
-            <p class="hdr-sub">إدارة الفروع والوكلاء — مسير صرف المرتبات الشهري المعتمد</p>
+            <p class="hdr-sub">إدارة الوكلاء — مسير صرف المرتبات الشهري المعتمد</p>
           </div>
           <div style="text-align:left;font-size:12px;color:#64748b;">
             <div>تاريخ الإصدار: ${new Date().toLocaleDateString('ar-LY')}</div>
@@ -607,7 +607,7 @@ export default function AgentSalariesModal({ agent, onClose }: AgentSalariesModa
             <div class="sig-line">الاسم والتوقيع</div>
           </div>
           <div class="sig-box">
-            <div>مدير إدارة الفروع والوكلاء</div>
+            <div>مدير إدارة الوكلاء</div>
             <div class="sig-line">الاسم والختم</div>
           </div>
           <div class="sig-box">
@@ -701,7 +701,7 @@ export default function AgentSalariesModal({ agent, onClose }: AgentSalariesModa
 
           <div class="sigs">
             <div class="sig-box">
-              <div>محاسب إدارة الفروع</div>
+              <div>محاسب إدارة الوكلاء</div>
               <div class="sig-line">التوقيع</div>
             </div>
             <div class="sig-box">
@@ -1280,7 +1280,7 @@ export default function AgentSalariesModal({ agent, onClose }: AgentSalariesModa
           }}
         >
           <div style={{ fontSize: '12px', color: 'var(--muted)', fontFamily: "'Cairo',sans-serif" }}>
-            قسم إدارة الوكلاء والفروع — سجل صرف الرواتب الشهري المعتمد
+            قسم إدارة الوكلاء — سجل صرف الرواتب الشهري المعتمد
           </div>
           <button
             onClick={onClose}

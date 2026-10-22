@@ -522,7 +522,7 @@ export default function AgencyCancellations({ isModal }: AgencyCancellationsProp
     <section className="users-management font-cairo">
       {!isModal && (
         <div className="users-breadcrumb">
-          <span>إدارة الفروع والوكلاء / إلغاء الوكالات وإخلاء الطرف</span>
+          <span>إدارة الوكلاء / إلغاء الوكالات وإخلاء الطرف</span>
         </div>
       )}
 
@@ -1084,7 +1084,7 @@ export default function AgencyCancellations({ isModal }: AgencyCancellationsProp
                 <div>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#1e3a8a' }}>شركة المدار الليبي للتأمين</h2>
                   <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Al Madar Libyan Insurance Company</p>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>إدارة الفروع والوكلاء والشؤون القانونية</p>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>إدارة الوكلاء والشؤون القانونية</p>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <img 

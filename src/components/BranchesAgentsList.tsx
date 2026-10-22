@@ -89,7 +89,7 @@ export default function BranchesAgentsList() {
       const data = await res.json();
       setBranchesAgents(data);
     } catch (error: any) {
-      showToast(`حدث خطأ أثناء جلب الفروع والوكلاء: ${error.message}`, 'error');
+      showToast(`حدث خطأ أثناء جلب الوكلاء: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -581,7 +581,7 @@ export default function BranchesAgentsList() {
         <div class="header">
           <div class="header-info">
             <h1>بيانات الوكيل المعتمد</h1>
-            <p>قسم الفروع والوكلاء</p>
+            <p>قسم الوكلاء</p>
           </div>
           <div class="header-branding">
             <div class="brand-text">
@@ -631,7 +631,7 @@ export default function BranchesAgentsList() {
             <div class="sig-line">توقيع الوكيل المعتمد</div>
           </div>
           <div class="sig-block">
-            <div class="sig-line">مدير إدارة الفروع والوكلاء</div>
+            <div class="sig-line">مدير إدارة الوكلاء</div>
           </div>
         </div>
         
@@ -842,7 +842,7 @@ export default function BranchesAgentsList() {
               <div class="emp-role">وكيل معتمد</div>
             </div>
             
-            <div class="footer-note">إدارة الفروع والوكلاء - المدار الليبي للتأمين</div>
+            <div class="footer-note">إدارة الوكلاء - المدار الليبي للتأمين</div>
           </div>
         </div>
       </body>
@@ -1027,7 +1027,7 @@ export default function BranchesAgentsList() {
   return (
     <section className="users-management">
       <div className="users-breadcrumb">
-        <span>إدارة الفروع والوكلاء / قائمة الفروع والوكلاء</span>
+        <span>إدارة الوكلاء / قائمة الوكلاء</span>
       </div>
 
       <div className="users-filters-box" style={{
@@ -1041,7 +1041,7 @@ export default function BranchesAgentsList() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 800 }}>الفلاتر والبحث</h3>
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>إدارة وتصفية قائمة الفروع والوكلاء المعتمدين في النظام</p>
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>إدارة وتصفية قائمة الوكلاء المعتمدين في النظام</p>
           </div>
           <button
             className="primary add-user-btn"
@@ -1049,7 +1049,7 @@ export default function BranchesAgentsList() {
             style={{ height: '42px', padding: '0 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700 }}
           >
             <i className="fa-solid fa-plus"></i>
-            إضافة فرع أو وكيل جديد
+            إضافة وكيل جديد
           </button>
         </div>
 

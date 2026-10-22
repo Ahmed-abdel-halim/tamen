@@ -225,7 +225,8 @@ function hasAccessToRoute(
     'صرف المرتبات والمسيرات': ['/reports/employee-salaries'],
     'الوثائق الملغية': ['/canceled-documents'],
 
-    // تفصيل صلاحيات الفروع والوكلاء
+    // تفصيل صلاحيات الوكلاء
+    'قائمة الوكلاء': ['/branches-agents'],
     'قائمة الفروع والوكلاء': ['/branches-agents'],
     'الوكلاء الجدد': ['/branches-agents'],
     'طلبات الوكلاء': ['/agent-requests'],
@@ -522,8 +523,8 @@ const menuSections: SidebarSection[] = [
     title: 'الشؤون الادارية',
     items: [
       {
-        label: 'إدارة الفروع والوكلاء', icon: 'fa-solid fa-building', children: [
-          { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+        label: 'إدارة الوكلاء', icon: 'fa-solid fa-users-line', children: [
+          { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
           { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
           { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations' },
           { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests' },
@@ -660,7 +661,7 @@ const createMenuSections = (
             })
           };
         }
-        if (item.label === 'إدارة الفروع والوكلاء' && item.children) {
+        if ((item.label === 'إدارة الوكلاء' || item.label === 'إدارة الفروع والوكلاء') && item.children) {
           return {
             ...item,
             children: item.children.map(child => {
@@ -743,17 +744,8 @@ const createMenuSections = (
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests', badge: pendingDocsCount },
     ...(isAdmin ? { 'إدارة الوثائق القديمة': { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' } } : {}),
     'الوثائق الملغية': { label: 'الوثائق الملغية', icon: 'fa-solid fa-ban', to: '/canceled-documents' },
-    'إدارة الفروع والوكلاء': [
-      { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
-      { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
-      { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
-      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
-      { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
-      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
-      { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
-    ],
     'إدارة الوكلاء': [
-      { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+      { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
       { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
       { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
       { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
@@ -761,8 +753,18 @@ const createMenuSections = (
       { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
       { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
     ],
-    // تفصيل صلاحيات الفروع والوكلاء
-    'قائمة الفروع والوكلاء': { label: 'قائمة الفروع والوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+    'إدارة الفروع والوكلاء': [
+      { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+      { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
+      { label: 'إلغاء الوكالات', icon: 'fa-solid fa-user-slash', to: '/agency-cancellations', badge: adminCounts?.agency_cancellations },
+      { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
+      { label: 'طلبات تعديل بيانات الوكلاء', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=agent', badge: adminCounts?.agent_profile_updates },
+      { label: 'إدارة الوكيل', icon: 'fa-solid fa-book-open-reader', to: '/reports/agent-monthly-ledger' },
+      { label: 'صرف المرتبات والمسيرات', icon: 'fa-solid fa-money-check-dollar', to: '/reports/employee-salaries' },
+    ],
+    // تفصيل صلاحيات الوكلاء
+    'قائمة الوكلاء': { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
+    'قائمة الفروع والوكلاء': { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
     'الوكلاء الجدد': { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
     'طلبات الوكلاء': { label: 'طلبات الوكلاء', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
     'طلبات الوكيل': { label: 'طلبات الوكيل', icon: 'fa-solid fa-paper-plane', to: '/agent-requests', badge: adminCounts?.agent_requests },
@@ -1192,8 +1194,8 @@ const createMenuSections = (
         finalAdmin.push(agentsGroup[0]);
       } else {
         finalAdmin.push({
-          label: 'إدارة الفروع والوكلاء',
-          icon: 'fa-solid fa-building',
+          label: 'إدارة الوكلاء',
+          icon: 'fa-solid fa-users-line',
           children: agentsGroup
         });
       }
@@ -1506,6 +1508,7 @@ export default function App() {
 
   const hasPendingCountsAccess = isAdmin || (
     authorizedDocuments !== null && (
+      authorizedDocuments.includes('إدارة الوكلاء') ||
       authorizedDocuments.includes('إدارة الفروع والوكلاء') ||
       authorizedDocuments.includes('إدارة الموظفين') ||
       authorizedDocuments.includes('المحاسب المالي') ||
@@ -1530,6 +1533,7 @@ export default function App() {
       const user = JSON.parse(userStr);
       const hasAccess = user.is_admin || (
         Array.isArray(user.authorized_documents) && (
+          user.authorized_documents.includes('إدارة الوكلاء') ||
           user.authorized_documents.includes('إدارة الفروع والوكلاء') ||
           user.authorized_documents.includes('إدارة الموظفين') ||
           user.authorized_documents.includes('المحاسب المالي') ||
@@ -1827,7 +1831,7 @@ export default function App() {
                   <Route path="/agency-cancellations" element={<AuthorizedRoute requiredPath="/agency-cancellations"><AgencyCancellations /></AuthorizedRoute>} />
 
                   <Route path="/document-requests" element={<AuthorizedRoute requiredPath="/document-requests"><DocumentRequestsList /></AuthorizedRoute>} />
-                  {/* إدارة الفروع والوكلاء */}
+                  {/* إدارة الوكلاء */}
                   <Route path="/branches-agents" element={<AuthorizedRoute requiredPath="/branches-agents"><BranchesAgentsList /></AuthorizedRoute>} />
                   <Route path="/branches-agents/create" element={<AuthorizedRoute requiredPath="/branches-agents"><CreateBranchAgent /></AuthorizedRoute>} />
                   <Route path="/branches-agents/:id" element={<AuthorizedRoute><BranchAgentDetails /></AuthorizedRoute>} />

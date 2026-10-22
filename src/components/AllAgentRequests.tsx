@@ -143,7 +143,7 @@ export default function AllAgentRequests({ isModal }: AllAgentRequestsProps = {}
       <div className="users-card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)' }}>سجل طلبات الوكلاء والفروع</h2>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)' }}>سجل طلبات الوكلاء</h2>
             <button onClick={fetchRequests} className="action-btn" title="تحديث البيانات"><i className="fa-solid fa-rotate"></i></button>
           </div>
           

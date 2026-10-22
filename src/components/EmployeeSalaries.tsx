@@ -1779,7 +1779,7 @@ export default function EmployeeSalaries() {
                     value={selectedAgentFilter}
                     onChange={(e) => setSelectedAgentFilter(e.target.value)}
                   >
-                    <option value="all">جميع الفروع والوكلاء والمقر</option>
+                    <option value="all">جميع الوكلاء والمقر</option>
                     <option value="hq">المقر الرئيسي فقط</option>
                     {branchAgents.map((ag) => (
                       <option key={ag.id} value={String(ag.id)}>

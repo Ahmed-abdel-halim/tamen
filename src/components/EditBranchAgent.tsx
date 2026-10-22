@@ -752,7 +752,7 @@ export default function EditBranchAgent() {
     return (
       <section className="users-management">
         <div className="users-breadcrumb">
-          <span>إدارة الفروع والوكلاء / تعديل</span>
+          <span>إدارة الوكلاء / تعديل</span>
         </div>
         <div className="users-card" style={{ textAlign: 'center', padding: '40px' }}>
           <p>جار التحميل...</p>
@@ -773,7 +773,7 @@ export default function EditBranchAgent() {
     <section className="users-management">
       <div className="users-breadcrumb">
         <span onClick={() => navigate('/branches-agents')} className="breadcrumb-link">
-          الفروع والوكلاء
+          الوكلاء
         </span>
         <span> / </span>
         <span>تعديل</span>
