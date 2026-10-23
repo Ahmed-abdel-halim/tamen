@@ -8,6 +8,15 @@ export interface Branch {
   email?: string;
   manager_name?: string;
   manager_phone?: string;
+  manager_user_id?: number | null;
+  manager_user?: {
+    id: number;
+    name: string;
+    username: string;
+    email?: string;
+    personal_phone?: string;
+    is_branch_admin?: boolean;
+  } | null;
   status: 'نشط' | 'موقف';
   is_main_branch?: boolean;
   commercial_registration?: string;

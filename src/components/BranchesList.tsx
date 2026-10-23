@@ -34,6 +34,10 @@ export const BranchesList: React.FC = () => {
     commercial_registration: '',
     tax_number: '',
     notes: '',
+    create_admin_account: true,
+    admin_username: '',
+    admin_password: '',
+    admin_email: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -84,6 +88,10 @@ export const BranchesList: React.FC = () => {
       commercial_registration: '',
       tax_number: '',
       notes: '',
+      create_admin_account: true,
+      admin_username: '',
+      admin_password: '',
+      admin_email: '',
     });
     setShowModal(true);
   };
@@ -104,6 +112,10 @@ export const BranchesList: React.FC = () => {
       commercial_registration: branch.commercial_registration || '',
       tax_number: branch.tax_number || '',
       notes: branch.notes || '',
+      create_admin_account: false,
+      admin_username: branch.manager_user?.username || '',
+      admin_password: '',
+      admin_email: branch.manager_user?.email || '',
     });
     setShowModal(true);
   };
@@ -647,16 +659,33 @@ export const BranchesList: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Manager */}
+                      {/* Manager & Admin */}
                       <td style={{ padding: '14px 16px' }}>
                         <div style={{ fontWeight: 600, color: '#334155' }}>
                           {branch.manager_name || '—'}
                         </div>
-                        {branch.manager_phone && (
-                          <div style={{ fontSize: '11px', color: '#64748b', direction: 'ltr', textAlign: 'right' }}>
+                        {branch.manager_user ? (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                              color: '#2563eb',
+                              fontSize: '11px',
+                              fontWeight: 700
+                            }}>
+                              <i className="fa-solid fa-user-shield" style={{ fontSize: '10px' }} />
+                              أدمن: @{branch.manager_user.username}
+                            </span>
+                          </div>
+                        ) : branch.manager_phone ? (
+                          <div style={{ fontSize: '11px', color: '#64748b', direction: 'ltr', textAlign: 'right', marginTop: '2px' }}>
                             📞 {branch.manager_phone}
                           </div>
-                        )}
+                        ) : null}
                       </td>
 
                       {/* Employees Count */}
@@ -1104,6 +1133,121 @@ export const BranchesList: React.FC = () => {
                     />
                     <span>تعيين كفرع رئيسي (المركز الرئيسي)</span>
                   </label>
+                </div>
+
+                {/* Branch Admin Account Section */}
+                <div style={{
+                  gridColumn: 'span 2',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(37, 99, 235, 0.04)',
+                  border: '1.5px solid rgba(37, 99, 235, 0.2)',
+                  marginTop: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: formData.create_admin_account ? '14px' : '0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
+                        backgroundColor: '#2563eb',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px'
+                      }}>
+                        <i className="fa-solid fa-user-shield" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b' }}>
+                          حساب مدير / أدمن الفرع (Branch Admin)
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          يتيح له إدارة وتعيين موظفي هذا الفرع فقط بشكل مستقل
+                        </div>
+                      </div>
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', color: '#2563eb' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.create_admin_account}
+                        onChange={(e) => setFormData({ ...formData, create_admin_account: e.target.checked })}
+                        style={{ width: '18px', height: '18px', accentColor: '#2563eb' }}
+                      />
+                      <span>{editingBranch ? 'إنشاء / تغيير حساب الأدمن' : 'إنشاء حساب أدمن للفرع'}</span>
+                    </label>
+                  </div>
+
+                  {formData.create_admin_account && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', borderTop: '1px solid rgba(37, 99, 235, 0.1)', paddingTop: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 700, fontSize: '12px', color: '#334155' }}>
+                          اسم المستخدم للدخول <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required={formData.create_admin_account}
+                          placeholder="مثال: admin_tripoli"
+                          value={formData.admin_username}
+                          onChange={(e) => setFormData({ ...formData, admin_username: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color, #cbd5e1)',
+                            fontSize: '13px',
+                            outline: 'none',
+                            backgroundColor: '#ffffff'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 700, fontSize: '12px', color: '#334155' }}>
+                          كلمة المرور <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <input
+                          type="password"
+                          required={formData.create_admin_account}
+                          placeholder="6 أحرف أو أرقام على الأقل"
+                          value={formData.admin_password}
+                          onChange={(e) => setFormData({ ...formData, admin_password: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color, #cbd5e1)',
+                            fontSize: '13px',
+                            outline: 'none',
+                            backgroundColor: '#ffffff'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 700, fontSize: '12px', color: '#334155' }}>
+                          البريد الإلكتروني للأدمن (اختياري)
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="admin@almadar.ly"
+                          value={formData.admin_email}
+                          onChange={(e) => setFormData({ ...formData, admin_email: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color, #cbd5e1)',
+                            fontSize: '13px',
+                            outline: 'none',
+                            backgroundColor: '#ffffff'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

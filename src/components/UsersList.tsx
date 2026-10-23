@@ -10,6 +10,7 @@ type User = {
   name: string;
   email?: string;
   is_admin?: boolean;
+  is_branch_admin?: boolean;
   authorized_documents?: string[];
   user_type?: string;
   branch_agent_info?: {
@@ -298,6 +299,18 @@ export const PERMISSION_GROUPS = [
 
 export default function UsersList() {
   const navigate = useNavigate();
+  const currentUserObj = (() => {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isSuperAdmin = Boolean(currentUserObj?.is_admin);
+  const isBranchAdmin = Boolean(currentUserObj?.is_branch_admin && !currentUserObj?.is_admin);
+  const currentBranchId = currentUserObj?.branch_id ?? null;
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<null | { mode: 'add' | 'edit', user?: User }>(null);
@@ -328,6 +341,7 @@ export default function UsersList() {
     email: '',
     password: '',
     is_admin: false,
+    is_branch_admin: false,
     authorized_documents: [] as string[],
     salary: '' as string | number,
     national_id_number: '',
@@ -616,10 +630,18 @@ export default function UsersList() {
         active: filterActive
       });
 
+      const activeBranchRaw = localStorage.getItem('active_branch');
+      let activeBranchId: string | null = null;
+      if (activeBranchRaw) {
+        try { activeBranchId = JSON.parse(activeBranchRaw)?.id?.toString() || null; } catch {}
+      }
+
       const response = await fetch(`${API_BASE_URL}/users?${params}`, {
         headers: {
           'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(currentUserObj?.id ? { 'X-User-Id': currentUserObj.id.toString() } : {}),
+          ...(activeBranchId ? { 'X-Branch-Id': activeBranchId } : {})
         }
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -888,6 +910,7 @@ export default function UsersList() {
         email: showForm.user.email || '',
         password: '',
         is_admin: showForm.user.is_admin || false,
+        is_branch_admin: showForm.user.is_branch_admin || false,
         authorized_documents: showForm.user.authorized_documents || [],
         salary: showForm.user.salary || '',
         national_id_number: showForm.user.national_id_number || '',
@@ -955,6 +978,7 @@ export default function UsersList() {
         email: '',
         password: '',
         is_admin: false,
+        is_branch_admin: false,
         authorized_documents: [],
         salary: '',
         national_id_number: '',
@@ -973,7 +997,7 @@ export default function UsersList() {
         address: '',
         financial_number: `MLI${nextId}`,
         job_number: `${nextId}-${currentYear}`,
-        branch_id: null,
+        branch_id: isBranchAdmin ? currentBranchId : null,
         bank_name: '',
         bank_branch: '',
         account_number: '',
@@ -1169,8 +1193,9 @@ export default function UsersList() {
 
       const rawBody: any = {
         ...formData,
+        is_branch_admin: Boolean(formData.is_branch_admin),
         email: formData.email?.trim() || null,
-        branch_id: formData.branch_id || null,
+        branch_id: isBranchAdmin ? currentBranchId : (formData.branch_id || null),
         salary: formData.salary !== '' && formData.salary !== null && formData.salary !== undefined ? Number(formData.salary) : null,
         national_id_number: formData.national_id_number?.trim() || null,
         job_title: formData.job_title?.trim() || null,
@@ -1245,7 +1270,8 @@ export default function UsersList() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(currentUserObj?.id ? { 'X-User-Id': currentUserObj.id.toString() } : {})
         },
         body: JSON.stringify(body),
       });
@@ -1308,6 +1334,7 @@ export default function UsersList() {
         email: '',
         password: '',
         is_admin: false,
+        is_branch_admin: false,
         authorized_documents: [],
         salary: '',
         national_id_number: '',
@@ -1326,7 +1353,7 @@ export default function UsersList() {
         address: '',
         financial_number: '',
         job_number: '',
-        branch_id: null,
+        branch_id: isBranchAdmin ? currentBranchId : null,
         bank_name: '',
         bank_branch: '',
         account_number: '',
@@ -1513,6 +1540,11 @@ export default function UsersList() {
                           {u.user_type === 'مدير' && (
                             <span className="type-badge admin">مدير</span>
                           )}
+                          {u.is_branch_admin && (
+                            <span className="type-badge" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                              <i className="fa-solid fa-shield-halved" style={{ marginLeft: '4px' }}></i> أدمن الفرع
+                            </span>
+                          )}
                           {u.user_type === 'وكيل' && (
                             <span className="type-badge agent">
                               <i className="fa-solid fa-user-tie"></i> وكيل
@@ -1684,6 +1716,11 @@ export default function UsersList() {
                         <span className="user-mobile-value">
                           {u.user_type === 'مدير' && (
                             <span className="type-badge admin">مدير</span>
+                          )}
+                          {u.is_branch_admin && (
+                            <span className="type-badge" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                              <i className="fa-solid fa-shield-halved" style={{ marginLeft: '4px' }}></i> أدمن الفرع
+                            </span>
                           )}
                           {u.user_type === 'وكيل' && (
                             <span className="type-badge agent">
@@ -1995,21 +2032,50 @@ export default function UsersList() {
                   </div>
                 </div>
                 <div className="form-row" style={{ marginTop: '15px' }}>
-                  <div className="form-group flex-1">
-                    <label className="checkbox-label-premium">
-                      <div className="chk-content">
-                        <i className="fa-solid fa-user-shield"></i>
-                        <div>
-                          <span className="chk-title">مدير نظام (Admin)</span>
-                          <span className="chk-desc">صلاحيات كاملة للتحكم في النظام</span>
-                        </div>
+                  {isSuperAdmin && (
+                    <>
+                      <div className="form-group flex-1">
+                        <label className="checkbox-label-premium">
+                          <div className="chk-content">
+                            <i className="fa-solid fa-user-shield"></i>
+                            <div>
+                              <span className="chk-title">مدير نظام عام (Super Admin)</span>
+                              <span className="chk-desc">صلاحيات كاملة للتحكم في النظام وكافة الفروع</span>
+                            </div>
+                          </div>
+                          <input
+                            type="checkbox" checked={formData.is_admin}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              is_admin: e.target.checked,
+                              is_branch_admin: e.target.checked ? false : formData.is_branch_admin,
+                              authorized_documents: e.target.checked ? [] : formData.authorized_documents
+                            })}
+                          />
+                        </label>
                       </div>
-                      <input
-                        type="checkbox" checked={formData.is_admin}
-                        onChange={(e) => setFormData({ ...formData, is_admin: e.target.checked, authorized_documents: e.target.checked ? [] : formData.authorized_documents })}
-                      />
-                    </label>
-                  </div>
+                      <div className="form-group flex-1">
+                        <label className="checkbox-label-premium">
+                          <div className="chk-content">
+                            <i className="fa-solid fa-shield-halved" style={{ color: '#2563eb' }}></i>
+                            <div>
+                              <span className="chk-title">أدمن فرع (Branch Admin)</span>
+                              <span className="chk-desc">إدارة وإضافة موظفي الفرع الخاص به فقط</span>
+                            </div>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={formData.is_branch_admin}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              is_branch_admin: e.target.checked,
+                              is_admin: e.target.checked ? false : formData.is_admin
+                            })}
+                          />
+                        </label>
+                      </div>
+                    </>
+                  )}
                   <div className="form-group flex-1">
                     <label className="checkbox-label-premium">
                       <div className="chk-content">
@@ -2195,18 +2261,26 @@ export default function UsersList() {
 
                   <div className="form-group flex-1">
                     <label>الفرع التابع له (عزل المنظومة)</label>
-                    <select
-                      value={formData.branch_id || ''}
-                      onChange={(e) => setFormData({ ...formData, branch_id: e.target.value ? Number(e.target.value) : null })}
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
-                    >
-                      <option value="">الإدارة العامة (غير مرتبط بفرع محدد)</option>
-                      {branchesList.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} ({b.city || b.code})
-                        </option>
-                      ))}
-                    </select>
+                    {isBranchAdmin ? (
+                      <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--panel)', color: 'var(--text)', fontWeight: 600 }}>
+                        <i className="fa-solid fa-building" style={{ marginLeft: 6, color: '#2563eb' }}></i>
+                        {branchesList.find(b => b.id === currentBranchId)?.name || `فرع #${currentBranchId}`}
+                        <span style={{ marginRight: 8, fontSize: '0.8rem', color: 'var(--muted)' }}>(محدد تلقائياً لفرعك)</span>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.branch_id || ''}
+                        onChange={(e) => setFormData({ ...formData, branch_id: e.target.value ? Number(e.target.value) : null })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
+                      >
+                        <option value="">الإدارة العامة (غير مرتبط بفرع محدد)</option>
+                        {branchesList.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.city || b.code})
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <div className="form-row">
