@@ -6,6 +6,7 @@ import { generatePremiumExcel } from "../utils/excelGenerator";
 import DocumentStatusFilter, { type DocumentStatusType } from "./DocumentStatusFilter";
 import InsuranceTermsModal from "./InsuranceTermsModal";
 import CancelDocumentModal from "./CancelDocumentModal";
+import { getActiveBranch } from "../utils/branchContext";
 
 type Plate = {
   id: number;
@@ -178,6 +179,15 @@ export default function InsuranceDocumentsList({ isArchive = false, documentCate
 
   useEffect(() => {
     fetchDocuments();
+
+    const handleRefresh = () => fetchDocuments();
+    window.addEventListener('branchChanged', handleRefresh);
+    window.addEventListener('refreshData', handleRefresh);
+
+    return () => {
+      window.removeEventListener('branchChanged', handleRefresh);
+      window.removeEventListener('refreshData', handleRefresh);
+    };
   }, [currentPage, searchQuery, isArchive, filters, statusFilter, activeCategory]);
 
   useEffect(() => {
@@ -238,6 +248,10 @@ export default function InsuranceDocumentsList({ isArchive = false, documentCate
       }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+      const activeBranch = getActiveBranch();
+      if (activeBranch?.id) {
+        headers['X-Branch-Id'] = activeBranch.id.toString();
       }
 
       if (statusFilter === 'cancelled') {

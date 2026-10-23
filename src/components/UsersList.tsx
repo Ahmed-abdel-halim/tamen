@@ -19,6 +19,13 @@ type User = {
     agent_name: string;
   } | null;
   salary?: number;
+  branch_id?: number | null;
+  branch?: {
+    id: number;
+    code: string;
+    name: string;
+    city?: string;
+  } | null;
   national_id_number?: string | null;
   job_title?: string | null;
   profile_photo_url?: string | null;
@@ -187,6 +194,16 @@ export const PERMISSION_GROUPS = [
     ]
   },
   {
+    id: 'branches_management',
+    title: 'إدارة الفروع المستقلة',
+    icon: 'fa-code-branch',
+    color: '#2563eb',
+    permissions: [
+      { id: 'قائمة الفروع', label: 'قائمة الفروع (عرض والاطلاع)' },
+      { id: 'إدارة الفروع', label: 'إدارة الفروع (صلاحية كاملة: إضافة، تعديل، دخول كفرع)' },
+    ]
+  },
+  {
     id: 'branches_agents',
     title: 'إدارة الوكلاء',
     icon: 'fa-user-tie',
@@ -330,6 +347,7 @@ export default function UsersList() {
     address: '',
     financial_number: '',
     job_number: '',
+    branch_id: null as number | null,
     bank_name: '',
     bank_branch: '',
     account_number: '',
@@ -391,6 +409,14 @@ export default function UsersList() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<null | User>(null);
   const [deleting, setDeleting] = useState(false);
+  const [branchesList, setBranchesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/branches?for_select=1`)
+      .then(res => res.json())
+      .then(data => setBranchesList(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Error fetching branches in UsersList:', err));
+  }, []);
 
   const [filterRole, setFilterRole] = useState("all");
   const [filterJobTitle, setFilterJobTitle] = useState("all");
@@ -881,6 +907,7 @@ export default function UsersList() {
         address: showForm.user.address || '',
         financial_number: showForm.user.financial_number || '',
         job_number: showForm.user.job_number || '',
+        branch_id: showForm.user.branch_id || (showForm.user.branch?.id ?? null),
         bank_name: showForm.user.bank_name || '',
         bank_branch: showForm.user.bank_branch || '',
         account_number: showForm.user.account_number || '',
@@ -946,6 +973,7 @@ export default function UsersList() {
         address: '',
         financial_number: `MLI${nextId}`,
         job_number: `${nextId}-${currentYear}`,
+        branch_id: null,
         bank_name: '',
         bank_branch: '',
         account_number: '',
@@ -1142,6 +1170,7 @@ export default function UsersList() {
       const rawBody: any = {
         ...formData,
         email: formData.email?.trim() || null,
+        branch_id: formData.branch_id || null,
         salary: formData.salary !== '' && formData.salary !== null && formData.salary !== undefined ? Number(formData.salary) : null,
         national_id_number: formData.national_id_number?.trim() || null,
         job_title: formData.job_title?.trim() || null,
@@ -1297,6 +1326,7 @@ export default function UsersList() {
         address: '',
         financial_number: '',
         job_number: '',
+        branch_id: null,
         bank_name: '',
         bank_branch: '',
         account_number: '',
@@ -1497,6 +1527,13 @@ export default function UsersList() {
                             <span className="type-badge user">
                               <i className="fa-solid fa-user"></i> مستخدم
                             </span>
+                          )}
+                          {u.branch && (
+                            <div style={{ marginTop: '4px' }}>
+                              <span className="type-badge" style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.2)', fontSize: '11px' }}>
+                                <i className="fa-solid fa-building" style={{ marginLeft: '4px' }}></i> {u.branch.name}
+                              </span>
+                            </div>
                           )}
                         </td>
                         <td>
@@ -2154,6 +2191,22 @@ export default function UsersList() {
                         <i className="fa-solid fa-plus-minus"></i>
                       </button>
                     </div>
+                  </div>
+
+                  <div className="form-group flex-1">
+                    <label>الفرع التابع له (عزل المنظومة)</label>
+                    <select
+                      value={formData.branch_id || ''}
+                      onChange={(e) => setFormData({ ...formData, branch_id: e.target.value ? Number(e.target.value) : null })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
+                    >
+                      <option value="">الإدارة العامة (غير مرتبط بفرع محدد)</option>
+                      {branchesList.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.city || b.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="form-row">

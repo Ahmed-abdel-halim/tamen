@@ -113,6 +113,8 @@ import EmployeeSalaries from './components/EmployeeSalaries';
 import { ToastContainer } from './components/Toast';
 import ProfileUpdateRequestsList from './components/ProfileUpdateRequestsList';
 import { TaxSSReport } from './components/TaxSSReport';
+import BranchesList from './components/BranchesList';
+import ActiveBranchBanner from './components/ActiveBranchBanner';
 import ExternalEntitiesManagement from './components/ExternalEntitiesManagement';
 import MailManagement from './components/MailManagement';
 import ViewMailDocument from './components/ViewMailDocument';
@@ -222,6 +224,8 @@ function hasAccessToRoute(
     'تأمين شحن البضائع': ['/cargo-insurance'],
     'إدارة الفروع والوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries', '/reports/agent-monthly-ledger'],
     'إدارة الوكلاء': ['/branches-agents', '/agent-requests', '/agency-cancellations', '/reports/employee-salaries', '/reports/agent-monthly-ledger'],
+    'إدارة الفروع': ['/branches'],
+    'قائمة الفروع': ['/branches'],
     'صرف المرتبات والمسيرات': ['/reports/employee-salaries'],
     'الوثائق الملغية': ['/canceled-documents'],
 
@@ -523,6 +527,11 @@ const menuSections: SidebarSection[] = [
     title: 'الشؤون الادارية',
     items: [
       {
+        label: 'إدارة الفروع', icon: 'fa-solid fa-code-branch', children: [
+          { label: 'قائمة الفروع', icon: 'fa-solid fa-building', to: '/branches' },
+        ]
+      },
+      {
         label: 'إدارة الوكلاء', icon: 'fa-solid fa-users-line', children: [
           { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
           { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending' },
@@ -744,6 +753,10 @@ const createMenuSections = (
     'طلبات الوثائق': { label: 'طلبات الوثائق', icon: 'fa-solid fa-file-circle-exclamation', to: '/document-requests', badge: pendingDocsCount },
     ...(isAdmin ? { 'إدارة الوثائق القديمة': { label: 'إدارة الوثائق القديمة', icon: 'fa-solid fa-clock-rotate-left', to: '/old-documents' } } : {}),
     'الوثائق الملغية': { label: 'الوثائق الملغية', icon: 'fa-solid fa-ban', to: '/canceled-documents' },
+    'إدارة الفروع': [
+      { label: 'قائمة الفروع', icon: 'fa-solid fa-building', to: '/branches' },
+    ],
+    'قائمة الفروع': { label: 'قائمة الفروع', icon: 'fa-solid fa-building', to: '/branches' },
     'إدارة الوكلاء': [
       { label: 'قائمة الوكلاء', icon: 'fa-solid fa-list-check', to: '/branches-agents' },
       { label: 'الوكلاء الجدد', icon: 'fa-solid fa-user-plus', to: '/branches-agents?status=pending', badge: adminCounts?.new_agents },
@@ -1809,6 +1822,7 @@ export default function App() {
                   isSidebarOpen={isSidebarOpen}
                   showSidebarToggle={showSidebarToggle}
                 />
+                <ActiveBranchBanner />
                 <Routes>
                   <Route path="/company-documents" element={<AuthorizedRoute requiredPath="/company-documents"><CompanyDocuments /></AuthorizedRoute>} />
                   <Route path="/excel-import" element={isAdmin ? <ExcelImportPage /> : <Navigate to="/dashboard" />} />
@@ -1831,6 +1845,8 @@ export default function App() {
                   <Route path="/agency-cancellations" element={<AuthorizedRoute requiredPath="/agency-cancellations"><AgencyCancellations /></AuthorizedRoute>} />
 
                   <Route path="/document-requests" element={<AuthorizedRoute requiredPath="/document-requests"><DocumentRequestsList /></AuthorizedRoute>} />
+                  {/* إدارة الفروع */}
+                  <Route path="/branches" element={<AuthorizedRoute requiredPath="/branches"><BranchesList /></AuthorizedRoute>} />
                   {/* إدارة الوكلاء */}
                   <Route path="/branches-agents" element={<AuthorizedRoute requiredPath="/branches-agents"><BranchesAgentsList /></AuthorizedRoute>} />
                   <Route path="/branches-agents/create" element={<AuthorizedRoute requiredPath="/branches-agents"><CreateBranchAgent /></AuthorizedRoute>} />

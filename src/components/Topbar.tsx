@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../config/api'
 import { showToast } from './Toast'
+import { BranchSwitcher } from './BranchSwitcher'
 
 const playSynthesizedNotificationSound = () => {
   try {
@@ -327,7 +328,7 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
 
   return (
     <header className="topbar">
-      <div className="topbar-left">
+      <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {showSidebarToggle && (
           <button
             type="button"
@@ -342,6 +343,7 @@ export function Topbar({ onToggleSidebar, isSidebarOpen, showSidebarToggle = fal
             />
           </button>
         )}
+        <BranchSwitcher />
       </div>
 
       <div className="topbar-right">

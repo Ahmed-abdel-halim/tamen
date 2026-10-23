@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
+import { getActiveBranch } from "../utils/branchContext";
 
 type ServiceCard = {
   label: string;
@@ -172,6 +173,10 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         if (userId) {
           headers['X-User-Id'] = userId.toString();
         }
+        const activeBranch = getActiveBranch();
+        if (activeBranch?.id) {
+          headers['X-Branch-Id'] = activeBranch.id.toString();
+        }
         
         const res = await fetch(`${API_BASE_URL}/dashboard/statistics`, {
           headers
@@ -207,6 +212,15 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     };
     
     fetchStatistics();
+
+    const handleRefresh = () => fetchStatistics();
+    window.addEventListener('branchChanged', handleRefresh);
+    window.addEventListener('refreshData', handleRefresh);
+
+    return () => {
+      window.removeEventListener('branchChanged', handleRefresh);
+      window.removeEventListener('refreshData', handleRefresh);
+    };
   }, []);
 
   // Fetch latest documents
@@ -226,6 +240,10 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         if (userId) {
           headers['X-User-Id'] = userId.toString();
         }
+        const activeBranch = getActiveBranch();
+        if (activeBranch?.id) {
+          headers['X-Branch-Id'] = activeBranch.id.toString();
+        }
         
         const res = await fetch(`${API_BASE_URL}/dashboard/latest-documents`, {
           headers
@@ -240,6 +258,15 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     };
     
     fetchLatestDocuments();
+
+    const handleRefresh = () => fetchLatestDocuments();
+    window.addEventListener('branchChanged', handleRefresh);
+    window.addEventListener('refreshData', handleRefresh);
+
+    return () => {
+      window.removeEventListener('branchChanged', handleRefresh);
+      window.removeEventListener('refreshData', handleRefresh);
+    };
   }, []);
 
   // خريطة أنواع التأمين إلى الروابط (مثل السايدبار)

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
+import { getActiveBranch } from "../utils/branchContext";
 
 // Helper to get local date string YYYY-MM-DD
 const getLocalDateString = (date: Date = new Date()) => {
@@ -2642,6 +2643,10 @@ export default function CreateInsuranceDocument({ defaultType }: CreateInsurance
       if (userId) {
         headers['X-User-Id'] = userId.toString();
       }
+      const activeBranch = getActiveBranch();
+      if (activeBranch?.id) {
+        headers['X-Branch-Id'] = activeBranch.id.toString();
+      }
 
       // تحضير البيانات للإرسال
       // التأكد من أن premium ليس فارغاً أو NaN
@@ -2731,6 +2736,7 @@ export default function CreateInsuranceDocument({ defaultType }: CreateInsurance
           const vt = vehicleTypes.find(t => t.id.toString() === formData.vehicle_type_id);
           return vt ? `${vt.brand}` : ''; // إرسال الماركة فقط
         })(),
+        branch_id: activeBranch?.id || undefined,
       };
 
       console.log('Sending request data:', requestBody);
