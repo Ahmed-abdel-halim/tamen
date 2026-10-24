@@ -98,8 +98,28 @@ export default function EditBranchAgent() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const currentUserObj = (() => {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isBranchAdmin = Boolean(currentUserObj?.is_branch_admin && !currentUserObj?.is_admin);
+  const currentBranchId = currentUserObj?.branch_id ?? null;
+  const [branchesList, setBranchesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/branches?for_select=1`)
+      .then(res => res.json())
+      .then(data => setBranchesList(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Error fetching branches in EditBranchAgent:', err));
+  }, []);
+
   const [formData, setFormData] = useState({
     type: 'وكيل' as 'وكيل' | 'فرع من شركة',
+    branch_id: null as number | null,
     agency_name: '',
     agent_name: '',
     activity: '',
@@ -309,6 +329,7 @@ export default function EditBranchAgent() {
 
       setFormData({
         type: data.type,
+        branch_id: data.branch_id || null,
         agency_name: data.agency_name || '',
         agent_name: data.agent_name || '',
         activity: data.activity || '',
@@ -684,14 +705,22 @@ export default function EditBranchAgent() {
       if (formData.eidc_password) formDataToSend.append('eidc_password', formData.eidc_password);
       if (formData.lifo_username) formDataToSend.append('lifo_username', formData.lifo_username);
       if (formData.lifo_password) formDataToSend.append('lifo_password', formData.lifo_password);
+      if (formData.branch_id !== undefined && formData.branch_id !== null) {
+        formDataToSend.append('branch_id', formData.branch_id.toString());
+      } else {
+        formDataToSend.append('branch_id', '');
+      }
       if (formData.lifo_office_id) formDataToSend.append('lifo_office_id', formData.lifo_office_id);
       formDataToSend.append('_method', 'PUT');
 
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/branches-agents/${id}`, {
         method: 'POST',
         body: formDataToSend,
         headers: {
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(currentUserObj?.id ? { 'X-User-Id': currentUserObj.id.toString() } : {})
         },
       });
 
@@ -861,6 +890,30 @@ export default function EditBranchAgent() {
                       placeholder="اسم الوكيل"
                     />
                     {formErrors.agent_name && <span className="error-message">{formErrors.agent_name}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>الفرع التابع له الوكيل (عزل المنظومة)</label>
+                    {isBranchAdmin ? (
+                      <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#1e293b', fontWeight: 600 }}>
+                        <i className="fa-solid fa-building" style={{ marginLeft: 6, color: '#2563eb' }}></i>
+                        {branchesList.find(b => b.id === (formData.branch_id || currentBranchId))?.name || `فرع #${formData.branch_id || currentBranchId}`}
+                        <span style={{ marginRight: 8, fontSize: '0.8rem', color: '#64748b' }}>(تابع لفرعك)</span>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.branch_id || ''}
+                        onChange={(e) => setFormData({ ...formData, branch_id: e.target.value ? Number(e.target.value) : null })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}
+                      >
+                        <option value="">الإدارة العامة (غير مرتبط بفرع محدد)</option>
+                        {branchesList.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.city || b.code})
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="form-group">

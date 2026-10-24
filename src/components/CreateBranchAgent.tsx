@@ -95,8 +95,28 @@ const DEFAULT_CONTRACT_TERMS = `1. يتعهد الطرف الثاني بأن ي�
 
 export default function CreateBranchAgent() {
   const navigate = useNavigate();
+  const currentUserObj = (() => {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isBranchAdmin = Boolean(currentUserObj?.is_branch_admin && !currentUserObj?.is_admin);
+  const currentBranchId = currentUserObj?.branch_id ?? null;
+  const [branchesList, setBranchesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/branches?for_select=1`)
+      .then(res => res.json())
+      .then(data => setBranchesList(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Error fetching branches in CreateBranchAgent:', err));
+  }, []);
+
   const [formData, setFormData] = useState({
     type: 'وكيل' as 'وكيل' | 'فرع من شركة',
+    branch_id: (isBranchAdmin ? currentBranchId : null) as number | null,
     agency_name: '',
     agent_name: '',
     activity: '',
@@ -366,10 +386,19 @@ export default function CreateBranchAgent() {
       if (formData.eidc_password) formDataToSend.append('eidc_password', formData.eidc_password);
       if (formData.lifo_username) formDataToSend.append('lifo_username', formData.lifo_username);
       if (formData.lifo_password) formDataToSend.append('lifo_password', formData.lifo_password);
+      if (formData.branch_id || (isBranchAdmin && currentBranchId)) {
+        formDataToSend.append('branch_id', (isBranchAdmin ? currentBranchId : formData.branch_id)!.toString());
+      }
       if (formData.lifo_office_id) formDataToSend.append('lifo_office_id', formData.lifo_office_id);
 
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(currentUserObj?.id ? { 'X-User-Id': currentUserObj.id.toString() } : {})
+        },
         body: formDataToSend,
       });
 
@@ -486,6 +515,30 @@ export default function CreateBranchAgent() {
                     placeholder="اسم الوكيل"
                   />
                   {formErrors.agent_name && <span className="error-message">{formErrors.agent_name}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label>الفرع التابع له الوكيل (عزل المنظومة)</label>
+                  {isBranchAdmin ? (
+                    <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#1e293b', fontWeight: 600 }}>
+                      <i className="fa-solid fa-building" style={{ marginLeft: 6, color: '#2563eb' }}></i>
+                      {branchesList.find(b => b.id === currentBranchId)?.name || `فرع #${currentBranchId}`}
+                      <span style={{ marginRight: 8, fontSize: '0.8rem', color: '#64748b' }}>(محدد تلقائياً لفرعك)</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.branch_id || ''}
+                      onChange={(e) => setFormData({ ...formData, branch_id: e.target.value ? Number(e.target.value) : null })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}
+                    >
+                      <option value="">الإدارة العامة (غير مرتبط بفرع محدد)</option>
+                      {branchesList.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.city || b.code})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="form-group">

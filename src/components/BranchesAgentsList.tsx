@@ -6,6 +6,13 @@ import { API_BASE_URL, BACKEND_URL } from "../config/api";
 type BranchAgent = {
   id: number;
   type: 'وكيل' | 'فرع من شركة';
+  branch_id?: number | null;
+  branch?: {
+    id: number;
+    code: string;
+    name: string;
+    city?: string;
+  } | null;
   code: string;
   agency_name: string;
   agent_name: string;
@@ -68,6 +75,13 @@ export default function BranchesAgentsList() {
 
   useEffect(() => {
     fetchBranchesAgents();
+    const handleBranchChange = () => {
+      fetchBranchesAgents();
+    };
+    window.addEventListener('branchChanged', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
   }, []);
 
 
@@ -79,10 +93,20 @@ export default function BranchesAgentsList() {
   const fetchBranchesAgents = async () => {
     try {
       const token = localStorage.getItem('token');
+      const currentUserStr = localStorage.getItem('user');
+      const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+      const activeBranchRaw = localStorage.getItem('active_branch');
+      let activeBranchId: string | null = null;
+      if (activeBranchRaw) {
+        try { activeBranchId = JSON.parse(activeBranchRaw)?.id?.toString() || null; } catch {}
+      }
+
       const res = await fetch(`${API_BASE_URL}/branches-agents`, {
         headers: {
           'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(currentUser?.id ? { 'X-User-Id': currentUser.id.toString() } : {}),
+          ...(activeBranchId ? { 'X-Branch-Id': activeBranchId } : {})
         }
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -1247,7 +1271,16 @@ export default function BranchesAgentsList() {
                           </div>
                         </td>
                         <td>{branchAgent.code}</td>
-                        <td>{branchAgent.agency_name}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{branchAgent.agency_name}</div>
+                          {branchAgent.branch && (
+                            <div style={{ marginTop: '3px' }}>
+                              <span className="type-badge" style={{ backgroundColor: 'rgba(37, 99, 235, 0.08)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.2)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                <i className="fa-solid fa-building"></i> {branchAgent.branch.name}
+                              </span>
+                            </div>
+                          )}
+                        </td>
                         <td>{branchAgent.agent_name}</td>
                         <td>{branchAgent.agency_number || '-'}</td>
                         <td>{branchAgent.phone || '-'}</td>
@@ -1380,6 +1413,14 @@ export default function BranchesAgentsList() {
                       </div>
                     </div>
                     <div className="user-mobile-body">
+                      {branchAgent.branch && (
+                        <div className="user-mobile-row">
+                          <span className="user-mobile-label">الفرع:</span>
+                          <span className="user-mobile-value" style={{ color: '#2563eb', fontWeight: 600 }}>
+                            <i className="fa-solid fa-building" style={{ marginLeft: '4px' }}></i> {branchAgent.branch.name}
+                          </span>
+                        </div>
+                      )}
                       <div className="user-mobile-row">
                         <span className="user-mobile-label">اسم الوكيل:</span>
                         <span className="user-mobile-value">{branchAgent.agent_name}</span>

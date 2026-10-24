@@ -161,6 +161,18 @@ function hasAccessToRoute(
     return true;
   }
 
+  // Branch Admin لديه وصول لإدارة فرعه (باستثناء صفحات الإدارة العامة المركزية كإدارة الفروع)
+  try {
+    const uStr = localStorage.getItem('user');
+    const u = uStr ? JSON.parse(uStr) : null;
+    if (u?.is_branch_admin) {
+      if (path.startsWith('/branches') && !path.startsWith('/branches-agents')) {
+        return false;
+      }
+      return true;
+    }
+  } catch {}
+
   // إذا كانت الوكالة ملغية أو مجمدة، يمنع تماماً من الوصول لمسارات إنشاء وإصدار وثائق جديدة
   if (isAgentCancelled && (path.includes('/create') || path.endsWith('/create'))) {
     return false;
@@ -178,6 +190,9 @@ function hasAccessToRoute(
 
   // الفروع/الوكلاء لديهم وصول إلى صفحاتهم الخاصة وإعدادات أنواع السيارات وحوالات الوكلاء وطلبات الوثائق
   if (branchAgentId) {
+    if (path.startsWith('/office-users')) {
+      return true;
+    }
     if (path.startsWith('/vehicle-types')) {
       return true;
     }
@@ -654,11 +669,23 @@ const createMenuSections = (
     agent_transfers?: number;
   }
 ): SidebarSection[] => {
-  // إذا كان المستخدم admin، أظهر كل شيء
-  if (isAdmin) {
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isBranchAdmin = Boolean(currentUser?.is_branch_admin && !isAdmin);
+
+  // إذا كان المستخدم admin أو أدمن فرع
+  if (isAdmin || isBranchAdmin) {
     return menuSections.map(section => ({
       ...section,
-      items: section.items.map(item => {
+      items: section.items
+        .filter(item => {
+          // إذا كان أدمن فرع، نخفي إدارة الفروع المركزية
+          if (isBranchAdmin && (item.label === 'إدارة الفروع' || item.to === '/branches')) {
+            return false;
+          }
+          return true;
+        })
+        .map(item => {
         if (item.label === 'إدارة الوثائق' && item.children) {
           return {
             ...item,
@@ -726,8 +753,6 @@ const createMenuSections = (
     }));
   }
 
-  const userStr = localStorage.getItem('user');
-  const currentUser = userStr ? JSON.parse(userStr) : null;
   const isSubUser = !!(currentUser?.lifo_permissions && currentUser.lifo_permissions.length > 0) || !!currentUser?.lifo_user_id;
 
   // خريطة الصلاحيات إلى العناصر الجانبية
@@ -1140,6 +1165,14 @@ const createMenuSections = (
     { label: 'لوحة التحكم', icon: 'fa-solid fa-gauge-high', to: '/dashboard' },
     ...extraMainItems
   ];
+
+  if (branchAgentId && !isAdmin && !isSubUser) {
+    mainMenuItems.push({
+      label: 'موظفي الوكالة',
+      icon: 'fa-solid fa-users-gear',
+      to: '/office-users',
+    });
+  }
 
 
   if (insuranceItems.length > 0) {
