@@ -1457,6 +1457,35 @@ export default function App() {
     window.fetch = async (...args) => {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
       
+      // Inject X-Branch-Id and X-User-Id headers for backend API calls
+      if (url && (url.includes('/api') || url.includes(':8000') || url.includes('api.mli.ly'))) {
+        let options: RequestInit = args[1] || {};
+        const headers = new Headers(options.headers || {});
+
+        try {
+          const activeBranchRaw = localStorage.getItem('active_branch');
+          if (activeBranchRaw) {
+            const activeBranch = JSON.parse(activeBranchRaw);
+            if (activeBranch?.id && !headers.has('X-Branch-Id')) {
+              headers.set('X-Branch-Id', activeBranch.id.toString());
+            }
+          }
+        } catch {}
+
+        try {
+          const userRaw = localStorage.getItem('user');
+          if (userRaw) {
+            const user = JSON.parse(userRaw);
+            if (user?.id && !headers.has('X-User-Id')) {
+              headers.set('X-User-Id', user.id.toString());
+            }
+          }
+        } catch {}
+
+        options.headers = headers;
+        args[1] = options;
+      }
+
       // Exclude background polling/interval endpoints
       const isBackground = 
         url.includes('/branches-agents/pending-counts') || 
@@ -1511,6 +1540,25 @@ export default function App() {
   const [branchAgentId, setBranchAgentId] = useState<number | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [pendingDocsCount, setPendingDocsCount] = useState<number>(0);
+
+  // Active branch scope key to refresh current route when branch context changes
+  const [branchScopeKey, setBranchScopeKey] = useState<string>(() => {
+    try {
+      const b = localStorage.getItem('active_branch');
+      return b ? String(JSON.parse(b)?.id ?? 'all') : 'all';
+    } catch {
+      return 'all';
+    }
+  });
+
+  useEffect(() => {
+    const handleBranchChange = (e: any) => {
+      const b = e.detail;
+      setBranchScopeKey(b ? String(b.id) : 'all');
+    };
+    window.addEventListener('branchChanged', handleBranchChange);
+    return () => window.removeEventListener('branchChanged', handleBranchChange);
+  }, []);
   const [adminPendingCounts, setAdminPendingCounts] = useState<{
     new_agents: number;
     agent_requests: number;
@@ -1856,6 +1904,7 @@ export default function App() {
                   showSidebarToggle={showSidebarToggle}
                 />
                 <ActiveBranchBanner />
+                <div key={branchScopeKey} style={{ display: 'contents' }}>
                 <Routes>
                   <Route path="/company-documents" element={<AuthorizedRoute requiredPath="/company-documents"><CompanyDocuments /></AuthorizedRoute>} />
                   <Route path="/excel-import" element={isAdmin ? <ExcelImportPage /> : <Navigate to="/dashboard" />} />
@@ -2021,6 +2070,7 @@ export default function App() {
                   <Route path="/claims/:id" element={<AuthorizedRoute requiredPath="/claims"><ViewClaim /></AuthorizedRoute>} />
                   <Route path="/coming-soon" element={<div style={{ padding: '40px', textAlign: 'center' }}><h3>قريباً...</h3><p>هذا القسم قيد التطوير وسيتم تفعيله في التحديث القادم.</p></div>} />
                 </Routes>
+                </div>
               </main>
             </div>
           </ProtectedRoute>
