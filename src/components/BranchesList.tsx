@@ -712,10 +712,9 @@ export const BranchesList: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '13px' }}>
               <thead>
                 <tr style={{
-                  backgroundColor: 'var(--input-bg, #f8fafc)',
+                  backgroundColor: 'var(--table-header, #1e2330)',
                   borderBottom: '1px solid var(--border, #e2e8f0)',
                   color: 'var(--muted, #64748b)',
-                  backgroundColor: 'var(--table-header, #1e2330)',
                   fontWeight: 700
                 }}>
                   <th style={{ padding: '14px 16px' }}>كود الفرع</th>
@@ -740,7 +739,6 @@ export const BranchesList: React.FC = () => {
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--hover-bg, rgba(255, 255, 255, 0.04))')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       {/* Code */}
                       <td style={{ padding: '14px 16px' }}>
@@ -748,8 +746,9 @@ export const BranchesList: React.FC = () => {
                           display: 'inline-block',
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          backgroundColor: '#e2e8f0',
-                          color: '#334155',
+                          backgroundColor: 'var(--input-bg, #e2e8f0)',
+                          color: 'var(--text, #334155)',
+                          border: '1px solid var(--border, #cbd5e1)',
                           fontWeight: 700,
                           fontSize: '12px'
                         }}>
