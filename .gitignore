@@ -28,3 +28,5 @@ dist-ssr
 *.rar
 *.tar.gz
 *.7z
+*.sql
+

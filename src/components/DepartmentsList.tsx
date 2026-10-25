@@ -13,6 +13,12 @@ type Department = {
   id: number;
   name: string;
   description: string | null;
+  branch_id?: number | null;
+  branch?: {
+    id: number;
+    name: string;
+    code?: string;
+  } | null;
   users: Employee[];
 };
 
@@ -36,6 +42,16 @@ export default function DepartmentsList() {
   useEffect(() => {
     fetchDepartments();
     fetchEmployees();
+
+    const handleBranchChange = () => {
+      fetchDepartments();
+      fetchEmployees();
+    };
+
+    window.addEventListener('branchChanged', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
   }, []);
 
   const fetchDepartments = async () => {
@@ -250,7 +266,28 @@ export default function DepartmentsList() {
             <tbody>
               {departments.map((dept) => (
                 <tr key={dept.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#fafafa"} onMouseOut={e => e.currentTarget.style.background = "none"}>
-                  <td style={{ padding: "16px 20px", fontWeight: "600", color: "#0f172a" }}>{dept.name}</td>
+                  <td style={{ padding: "16px 20px", fontWeight: "600", color: "#0f172a" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>{dept.name}</span>
+                      {dept.branch && (
+                        <span style={{
+                          background: "#ecfdf5",
+                          color: "#065f46",
+                          border: "1px solid #a7f3d0",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px"
+                        }}>
+                          <i className="fas fa-code-branch" style={{ fontSize: "10px" }}></i>
+                          {dept.branch.name}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td style={{ padding: "16px 20px", color: "#475569", fontSize: "14px" }}>{dept.description || "—"}</td>
                   <td style={{ padding: "16px 20px" }}>
                     {dept.users.length === 0 ? (

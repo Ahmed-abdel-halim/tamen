@@ -18,6 +18,8 @@ export const BranchesList: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [viewingBranchDetails, setViewingBranchDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [deletingBranch, setDeletingBranch] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -217,6 +219,55 @@ export const BranchesList: React.FC = () => {
     showToast(`تم الانتقال للعمل كـ: ${branch.name}`, 'success');
     window.dispatchEvent(new CustomEvent('refreshData'));
     navigate('/dashboard');
+  };
+
+  // Confirm and cascade delete branch
+  const confirmDeleteBranch = async () => {
+    if (!branchToDelete) return;
+    if (branchToDelete.is_main_branch || branchToDelete.id === 1) {
+      showToast('لا يمكن حذف الفرع الرئيسي للشركة', 'error');
+      setBranchToDelete(null);
+      return;
+    }
+
+    try {
+      setDeletingBranch(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/branches/${branchToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) {
+        showToast(data?.message || 'تم حذف الفرع وكافة السجلات المرتبطة به بنجاح', 'success');
+
+        // If active branch in session was this deleted branch, reset back to HQ (all)
+        const active = localStorage.getItem('active_branch');
+        if (active) {
+          try {
+            const b = JSON.parse(active);
+            if (b?.id === branchToDelete.id) {
+              setActiveBranch(null);
+              window.dispatchEvent(new CustomEvent('refreshData'));
+            }
+          } catch {}
+        }
+
+        setBranchToDelete(null);
+        fetchBranches();
+      } else {
+        showToast(data?.message || 'فشل حذف الفرع', 'error');
+      }
+    } catch (err) {
+      showToast('خطأ في الاتصال بالخادم أثناء الحذف', 'error');
+    } finally {
+      setDeletingBranch(false);
+    }
   };
 
   // Filtered branches
@@ -748,7 +799,7 @@ export const BranchesList: React.FC = () => {
 
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
                           {/* Operate as Branch Button */}
                           <button
                             type="button"
@@ -771,6 +822,29 @@ export const BranchesList: React.FC = () => {
                           >
                             <i className="fa-solid fa-arrow-right-to-bracket" />
                             <span>دخول كفرع</span>
+                          </button>
+
+                          {/* Toggle Active / Deactivate Branch Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(branch)}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              border: branch.status === 'نشط' ? '1px solid #fcd34d' : '1px solid #86efac',
+                              backgroundColor: branch.status === 'نشط' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                              color: branch.status === 'نشط' ? '#d97706' : '#16a34a',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: 600
+                            }}
+                            title={branch.status === 'نشط' ? 'تعطيل / إيقاف هذا الفرع' : 'إعادة تنشيط هذا الفرع'}
+                          >
+                            <i className={`fa-solid ${branch.status === 'نشط' ? 'fa-ban' : 'fa-circle-check'}`} />
+                            <span>{branch.status === 'نشط' ? 'تعطيل' : 'تنشيط'}</span>
                           </button>
 
                           {/* View Details */}
@@ -807,6 +881,25 @@ export const BranchesList: React.FC = () => {
                             title="تعديل بيانات الفرع"
                           >
                             <i className="fa-solid fa-pen-to-square" />
+                          </button>
+
+                          {/* Delete Branch & Cascading Data */}
+                          <button
+                            type="button"
+                            onClick={() => setBranchToDelete(branch)}
+                            disabled={Boolean(branch.is_main_branch || branch.id === 1)}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #fecaca',
+                              backgroundColor: (branch.is_main_branch || branch.id === 1) ? '#f1f5f9' : 'rgba(239, 68, 68, 0.08)',
+                              color: (branch.is_main_branch || branch.id === 1) ? '#94a3b8' : '#ef4444',
+                              cursor: (branch.is_main_branch || branch.id === 1) ? 'not-allowed' : 'pointer',
+                              fontSize: '12px'
+                            }}
+                            title={(branch.is_main_branch || branch.id === 1) ? 'الفرع الرئيسي لا يمكن حذفه' : 'حذف الفرع نهائياً مع كافة متعلقاته وسجلاته'}
+                          >
+                            <i className="fa-solid fa-trash-can" />
                           </button>
                         </div>
                       </td>
@@ -1518,6 +1611,122 @@ export const BranchesList: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {branchToDelete && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1050,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '480px',
+            padding: '28px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            textAlign: 'center',
+            borderTop: '5px solid #ef4444'
+          }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: '#fee2e2',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '28px',
+              margin: '0 auto 16px'
+            }}>
+              <i className="fa-solid fa-triangle-exclamation" />
+            </div>
+
+            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+              تأكيد حذف الفرع نهائياً
+            </h3>
+
+            <div style={{
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '10px',
+              padding: '12px',
+              marginBottom: '16px',
+              fontSize: '14px',
+              color: '#991b1b',
+              fontWeight: 700
+            }}>
+              {branchToDelete.name} ({branchToDelete.code || `ID: ${branchToDelete.id}`})
+            </div>
+
+            <p style={{ color: '#475569', fontSize: '13px', lineHeight: 1.7, marginBottom: '24px', textAlign: 'right' }}>
+              ⚠️ <strong style={{ color: '#dc2626' }}>تحذير خطير:</strong> سيؤدي هذا الإجراء إلى <strong>حذف الفرع نهائياً من قاعدة البيانات</strong> وحذف ومسح كافة السجلات والمتعلقات التابعة له بالكامل (وثائق التأمين بأنواعها، حركات الخزينة والبنك، المصروفات، العهد والمخازن، المطالبات، والوكلاء والموظفين التابعين له).
+              <br />
+              <span style={{ color: '#ef4444', fontWeight: 700, display: 'block', marginTop: '6px' }}>
+                هذه العملية جذرية وفورية ولا يمكن التراجع عنها.
+              </span>
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                disabled={deletingBranch}
+                onClick={() => setBranchToDelete(null)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#f8fafc',
+                  color: '#475569',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                إلغاء الأمر
+              </button>
+              <button
+                type="button"
+                disabled={deletingBranch}
+                onClick={confirmDeleteBranch}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: deletingBranch ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)'
+                }}
+              >
+                {deletingBranch ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin" />
+                    <span>جاري الحذف الجذري...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-trash-can" />
+                    <span>نعم، احذف الفرع ومتعلقاته</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

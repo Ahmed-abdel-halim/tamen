@@ -3,6 +3,7 @@ import { showToast } from "./Toast";
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
+import { getBranchHeaders } from '../utils/branchContext';
 
 const formatDateTime = (dateStr?: string) => {
   if (!dateStr) return '—';
@@ -182,6 +183,15 @@ export default function InventoryManagement() {
 
   useEffect(() => {
     fetchData();
+
+    const handleBranchChange = () => {
+      fetchData();
+    };
+
+    window.addEventListener('branchChanged', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
   }, []);
 
   const renderPagination = (currentPage: number, totalItems: number, onPageChange: (p: number) => void) => {
@@ -272,9 +282,11 @@ export default function InventoryManagement() {
     setMovementsLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const branchHeaders = getBranchHeaders();
       const headers = {
         'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...branchHeaders,
       };
 
       // Run all requests in parallel
