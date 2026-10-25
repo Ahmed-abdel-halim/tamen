@@ -319,7 +319,7 @@ export const BranchesList: React.FC = () => {
               <i className="fa-solid fa-building" />
             </div>
             <div>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: 'var(--text-main, #1e293b)' }}>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: 'var(--text, #1e293b)' }}>
                 إدارة الفروع المستقلة
               </h1>
               <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
@@ -338,8 +338,8 @@ export const BranchesList: React.FC = () => {
             style={{
               padding: '10px 14px',
               borderRadius: '10px',
-              border: '1px solid var(--border-color, #cbd5e1)',
-              background: 'var(--surface-color, #ffffff)',
+              border: '1px solid var(--border, #cbd5e1)',
+              background: 'var(--card-bg, #ffffff)',
               cursor: 'pointer'
             }}
           >
@@ -380,137 +380,213 @@ export const BranchesList: React.FC = () => {
         gap: '16px',
         marginBottom: '24px'
       }}>
+        {/* Card 1: Total Branches (Royal Blue) */}
         <div style={{
-          padding: '16px 20px',
-          borderRadius: '14px',
-          background: 'var(--surface-color, #ffffff)',
-          border: '1px solid var(--border-color, #e2e8f0)',
+          padding: '20px 24px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+          color: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          justifyContent: 'space-between',
+          boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          cursor: 'default'
         }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            color: '#2563eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '22px'
-          }}>
-            <i className="fa-solid fa-building" />
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>إجمالي الفروع</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 600, marginBottom: '6px' }}>إجمالي الفروع</div>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
               {totalBranchesCount}
             </div>
           </div>
-        </div>
-
-        <div style={{
-          padding: '16px 20px',
-          borderRadius: '14px',
-          background: 'var(--surface-color, #ffffff)',
-          border: '1px solid var(--border-color, #e2e8f0)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-        }}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            color: '#10b981',
+            width: '52px',
+            height: '52px',
+            borderRadius: '14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(8px)',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '22px'
+            fontSize: '24px',
+            position: 'relative',
+            zIndex: 1
           }}>
-            <i className="fa-solid fa-circle-check" />
+            <i className="fa-solid fa-building" />
           </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>الفروع النشطة</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981' }}>
+          {/* Subtle Watermark Icon */}
+          <i className="fa-solid fa-building" style={{
+            position: 'absolute',
+            left: '-15px',
+            bottom: '-15px',
+            fontSize: '95px',
+            opacity: 0.12,
+            color: '#ffffff',
+            pointerEvents: 'none'
+          }} />
+        </div>
+
+        {/* Card 2: Active Branches (Emerald Green) */}
+        <div style={{
+          padding: '20px 24px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+          color: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 8px 24px -4px rgba(16, 185, 129, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          cursor: 'default'
+        }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 600, marginBottom: '6px' }}>الفروع النشطة</div>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
               {activeBranchesCount}
             </div>
           </div>
-        </div>
-
-        <div style={{
-          padding: '16px 20px',
-          borderRadius: '14px',
-          background: 'var(--surface-color, #ffffff)',
-          border: '1px solid var(--border-color, #e2e8f0)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-        }}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            color: '#6366f1',
+            width: '52px',
+            height: '52px',
+            borderRadius: '14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(8px)',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '22px'
+            fontSize: '24px',
+            position: 'relative',
+            zIndex: 1
           }}>
-            <i className="fa-solid fa-users" />
+            <i className="fa-solid fa-circle-check" />
           </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>موظفي الفروع</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+          {/* Subtle Watermark Icon */}
+          <i className="fa-solid fa-circle-check" style={{
+            position: 'absolute',
+            left: '-15px',
+            bottom: '-15px',
+            fontSize: '95px',
+            opacity: 0.12,
+            color: '#ffffff',
+            pointerEvents: 'none'
+          }} />
+        </div>
+
+        {/* Card 3: Branch Staff (Vibrant Purple / Indigo) */}
+        <div style={{
+          padding: '20px 24px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)',
+          color: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 8px 24px -4px rgba(139, 92, 246, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          cursor: 'default'
+        }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 600, marginBottom: '6px' }}>موظفي الفروع</div>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
               {totalStaffCount}
             </div>
           </div>
-        </div>
-
-        <div style={{
-          padding: '16px 20px',
-          borderRadius: '14px',
-          background: 'var(--surface-color, #ffffff)',
-          border: '1px solid var(--border-color, #e2e8f0)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-        }}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            color: '#f59e0b',
+            width: '52px',
+            height: '52px',
+            borderRadius: '14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(8px)',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '22px'
+            fontSize: '24px',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <i className="fa-solid fa-users" />
+          </div>
+          {/* Subtle Watermark Icon */}
+          <i className="fa-solid fa-users" style={{
+            position: 'absolute',
+            left: '-15px',
+            bottom: '-15px',
+            fontSize: '95px',
+            opacity: 0.12,
+            color: '#ffffff',
+            pointerEvents: 'none'
+          }} />
+        </div>
+
+        {/* Card 4: Total Financial Production (Golden Amber / Warm Orange) */}
+        <div style={{
+          padding: '20px 24px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #b45309 0%, #f59e0b 100%)',
+          color: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 8px 24px -4px rgba(245, 158, 11, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          cursor: 'default'
+        }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 600, marginBottom: '6px' }}>إجمالي الإنتاج المالي</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
+              {totalRevenueSum.toLocaleString('ar-LY')} <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>د.ل</span>
+            </div>
+          </div>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            borderRadius: '14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(8px)',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            position: 'relative',
+            zIndex: 1
           }}>
             <i className="fa-solid fa-coins" />
           </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>إجمالي الإنتاج المالي</div>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: '#f59e0b' }}>
-              {totalRevenueSum.toLocaleString('ar-LY')} <span style={{ fontSize: '12px' }}>د.ل</span>
-            </div>
-          </div>
+          {/* Subtle Watermark Icon */}
+          <i className="fa-solid fa-coins" style={{
+            position: 'absolute',
+            left: '-15px',
+            bottom: '-15px',
+            fontSize: '95px',
+            opacity: 0.12,
+            color: '#ffffff',
+            pointerEvents: 'none'
+          }} />
         </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div style={{
         padding: '16px 20px',
-        backgroundColor: 'var(--surface-color, #ffffff)',
+        backgroundColor: 'var(--card-bg, #ffffff)',
         borderRadius: '14px',
-        border: '1px solid var(--border-color, #e2e8f0)',
+        border: '1px solid var(--border, #e2e8f0)',
         marginBottom: '20px',
         display: 'flex',
         flexWrap: 'wrap',
@@ -540,9 +616,10 @@ export const BranchesList: React.FC = () => {
                 width: '100%',
                 padding: '10px 40px 10px 14px',
                 borderRadius: '10px',
-                border: '1px solid var(--border-color, #cbd5e1)',
-                backgroundColor: 'var(--bg-light, #f8fafc)',
+                border: '1px solid var(--border, #cbd5e1)',
+                backgroundColor: 'var(--input-bg, #f8fafc)',
                 fontSize: '13px',
+                color: 'var(--text, #0f172a)',
                 outline: 'none'
               }}
             />
@@ -555,10 +632,11 @@ export const BranchesList: React.FC = () => {
             style={{
               padding: '10px 14px',
               borderRadius: '10px',
-              border: '1px solid var(--border-color, #cbd5e1)',
-              backgroundColor: 'var(--bg-light, #f8fafc)',
+              border: '1px solid var(--border, #cbd5e1)',
+              backgroundColor: 'var(--input-bg, #f8fafc)',
               fontSize: '13px',
               fontWeight: 500,
+              color: 'var(--text, #0f172a)',
               cursor: 'pointer',
               outline: 'none'
             }}
@@ -576,10 +654,11 @@ export const BranchesList: React.FC = () => {
             style={{
               padding: '10px 14px',
               borderRadius: '10px',
-              border: '1px solid var(--border-color, #cbd5e1)',
-              backgroundColor: 'var(--bg-light, #f8fafc)',
+              border: '1px solid var(--border, #cbd5e1)',
+              backgroundColor: 'var(--input-bg, #f8fafc)',
               fontSize: '13px',
               fontWeight: 500,
+              color: 'var(--text, #0f172a)',
               cursor: 'pointer',
               outline: 'none'
             }}
@@ -600,9 +679,9 @@ export const BranchesList: React.FC = () => {
         <div style={{
           padding: '60px',
           textAlign: 'center',
-          backgroundColor: 'var(--surface-color, #ffffff)',
+          backgroundColor: 'var(--card-bg, #ffffff)',
           borderRadius: '14px',
-          border: '1px solid var(--border-color, #e2e8f0)',
+          border: '1px solid var(--border, #e2e8f0)',
           color: '#64748b'
         }}>
           <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ color: '#2563eb', marginBottom: '12px' }} />
@@ -612,9 +691,9 @@ export const BranchesList: React.FC = () => {
         <div style={{
           padding: '60px',
           textAlign: 'center',
-          backgroundColor: 'var(--surface-color, #ffffff)',
+          backgroundColor: 'var(--card-bg, #ffffff)',
           borderRadius: '14px',
-          border: '1px solid var(--border-color, #e2e8f0)',
+          border: '1px solid var(--border, #e2e8f0)',
           color: '#64748b'
         }}>
           <i className="fa-solid fa-building-circle-xmark fa-3x" style={{ color: '#94a3b8', marginBottom: '14px' }} />
@@ -623,9 +702,9 @@ export const BranchesList: React.FC = () => {
         </div>
       ) : (
         <div style={{
-          backgroundColor: 'var(--surface-color, #ffffff)',
+          backgroundColor: 'var(--card-bg, #ffffff)',
           borderRadius: '14px',
-          border: '1px solid var(--border-color, #e2e8f0)',
+          border: '1px solid var(--border, #e2e8f0)',
           overflow: 'hidden',
           boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
         }}>
@@ -633,9 +712,10 @@ export const BranchesList: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '13px' }}>
               <thead>
                 <tr style={{
-                  backgroundColor: 'var(--bg-light, #f8fafc)',
-                  borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                  color: '#475569',
+                  backgroundColor: 'var(--input-bg, #f8fafc)',
+                  borderBottom: '1px solid var(--border, #e2e8f0)',
+                  color: 'var(--muted, #64748b)',
+                  backgroundColor: 'var(--table-header, #1e2330)',
                   fontWeight: 700
                 }}>
                   <th style={{ padding: '14px 16px' }}>كود الفرع</th>
@@ -655,10 +735,11 @@ export const BranchesList: React.FC = () => {
                     <tr
                       key={branch.id}
                       style={{
-                        borderBottom: '1px solid var(--border-color, #f1f5f9)',
+                        borderBottom: '1px solid var(--border, #f1f5f9)',
                         transition: 'background-color 0.15s ease'
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-light, #f8fafc)')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--hover-bg, rgba(255, 255, 255, 0.04))')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       {/* Code */}
@@ -769,7 +850,7 @@ export const BranchesList: React.FC = () => {
 
                       {/* Total Revenue */}
                       <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text, #0f172a)' }}>
                           {(Number(branch.total_revenue) || 0).toLocaleString('ar-LY')} <span style={{ fontSize: '11px' }}>د.ل</span>
                         </div>
                       </td>
@@ -854,9 +935,9 @@ export const BranchesList: React.FC = () => {
                             style={{
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              border: '1px solid var(--border-color, #cbd5e1)',
-                              backgroundColor: 'var(--surface-color, #ffffff)',
-                              color: '#475569',
+                              border: '1px solid var(--border, #cbd5e1)',
+                              backgroundColor: 'var(--input-bg, #ffffff)',
+                              color: 'var(--text, #475569)',
                               cursor: 'pointer',
                               fontSize: '12px'
                             }}
@@ -872,9 +953,9 @@ export const BranchesList: React.FC = () => {
                             style={{
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              border: '1px solid var(--border-color, #cbd5e1)',
-                              backgroundColor: 'var(--surface-color, #ffffff)',
-                              color: '#2563eb',
+                              border: '1px solid var(--border, #cbd5e1)',
+                              backgroundColor: 'var(--input-bg, #ffffff)',
+                              color: '#3b82f6',
                               cursor: 'pointer',
                               fontSize: '12px'
                             }}
@@ -926,20 +1007,20 @@ export const BranchesList: React.FC = () => {
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: 'var(--surface-color, #ffffff)',
+            backgroundColor: 'var(--card-bg, #ffffff)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '680px',
             maxHeight: '90vh',
             overflowY: 'auto',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            border: '1px solid var(--border-color, #e2e8f0)',
+            border: '1px solid var(--border, #e2e8f0)',
             animation: 'fadeIn 0.2s ease-out'
           }}>
             {/* Modal Header */}
             <div style={{
               padding: '18px 24px',
-              borderBottom: '1px solid var(--border-color, #e2e8f0)',
+              borderBottom: '1px solid var(--border, #e2e8f0)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
@@ -995,7 +1076,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1016,7 +1097,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1035,10 +1116,10 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none',
-                      backgroundColor: 'var(--surface-color, #ffffff)'
+                      backgroundColor: 'var(--card-bg, #ffffff)'
                     }}
                   >
                     {cities.map((c) => (
@@ -1061,7 +1142,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1082,7 +1163,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1103,7 +1184,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1124,7 +1205,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1145,7 +1226,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1166,7 +1247,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1186,7 +1267,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
@@ -1205,10 +1286,10 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none',
-                      backgroundColor: 'var(--surface-color, #ffffff)'
+                      backgroundColor: 'var(--card-bg, #ffffff)'
                     }}
                   >
                     <option value="نشط">نشط</option>
@@ -1289,7 +1370,7 @@ export const BranchesList: React.FC = () => {
                             width: '100%',
                             padding: '9px 12px',
                             borderRadius: '8px',
-                            border: '1px solid var(--border-color, #cbd5e1)',
+                            border: '1px solid var(--border, #cbd5e1)',
                             fontSize: '13px',
                             outline: 'none',
                             backgroundColor: '#ffffff'
@@ -1311,7 +1392,7 @@ export const BranchesList: React.FC = () => {
                             width: '100%',
                             padding: '9px 12px',
                             borderRadius: '8px',
-                            border: '1px solid var(--border-color, #cbd5e1)',
+                            border: '1px solid var(--border, #cbd5e1)',
                             fontSize: '13px',
                             outline: 'none',
                             backgroundColor: '#ffffff'
@@ -1332,7 +1413,7 @@ export const BranchesList: React.FC = () => {
                             width: '100%',
                             padding: '9px 12px',
                             borderRadius: '8px',
-                            border: '1px solid var(--border-color, #cbd5e1)',
+                            border: '1px solid var(--border, #cbd5e1)',
                             fontSize: '13px',
                             outline: 'none',
                             backgroundColor: '#ffffff'
@@ -1357,7 +1438,7 @@ export const BranchesList: React.FC = () => {
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
+                      border: '1px solid var(--border, #cbd5e1)',
                       fontSize: '13px',
                       outline: 'none',
                       resize: 'vertical'
@@ -1371,7 +1452,7 @@ export const BranchesList: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'flex-end',
                 gap: '12px',
-                borderTop: '1px solid var(--border-color, #e2e8f0)',
+                borderTop: '1px solid var(--border, #e2e8f0)',
                 paddingTop: '16px'
               }}>
                 <button
@@ -1380,7 +1461,7 @@ export const BranchesList: React.FC = () => {
                   style={{
                     padding: '10px 20px',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-color, #cbd5e1)',
+                    border: '1px solid var(--border, #cbd5e1)',
                     background: 'none',
                     fontWeight: 600,
                     cursor: 'pointer'
@@ -1425,14 +1506,14 @@ export const BranchesList: React.FC = () => {
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: 'var(--surface-color, #ffffff)',
+            backgroundColor: 'var(--card-bg, #ffffff)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '750px',
             maxHeight: '90vh',
             overflowY: 'auto',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            border: '1px solid var(--border-color, #e2e8f0)'
+            border: '1px solid var(--border, #e2e8f0)'
           }}>
             {loadingDetails || !viewingBranchDetails ? (
               <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
@@ -1444,7 +1525,7 @@ export const BranchesList: React.FC = () => {
                 {/* Header */}
                 <div style={{
                   padding: '20px 24px',
-                  borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                  borderBottom: '1px solid var(--border, #e2e8f0)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
@@ -1514,25 +1595,25 @@ export const BranchesList: React.FC = () => {
                     gap: '12px',
                     marginBottom: '24px'
                   }}>
-                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-light, #f8fafc)', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--input-bg, #f8fafc)', border: '1px solid var(--border, #e2e8f0)', textAlign: 'center' }}>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>إجمالي الوثائق</div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text, #0f172a)' }}>
                         {viewingBranchDetails.statistics.total_documents}
                       </div>
                     </div>
-                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-light, #f8fafc)', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--input-bg, #f8fafc)', border: '1px solid var(--border, #e2e8f0)', textAlign: 'center' }}>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>الوثائق السارية</div>
                       <div style={{ fontSize: '18px', fontWeight: 800, color: '#10b981' }}>
                         {viewingBranchDetails.statistics.active_documents}
                       </div>
                     </div>
-                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-light, #f8fafc)', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--input-bg, #f8fafc)', border: '1px solid var(--border, #e2e8f0)', textAlign: 'center' }}>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>الموظفين</div>
                       <div style={{ fontSize: '18px', fontWeight: 800, color: '#6366f1' }}>
                         {viewingBranchDetails.statistics.employees_count}
                       </div>
                     </div>
-                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-light, #f8fafc)', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+                    <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--input-bg, #f8fafc)', border: '1px solid var(--border, #e2e8f0)', textAlign: 'center' }}>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>إجمالي الإيراد</div>
                       <div style={{ fontSize: '18px', fontWeight: 800, color: '#f59e0b' }}>
                         {viewingBranchDetails.statistics.total_revenue.toLocaleString('ar-LY')}
@@ -1546,7 +1627,7 @@ export const BranchesList: React.FC = () => {
                       موظفي الفرع ({viewingBranchDetails.branch.users?.length || 0})
                     </h3>
                     {!viewingBranchDetails.branch.users || viewingBranchDetails.branch.users.length === 0 ? (
-                      <div style={{ padding: '14px', borderRadius: '8px', backgroundColor: 'var(--bg-light, #f8fafc)', color: '#64748b', fontSize: '12px', textAlign: 'center' }}>
+                      <div style={{ padding: '14px', borderRadius: '8px', backgroundColor: 'var(--input-bg, #f8fafc)', color: '#64748b', fontSize: '12px', textAlign: 'center' }}>
                         لم يتم تعيين موظفين لهذا الفرع بعد. يمكنك ربط الموظفين بهذا الفرع من صفحة "إدارة المستخدمين".
                       </div>
                     ) : (
@@ -1557,8 +1638,8 @@ export const BranchesList: React.FC = () => {
                             style={{
                               padding: '10px 14px',
                               borderRadius: '8px',
-                              border: '1px solid var(--border-color, #e2e8f0)',
-                              backgroundColor: 'var(--bg-light, #f8fafc)',
+                              border: '1px solid var(--border, #e2e8f0)',
+                              backgroundColor: 'var(--input-bg, #f8fafc)',
                               fontSize: '12px'
                             }}
                           >
@@ -1578,14 +1659,14 @@ export const BranchesList: React.FC = () => {
                       آخر الوثائق الصادرة من هذا الفرع
                     </h3>
                     {!viewingBranchDetails.recent_documents || viewingBranchDetails.recent_documents.length === 0 ? (
-                      <div style={{ padding: '14px', borderRadius: '8px', backgroundColor: 'var(--bg-light, #f8fafc)', color: '#64748b', fontSize: '12px', textAlign: 'center' }}>
+                      <div style={{ padding: '14px', borderRadius: '8px', backgroundColor: 'var(--input-bg, #f8fafc)', color: '#64748b', fontSize: '12px', textAlign: 'center' }}>
                         لا توجد وثائق مصدرة بعد من هذا الفرع.
                       </div>
                     ) : (
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                           <thead>
-                            <tr style={{ backgroundColor: 'var(--bg-light, #f8fafc)', borderBottom: '1px solid var(--border-color, #e2e8f0)', color: '#64748b' }}>
+                            <tr style={{ backgroundColor: 'var(--input-bg, #f8fafc)', borderBottom: '1px solid var(--border, #e2e8f0)', color: '#64748b' }}>
                               <th style={{ padding: '8px 10px', textAlign: 'right' }}>رقم الوثيقة</th>
                               <th style={{ padding: '8px 10px', textAlign: 'right' }}>المؤمّن له</th>
                               <th style={{ padding: '8px 10px', textAlign: 'right' }}>المصدر</th>
@@ -1595,7 +1676,7 @@ export const BranchesList: React.FC = () => {
                           </thead>
                           <tbody>
                             {viewingBranchDetails.recent_documents.map((doc: any) => (
-                              <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-color, #f1f5f9)' }}>
+                              <tr key={doc.id} style={{ borderBottom: '1px solid var(--border, #f1f5f9)' }}>
                                 <td style={{ padding: '8px 10px', fontWeight: 700 }}>{doc.insurance_number}</td>
                                 <td style={{ padding: '8px 10px' }}>{doc.insured_name}</td>
                                 <td style={{ padding: '8px 10px', color: '#64748b' }}>{doc.user?.name || '—'}</td>
