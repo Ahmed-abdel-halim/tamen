@@ -3,9 +3,12 @@ import { showToast } from './Toast';
 import { API_BASE_URL } from "../config/api";
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
+import { type Branch, getActiveBranch, getBranchHeaders } from '../utils/branchContext';
 
 type Employee = {
   id: number;
+  branch_id?: number | null;
+
   username: string;
   name: string;
   email?: string;
@@ -190,10 +193,36 @@ export default function EmployeeSalaries() {
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [status, setStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [activeBranch, setActiveBranchState] = useState<Branch | null>(getActiveBranch());
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [branchAgents, setBranchAgents] = useState<{ id: number; agency_name: string; code: string }[]>([]);
+  const currentUser = useMemo(() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('agent_id') || params.get('branch_agent_id') || 'all';
+    const urlBranch = params.get('branch_id');
+    const urlAgent = params.get('agent_id') || params.get('branch_agent_id');
+    if (urlBranch) return urlBranch === 'all' || urlBranch === 'hq' ? urlBranch : `branch_${urlBranch}`;
+    if (urlAgent) return `agent_${urlAgent}`;
+
+    const curBranch = getActiveBranch();
+    if (curBranch) return `branch_${curBranch.id}`;
+
+    try {
+      const uStr = localStorage.getItem('user');
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        if (u.is_branch_admin && u.branch_id) return `branch_${u.branch_id}`;
+      }
+    } catch {}
+    return 'all';
   });
   const [historyFor, setHistoryFor] = useState<Employee | null>(null);
   const [history, setHistory] = useState<SalaryHistory[]>([]);
@@ -238,18 +267,28 @@ export default function EmployeeSalaries() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const branchHeaders = getBranchHeaders();
       const headers = {
         'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...branchHeaders
       };
 
       let scopeParam = '';
-      if (selectedAgentFilter === 'hq') {
-        scopeParam = '&scope=hq';
-      } else if (selectedAgentFilter !== 'all') {
+      if (selectedAgentFilter.startsWith('branch_')) {
+        const bId = selectedAgentFilter.replace('branch_', '');
+        scopeParam = `&branch_id=${bId}`;
+      } else if (selectedAgentFilter === 'hq') {
+        scopeParam = '&branch_id=hq&scope=hq';
+      } else if (selectedAgentFilter.startsWith('agent_')) {
+        const aId = selectedAgentFilter.replace('agent_', '');
+        scopeParam = `&branch_agent_id=${aId}`;
+      } else if (!isNaN(Number(selectedAgentFilter)) && selectedAgentFilter !== 'all') {
         scopeParam = `&branch_agent_id=${selectedAgentFilter}`;
-      } else {
-        scopeParam = '&scope=all';
+      } else if (selectedAgentFilter === 'all') {
+        scopeParam = '&branch_id=all&scope=all';
+      } else if (activeBranch) {
+        scopeParam = `&branch_id=${activeBranch.id}`;
       }
 
       const [employeesRes, payrollsRes] = await Promise.all([
@@ -268,38 +307,75 @@ export default function EmployeeSalaries() {
   };
 
   useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/branches-agents?per_page=500`, {
-          headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-        });
-        const d = await res.json();
-        const list = Array.isArray(d) ? d : (d.data || []);
-        setBranchAgents(list);
-      } catch (err) {
-        console.error('Failed to load agents', err);
+    const handleBranchChange = (e: CustomEvent) => {
+      const b = e.detail || null;
+      setActiveBranchState(b);
+      if (b) {
+        setSelectedAgentFilter(`branch_${b.id}`);
+      } else {
+        setSelectedAgentFilter('all');
       }
     };
-    fetchAgents();
+    window.addEventListener('branchChanged', handleBranchChange as EventListener);
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchBranchesAndAgents = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+        const [resBranches, resAgents] = await Promise.all([
+          fetch(`${API_BASE_URL}/branches?for_select=1`, { headers }),
+          fetch(`${API_BASE_URL}/branches-agents?per_page=500`, { headers })
+        ]);
+        if (resBranches.ok) {
+          const bData = await resBranches.json();
+          setBranches(Array.isArray(bData) ? bData : (bData.data || []));
+        }
+        if (resAgents.ok) {
+          const aData = await resAgents.json();
+          setBranchAgents(Array.isArray(aData) ? aData : (aData.data || []));
+        }
+      } catch (err) {
+        console.error('Failed to load branches and agents', err);
+      }
+    };
+    fetchBranchesAndAgents();
   }, []);
 
   useEffect(() => {
     loadAll();
-  }, [year, month, status, selectedAgentFilter]);
+  }, [year, month, status, selectedAgentFilter, activeBranch]);
 
   const fetchRangeReport = async () => {
     setRangeReportLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const branchHeaders = getBranchHeaders();
       const headers = {
         'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...branchHeaders
       };
 
       const params = new URLSearchParams();
       if (rangeEmployeeId) params.append('user_id', rangeEmployeeId);
       params.append('per_page', '1000');
+
+      if (selectedAgentFilter.startsWith('branch_')) {
+        params.append('branch_id', selectedAgentFilter.replace('branch_', ''));
+      } else if (selectedAgentFilter === 'hq') {
+        params.append('branch_id', 'hq');
+      } else if (selectedAgentFilter.startsWith('agent_')) {
+        params.append('branch_agent_id', selectedAgentFilter.replace('agent_', ''));
+      } else if (selectedAgentFilter === 'all') {
+        params.append('branch_id', 'all');
+      } else if (activeBranch) {
+        params.append('branch_id', String(activeBranch.id));
+      }
 
       const res = await fetch(`${API_BASE_URL}/employee-payrolls?${params.toString()}`, { headers });
       if (!res.ok) {
@@ -333,8 +409,8 @@ export default function EmployeeSalaries() {
       });
 
       setRangeReportPayrolls(filtered);
-    } catch (error: any) {
-      showToast(error?.message || 'حدث خطأ أثناء تحميل تقرير الفترة', 'error');
+    } catch (err: any) {
+      showToast(err?.message || 'حدث خطأ أثناء تحميل تقرير الفترة', 'error');
     } finally {
       setRangeReportLoading(false);
     }
@@ -752,19 +828,38 @@ export default function EmployeeSalaries() {
     setBulkPaying(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/employee-payrolls/bulk-pay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          year,
-          month,
-          branch_agent_id: (selectedAgentFilter !== 'all' && selectedAgentFilter !== 'hq') ? Number(selectedAgentFilter) : undefined
-        }),
-      });
+    let bodyBranchId: string | number | undefined = undefined;
+    let bodyAgentId: number | undefined = undefined;
+
+    if (selectedAgentFilter.startsWith('branch_')) {
+      bodyBranchId = Number(selectedAgentFilter.replace('branch_', ''));
+    } else if (selectedAgentFilter === 'hq') {
+      bodyBranchId = 'hq';
+    } else if (selectedAgentFilter.startsWith('agent_')) {
+      bodyAgentId = Number(selectedAgentFilter.replace('agent_', ''));
+    } else if (!isNaN(Number(selectedAgentFilter)) && selectedAgentFilter !== 'all') {
+      bodyAgentId = Number(selectedAgentFilter);
+    } else if (activeBranch) {
+      bodyBranchId = activeBranch.id;
+    }
+
+    const bodyPayload: any = {
+      year,
+      month,
+    };
+    if (bodyBranchId !== undefined) bodyPayload.branch_id = bodyBranchId;
+    if (bodyAgentId !== undefined) bodyPayload.branch_agent_id = bodyAgentId;
+
+    const res = await fetch(`${API_BASE_URL}/employee-payrolls/bulk-pay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...getBranchHeaders()
+      },
+      body: JSON.stringify(bodyPayload),
+    });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data?.message || 'فشل صرف المرتبات الجماعي');
@@ -1778,14 +1873,40 @@ export default function EmployeeSalaries() {
                     id="ep-payroll-branch-agent"
                     value={selectedAgentFilter}
                     onChange={(e) => setSelectedAgentFilter(e.target.value)}
+                    disabled={Boolean(currentUser?.is_branch_admin && !currentUser?.is_admin && currentUser?.branch_id)}
                   >
-                    <option value="all">جميع الوكلاء والمقر</option>
-                    <option value="hq">المقر الرئيسي فقط</option>
-                    {branchAgents.map((ag) => (
-                      <option key={ag.id} value={String(ag.id)}>
-                        {ag.agency_name} ({ag.code})
-                      </option>
-                    ))}
+                    {!currentUser?.is_branch_admin || currentUser?.is_admin ? (
+                      <>
+                        <option value="all">كافة الفروع والمقر الرئيسي</option>
+                        <option value="hq">المقر الرئيسي فقط</option>
+                        {branches.length > 0 && (
+                          <optgroup label="الفروع">
+                            {branches.map((b) => (
+                              <option key={`branch_${b.id}`} value={`branch_${b.id}`}>
+                                فرع {b.name} ({b.code})
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {branchAgents.length > 0 && (
+                          <optgroup label="الوكلاء">
+                            {branchAgents.map((ag) => (
+                              <option key={`agent_${ag.id}`} value={`agent_${ag.id}`}>
+                                {ag.agency_name} ({ag.code})
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    ) : (
+                      branches
+                        .filter((b) => b.id === currentUser?.branch_id)
+                        .map((b) => (
+                          <option key={`branch_${b.id}`} value={`branch_${b.id}`}>
+                            فرع {b.name} ({b.code})
+                          </option>
+                        ))
+                    )}
                   </select>
                 </div>
                 <div className="ep-field">

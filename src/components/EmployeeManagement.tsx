@@ -5,6 +5,7 @@ import { showToast } from "./Toast";
 import { generatePremiumExcel } from "../utils/excelGenerator";
 import AllEmployeeRequests from "./AllEmployeeRequests";
 import ProfileUpdateRequestsList from "./ProfileUpdateRequestsList";
+import { getBranchHeaders } from "../utils/branchContext";
 
 // ─── Interfaces & Types ───────────────────────────────────────────────────────
 
@@ -654,9 +655,20 @@ export default function EmployeeManagement() {
     }
   }, [selectedEmployeeId]);
 
+  useEffect(() => {
+    const handleBranchChange = () => {
+      loadEmployees();
+    };
+    window.addEventListener('branchChanged', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
+  }, []);
+
   const authHeaders = () => ({
     Accept: "application/json",
     Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+    ...getBranchHeaders(),
   });
 
   // ─── Fetch All Active Employees ───
