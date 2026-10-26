@@ -1417,9 +1417,34 @@ export default function UsersList() {
             </h2>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>التحكم في بيانات الموظفين، الصلاحيات، والرواتب</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm({ mode: 'add' })} style={{ borderRadius: '10px', padding: '12px 25px', fontSize: '15px', fontWeight: 'bold', background: 'var(--accent-cyan)', border: 'none', boxShadow: '0 4px 12px var(--accent-shadow)' }}>
-            <i className="fa-solid fa-user-plus"></i> إضافة موظف جديد
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button 
+                type="button"
+                onClick={() => navigate('/employee-presence')} 
+                style={{ 
+                    borderRadius: '10px', 
+                    padding: '12px 20px', 
+                    fontSize: '14px', 
+                    fontWeight: 'bold', 
+                    background: 'rgba(16, 185, 129, 0.15)', 
+                    color: '#34d399', 
+                    border: '1px solid rgba(52, 211, 153, 0.4)', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                }}
+                title="الانتقال إلى تتبع الموظفين المتصلين وسجل الحضور وساعات العمل"
+            >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                <i className="fa-solid fa-user-clock"></i>
+                حالة اتصال وتواجد الموظفين
+            </button>
+            <button className="btn-primary" onClick={() => setShowForm({ mode: 'add' })} style={{ borderRadius: '10px', padding: '12px 25px', fontSize: '15px', fontWeight: 'bold', background: 'var(--accent-cyan)', border: 'none', boxShadow: '0 4px 12px var(--accent-shadow)' }}>
+                <i className="fa-solid fa-user-plus"></i> إضافة موظف جديد
+            </button>
+        </div>
       </div>
 
       <div className="users-card">

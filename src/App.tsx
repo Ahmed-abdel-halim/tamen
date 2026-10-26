@@ -20,6 +20,7 @@ type SidebarSection = {
 import { Topbar } from './components/Topbar'
 import { DashboardPanels } from './components/DashboardPanels'
 import UsersList from './components/UsersList';
+import EmployeePresence from './components/EmployeePresence';
 import DepartmentsList from './components/DepartmentsList';
 import DocumentRequestsList from './components/DocumentRequestsList';
 import Login from './components/Login';
@@ -260,10 +261,11 @@ function hasAccessToRoute(
     'إدارة الوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
     'كشف الحساب الشهري للوكيل': ['/reports/agent-monthly-ledger', '/agency-cancellations', '/agent-requests', '/profile-update-requests'],
 
-    'إدارة الموظفين': ['/users', '/employee-requests', '/departments', '/employees', '/employees-management', '/profile-update-requests'],
+    'إدارة الموظفين': ['/users', '/employee-presence', '/employee-requests', '/departments', '/employees', '/employees-management', '/profile-update-requests'],
     // تفصيل صلاحيات الموظفين
     'إدارة الموظف': ['/employees', '/employees-management', '/employee-requests', '/profile-update-requests'],
-    'قائمة الموظفين': ['/users', '/employees', '/employees-management'],
+    'قائمة الموظفين': ['/users', '/employee-presence', '/employees', '/employees-management'],
+    'حالة اتصال وتواجد الموظفين': ['/employee-presence'],
     'إدارة أقسام الشركة': ['/departments', '/management/department'],
     'طلبات الموظفين': ['/employee-requests'],
     'طلبات الموظف': ['/employee-requests'],
@@ -560,6 +562,7 @@ const menuSections: SidebarSection[] = [
       {
         label: 'إدارة الموظفين', icon: 'fa-solid fa-user-shield', children: [
           { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+          { label: 'حالة اتصال وتواجد الموظفين', icon: 'fa-solid fa-user-clock', to: '/employee-presence' },
           { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
           { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests' },
           { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee' },
@@ -820,12 +823,14 @@ const createMenuSections = (
 
     'إدارة الموظفين': [
       { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
+      { label: 'حالة اتصال وتواجد الموظفين', icon: 'fa-solid fa-user-clock', to: '/employee-presence' },
       { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
       { label: 'طلبات الموظفين', icon: 'fa-solid fa-file-invoice', to: '/employee-requests', badge: adminCounts?.employee_requests },
       { label: 'طلبات تعديل بيانات الموظفين', icon: 'fa-solid fa-user-pen', to: '/profile-update-requests?type=employee', badge: adminCounts?.employee_profile_updates },
       { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
     ],
     // تفصيل صلاحيات الموظفين
+    'حالة اتصال وتواجد الموظفين': { label: 'حالة اتصال وتواجد الموظفين', icon: 'fa-solid fa-user-clock', to: '/employee-presence' },
     'إدارة الموظف': { label: 'إدارة الموظف', icon: 'fa-solid fa-id-card-clip', to: '/employees' },
     'قائمة الموظفين': { label: 'قائمة الموظفين', icon: 'fa-solid fa-users-gear', to: '/users' },
     'إدارة أقسام الشركة': { label: 'إدارة أقسام الشركة', icon: 'fa-solid fa-sitemap', to: '/departments' },
@@ -1022,6 +1027,7 @@ const createMenuSections = (
     '/reports/agent-monthly-ledger',
     '/employees',
     '/users', 
+    '/employee-presence',
     '/departments',
     '/employee-requests', 
     '/profile-update-requests?type=employee',
@@ -1195,6 +1201,7 @@ const createMenuSections = (
     const hrOrder = [
       '/employees',
       '/users',
+      '/employee-presence',
       '/departments',
       '/employee-requests',
       '/profile-update-requests?type=employee'
@@ -1492,6 +1499,7 @@ export default function App() {
         url.includes('/document-requests/pending-count') || 
         url.includes('/notifications/unread-count') ||
         url.includes('/sync-union-status') ||
+        url.includes('/employee-presence/ping') ||
         (url.includes('/notifications') && !url.includes('/read-all') && !url.includes('/read'));
 
       if (!isBackground) {
@@ -1702,6 +1710,47 @@ export default function App() {
       };
     }
   }, [currentUserId, hasPendingCountsAccess]);
+
+  // Heartbeat لإرسال نبضة التواجد وتتبع اتصال الموظف واحتساب ساعات العمل
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const sendPresencePing = async () => {
+      if (document.visibilityState === 'hidden') return;
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        await fetch(`${API_BASE_URL}/employee-presence/ping`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (err) {
+        // Silently catch ping errors
+      }
+    };
+
+    sendPresencePing();
+    const pingInterval = setInterval(sendPresencePing, 60000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        sendPresencePing();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(pingInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [currentUserId]);
 
   useEffect(() => {
     const html = document.documentElement
@@ -1916,6 +1965,7 @@ export default function App() {
                   <Route path="/office-users" element={<OfficeUsers />} />
                   <Route path="/profile-update-requests" element={<AuthorizedRoute requiredPath="/profile-update-requests"><ProfileUpdateRequestsList /></AuthorizedRoute>} />
                   <Route path="/users" element={<AuthorizedRoute requiredPath="/users"><UsersList /></AuthorizedRoute>} />
+                  <Route path="/employee-presence" element={<AuthorizedRoute requiredPath="/employee-presence"><EmployeePresence /></AuthorizedRoute>} />
                   <Route path="/departments" element={<AuthorizedRoute requiredPath="/departments"><DepartmentsList /></AuthorizedRoute>} />
                   <Route path="/employee-requests" element={<AuthorizedRoute requiredPath="/employee-requests"><AllEmployeeRequests /></AuthorizedRoute>} />
                   <Route path="/users/:id" element={<EmployeeProfile />} />
