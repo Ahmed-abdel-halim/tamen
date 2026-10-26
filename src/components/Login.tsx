@@ -72,8 +72,19 @@ export default function Login() {
       showToast('تم تسجيل الدخول بنجاح!', 'success');
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token || '');
+      
+      // ضبط سياق الفرع النشط إذا كان المستخدم يتبع فرعاً
+      if (data.user?.branch) {
+        localStorage.setItem('active_branch', JSON.stringify(data.user.branch));
+      } else if (data.user?.branch_id && !data.user?.is_admin) {
+        localStorage.setItem('active_branch', JSON.stringify({ id: data.user.branch_id, name: data.user.name || 'الفرع' }));
+      } else if (data.user?.is_admin && !data.user?.branch_id) {
+        localStorage.removeItem('active_branch');
+      }
+
       // إرسال event لتحديث الصلاحيات في App.tsx
       window.dispatchEvent(new Event('userLoggedIn'));
+      window.dispatchEvent(new CustomEvent('branchChanged', { detail: data.user?.branch || null }));
       setTimeout(() => {
         window.location.href = '/dashboard'; // التوجيه إلى لوحة التحكم
       }, 1300);

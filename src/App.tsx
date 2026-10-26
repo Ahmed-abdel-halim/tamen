@@ -1476,6 +1476,14 @@ export default function App() {
             if (activeBranch?.id && !headers.has('X-Branch-Id')) {
               headers.set('X-Branch-Id', activeBranch.id.toString());
             }
+          } else {
+            const userRaw = localStorage.getItem('user');
+            if (userRaw) {
+              const user = JSON.parse(userRaw);
+              if (user?.branch_id && !user?.is_admin && !headers.has('X-Branch-Id')) {
+                headers.set('X-Branch-Id', user.branch_id.toString());
+              }
+            }
           }
         } catch {}
 

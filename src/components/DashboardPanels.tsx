@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
-import { getActiveBranch } from "../utils/branchContext";
+import { type Branch, getActiveBranch } from "../utils/branchContext";
 
 type ServiceCard = {
   label: string;
@@ -17,6 +17,8 @@ export function DashboardPanels({}: DashboardPanelsProps) {
   const navigate = useNavigate();
   const [statistics, setStatistics] = useState<Record<string, number>>({});
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isBranchAdmin, setIsBranchAdmin] = useState(false);
+  const [activeBranch, setActiveBranchState] = useState<Branch | null>(getActiveBranch());
   const [authorizedDocs, setAuthorizedDocs] = useState<string[] | null>(null);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [userName, setUserName] = useState<string>('');
@@ -36,6 +38,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         if (userStr) {
           const user = JSON.parse(userStr);
           setIsAdmin(user.is_admin || false);
+          setIsBranchAdmin(Boolean(user.is_branch_admin || (!user.is_admin && user.branch_id)));
           setAuthorizedDocs(user.authorized_documents || null);
           setUserName(user.name || user.username || '');
           if (user.branch_agent_id) {
@@ -46,6 +49,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         }
       } catch (error) {
         setIsAdmin(false);
+        setIsBranchAdmin(false);
         setAuthorizedDocs(null);
         setUserName('');
         setBranchAgentId(null);
@@ -54,13 +58,20 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     
     loadUserPermissions();
     
+    const handleBranchChange = (e: any) => {
+      setActiveBranchState(e.detail || getActiveBranch());
+    };
+    window.addEventListener('branchChanged', handleBranchChange);
+
     // Listen for storage changes
     const handleStorageChange = () => {
       loadUserPermissions();
+      setActiveBranchState(getActiveBranch());
     };
     window.addEventListener('storage', handleStorageChange);
     
     return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
@@ -109,23 +120,43 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       setWalletStats(null);
     }
 
-    // 2. Fetch financial stats (Agent stats if agent, Global stats if admin)
+    // 2. Fetch financial stats (Agent stats if agent, Branch stats if branch, Global stats if admin)
     const fetchFinancialStats = async () => {
-      if (!branchAgentId && !isAdmin) return;
+      const curBranch = getActiveBranch();
+      const hasBranchContext = Boolean(curBranch?.id || isBranchAdmin);
+      if (!branchAgentId && !isAdmin && !hasBranchContext) {
+        setAgentFinancialStats(null);
+        return;
+      }
       
       setLoadingFinancialStats(true);
       try {
         const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        let userId = null;
+        if (userStr) {
+          try {
+            const u = JSON.parse(userStr);
+            userId = u.id;
+          } catch (e) {}
+        }
+
+        const headers: HeadersInit = {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        if (userId) {
+          headers['X-User-Id'] = userId.toString();
+        }
+        if (curBranch?.id) {
+          headers['X-Branch-Id'] = curBranch.id.toString();
+        }
+
         const url = branchAgentId 
           ? `${API_BASE_URL}/branches-agents/${branchAgentId}/financial-stats`
           : `${API_BASE_URL}/global-financial-stats`;
 
-        const res = await fetch(url, {
-          headers: {
-            'Accept': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        });
+        const res = await fetch(url, { headers });
         if (res.ok) {
           const data = await res.json();
           // The global stats might return directly, let's normalize or check structure
@@ -141,7 +172,16 @@ export function DashboardPanels({}: DashboardPanelsProps) {
     };
 
     fetchFinancialStats();
-  }, [branchAgentId, isAdmin]);
+
+    const handleRefresh = () => fetchFinancialStats();
+    window.addEventListener('branchChanged', handleRefresh);
+    window.addEventListener('refreshData', handleRefresh);
+
+    return () => {
+      window.removeEventListener('branchChanged', handleRefresh);
+      window.removeEventListener('refreshData', handleRefresh);
+    };
+  }, [branchAgentId, isAdmin, isBranchAdmin, activeBranch?.id]);
 
   // Digital clock state
   const [clock, setClock] = useState(() => {
@@ -221,7 +261,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       window.removeEventListener('branchChanged', handleRefresh);
       window.removeEventListener('refreshData', handleRefresh);
     };
-  }, []);
+  }, [activeBranch?.id]);
 
   // Fetch latest documents
   useEffect(() => {
@@ -267,7 +307,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
       window.removeEventListener('branchChanged', handleRefresh);
       window.removeEventListener('refreshData', handleRefresh);
     };
-  }, []);
+  }, [activeBranch?.id]);
 
   // خريطة أنواع التأمين إلى الروابط (مثل السايدبار)
   const insuranceTypeMap: Record<string, { label: string; icon: string; route: string; color: 'green' | 'blue'; statisticsKey?: string }> = {
@@ -478,19 +518,33 @@ export function DashboardPanels({}: DashboardPanelsProps) {
         </div>
       </div>
 
-      {/* Financial Stats Cards for Agents and Admins */}
-      {(branchAgentId || isAdmin) && (
+      {/* Financial Stats Cards for Agents, Admins, and Branches */}
+      {(branchAgentId || isAdmin || isBranchAdmin || activeBranch) && (
         <div style={{ marginBottom: '25px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
             <i className="fa-solid fa-chart-pie" style={{ color: '#6366f1' }}></i>
-            {isAdmin ? 'ملخص الإحصائيات المالية العامة (جميع الوكلاء)' : 'ملخص الإحصائيات المالية لوثائقي'}
+            {branchAgentId 
+              ? 'ملخص الإحصائيات المالية لوثائقي'
+              : (activeBranch 
+                  ? `ملخص الإحصائيات المالية لفرع: ${activeBranch.name}`
+                  : (isBranchAdmin 
+                      ? 'ملخص الإحصائيات المالية للفرع' 
+                      : 'ملخص الإحصائيات المالية العامة (جميع الفروع والوكلاء)')
+                )
+            }
           </h2>
           <div className="agent-financial-grid">
 
             {/* إجمالي الوثائق */}
             <div className="service-card" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', cursor: 'default' }}>
               <div className="service-content">
-                <div className="service-label">{isAdmin ? 'إجمالي الوثائق الصادرة (الكل)' : 'إجمالي الوثائق الصادرة'}</div>
+                <div className="service-label">
+                  {branchAgentId 
+                    ? 'إجمالي الوثائق الصادرة' 
+                    : (activeBranch 
+                        ? `إجمالي الوثائق الصادرة (${activeBranch.name})` 
+                        : (isBranchAdmin ? 'إجمالي الوثائق الصادرة (الفرع)' : 'إجمالي الوثائق الصادرة (الكل)'))}
+                </div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.total_documents ?? 0)}
                 </div>
@@ -506,7 +560,13 @@ export function DashboardPanels({}: DashboardPanelsProps) {
             {/* إجمالي الإيرادات */}
             <div className="service-card" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', cursor: 'default' }}>
               <div className="service-content">
-                <div className="service-label">{isAdmin ? 'إجمالي إيرادات الشركة' : 'إجمالي إيرادات وثائقي'}</div>
+                <div className="service-label">
+                  {branchAgentId 
+                    ? 'إجمالي إيرادات وثائقي' 
+                    : (activeBranch 
+                        ? `إجمالي إيرادات فرع (${activeBranch.name})` 
+                        : (isBranchAdmin ? 'إجمالي إيرادات الفرع' : 'إجمالي إيرادات الشركة'))}
+                </div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.total_revenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00')} <span style={{ fontSize: '14px', fontWeight: '500' }}>د.ل</span>
                 </div>
@@ -522,7 +582,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
             {/* حصة الشركة */}
             <div className="service-card" style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', cursor: 'default' }}>
               <div className="service-content">
-                <div className="service-label">حصة الشركة</div>
+                <div className="service-label">{activeBranch || isBranchAdmin ? 'حصة الشركة من الفرع' : 'حصة الشركة'}</div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.company_share?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00')} <span style={{ fontSize: '14px', fontWeight: '500' }}>د.ل</span>
                 </div>
@@ -538,12 +598,16 @@ export function DashboardPanels({}: DashboardPanelsProps) {
             {/* حصة الوكيل */}
             <div className="service-card" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', cursor: 'default' }}>
               <div className="service-content">
-                <div className="service-label">{isAdmin ? 'إجمالي عمولات الوكلاء' : 'حصة الوكيل (عمولتي)'}</div>
+                <div className="service-label">
+                  {branchAgentId 
+                    ? 'حصة الوكيل (عمولتي)' 
+                    : (activeBranch || isBranchAdmin ? 'إجمالي عمولات وكلاء الفرع' : 'إجمالي عمولات الوكلاء')}
+                </div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.agent_share?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00')} <span style={{ fontSize: '14px', fontWeight: '500' }}>د.ل</span>
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '4px' }}>
-                  {isAdmin ? 'مجموع عمولات الوكلاء المحتسبة' : 'العمولة المكتسبة من الوثائق'}
+                  {isAdmin || activeBranch || isBranchAdmin ? 'مجموع عمولات الوكلاء المحتسبة' : 'العمولة المكتسبة من الوثائق'}
                 </div>
               </div>
               <div className="service-icon">
@@ -554,7 +618,11 @@ export function DashboardPanels({}: DashboardPanelsProps) {
             {/* المدفوع للشركة */}
             <div className="service-card" style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', cursor: 'default' }}>
               <div className="service-content">
-                <div className="service-label">{isAdmin ? 'إجمالي المقبوضات (إيصالات الدفع)' : 'المدفوع للشركة'}</div>
+                <div className="service-label">
+                  {branchAgentId 
+                    ? 'المدفوع للشركة' 
+                    : (activeBranch || isBranchAdmin ? 'إجمالي مقبوضات الفرع (إيصالات الدفع)' : 'إجمالي المقبوضات (إيصالات الدفع)')}
+                </div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.paid_to_company?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00')} <span style={{ fontSize: '14px', fontWeight: '500' }}>د.ل</span>
                 </div>
@@ -575,14 +643,18 @@ export function DashboardPanels({}: DashboardPanelsProps) {
               cursor: 'default'
             }}>
               <div className="service-content">
-                <div className="service-label">{isAdmin ? 'إجمالي المتبقي بطرف الوكلاء' : 'المتبقي على الوكيل'}</div>
+                <div className="service-label">
+                  {branchAgentId 
+                    ? 'المتبقي على الوكيل' 
+                    : (activeBranch || isBranchAdmin ? 'إجمالي المتبقي بطرف وكلاء الفرع' : 'إجمالي المتبقي بطرف الوكلاء')}
+                </div>
                 <div className="service-statistics">
                   {loadingFinancialStats ? '...' : (agentFinancialStats?.remaining_for_company?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00')} <span style={{ fontSize: '14px', fontWeight: '500' }}>د.ل</span>
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '4px', fontWeight: 'bold' }}>
                   {agentFinancialStats?.remaining_for_company > 0 
-                    ? (isAdmin ? '⚠️ توجد ديون مستحقة للتحصيل' : '⚠️ يوجد رصيد مستحق') 
-                    : (isAdmin ? '✅ لا توجد ديون متأخرة للشركة' : '✅ لا توجد مبالغ متأخرة')}
+                    ? (isAdmin || activeBranch || isBranchAdmin ? '⚠️ توجد ديون مستحقة للتحصيل' : '⚠️ يوجد رصيد مستحق') 
+                    : (isAdmin || activeBranch || isBranchAdmin ? '✅ لا توجد ديون متأخرة للشركة' : '✅ لا توجد مبالغ متأخرة')}
                 </div>
               </div>
               <div className="service-icon">
@@ -661,7 +733,11 @@ export function DashboardPanels({}: DashboardPanelsProps) {
 
       {/* Latest Documents Section */}
       <div className="latest-documents-section">
-        <h2 className="latest-documents-title">آخر 5 تأمينات صادرة</h2>
+        <h2 className="latest-documents-title">
+          {activeBranch 
+            ? `آخر 5 تأمينات صادرة (${activeBranch.name})` 
+            : (isBranchAdmin ? 'آخر 5 تأمينات صادرة للفرع' : 'آخر 5 تأمينات صادرة')}
+        </h2>
         {latestDocuments.length > 0 ? (
           <div className="latest-documents-table-wrapper">
             <table className="latest-documents-table">
@@ -673,7 +749,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
                   <th>رقم الهاتف</th>
                   <th>الإجمالي</th>
                   <th>نوع التأمين</th>
-                  {isAdmin && <th>الوكيل</th>}
+                  {(isAdmin || isBranchAdmin || activeBranch) && <th>الوكيل / المكتب</th>}
                 </tr>
               </thead>
               <tbody>
@@ -685,7 +761,7 @@ export function DashboardPanels({}: DashboardPanelsProps) {
                     <td>{doc.phone || '-'}</td>
                     <td>{doc.total ? doc.total.toLocaleString() : '0'} د.ل</td>
                     <td>{doc.insurance_type || '-'}</td>
-                    {isAdmin && (
+                    {(isAdmin || isBranchAdmin || activeBranch) && (
                       <td>{doc.agency_name || '-'}</td>
                     )}
                   </tr>

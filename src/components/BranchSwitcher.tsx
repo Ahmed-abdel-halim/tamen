@@ -27,12 +27,13 @@ export const BranchSwitcher: React.FC<BranchSwitcherProps> = ({ className = '' }
         if (userStr) {
           const user = JSON.parse(userStr);
           setIsAdmin(Boolean(user.is_admin));
-          if (user.branch) {
-            setUserBranch(user.branch);
+          const branchObj = user.branch || (user.branch_id && !user.is_admin ? { id: user.branch_id, name: user.name || 'الفرع' } : null);
+          if (branchObj) {
+            setUserBranch(branchObj);
             // If user is locked to a branch and no active branch is set or differs, auto-set it
             if (!user.is_admin) {
-              setActiveBranch(user.branch);
-              setActiveBranchState(user.branch);
+              setActiveBranch(branchObj);
+              setActiveBranchState(branchObj);
             }
           }
         }
