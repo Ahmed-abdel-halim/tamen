@@ -48,12 +48,12 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
   const navigate = useNavigate();
   const location = useLocation();
 
-  // نوع التقرير: مصلحة الضرائب أو الضمان الاجتماعي أو التضامن الاجتماعي
+  // نوع التقرير
   const [activeType, setActiveType] = useState<ReportEntityType>(initialType);
 
-  // الفلاتر الزمنية
+  // الفلاتر
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [periodType, setPeriodType] = useState<PeriodType>('h1'); // افتراضياً النصف الأول كما في نموذج الشركة
+  const [periodType, setPeriodType] = useState<PeriodType>('h1');
   const [selectedMonth, setSelectedMonth] = useState<number>(1);
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -61,14 +61,12 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     new Date().toLocaleDateString('ar-LY', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
   );
 
-
-
   // البيانات
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([]);
   const [employees, setEmployees] = useState<PayrollUser[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // مزامنة النوع عند تغير الرابط
+  // مزامنة النوع مع مسار الصفحة
   useEffect(() => {
     if (location.pathname.includes('/reports/tax')) {
       setActiveType('tax');
@@ -81,7 +79,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     }
   }, [location.pathname, initialType]);
 
-  // إعدادات وتسميات كل جهة
+  // إعدادات الكيان النشط
   const config = useMemo(() => {
     switch (activeType) {
       case 'tax':
@@ -89,11 +87,11 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           key: 'tax',
           title: 'كشف حصة مصلحة الضرائب من مرتبات الموظفين',
           entityShortName: 'مصلحة الضرائب',
-          entityFullName: 'مصلحة الضرائب (ضريبة الدخل والجهاد)',
+          entityFullName: 'مصلحة الضرائب',
           columnLabel: 'حصة مصلحة الضرائب',
           fileNumberLabel: 'الرقم الضريبي',
           defaultPct: 10,
-          color: '#1d4ed8', // Blue
+          color: '#1d4ed8',
           accentBg: 'rgba(29, 78, 216, 0.08)',
           icon: 'fa-solid fa-percent',
         };
@@ -101,12 +99,12 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         return {
           key: 'social_security',
           title: 'كشف حصة الضمان الاجتماعي من مرتبات الموظفين',
-          entityShortName: 'صندوق الضمان الاجتماعي',
+          entityShortName: 'الضمان الاجتماعي',
           entityFullName: 'صندوق الضمان الاجتماعي',
           columnLabel: 'حصة الضمان الاجتماعي',
           fileNumberLabel: 'رقم الضمان',
           defaultPct: 10.5,
-          color: '#059669', // Emerald
+          color: '#059669',
           accentBg: 'rgba(5, 150, 105, 0.08)',
           icon: 'fa-solid fa-handshake-angle',
         };
@@ -115,85 +113,45 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         return {
           key: 'solidarity',
           title: 'كشف حصة التضامن الاجتماعي من مرتبات الموظفين',
-          entityShortName: 'صندوق التضامن الاجتماعي',
+          entityShortName: 'التضامن الاجتماعي',
           entityFullName: 'صندوق التضامن الاجتماعي',
           columnLabel: 'حصة التضامن الاجتماعي',
           fileNumberLabel: 'رقم التضامن / الرقم الضريبي',
           defaultPct: 1,
-          color: '#d97706', // Amber
+          color: '#d97706',
           accentBg: 'rgba(217, 119, 6, 0.08)',
           icon: 'fa-solid fa-shield-heart',
         };
     }
   }, [activeType]);
 
-  // تحديد الأشهر المشمولة بالفترة المختارة وعدد الأشهر
+  // تفاصيل الفترة وعدد الأشهر
   const { periodMonths, periodLabel, periodMonthsCount } = useMemo(() => {
     switch (periodType) {
       case 'h1':
-        return {
-          periodMonths: [1, 2, 3, 4, 5, 6],
-          periodLabel: 'خلال النصف الأول',
-          periodMonthsCount: 6,
-        };
+        return { periodMonths: [1, 2, 3, 4, 5, 6], periodLabel: 'خلال النصف الأول', periodMonthsCount: 6 };
       case 'h2':
-        return {
-          periodMonths: [7, 8, 9, 10, 11, 12],
-          periodLabel: 'خلال النصف الثاني',
-          periodMonthsCount: 6,
-        };
+        return { periodMonths: [7, 8, 9, 10, 11, 12], periodLabel: 'خلال النصف الثاني', periodMonthsCount: 6 };
       case 'q1':
-        return {
-          periodMonths: [1, 2, 3],
-          periodLabel: 'خلال الربع الأول',
-          periodMonthsCount: 3,
-        };
+        return { periodMonths: [1, 2, 3], periodLabel: 'خلال الربع الأول', periodMonthsCount: 3 };
       case 'q2':
-        return {
-          periodMonths: [4, 5, 6],
-          periodLabel: 'خلال الربع الثاني',
-          periodMonthsCount: 3,
-        };
+        return { periodMonths: [4, 5, 6], periodLabel: 'خلال الربع الثاني', periodMonthsCount: 3 };
       case 'q3':
-        return {
-          periodMonths: [7, 8, 9],
-          periodLabel: 'خلال الربع الثالث',
-          periodMonthsCount: 3,
-        };
+        return { periodMonths: [7, 8, 9], periodLabel: 'خلال الربع الثالث', periodMonthsCount: 3 };
       case 'q4':
-        return {
-          periodMonths: [10, 11, 12],
-          periodLabel: 'خلال الربع الرابع',
-          periodMonthsCount: 3,
-        };
+        return { periodMonths: [10, 11, 12], periodLabel: 'خلال الربع الرابع', periodMonthsCount: 3 };
       case 'month':
-        return {
-          periodMonths: [selectedMonth],
-          periodLabel: `شهر ${selectedMonth}`,
-          periodMonthsCount: 1,
-        };
+        return { periodMonths: [selectedMonth], periodLabel: `شهر ${selectedMonth}`, periodMonthsCount: 1 };
       case 'year':
-        return {
-          periodMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-          periodLabel: `خلال العام ${year}`,
-          periodMonthsCount: 12,
-        };
+        return { periodMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], periodLabel: `خلال العام ${year}`, periodMonthsCount: 12 };
       case 'custom':
-        return {
-          periodMonths: [],
-          periodLabel: fromDate && toDate ? `من ${fromDate} إلى ${toDate}` : 'فترة مخصصة',
-          periodMonthsCount: 1,
-        };
+        return { periodMonths: [], periodLabel: fromDate && toDate ? `من ${fromDate} إلى ${toDate}` : 'فترة مخصصة', periodMonthsCount: 1 };
       default:
-        return {
-          periodMonths: [1, 2, 3, 4, 5, 6],
-          periodLabel: 'خلال النصف الأول',
-          periodMonthsCount: 6,
-        };
+        return { periodMonths: [1, 2, 3, 4, 5, 6], periodLabel: 'خلال النصف الأول', periodMonthsCount: 6 };
     }
   }, [periodType, selectedMonth, year, fromDate, toDate]);
 
-  // جلب البيانات من الخادم
+  // جلب البيانات
   const loadData = async () => {
     setLoading(true);
     try {
@@ -203,7 +161,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      // 1. جلب مسيرات الرواتب للعام المحدد
       const params = new URLSearchParams();
       if (year) params.append('year', year.toString());
       if (periodType === 'month' && selectedMonth) {
@@ -212,7 +169,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
       if (fromDate) params.append('from_date', fromDate);
       if (toDate) params.append('to_date', toDate);
 
-      // جلب تقارير الرواتب والموظفين بالتوازي لضمان دقة وتكامل النموذج
       const [reportsRes, empRes] = await Promise.all([
         fetch(`${API_BASE_URL}/employee-payrolls/reports?${params.toString()}`, { headers }),
         fetch(`${API_BASE_URL}/employee-payrolls/employees?year=${year}`, { headers }).catch(() => null),
@@ -224,17 +180,13 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           setPayrolls(result);
         } else if (result && result.payrolls) {
           setPayrolls(result.payrolls);
-          if (result.employees) {
-            setEmployees(result.employees);
-          }
+          if (result.employees) setEmployees(result.employees);
         }
       }
 
       if (empRes && empRes.ok) {
         const empResult = await empRes.json();
-        if (Array.isArray(empResult)) {
-          setEmployees(empResult);
-        }
+        if (Array.isArray(empResult)) setEmployees(empResult);
       }
     } catch (err) {
       console.error('Error fetching tax/SS report data:', err);
@@ -248,53 +200,39 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     loadData();
   }, [year, periodType, selectedMonth, fromDate, toDate]);
 
-  // تجميع قائمة الموظفين النشطين مع بيانات الحسابات المجمعة للفترة المحددة
+  // تجميع الموظفين والاستقطاعات
   const aggregatedRows = useMemo(() => {
-    // بناء خريطة للموظفين (سواء وجدوا في الرواتب أو في قائمة الموظفين)
     const employeesMap = new Map<number, PayrollUser>();
 
-    // إضافة الموظفين من جدول الموظفين أولاً
     employees.forEach((emp) => {
-      if (emp && emp.id) {
-        employeesMap.set(emp.id, emp);
-      }
+      if (emp && emp.id) employeesMap.set(emp.id, emp);
     });
 
-    // إضافة أو تحديث من سجلات الرواتب
     payrolls.forEach((p) => {
       if (p.user && p.user.id && !employeesMap.has(p.user.id)) {
         employeesMap.set(p.user.id, p.user);
       }
     });
 
-    // تحويل القائمة وتطبيق فلاتر الاستحقاق وفقاً لنوع التقرير
     const rowsList = Array.from(employeesMap.values())
       .filter((user) => {
-        // التحقق من تطبيق الضريبة / الضمان / التضامن على الموظف
-        if (activeType === 'tax') {
-          return user.apply_tax !== false;
-        } else if (activeType === 'social_security') {
-          return user.apply_social_security !== false;
-        } else {
-          return user.apply_solidarity !== false;
-        }
+        if (activeType === 'tax') return user.apply_tax !== false;
+        if (activeType === 'social_security') return user.apply_social_security !== false;
+        return user.apply_solidarity !== false;
       })
       .map((user) => {
-        // جلب مسيرات الموظف ضمن الأشهر المحددة للفترة
         const userPayrolls = payrolls.filter((p) => {
           if (p.user_id !== user.id) return false;
           if (periodType === 'custom') return true;
           return periodMonths.includes(Number(p.month));
         });
 
-        // الراتب الأساسي الشهري
         let baseSalary = toNum(user.salary);
         if (baseSalary === 0 && userPayrolls.length > 0) {
           baseSalary = toNum(userPayrolls[0].base_salary);
         }
-        if (baseSalary === 0) baseSalary = 1000; // قيمة افتراضية نموذجية إذا لم تحدد
+        if (baseSalary === 0) baseSalary = 1000;
 
-        // نسبة الاستقطاع
         let percentage = config.defaultPct;
         if (activeType === 'tax') {
           const userPct = toNum(user.tax_percentage);
@@ -307,11 +245,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           if (userPct > 0) percentage = userPct;
         }
 
-        // الحصة الشهرية
         const monthlyShare = (baseSalary * percentage) / 100;
-
-        // إجمالي الحصة للفترة المحددة
-        // إذا كان هناك مسيرات مسجلة فعلياً في قاعدة البيانات نجمعها
         let totalShare = 0;
         let monthsWithPayroll = 0;
 
@@ -327,13 +261,11 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           }
         });
 
-        // إذا لم تكن مسيرات كل أشهر الفترة مسجلة بعد، نحسب الأشهر المتبقية تلقائياً وفقاً للنموذج
         const effectiveMonthsCount = periodMonthsCount > 0 ? periodMonthsCount : 1;
         if (totalShare === 0 || monthsWithPayroll < effectiveMonthsCount) {
           totalShare = monthlyShare * effectiveMonthsCount;
         }
 
-        // الرقم المرجعي (ضريبي / ضمان / وطني)
         let fileNumber = '—';
         if (activeType === 'tax') {
           fileNumber = user.tax_file_number || user.national_id_number || '12345';
@@ -343,7 +275,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           fileNumber = user.tax_file_number || user.social_security_file_number || user.national_id_number || '12345';
         }
 
-        // تنسيق تاريخ بداية العمل بصيغة YYYY/M/D المطابقة للنموذج
         let formattedStartDate = '—';
         if (user.start_date) {
           const d = new Date(user.start_date);
@@ -352,7 +283,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           }
         }
 
-        // النص التوضيحي للحصة مع عدد الأشهر إذا كان أكثر من شهر واحد (مثل: 600 ( عن 6 اشهر ))
         const shareNote = effectiveMonthsCount > 1 ? `( عن ${effectiveMonthsCount} أشهر )` : '';
 
         return {
@@ -371,11 +301,10 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         };
       });
 
-    // ترتيب الموظفين أبجدياً أو بالمعرف
     return rowsList.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   }, [employees, payrolls, activeType, config, periodMonths, periodMonthsCount, periodLabel, periodType]);
 
-  // إجماليات التقرير
+  // إجماليات الكشف
   const totals = useMemo(() => {
     return aggregatedRows.reduce(
       (acc, r) => {
@@ -387,7 +316,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     );
   }, [aggregatedRows]);
 
-  // جدول التوضيح وحساب قيم الفترات المختلفة للعام المحدد (مصفوفة الملاحظة والتوضيح)
+  // مصفوفة الملاحظة والتوضيح
   const periodClarifications = useMemo(() => {
     const singleMonthShare = aggregatedRows.reduce((acc, r) => acc + (r.baseSalary * r.percentage) / 100, 0);
 
@@ -403,7 +332,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     ];
   }, [aggregatedRows, year]);
 
-  // التبديل بين الكيانات عبر الرابط
   const handleSwitchType = (type: ReportEntityType) => {
     setActiveType(type);
     if (type === 'tax') navigate('/reports/tax');
@@ -411,44 +339,44 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     else if (type === 'solidarity') navigate('/reports/solidarity');
   };
 
-  // نافذة الطباعة الرسمية مع دعم الورقة المعنونة الرسمية almadar_official_letterhead.png
+  // ══════════════════════════════════════════════════════════════════════════
+  // نافذة الطباعة الرسمية مع ضمان ظهور الورقة المعنونة واحتوائها في صفحة واحدة A4
+  // ══════════════════════════════════════════════════════════════════════════
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank', 'width=1280,height=960');
+    const printWindow = window.open('', '_blank', 'width=1200,height=900');
     if (!printWindow) return;
 
     const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
     const letterheadUrl = origin ? `${origin}/img/almadar_official_letterhead.png` : '/img/almadar_official_letterhead.png';
 
-    // صفوف الجدول الرئيسي
     const bodyRowsHtml = aggregatedRows
       .map(
         (row, idx) => `
         <tr>
-          <td style="width: 35px; text-align: center; font-weight: bold;">${idx + 1}</td>
-          <td style="text-align: right; font-weight: 700; padding-right: 8px;">${row.name}</td>
-          <td style="text-align: center;">${row.nationality}</td>
-          <td style="text-align: center;">${row.jobTitle}</td>
-          <td style="text-align: center; font-family: 'Cairo', monospace;">${row.startDate}</td>
-          <td style="text-align: center; font-family: monospace; font-size: 13px;">${row.fileNumber}</td>
-          <td style="text-align: center; font-weight: 600;">${row.baseSalary.toLocaleString('en-US')}</td>
-          <td style="text-align: center; font-weight: 700; direction: ltr;">%${row.percentage}</td>
-          <td style="text-align: center; font-size: 12.5px;">${row.periodText}</td>
-          <td style="text-align: center; font-weight: 800; font-size: 13.5px; color: #0f172a;">
-            ${row.totalShare.toLocaleString('en-US')} ${row.shareNote ? `<span style="font-size: 11px; font-weight: normal; color: #475569;">${row.shareNote}</span>` : ''}
+          <td style="text-align: center; font-weight: bold; width: 26px;">${idx + 1}</td>
+          <td style="text-align: right; font-weight: 700; padding-right: 5px;">${row.name}</td>
+          <td style="text-align: center; width: 45px;">${row.nationality}</td>
+          <td style="text-align: center; font-size: 9.5px;">${row.jobTitle}</td>
+          <td style="text-align: center; font-family: monospace; font-size: 10px; width: 68px;">${row.startDate}</td>
+          <td style="text-align: center; font-family: monospace; font-size: 10px; width: 60px;">${row.fileNumber}</td>
+          <td style="text-align: center; font-weight: 700; width: 65px;">${row.baseSalary.toLocaleString('en-US')}</td>
+          <td style="text-align: center; font-weight: 700; width: 38px; direction: ltr;">%${row.percentage}</td>
+          <td style="text-align: center; font-size: 9.5px; width: 75px;">${row.periodText}</td>
+          <td style="text-align: center; font-weight: 800; font-size: 10.5px; width: 95px;">
+            ${row.totalShare.toLocaleString('en-US')} ${row.shareNote ? `<span style="font-size: 8.5px; font-weight: normal; color: #475569;">${row.shareNote}</span>` : ''}
           </td>
         </tr>
       `
       )
       .join('');
 
-    // صفوف جدول الملاحظة والتوضيح
     const clarificationsRowsHtml = periodClarifications
       .map(
         (c) => `
         <tr>
-          <td style="text-align: right; padding: 6px 14px; font-size: 12.5px; font-weight: 600;">${c.label}</td>
-          <td style="text-align: center; font-weight: bold; width: 90px; font-size: 13px;">${year}</td>
-          <td style="text-align: center; font-weight: 700; width: 140px; font-size: 12.5px; color: #1e3a8a;">
+          <td style="text-align: right; padding: 2px 8px; font-size: 9.5px; font-weight: 700; color: #1e293b;">${c.label}</td>
+          <td style="text-align: center; font-weight: 800; width: 60px; font-size: 10px;">${year}</td>
+          <td style="text-align: center; font-weight: 800; width: 90px; font-size: 9.5px; color: #1e3a8a;">
             ${c.share.toLocaleString('en-US')} د.ل
           </td>
         </tr>
@@ -472,7 +400,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             print-color-adjust: exact !important;
           }
           @page {
-            size: A4 landscape;
+            size: A4 portrait;
             margin: 0;
           }
           html, body {
@@ -482,9 +410,11 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             direction: rtl;
             color: #0f172a;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
-          /* ─── شريط التحكم بالطباعة على الشاشة ─── */
+          /* ─── شريط التحكم العلوي على الشاشة ─── */
           .screen-toolbar {
             position: sticky;
             top: 0;
@@ -498,30 +428,30 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             box-shadow: 0 4px 15px rgba(0,0,0,0.35);
           }
           .toolbar-title {
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 800;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
           }
           .toolbar-badge {
             background: #f59e0b;
             color: #091e3a;
-            padding: 3px 10px;
-            border-radius: 6px;
-            font-size: 11.5px;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 11px;
             font-weight: 900;
           }
           .toolbar-options {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
             background: rgba(255, 255, 255, 0.12);
-            padding: 6px 16px;
-            border-radius: 8px;
+            padding: 5px 14px;
+            border-radius: 6px;
           }
           .mode-label {
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 700;
             color: #f1f5f9;
             cursor: pointer;
@@ -538,16 +468,16 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             gap: 10px;
           }
           .btn-action {
-            padding: 8px 20px;
-            border-radius: 8px;
+            padding: 7px 18px;
+            border-radius: 6px;
             font-family: 'Cairo', sans-serif;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 800;
             cursor: pointer;
             border: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             transition: all 0.15s;
           }
           .btn-print {
@@ -561,79 +491,83 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           }
           .btn-close:hover { background: #475569; }
 
-          /* ─── حاوية الورقة القياسية A4 (Landscape 297mm x 210mm) ─── */
+          /* ─── حاوية الورقة A4 القياسية المغلقة بدقة (210mm x 297mm) ─── */
           .paper-sheet {
-            width: 297mm;
-            min-height: 210mm;
+            width: 210mm;
+            height: 297mm;
+            max-height: 297mm;
             margin: 15px auto;
             background: #ffffff;
             box-shadow: 0 10px 30px rgba(0,0,0,0.45);
             position: relative;
+            overflow: hidden;
             box-sizing: border-box;
-            page-break-after: always;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
           }
 
-          /* نمط الورقة المعنونة الرسمية الكاملة المعتمدة */
-          .paper-sheet.letterhead-full {
-            background-image: url('${letterheadUrl}');
-            background-size: 100% 100%;
-            background-position: center;
-            background-repeat: no-repeat;
+          /* ─── 1. صورة الورقة المعنونة كعنصر HTML مستقل لضمان طباعتها دائماً دون تقييد بالمتصفح ─── */
+          .letterhead-bg-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 210mm;
+            height: 297mm;
+            object-fit: fill;
+            z-index: 1;
+            display: block;
+            pointer-events: none;
           }
 
-          /* المحتوى المطبوع المتناغم بدقة مع هوامش الورقة المعنونة */
-          .sheet-content {
-            padding: 30mm 15mm 20mm 15mm;
+          /* ─── 2. مساحة المحتوى الموزعة بدقة بين ترويسة الورقة المعنونة وتذييلها ─── */
+          .sheet-content-layer {
+            position: absolute;
+            top: 48mm;
+            bottom: 22mm;
+            left: 10mm;
+            right: 10mm;
+            z-index: 3;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 210mm;
             box-sizing: border-box;
           }
 
-          /* في حال الطباعة على ورق أبيض بدون خلفية معنونة مسبقاً */
-          .paper-sheet.letterhead-banner .clean-header {
-            display: flex !important;
-          }
-          .paper-sheet.letterhead-clean .sheet-content {
-            padding: 15mm 15mm 15mm 15mm;
-          }
-
-          /* الترويسة العلوية المطابقة تماماً لصورة النموذج المرفقة */
+          /* الترويسة المطابقة تماماً لنموذج Word */
           .meta-header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
-            border-bottom: 2px solid #0f172a;
-            padding-bottom: 4px;
+            margin-bottom: 4px;
+            border-bottom: 1.5px solid #0f172a;
+            padding-bottom: 2px;
           }
           .meta-header-table td {
-            padding: 4px 6px;
+            padding: 2px 4px;
             vertical-align: middle;
-            font-size: 13.5px;
+            font-size: 11.5px;
             font-weight: 800;
           }
 
-          /* جدول الكشف الأساسي المطابق تماماً لنموذج الشركة */
+          /* جدول الكشف الأساسي */
           .main-report-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
-            margin-bottom: 12px;
-            background: #ffffff;
+            font-size: 10px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.95);
           }
           .main-report-table th {
             background-color: #f1f5f9;
             color: #0f172a;
             font-weight: 800;
-            padding: 7px 5px;
-            border: 1.5px solid #0f172a;
+            padding: 4px 3px;
+            border: 1px solid #0f172a;
             text-align: center;
-            font-size: 12px;
+            font-size: 10px;
           }
           .main-report-table td {
             border: 1px solid #334155;
-            padding: 6px 5px;
+            padding: 3px 3px;
             vertical-align: middle;
           }
           .main-report-table tr:nth-child(even) {
@@ -642,32 +576,33 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           .main-report-table tfoot td {
             background-color: #f1f5f9;
             font-weight: 900;
-            font-size: 13px;
-            border-top: 2px solid #0f172a;
+            font-size: 10.5px;
+            border-top: 1.5px solid #0f172a;
+            padding: 4px 3px;
           }
 
-          /* قسم ملاحظة وتوضيح أسفل الكشف */
+          /* قسم ملاحظة وتوضيح */
           .clarification-block {
-            margin-top: 8px;
-            margin-bottom: 15px;
-            border: 1.5px solid #0f172a;
-            background: #ffffff;
+            margin-top: 3px;
+            margin-bottom: 4px;
+            border: 1px solid #0f172a;
+            background: rgba(255, 255, 255, 0.98);
           }
           .clarification-title-bar {
             text-align: center;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 900;
             color: #0f172a;
-            padding: 4px;
-            border-bottom: 1.5px solid #0f172a;
+            padding: 2px 4px;
+            border-bottom: 1px solid #0f172a;
             background: #e2e8f0;
           }
           .clarification-subtitle-bar {
             text-align: center;
-            font-size: 12.5px;
+            font-size: 10px;
             font-weight: 800;
             color: #1e293b;
-            padding: 4px;
+            padding: 2px 4px;
             border-bottom: 1px solid #0f172a;
             background: #f8fafc;
           }
@@ -677,47 +612,54 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           }
           .clarification-table td {
             border-bottom: 1px solid #cbd5e1;
-            padding: 3px 8px;
+            padding: 2px 6px;
           }
           .clarification-table tr:last-child td {
             border-bottom: none;
           }
 
-          /* تواقيع الاعتماد الرسمية */
+          /* التواقيع الرسمية */
           .signatures-strip {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 20px;
-            padding: 0 40px;
+            margin-top: 6px;
+            padding: 0 25px;
           }
           .sig-box {
             text-align: center;
-            width: 220px;
+            width: 170px;
           }
           .sig-line {
-            border-top: 1.5px solid #0f172a;
-            margin-top: 35px;
-            margin-bottom: 6px;
+            border-top: 1.2px solid #0f172a;
+            margin-top: 24px;
+            margin-bottom: 4px;
           }
           .sig-label {
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 800;
             color: #0f172a;
           }
 
-          /* إخفاء شريط التحكم عند أمر الطباعة */
+          /* ضبط الطباعة للصفحة الواحدة وتفادي أي انتقال لصفحة ثانية */
           @media print {
             .screen-toolbar {
               display: none !important;
             }
             body {
-              background: #fff;
+              background: #fff !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
             .paper-sheet {
               margin: 0 !important;
               box-shadow: none !important;
-              page-break-after: always;
+              width: 210mm !important;
+              height: 297mm !important;
+              max-height: 297mm !important;
+              overflow: hidden !important;
+              page-break-after: avoid !important;
+              page-break-inside: avoid !important;
             }
           }
         </style>
@@ -730,20 +672,20 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           </div>
 
           <div class="toolbar-options">
-            <span style="font-size: 12px; font-weight: 800; color: #94a3b8;">خلفية الورقة:</span>
+            <span style="font-size: 11.5px; font-weight: 800; color: #94a3b8;">الورقة الرسمية:</span>
             <label class="mode-label">
-              <input type="radio" name="bg_mode" value="full" checked onchange="toggleBackground('full')">
-              الورقة المعنونة الرسمية المعتمدة
+              <input type="radio" name="bg_mode" value="full" checked onchange="toggleBackground(true)">
+              إظهار الورقة المعنونة المعتمدة
             </label>
             <label class="mode-label">
-              <input type="radio" name="bg_mode" value="clean" onchange="toggleBackground('clean')">
-              ورق أبيض (للطباعة على ورق الشركة المطبوع مسبقاً)
+              <input type="radio" name="bg_mode" value="clean" onchange="toggleBackground(false)">
+              ورق أبيض (للطباعة على ورق الشركة الجاهز)
             </label>
           </div>
 
           <div class="toolbar-actions">
             <button class="btn-action btn-print" onclick="window.print()">
-              طباعة التقرير
+              🖨️ طباعة التقرير الآن
             </button>
             <button class="btn-action btn-close" onclick="window.close()">
               إغلاق
@@ -751,14 +693,17 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           </div>
         </div>
 
-        <div id="printSheet" class="paper-sheet letterhead-full">
-          <div class="sheet-content">
+        <div id="printSheet" class="paper-sheet">
+          <!-- صورة الورقة المعنونة كعنصر HTML رئيسي لضمان ظهورها 100% -->
+          <img id="letterheadImg" src="${letterheadUrl}" class="letterhead-bg-img" alt="Official Letterhead" />
+
+          <div class="sheet-content-layer">
             <div>
-              <!-- الترويسة العلوية المطابقة تماماً لنموذج Word المرفق -->
+              <!-- الترويسة المطابقة تماماً لنموذج Word المرفق -->
               <table class="meta-header-table">
                 <tr>
                   <td style="text-align: right; width: 33.3%;">قسم الشؤون المالية والموارد البشرية</td>
-                  <td style="text-align: center; width: 33.3%; font-size: 17px; font-weight: 900; color: #1e3a8a;">
+                  <td style="text-align: center; width: 33.3%; font-size: 14px; font-weight: 900; color: #1e3a8a;">
                     المدار الليبي للتأمين
                   </td>
                   <td style="text-align: left; width: 33.3%;">التاريخ: ${reportDate}</td>
@@ -769,16 +714,16 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
               <table class="main-report-table">
                 <thead>
                   <tr>
-                    <th style="width: 35px;">م</th>
+                    <th style="width: 26px;">م</th>
                     <th>الاسم</th>
-                    <th style="width: 80px;">الجنسية</th>
+                    <th style="width: 45px;">الجنسية</th>
                     <th>المهنة</th>
-                    <th style="width: 95px;">بداية العمل</th>
-                    <th style="width: 105px;">${config.fileNumberLabel}</th>
-                    <th style="width: 105px;">الراتب الأساسي</th>
-                    <th style="width: 65px;">النسبة</th>
-                    <th style="width: 115px;">خلال شهر</th>
-                    <th style="width: 140px;">${config.columnLabel}</th>
+                    <th style="width: 68px;">بداية العمل</th>
+                    <th style="width: 60px;">${config.fileNumberLabel}</th>
+                    <th style="width: 65px;">الراتب الأساسي</th>
+                    <th style="width: 38px;">النسبة</th>
+                    <th style="width: 75px;">خلال شهر</th>
+                    <th style="width: 95px;">${config.columnLabel}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -786,17 +731,17 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colspan="6" style="text-align: center; font-weight: 900; font-size: 13px;">الإجمالي العام</td>
-                    <td style="text-align: center; font-weight: 900; font-size: 13px;">${totals.baseSalary.toLocaleString('en-US')} د.ل</td>
+                    <td colspan="6" style="text-align: center; font-weight: 900;">الإجمالي العام</td>
+                    <td style="text-align: center; font-weight: 900;">${totals.baseSalary.toLocaleString('en-US')} د.ل</td>
                     <td colspan="2" style="text-align: center;">-</td>
-                    <td style="text-align: center; font-weight: 900; font-size: 14px; color: #b91c1c;">
+                    <td style="text-align: center; font-weight: 900; color: #b91c1c;">
                       ${totals.totalShare.toLocaleString('en-US')} د.ل
                     </td>
                   </tr>
                 </tfoot>
               </table>
 
-              <!-- قسم ملاحظة وتوضيح المطابق لصورة المستند تماماً -->
+              <!-- قسم ملاحظة وتوضيح -->
               <div class="clarification-block">
                 <div class="clarification-title-bar">ملاحظه وتوضيح</div>
                 <div class="clarification-subtitle-bar">
@@ -810,7 +755,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
               </div>
             </div>
 
-            <!-- التواقيع الرسمية -->
+            <!-- التواقيع الرسمية الثلاثة -->
             <div class="signatures-strip">
               <div class="sig-box">
                 <div class="sig-line"></div>
@@ -829,12 +774,10 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         </div>
 
         <script>
-          function toggleBackground(mode) {
-            const sheet = document.getElementById('printSheet');
-            if (mode === 'clean') {
-              sheet.className = 'paper-sheet letterhead-clean';
-            } else {
-              sheet.className = 'paper-sheet letterhead-full';
+          function toggleBackground(show) {
+            const img = document.getElementById('letterheadImg');
+            if (img) {
+              img.style.display = show ? 'block' : 'none';
             }
           }
         </script>
@@ -845,7 +788,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
     printWindow.document.close();
   };
 
-  // تصدير إكسيل فاخر يتضمن النموذج الكامل مع مصفوفة الملاحظة والتوضيح
+  // تصدير إكسيل فاخر
   const handleExportExcel = async () => {
     try {
       const columns = [
@@ -874,7 +817,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         totalShare: `${row.totalShare.toLocaleString('en-US')} د.ل ${row.shareNote}`,
       }));
 
-      // صف الإجمالي العام
       data.push({
         index: '-' as any,
         name: 'الإجمالي العام',
@@ -888,7 +830,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         totalShare: `${totals.totalShare.toLocaleString('en-US')} د.ل`,
       });
 
-      // إضافة أسطر فارغة ثم قسم ملاحظة وتوضيح في الإكسيل
       data.push({ index: '' as any, name: '', nationality: '', jobTitle: '', startDate: '', fileNumber: '', baseSalary: '', percentage: '', periodText: '', totalShare: '' });
       data.push({
         index: '*' as any,
@@ -992,7 +933,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             </div>
           </div>
 
-          {/* أزرار الإجراءات (طباعة وإكسيل) */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
               onClick={handleExportExcel}
@@ -1009,7 +949,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
-                transition: 'all 0.2s',
               }}
             >
               <i className="fa-solid fa-file-excel"></i>
@@ -1031,7 +970,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
-                transition: 'all 0.2s',
               }}
             >
               <i className="fa-solid fa-print"></i>
@@ -1040,7 +978,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           </div>
         </div>
 
-        {/* أزرار التبديل السريع بين الكيانات الثلاثة المحددة بالطلب */}
+        {/* أزرار التبديل السريع بين الكيانات الثلاثة */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             onClick={() => handleSwitchType('tax')}
@@ -1056,7 +994,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              transition: 'all 0.15s',
             }}
           >
             <i className="fa-solid fa-percent"></i>
@@ -1077,7 +1014,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              transition: 'all 0.15s',
             }}
           >
             <i className="fa-solid fa-handshake-angle"></i>
@@ -1098,7 +1034,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              transition: 'all 0.15s',
             }}
           >
             <i className="fa-solid fa-shield-heart"></i>
@@ -1107,7 +1042,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         </div>
       </div>
 
-      {/* ─── 2. شريط الفلاتر والخيارات الزمنية ─── */}
+      {/* ─── 2. شريط الفلاتر والخيارات ─── */}
       <div
         style={{
           background: 'var(--panel, #ffffff)',
@@ -1126,7 +1061,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             alignItems: 'end',
           }}
         >
-          {/* السنة */}
           <div className="form-group" style={{ margin: 0 }}>
             <label style={{ fontWeight: 800, fontSize: '13px', marginBottom: '6px', display: 'block' }}>
               السنة المالية
@@ -1151,7 +1085,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             </select>
           </div>
 
-          {/* نوع الفترة (النصف الأول، الثاني، الأرباع، شهر محدد، العام كاملاً) */}
           <div className="form-group" style={{ margin: 0 }}>
             <label style={{ fontWeight: 800, fontSize: '13px', marginBottom: '6px', display: 'block' }}>
               نوع الفترة المعتمدة
@@ -1181,7 +1114,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             </select>
           </div>
 
-          {/* إذا تم اختيار شهر محدد */}
           {periodType === 'month' && (
             <div className="form-group" style={{ margin: 0 }}>
               <label style={{ fontWeight: 800, fontSize: '13px', marginBottom: '6px', display: 'block' }}>
@@ -1208,7 +1140,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             </div>
           )}
 
-          {/* إذا تم اختيار فترة مخصصة */}
           {periodType === 'custom' && (
             <>
               <div className="form-group" style={{ margin: 0 }}>
@@ -1247,7 +1178,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             </>
           )}
 
-          {/* تاريخ التقرير (للطباعة) */}
           <div className="form-group" style={{ margin: 0 }}>
             <label style={{ fontWeight: 800, fontSize: '13px', marginBottom: '6px', display: 'block' }}>
               تاريخ استخراج الكشف
@@ -1269,7 +1199,6 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
             />
           </div>
 
-          {/* زر تحديث */}
           <button
             onClick={loadData}
             style={{
@@ -1294,7 +1223,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         </div>
       </div>
 
-      {/* ─── 3. بطاقات الملخص الإحصائي السريع ─── */}
+      {/* ─── 3. بطاقات الملخص السريع ─── */}
       <div
         style={{
           display: 'grid',
@@ -1442,7 +1371,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
         </div>
       </div>
 
-      {/* ─── 4. نموذج المستند المعتمد المطابق تماماً للصورة ─── */}
+      {/* ─── 4. نموذج المستند المعتمد المطابق تماماً لصورة النموذج ─── */}
       <div
         style={{
           background: '#ffffff',
@@ -1453,7 +1382,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           marginBottom: '25px',
         }}
       >
-        {/* الترويسة العلوية المطابقة تماماً للمستند المعروض */}
+        {/* الترويسة العلوية */}
         <div
           style={{
             display: 'flex',
@@ -1474,7 +1403,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           <div style={{ flex: 1, textAlign: 'left' }}>التاريخ: {reportDate}</div>
         </div>
 
-        {/* الجدول الرئيسي لكشف المرتبات والاستقطاعات */}
+        {/* الجدول الرئيسي */}
         <div style={{ overflowX: 'auto' }}>
           <table
             style={{
@@ -1571,7 +1500,7 @@ export function TaxSSReport({ type: initialType = 'tax' }: { type?: ReportEntity
           </table>
         </div>
 
-        {/* ─── قسم ملاحظة وتوضيح المطابق تماماً لصورة النموذج المرفقة ─── */}
+        {/* ─── قسم ملاحظة وتوضيح ─── */}
         <div style={{ borderTop: '2px solid #0f172a', background: '#ffffff' }}>
           <div
             style={{
