@@ -314,7 +314,8 @@ function hasAccessToRoute(
       '/reports/agent-monthly-ledger',
       '/reports/comprehensive-production',
       '/reports/tax',
-      '/reports/social-security'
+      '/reports/social-security',
+      '/reports/solidarity'
     ],
     'المحاسب المالي (عرض فقط)': [
       '/reports/financial-statistics',
@@ -341,7 +342,8 @@ function hasAccessToRoute(
       '/reports/agent-monthly-ledger',
       '/reports/comprehensive-production',
       '/reports/tax',
-      '/reports/social-security'
+      '/reports/social-security',
+      '/reports/solidarity'
     ],
     'المحاسب المالي (تعديل كامل)': [
       '/reports/financial-statistics',
@@ -368,7 +370,8 @@ function hasAccessToRoute(
       '/reports/agent-monthly-ledger',
       '/reports/comprehensive-production',
       '/reports/tax',
-      '/reports/social-security'
+      '/reports/social-security',
+      '/reports/solidarity'
     ],
     // تفصيل صلاحيات المحاسب المالي
     'المصارف والخزنة': ['/reports/treasury-banks'],
@@ -398,6 +401,7 @@ function hasAccessToRoute(
 
     'اجور ومرتبات ضرائب': ['/reports/tax'],
     'اجور ومرتبات ضمان': ['/reports/social-security'],
+    'اجور ومرتبات تضامن': ['/reports/solidarity'],
     'قائمة المدن': ['/cities'],
     'قائمة اللوحات': ['/plates'],
     'قائمة الألوان': ['/colors'],
@@ -597,6 +601,7 @@ const menuSections: SidebarSection[] = [
       { label: 'الأرشيف المالي', icon: 'fa-solid fa-folder-open', to: '/reports/financial-archive' },
       { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
       { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
+      { label: 'اجور ومرتبات تضامن', icon: 'fa-solid fa-shield-heart', to: '/reports/solidarity' },
       {
         label: 'المحاسب المالي', icon: 'fa-solid fa-file-contract', children: [
           { label: 'إحصائيات الإيرادات', icon: 'fa-solid fa-chart-pie', to: '/reports/revenue' },
@@ -963,6 +968,7 @@ const createMenuSections = (
 
     'اجور ومرتبات ضرائب': { label: 'اجور ومرتبات ضرائب', icon: 'fa-solid fa-percent', to: '/reports/tax' },
     'اجور ومرتبات ضمان': { label: 'اجور ومرتبات ضمان', icon: 'fa-solid fa-handshake-angle', to: '/reports/social-security' },
+    'اجور ومرتبات تضامن': { label: 'اجور ومرتبات تضامن', icon: 'fa-solid fa-shield-heart', to: '/reports/solidarity' },
     'قائمة المدن': { label: 'قائمة المدن', icon: 'fa-solid fa-city', to: '/cities' },
     'قائمة اللوحات': { label: 'قائمة اللوحات', icon: 'fa-solid fa-car', to: '/plates' },
     'قائمة الألوان': { label: 'قائمة الألوان', icon: 'fa-solid fa-palette', to: '/colors' },
@@ -1008,6 +1014,7 @@ const createMenuSections = (
     '/reports/monthly-account-closures-report',
     '/reports/tax',
     '/reports/social-security',
+    '/reports/solidarity',
     ...(SHOW_BANK_RECONCILIATION ? ['/reports/bank-reconciliation'] : []),
     '/reports/financial-archive',
     '/reports/indemnities',
@@ -1306,7 +1313,8 @@ const createMenuSections = (
       '/reports/employee-salaries',
       '/reports/financial-archive',
       '/reports/tax',
-      '/reports/social-security'
+      '/reports/social-security',
+      '/reports/solidarity'
     ];
     const accountantOrder = [
       '/reports/revenue',
@@ -2103,6 +2111,7 @@ export default function App() {
                   <Route path="/reports/employee-salaries" element={<AuthorizedRoute requiredPath="/reports/employee-salaries"><EmployeeSalaries /></AuthorizedRoute>} />
                   <Route path="/reports/tax" element={<AuthorizedRoute requiredPath="/reports/tax"><TaxSSReport type="tax" /></AuthorizedRoute>} />
                   <Route path="/reports/social-security" element={<AuthorizedRoute requiredPath="/reports/social-security"><TaxSSReport type="social_security" /></AuthorizedRoute>} />
+                  <Route path="/reports/solidarity" element={<AuthorizedRoute requiredPath="/reports/solidarity"><TaxSSReport type="solidarity" /></AuthorizedRoute>} />
                   <Route path="/reports/expenses" element={<AuthorizedRoute requiredPath="/reports/expenses"><ExpenseManagement activeTabOverride="expenses" /></AuthorizedRoute>} />
                   <Route path="/reports/expenses/:id" element={<AuthorizedRoute requiredPath="/reports/expenses"><ViewExpenseDetails /></AuthorizedRoute>} />
                   <Route path="/reports/indemnities" element={<AuthorizedRoute requiredPath="/reports/indemnities"><CompensationsList /></AuthorizedRoute>} />
