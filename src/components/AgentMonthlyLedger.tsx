@@ -7,6 +7,7 @@ import AgentSalariesModal from './AgentSalariesModal';
 import AgencyCancellations from './AgencyCancellations';
 import AllAgentRequests from './AllAgentRequests';
 import ProfileUpdateRequestsList from './ProfileUpdateRequestsList';
+import { getBranchHeaders } from '../utils/branchContext';
 
 const ARABIC_MONTHS_LDG = [
   'يناير','فبراير','مارس','أبريل','مايو','يونيو',
@@ -874,10 +875,23 @@ export default function AgentMonthlyLedger() {
     const loadAgents = async () => {
       try {
         const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        let currentUserId = '';
+        try {
+          if (userStr) {
+            const u = JSON.parse(userStr);
+            if (u && u.id) currentUserId = u.id.toString();
+          }
+        } catch {}
+
+        const branchHeaders = getBranchHeaders();
+
         const res = await fetch(`${API_BASE_URL}/branches-agents?status=نشط`, {
           headers: {
             'Accept': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...(currentUserId ? { 'X-User-Id': currentUserId } : {}),
+            ...branchHeaders,
           },
         });
         if (res.ok) {
@@ -894,6 +908,14 @@ export default function AgentMonthlyLedger() {
       }
     };
     loadAgents();
+
+    const handleBranchChanged = () => {
+      loadAgents();
+    };
+    window.addEventListener('branchChanged', handleBranchChanged);
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChanged);
+    };
   }, []);
 
   const fetchLedger = async (agentId: number, exclude?: boolean, docType?: string) => {
@@ -905,7 +927,7 @@ export default function AgentMonthlyLedger() {
       const token = localStorage.getItem('token');
       const res = await fetch(
         `${API_BASE_URL}/financial-statistics/agent-monthly-ledger?agent_id=${agentId}&exclude_canceled=${ex ? '1' : '0'}&document_type=${dt}`,
-        { headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+        { headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...getBranchHeaders() } }
       );
       if (!res.ok) throw new Error();
       const data: LedgerData = await res.json();
