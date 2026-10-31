@@ -38,6 +38,7 @@ interface MonthRow {
   cancellation_fees?: number;
   total_sales: number;
   agent_share: number;
+  company_sales_share?: number;
   company_share: number;
   carried_balance: number;
   paid_amount: number;
@@ -69,6 +70,7 @@ interface LedgerSummary {
   total_cancellation_fees?: number;
   total_sales: number;
   total_agent_share: number;
+  total_company_sales_share?: number;
   total_company_share: number;
   total_paid: number;
   total_remaining: number;
@@ -116,8 +118,10 @@ interface MonthDocsSummary {
   active_documents?: number;
   expired_documents?: number;
   canceled_documents?: number;
+  total_cancellation_fees?: number;
   total_sales: number;
   total_agent_share: number;
+  total_company_sales_share?: number;
   total_company_share: number;
 }
 
@@ -825,6 +829,174 @@ export default function AgentMonthlyLedger() {
       url += `&exclude_canceled=1`;
     }
     window.open(url, '_blank');
+  };
+
+  const handlePrintLedgerSummary = () => {
+    if (!ledger) return;
+    const w = window.open('', '_blank', 'width=1000,height=750');
+    if (!w) {
+      showToast('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
+      return;
+    }
+    const printDate = new Date().toLocaleDateString('ar-LY', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const logoSrc = resolveAgentPublicUrl('/img/logo.png');
+
+    const rowsHtml = ledger.months.map((r, i) => `
+      <tr>
+        <td style="text-align:center;">${i + 1}</td>
+        <td style="font-weight:700;">${r.month_label}</td>
+        <td style="text-align:center;">${r.percentage}%</td>
+        <td style="text-align:center;">${r.document_count}</td>
+        <td style="text-align:center; color:#16a34a; font-weight:700;">${r.active_count ?? 0}</td>
+        <td style="text-align:center; color:#dc2626; font-weight:700;">
+          ${r.canceled_count ?? 0}
+          ${(r.cancellation_fees ?? 0) > 0 ? `<div style="font-size:9.5px;color:#d97706;">(${fmt(r.cancellation_fees ?? 0)} د.ل)</div>` : ''}
+        </td>
+        <td style="text-align:center; font-weight:700;">${fmt(r.total_sales)} د.ل</td>
+        <td style="text-align:center; font-weight:700; color:#7c3aed;">${fmt(r.agent_share)} د.ل</td>
+        <td style="text-align:center; font-weight:700; color:#0d9488;">
+          ${fmt(r.company_share)} د.ل
+          ${(r.cancellation_fees ?? 0) > 0 ? `<div style="font-size:8.5px;color:#92400e;">(منها ${fmt(r.cancellation_fees ?? 0)} رسوم إلغاء)</div>` : ''}
+        </td>
+        <td style="text-align:center; color:#16a34a; font-weight:700;">${fmt(r.paid_amount)} د.ل</td>
+        <td style="text-align:center; font-weight:800; color:${r.remaining > 0 ? '#dc2626' : '#16a34a'};">${fmt(r.remaining)} د.ل</td>
+      </tr>
+    `).join('');
+
+    w.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>كشف الحساب الشهري والمطابقة المالية - ${ledger.agent.agency_name}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+    @page { size: A4 landscape; margin: 8mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-family: 'Cairo', sans-serif; font-size: 11px; margin: 0; padding: 0; color: #0f172a; background: #fff; line-height: 1.4; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 8px; margin-bottom: 12px; }
+    .company-title { font-size: 18px; font-weight: 900; color: #0369a1; }
+    .doc-subtitle { font-size: 12px; color: #64748b; font-weight: 700; }
+    .agent-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; margin-bottom: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .agent-item { font-size: 11px; }
+    .agent-item span { color: #64748b; font-weight: 700; }
+    .agent-item strong { color: #0f172a; font-weight: 800; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10.5px; }
+    th { background: #f1f5f9; color: #1e293b; border: 1px solid #94a3b8; padding: 6px 4px; font-weight: 800; text-align: center; }
+    td { border: 1px solid #cbd5e1; padding: 5px 4px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; margin-bottom: 12px; }
+    .summary-card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; background: #f8fafc; }
+    .summary-card.highlight { background: #fffbeb; border-color: #f59e0b; }
+    .summary-card.primary { background: #eff6ff; border-color: #3b82f6; }
+    .summary-card.danger { background: #fef2f2; border-color: #ef4444; }
+    .summary-card.success { background: #f0fdf4; border-color: #10b981; }
+    .card-label { font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 3px; }
+    .card-val { font-size: 15px; font-weight: 900; color: #0f172a; }
+    .footer-signatures { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 10px; }
+    .sig-col { width: 35%; text-align: center; border-top: 1px dashed #64748b; padding-top: 8px; font-size: 11px; font-weight: 800; }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="header">
+    <div>
+      <div class="company-title">شركة المدار الليبي للتأمين</div>
+      <div class="doc-subtitle">كشف الحساب الشهري والمطابقة المالية المعتمدة للوكيل</div>
+    </div>
+    <div style="text-align:left;">
+      <img src="${logoSrc}" style="max-height: 48px;" alt="Logo" onerror="this.style.display='none'" />
+      <div style="font-size: 9.5px; color: #64748b; margin-top: 2px;">تاريخ الاستخراج: ${printDate}</div>
+    </div>
+  </div>
+
+  <div class="agent-box">
+    <div class="agent-item"><span>اسم الوكالة:</span> <strong>${ledger.agent.agency_name}</strong></div>
+    <div class="agent-item"><span>كود الوكيل:</span> <strong>${ledger.agent.code}</strong></div>
+    <div class="agent-item"><span>المسؤول:</span> <strong>${ledger.agent.agent_name}</strong></div>
+    <div class="agent-item"><span>الحالة:</span> <strong>${ledger.agent.status || 'نشط'}</strong></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:25px;">#</th>
+        <th>الشهر / الفترة</th>
+        <th style="width:50px;">النسبة</th>
+        <th style="width:55px;">إجمالي الوثائق</th>
+        <th style="width:50px;">نشطة</th>
+        <th style="width:55px;">ملغية</th>
+        <th>إجمالي المبيعات</th>
+        <th>عمولة الوكيل</th>
+        <th>حصة الشركة</th>
+        <th>المسدد</th>
+        <th>المتبقي المطلوب</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+    <tfoot>
+      <tr style="background:#f1f5f9; font-weight:800;">
+        <td colspan="3" style="text-align:right; font-weight:900;">المجموع العام</td>
+        <td style="text-align:center;">${ledger.summary.total_documents}</td>
+        <td style="text-align:center; color:#16a34a;">${ledger.summary.active_documents ?? 0}</td>
+        <td style="text-align:center; color:#dc2626;">${ledger.summary.canceled_documents ?? 0}</td>
+        <td style="text-align:center;">${fmt(ledger.summary.total_sales)} د.ل</td>
+        <td style="text-align:center; color:#7c3aed;">${fmt(ledger.summary.total_agent_share)} د.ل</td>
+        <td style="text-align:center; color:#0d9488;">${fmt(ledger.summary.total_company_share)} د.ل</td>
+        <td style="text-align:center; color:#16a34a;">${fmt(ledger.summary.total_paid)} د.ل</td>
+        <td style="text-align:center; color:${ledger.summary.total_remaining > 0 ? '#dc2626' : '#16a34a'}; font-weight:900;">${fmt(ledger.summary.total_remaining)} د.ل</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- بيان نهاية التقرير والتسوية المالية -->
+  <div style="font-weight:900; font-size:12px; margin-top:12px; color:#0369a1; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">
+    بيان التسوية والمطابقة المالية المعتمدة (نهاية التقرير):
+  </div>
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="card-label">إجمالي المبيعات (الوثائق السارية)</div>
+      <div class="card-val">${fmt(ledger.summary.total_sales)} د.ل</div>
+    </div>
+    <div class="summary-card" style="border-color:#7c3aed; background:#faf5ff;">
+      <div class="card-label" style="color:#7c3aed;">عمولة الوكيل (كاملة دون أي استقطاع)</div>
+      <div class="card-val" style="color:#7c3aed;">${fmt(ledger.summary.total_agent_share)} د.ل</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">حصة الشركة من المبيعات</div>
+      <div class="card-val">${fmt(ledger.summary.total_company_sales_share || (ledger.summary.total_company_share - (ledger.summary.total_cancellation_fees || 0)))} د.ل</div>
+    </div>
+    <div class="summary-card highlight">
+      <div class="card-label" style="color:#b45309;">رسوم وثائق ملغية (مستحقة على الوكيل)</div>
+      <div class="card-val" style="color:#d97706;">${fmt(ledger.summary.total_cancellation_fees || 0)} د.ل</div>
+      <div style="font-size:9px; color:#92400e; margin-top:2px;">عدد ${ledger.summary.canceled_documents ?? 0} وثيقة ملغية - تُدفع نهاية الشهر</div>
+    </div>
+    <div class="summary-card primary">
+      <div class="card-label" style="color:#0369a1;">إجمالي المستحق للشركة (مبيعات + رسوم إلغاء)</div>
+      <div class="card-val" style="color:#0369a1;">${fmt(ledger.summary.total_company_share)} د.ل</div>
+    </div>
+    <div class="summary-card success">
+      <div class="card-label" style="color:#059669;">إجمالي المسدد (المستلم من الوكيل)</div>
+      <div class="card-val" style="color:#059669;">${fmt(ledger.summary.total_paid)} د.ل</div>
+    </div>
+    <div class="summary-card ${ledger.summary.total_remaining > 0 ? 'danger' : 'success'}">
+      <div class="card-label" style="color:${ledger.summary.total_remaining > 0 ? '#b91c1c' : '#059669'};">الرصيد المتبقي المطلوب سداده</div>
+      <div class="card-val" style="color:${ledger.summary.total_remaining > 0 ? '#dc2626' : '#059669'};">${fmt(ledger.summary.total_remaining)} د.ل</div>
+    </div>
+  </div>
+
+  <div class="footer-signatures">
+    <div class="sig-col">
+      <div>توقيع وختم الوكيل المعتمد</div>
+      <div style="margin-top:25px; font-weight:700;">${ledger.agent.agency_name}</div>
+    </div>
+    <div class="sig-col">
+      <div>اعتماد إدارة شؤون الوكلاء والفروع</div>
+      <div style="margin-top:25px; font-weight:700;">شركة المدار الليبي للتأمين</div>
+    </div>
+  </div>
+</body>
+</html>`);
+    w.document.close();
   };
   // ===================== End Agent Quick Action Helpers =====================
 
@@ -2077,6 +2249,7 @@ export default function AgentMonthlyLedger() {
         { header: 'الوثائق النشطة', key: 'active_count', width: 15 },
         { header: 'الوثائق المنتهية', key: 'expired_count', width: 15 },
         { header: 'الوثائق الملغية', key: 'canceled_count', width: 15 },
+        { header: 'رسوم وثائق ملغية (د.ل)', key: 'cancellation_fees', width: 20 },
         { header: 'إجمالي المبيعات (د.ل)', key: 'total_sales', width: 22 },
         { header: 'حصة الوكيل (د.ل)', key: 'agent_share', width: 20 },
         { header: 'حصة الشركة (د.ل)', key: 'company_share', width: 20 },
@@ -2092,6 +2265,7 @@ export default function AgentMonthlyLedger() {
         active_count: m.active_count ?? 0,
         expired_count: m.expired_count ?? 0,
         canceled_count: m.canceled_count ?? 0,
+        cancellation_fees: m.cancellation_fees ?? 0,
         total_sales: m.total_sales,
         agent_share: m.agent_share,
         company_share: m.company_share,
@@ -2342,6 +2516,28 @@ export default function AgentMonthlyLedger() {
               }}
             >
               <i className="fa-solid fa-print" /> طباعة تقرير الحوافظ (A4)
+            </button>
+
+            <button
+              onClick={handlePrintLedgerSummary}
+              title="طباعة كشف الحساب والمطابقة المالية المعتمدة لنهاية التقرير بصيغة A4"
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '13px',
+                color: 'white',
+                background: 'linear-gradient(135deg, #0f766e, #0d9488)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: "'Cairo',sans-serif",
+                boxShadow: '0 4px 12px rgba(15,118,110,0.3)',
+              }}
+            >
+              <i className="fa-solid fa-file-invoice-dollar" /> طباعة كشف الحساب والمطابقة (A4)
             </button>
 
             <button
@@ -3096,7 +3292,7 @@ export default function AgentMonthlyLedger() {
               </div>
             </div>
 
-            {/* Card 3: Company Share */}
+            {/* Card 3: Company Share from Sales */}
             <div
               className="stat-card"
               style={{
@@ -3109,15 +3305,42 @@ export default function AgentMonthlyLedger() {
               <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>حصة الشركة</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>حصة الشركة من المبيعات</span>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <i className="fa-solid fa-building-columns" style={{ fontSize: '20px' }} />
                   </div>
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
-                  {fmt(ledger.summary.total_company_share)}
+                  {fmt(ledger.summary.total_company_sales_share || (ledger.summary.total_company_share - (ledger.summary.total_cancellation_fees || 0)))}
                 </div>
-                <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, marginTop: '4px' }}>دينار ليبي</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, opacity: 0.85, marginTop: '4px' }}>دينار ليبي (صافي حصة المبيعات)</div>
+              </div>
+            </div>
+
+            {/* Card 4: Cancellation Fees (رسوم وثائق ملغية - مستحقة على الوكيل) */}
+            <div
+              className="stat-card"
+              style={{
+                ...statCardBase,
+                background: 'linear-gradient(135deg, #b45309 0%, #d97706 50%, #f59e0b 100%)',
+                color: 'white',
+              }}
+            >
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, opacity: 0.9 }}>رسوم وثائق ملغية</span>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-file-circle-xmark" style={{ fontSize: '20px' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {fmt(ledger.summary.total_cancellation_fees || 0)}
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 600, opacity: 0.9, marginTop: '4px' }}>
+                  دينار ليبي ({ledger.summary.canceled_documents ?? 0} وثيقة - تُدفع نهاية الشهر)
+                </div>
               </div>
             </div>
 
@@ -3387,8 +3610,8 @@ export default function AgentMonthlyLedger() {
                             {row.canceled_count ?? 0}
                           </span>
                           {row.cancellation_fees && row.cancellation_fees > 0 ? (
-                            <div style={{ fontSize: '10px', color: '#d97706', fontWeight: 800, marginTop: '2px' }} title="رسوم الإلغاء المستحقة لصالح الشركة">
-                              {fmt(row.cancellation_fees)} د.ل
+                            <div style={{ fontSize: '9.5px', color: '#d97706', fontWeight: 800, marginTop: '2px' }} title="رسوم وثائق ملغية مستحقة على الوكيل وتدفع نهاية الشهر">
+                              رسوم: {fmt(row.cancellation_fees)} د.ل
                             </div>
                           ) : null}
                         </td>
@@ -3418,8 +3641,8 @@ export default function AgentMonthlyLedger() {
                               {fmt(row.company_share)}
                               <span style={{ fontSize: '10px', color: 'var(--muted)', marginRight: '2px' }}>د.ل</span>
                               {row.cancellation_fees && row.cancellation_fees > 0 ? (
-                                <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: 800, marginTop: '2px' }} title="تتضمن حصة الشركة رسوم الإلغاء">
-                                  (منها {fmt(row.cancellation_fees)} رسوم إلغاء)
+                                <div style={{ fontSize: '9px', color: '#f59e0b', fontWeight: 800, marginTop: '2px' }} title="تشمل حصة الشركة رسوم الإلغاء">
+                                  ({fmt(row.company_sales_share || (row.company_share - row.cancellation_fees))} مبيعات + {fmt(row.cancellation_fees)} رسوم إلغاء)
                                 </div>
                               ) : null}
                             </>
@@ -3648,7 +3871,7 @@ export default function AgentMonthlyLedger() {
                         {ledger.summary.canceled_documents ?? 0}
                       </span>
                       {ledger.summary.total_cancellation_fees && ledger.summary.total_cancellation_fees > 0 ? (
-                        <div style={{ fontSize: '9.5px', color: '#d97706', fontWeight: 800, marginTop: '2px' }} title="إجمالي رسوم الإلغاء">
+                        <div style={{ fontSize: '9.5px', color: '#d97706', fontWeight: 800, marginTop: '2px' }} title="إجمالي رسوم الوثائق الملغية">
                           {fmt(ledger.summary.total_cancellation_fees)} د.ل
                         </div>
                       ) : null}
@@ -3660,13 +3883,16 @@ export default function AgentMonthlyLedger() {
                     <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#a78bfa' }}>
                       {fmt(ledger.summary.total_agent_share)}
                       <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
+                      <div style={{ fontSize: '9px', color: '#c4b5fd', fontWeight: 700, marginTop: '1px' }}>
+                        (كاملة بدون خصم)
+                      </div>
                     </td>
                     <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 900, fontSize: '12px', color: '#2dd4bf' }}>
                       {fmt(ledger.summary.total_company_share)}
                       <span style={{ fontSize: '10px', marginRight: '2px' }}>د.ل</span>
                       {ledger.summary.total_cancellation_fees && ledger.summary.total_cancellation_fees > 0 ? (
-                        <div style={{ fontSize: '9.5px', color: '#f59e0b', fontWeight: 800, marginTop: '2px' }} title="تتضمن إجمالي رسوم الإلغاء">
-                          (منها {fmt(ledger.summary.total_cancellation_fees)} رسوم إلغاء)
+                        <div style={{ fontSize: '9px', color: '#f59e0b', fontWeight: 800, marginTop: '2px' }} title="تتضمن إجمالي رسوم الإلغاء المستحقة">
+                          (شامل {fmt(ledger.summary.total_cancellation_fees)} رسوم إلغاء)
                         </div>
                       ) : null}
                     </td>
@@ -3691,6 +3917,207 @@ export default function AgentMonthlyLedger() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          </div>
+
+          {/* ====== بيان المطابقة والتسوية المالية لنهاية التقرير ====== */}
+          <div
+            style={{
+              marginTop: '24px',
+              background: 'var(--card-bg)',
+              borderRadius: '16px',
+              border: '1px solid var(--border)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '14px 22px',
+                background: 'linear-gradient(135deg, rgba(30, 64, 175, 0.08), rgba(14, 165, 233, 0.08))',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '17px',
+                  }}
+                >
+                  <i className="fa-solid fa-file-invoice-dollar" />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: 'var(--text)', fontFamily: "'Cairo',sans-serif" }}>
+                    بيان التسوية والمطابقة المالية المعتمدة (نهاية التقرير)
+                  </h4>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, fontFamily: "'Cairo',sans-serif" }}>
+                    موضحاً به مبيعات الوثائق، عمولة الوكيل، ورسوم الوثائق الملغية المستحقة للدفع نهاية الشهر
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handlePrintLedgerSummary}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    fontFamily: "'Cairo',sans-serif",
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(2,132,199,0.3)',
+                  }}
+                >
+                  <i className="fa-solid fa-print" /> طباعة البيان المالي A4
+                </button>
+              </div>
+            </div>
+
+            {/* Grid of Settlement Items */}
+            <div
+              style={{
+                padding: '20px 24px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                gap: '16px',
+              }}
+            >
+              {/* Item 1: Total Sales */}
+              <div style={{ background: 'var(--bg)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                  <i className="fa-solid fa-coins" style={{ color: '#3b82f6', marginLeft: '6px' }} />
+                  إجمالي قيمة المبيعات
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#3b82f6' }}>
+                  {fmt(ledger.summary.total_sales)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
+                  من {ledger.summary.active_documents ?? 0} وثيقة نشطة وسارية
+                </div>
+              </div>
+
+              {/* Item 2: Agent Commission */}
+              <div style={{ background: 'rgba(124, 58, 237, 0.05)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+                <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: 700, marginBottom: '4px' }}>
+                  <i className="fa-solid fa-hand-holding-dollar" style={{ marginLeft: '6px' }} />
+                  عمولة الوكيل المستحقة
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#7c3aed' }}>
+                  {fmt(ledger.summary.total_agent_share)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#059669', fontWeight: 700, marginTop: '2px' }}>
+                  ✓ كاملة دون أي استقطاع لرسوم الإلغاء
+                </div>
+              </div>
+
+              {/* Item 3: Company Share from Sales */}
+              <div style={{ background: 'rgba(13, 148, 136, 0.05)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(13, 148, 136, 0.2)' }}>
+                <div style={{ fontSize: '11px', color: '#0d9488', fontWeight: 700, marginBottom: '4px' }}>
+                  <i className="fa-solid fa-building-columns" style={{ marginLeft: '6px' }} />
+                  حصة الشركة من المبيعات
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#0d9488' }}>
+                  {fmt(ledger.summary.total_company_sales_share || (ledger.summary.total_company_share - (ledger.summary.total_cancellation_fees || 0)))} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
+                  صافي حصة الشركة من عقود التأمين
+                </div>
+              </div>
+
+              {/* Item 4: CANCELLATION FEES (رسوم وثائق ملغية) */}
+              <div
+                style={{
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                }}
+              >
+                <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 800, marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>
+                    <i className="fa-solid fa-file-circle-xmark" style={{ marginLeft: '6px' }} />
+                    رسوم وثائق ملغية
+                  </span>
+                  <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '9.5px', padding: '1px 6px', borderRadius: '6px' }}>
+                    {ledger.summary.canceled_documents ?? 0} وثيقة
+                  </span>
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#d97706' }}>
+                  {fmt(ledger.summary.total_cancellation_fees || 0)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#b45309', fontWeight: 700, marginTop: '2px' }}>
+                  مستحقة في حساب الوكيل ويدفعها نهاية الشهر
+                </div>
+              </div>
+
+              {/* Item 5: Total Due to Company */}
+              <div style={{ background: 'var(--bg)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px' }}>
+                  <i className="fa-solid fa-receipt" style={{ color: '#0284c7', marginLeft: '6px' }} />
+                  إجمالي المستحق للشركة
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#0284c7' }}>
+                  {fmt(ledger.summary.total_company_share)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
+                  (حصة المبيعات + رسوم الوثائق الملغية)
+                </div>
+              </div>
+
+              {/* Item 6: Total Paid */}
+              <div style={{ background: 'rgba(5, 150, 105, 0.05)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(5, 150, 105, 0.2)' }}>
+                <div style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginBottom: '4px' }}>
+                  <i className="fa-solid fa-circle-check" style={{ marginLeft: '6px' }} />
+                  المسدد من الوكيل (المستلم)
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#059669' }}>
+                  {fmt(ledger.summary.total_paid)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#059669', marginTop: '2px', fontWeight: 600 }}>
+                  إيصالات قبض وتحويلات معتمدة
+                </div>
+              </div>
+
+              {/* Item 7: Remaining Balance */}
+              <div
+                style={{
+                  background: ledger.summary.total_remaining > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(5, 150, 105, 0.08)',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: `1.5px solid ${ledger.summary.total_remaining > 0 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(5, 150, 105, 0.35)'}`,
+                }}
+              >
+                <div style={{ fontSize: '11px', color: ledger.summary.total_remaining > 0 ? '#dc2626' : '#059669', fontWeight: 800, marginBottom: '4px' }}>
+                  <i className={`fa-solid ${ledger.summary.total_remaining > 0 ? 'fa-triangle-exclamation' : 'fa-check-double'}`} style={{ marginLeft: '6px' }} />
+                  الرصيد المتبقي المطلوب سداده
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: ledger.summary.total_remaining > 0 ? '#dc2626' : '#059669' }}>
+                  {fmt(ledger.summary.total_remaining)} <span style={{ fontSize: '11px', fontWeight: 700 }}>د.ل</span>
+                </div>
+                <div style={{ fontSize: '10px', color: ledger.summary.total_remaining > 0 ? '#b91c1c' : '#047857', fontWeight: 700, marginTop: '2px' }}>
+                  {ledger.summary.total_remaining > 0 ? 'مطلوب توريده لحساب الشركة' : 'الحساب خالص ومسدد بالكامل'}
+                </div>
+              </div>
             </div>
           </div>
         </>
@@ -3921,7 +4348,7 @@ export default function AgentMonthlyLedger() {
                     fontWeight: 700,
                   }}
                 >
-                  💼 حصة الوكيل: <strong style={{ color: '#8b5cf6' }}>{fmt(monthDocsSummary.total_agent_share)} د.ل</strong>
+                  💼 عمولة الوكيل: <strong style={{ color: '#8b5cf6' }}>{fmt(monthDocsSummary.total_agent_share)} د.ل</strong>
                 </div>
                 <div
                   style={{
@@ -3934,7 +4361,37 @@ export default function AgentMonthlyLedger() {
                     fontWeight: 700,
                   }}
                 >
-                  🏢 حصة الشركة: <strong style={{ color: '#10b981' }}>{fmt(monthDocsSummary.total_company_share)} د.ل</strong>
+                  🏢 حصة الشركة من المبيعات: <strong style={{ color: '#10b981' }}>{fmt(monthDocsSummary.total_company_sales_share || (monthDocsSummary.total_company_share - (monthDocsSummary.total_cancellation_fees || 0)))} د.ل</strong>
+                </div>
+                {monthDocsSummary.total_cancellation_fees && monthDocsSummary.total_cancellation_fees > 0 ? (
+                  <div
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      padding: '8px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      fontSize: '12px',
+                      fontFamily: "'Cairo',sans-serif",
+                      fontWeight: 800,
+                      color: '#d97706',
+                    }}
+                  >
+                    ⚠️ رسوم وثائق ملغية (مستحقة على الوكيل): <strong>{fmt(monthDocsSummary.total_cancellation_fees)} د.ل</strong>
+                  </div>
+                ) : null}
+                <div
+                  style={{
+                    background: 'rgba(2, 132, 199, 0.1)',
+                    padding: '8px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(2, 132, 199, 0.3)',
+                    fontSize: '12px',
+                    fontFamily: "'Cairo',sans-serif",
+                    fontWeight: 800,
+                    color: '#0284c7',
+                  }}
+                >
+                  📋 إجمالي المستحق للشركة: <strong>{fmt(monthDocsSummary.total_company_share)} د.ل</strong>
                 </div>
               </div>
             )}
