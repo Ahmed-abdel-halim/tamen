@@ -103,7 +103,7 @@ export default function MonthlyAccountClosure() {
   const [availableInsuranceTypes, setAvailableInsuranceTypes] = useState<string[]>([]);
   const [allDocuments, setAllDocuments] = useState<Document[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [summary, setSummary] = useState({ total_agent_amount: 0, total_company_amount: 0, due_amount: 0, paid_vouchers_amount: 0, total_vouchers_all_time: 0 });
+  const [summary, setSummary] = useState({ total_agent_amount: 0, total_company_amount: 0, due_amount: 0, cancellation_fees: 0, canceled_docs_count: 0, paid_vouchers_amount: 0, total_vouchers_all_time: 0 });
   const [paidAmount, setPaidAmount] = useState<string>("");
   const [originalPaidAmount, setOriginalPaidAmount] = useState<number>(0); // القيمة المدفوعة الأصلية من جميع الوثائق
   const [loading, setLoading] = useState(false);
@@ -182,17 +182,28 @@ export default function MonthlyAccountClosure() {
   );
 
   // دالة لفلترة الوثائق حسب نوع التأمين
-  const filterDocumentsByInsuranceType = (docs: Document[], insuranceType: string, paidAmountValue: number = 0, vouchersData?: { monthly: number, allTime: number }) => {
+  const filterDocumentsByInsuranceType = (
+    docs: Document[], 
+    insuranceType: string, 
+    paidAmountValue: number = 0, 
+    vouchersData?: { monthly: number, allTime: number },
+    feesData?: { cancellationFees: number, canceledDocsCount: number }
+  ) => {
     const totalCompanyAmountAll = docs.reduce((sum, doc) => sum + doc.company_amount, 0);
+    const activeCancellationFees = feesData ? feesData.cancellationFees : (summary.cancellation_fees || 0);
+    const activeCanceledCount = feesData ? feesData.canceledDocsCount : (summary.canceled_docs_count || 0);
     
     if (insuranceType === "all") {
       setDocuments(docs);
       // حساب الملخص من جميع الوثائق
       const totalAgentAmount = docs.reduce((sum, doc) => sum + doc.agent_amount, 0);
+      const totalDue = totalCompanyAmountAll + activeCancellationFees;
       setSummary({
         total_agent_amount: totalAgentAmount,
-        total_company_amount: totalCompanyAmountAll,
-        due_amount: totalCompanyAmountAll,
+        total_company_amount: totalDue,
+        due_amount: totalDue,
+        cancellation_fees: activeCancellationFees,
+        canceled_docs_count: activeCanceledCount,
         paid_vouchers_amount: vouchersData ? vouchersData.monthly : summary.paid_vouchers_amount,
         total_vouchers_all_time: vouchersData ? vouchersData.allTime : summary.total_vouchers_all_time,
       });
@@ -273,10 +284,13 @@ export default function MonthlyAccountClosure() {
       // حساب الملخص من الوثائق المفلترة فقط
       const totalAgentAmount = filtered.reduce((sum, doc) => sum + doc.agent_amount, 0);
       const totalCompanyAmount = filtered.reduce((sum, doc) => sum + doc.company_amount, 0);
+      const totalDue = totalCompanyAmount + activeCancellationFees;
       setSummary({
         total_agent_amount: totalAgentAmount,
-        total_company_amount: totalCompanyAmount,
-        due_amount: totalCompanyAmount,
+        total_company_amount: totalDue,
+        due_amount: totalDue,
+        cancellation_fees: activeCancellationFees,
+        canceled_docs_count: activeCanceledCount,
         paid_vouchers_amount: vouchersData ? vouchersData.monthly : summary.paid_vouchers_amount,
         total_vouchers_all_time: vouchersData ? vouchersData.allTime : summary.total_vouchers_all_time,
       });
@@ -365,6 +379,8 @@ export default function MonthlyAccountClosure() {
         
         const vouchersMonthly = Number(data.summary.paid_vouchers_amount || 0);
         const vouchersAllTime = Number(data.summary.total_vouchers_all_time || 0);
+        const cancellationFees = Number(data.summary.cancellation_fees || 0);
+        const canceledDocsCount = Number(data.summary.canceled_docs_count || 0);
         const closurePaid = data.closure ? Number(data.closure.paid_amount) : 0;
         const paidAmountValue = Math.max(vouchersMonthly, closurePaid);
         
@@ -373,7 +389,13 @@ export default function MonthlyAccountClosure() {
         setNotes(data.closure?.notes || "");
         
         // فلترة البيانات حسب نوع التأمين المحدد (سيتم حساب summary و paidAmount تلقائياً)
-        filterDocumentsByInsuranceType(fetchedDocuments, selectedInsuranceType, paidAmountValue, { monthly: vouchersMonthly, allTime: vouchersAllTime });
+        filterDocumentsByInsuranceType(
+          fetchedDocuments, 
+          selectedInsuranceType, 
+          paidAmountValue, 
+          { monthly: vouchersMonthly, allTime: vouchersAllTime },
+          { cancellationFees, canceledDocsCount }
+        );
       } else {
         throw new Error(data.message || 'حدث خطأ');
       }
@@ -384,6 +406,8 @@ export default function MonthlyAccountClosure() {
         total_agent_amount: 0, 
         total_company_amount: 0, 
         due_amount: 0,
+        cancellation_fees: 0,
+        canceled_docs_count: 0,
         paid_vouchers_amount: 0,
         total_vouchers_all_time: 0
       });
@@ -603,6 +627,7 @@ export default function MonthlyAccountClosure() {
                 <thead>
                   <tr>
                     <th>القيمة المستحقة (الشركة)</th>
+                    ${(closure.cancellation_fees || 0) > 0 ? `<th>رسوم وثائق ملغية</th>` : ''}
                     <th>القيمة المستلمة (المدفوعة)</th>
                     <th>القيمة المتبقية (الديون)</th>
                   </tr>
@@ -610,6 +635,7 @@ export default function MonthlyAccountClosure() {
                 <tbody>
                   <tr>
                     <td>${formatCurrency(closure.due_amount)}</td>
+                    ${(closure.cancellation_fees || 0) > 0 ? `<td style="color:#d97706; font-weight:bold;">${formatCurrency(closure.cancellation_fees)}</td>` : ''}
                     <td style="font-weight: bold; color: #059669;">${formatCurrency(closure.paid_amount)}</td>
                     <td style="color: ${closure.remaining_amount > 0 ? '#dc2626' : '#059669'}; font-weight: bold;">
                        ${formatCurrency(closure.remaining_amount)}
@@ -1187,7 +1213,7 @@ export default function MonthlyAccountClosure() {
               marginBottom: '24px',
             }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>القيمة المستحقة</label>
+                <label>القيمة المستحقة للشركة</label>
                 <input
                   type="text"
                   value={formatCurrency(summary.due_amount)}
@@ -1202,8 +1228,16 @@ export default function MonthlyAccountClosure() {
                     fontSize: 14,
                     minHeight: 42,
                     cursor: 'not-allowed',
+                    fontWeight: 'bold',
+                    color: '#0284c7',
                   }}
                 />
+                {summary.cancellation_fees > 0 && (
+                  <div style={{ fontSize: '11px', color: '#b45309', marginTop: '4px', fontWeight: 600 }}>
+                    <i className="fa-solid fa-triangle-exclamation" style={{ marginLeft: '4px' }}></i>
+                    تشمل {formatCurrency(summary.cancellation_fees)} رسوم وثائق ملغية ({summary.canceled_docs_count}) تُدفع نهاية الشهر
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>المدفوع</label>
