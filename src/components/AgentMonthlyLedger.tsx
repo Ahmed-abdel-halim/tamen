@@ -22,6 +22,16 @@ function ldgArabicMonth(dateStr: string): string {
   return `${ARABIC_MONTHS_LDG[m-1]} ${parts[0]}`;
 }
 
+export interface MonthTypeBreakdown {
+  type_label: string;
+  percentage: number;
+  document_count: number;
+  active_count: number;
+  canceled_count: number;
+  sales: number;
+  agent_share: number;
+}
+
 interface MonthRow {
   closure_id: number | null;
   year: number;
@@ -31,6 +41,12 @@ interface MonthRow {
   from_date: string;
   to_date: string;
   percentage: number;
+  is_multiple_percentages?: boolean;
+  percentage_label?: string;
+  percentage_summary_text?: string;
+  types_breakdown?: MonthTypeBreakdown[];
+  unique_percentages?: number[];
+  effective_percentage?: number;
   document_count: number;
   active_count?: number;
   expired_count?: number;
@@ -272,6 +288,13 @@ export default function AgentMonthlyLedger() {
   const [filterDocType, setFilterDocType] = useState('all');
   const [monthStatusFilter, setMonthStatusFilter] = useState<'all' | 'active' | 'expired' | 'canceled'>('all');
   const [exportingDocsExcel, setExportingDocsExcel] = useState(false);
+  const [activePercentagePopover, setActivePercentagePopover] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClosePopover = () => setActivePercentagePopover(null);
+    window.addEventListener('click', handleClosePopover);
+    return () => window.removeEventListener('click', handleClosePopover);
+  }, []);
 
   // Preview Document State
   const [previewDocModal, setPreviewDocModal] = useState<MonthDocItem | null>(null);
@@ -845,7 +868,11 @@ export default function AgentMonthlyLedger() {
       <tr>
         <td style="text-align:center;">${i + 1}</td>
         <td style="font-weight:700;">${r.month_label}</td>
-        <td style="text-align:center;">${r.percentage}%</td>
+        <td style="text-align:center;">
+          ${r.is_multiple_percentages 
+            ? `<div style="font-weight:900;color:#b45309;">متعددة</div><div style="font-size:8px;color:#64748b;">${r.unique_percentages && r.unique_percentages.length > 0 ? r.unique_percentages.join('%, ') + '%' : `${r.percentage}%`}</div>` 
+            : `${r.percentage}%`}
+        </td>
         <td style="text-align:center;">${r.document_count}</td>
         <td style="text-align:center; color:#16a34a; font-weight:700;">${r.active_count ?? 0}</td>
         <td style="text-align:center; color:#dc2626; font-weight:700;">
@@ -2245,6 +2272,7 @@ export default function AgentMonthlyLedger() {
     try {
       const columns = [
         { header: 'الشهر', key: 'month_label', width: 20 },
+        { header: 'النسبة المطبقة', key: 'percentage_display', width: 28 },
         { header: 'عدد الوثائق الإجمالي', key: 'document_count', width: 15 },
         { header: 'الوثائق النشطة', key: 'active_count', width: 15 },
         { header: 'الوثائق المنتهية', key: 'expired_count', width: 15 },
@@ -2261,6 +2289,9 @@ export default function AgentMonthlyLedger() {
 
       const data = ledger.months.map((m) => ({
         month_label: m.month_label,
+        percentage_display: m.is_multiple_percentages 
+          ? (m.percentage_summary_text || `متعددة (${m.unique_percentages ? m.unique_percentages.join('%, ') + '%' : `${m.percentage}%`})`)
+          : (m.percentage > 0 ? `${m.percentage}%` : '—'),
         document_count: m.document_count,
         active_count: m.active_count ?? 0,
         expired_count: m.expired_count ?? 0,
@@ -3577,13 +3608,106 @@ export default function AgentMonthlyLedger() {
                         <td style={{ ...td, textAlign: 'right', paddingRight: '8px', fontWeight: 800, color: 'var(--text)', fontSize: '12px' }}>
                           {row.month_label}
                         </td>
-                        <td style={td}>
-                          {row.percentage > 0 ? (
-                            <span style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#5b21b6', padding: '2px 8px', borderRadius: '20px', fontWeight: 800, fontSize: '11px' }}>
-                              {row.percentage}%
-                            </span>
-                          ) : (
+                        <td style={{ ...td, position: 'relative' }}>
+                          {row.document_count === 0 ? (
                             <span style={{ color: 'var(--muted)', fontSize: '11px' }}>—</span>
+                          ) : row.is_multiple_percentages ? (
+                            <div 
+                              style={{ 
+                                display: 'inline-flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                cursor: 'pointer',
+                                position: 'relative'
+                              }}
+                              title={row.percentage_summary_text || 'نسب متعددة حسب فئة التأمين (اضغط للتفاصيل)'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePercentagePopover(activePercentagePopover === row.month_key ? null : row.month_key);
+                              }}
+                            >
+                              <span style={{ 
+                                background: 'linear-gradient(135deg, #fef3c7, #fde68a)', 
+                                color: '#92400e', 
+                                border: '1px solid #f59e0b',
+                                padding: '2px 8px', 
+                                borderRadius: '12px', 
+                                fontWeight: 900, 
+                                fontSize: '11px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 1px 3px rgba(245, 158, 11, 0.2)'
+                              }}>
+                                <span>متعددة</span>
+                                <i className="fa-solid fa-layer-group" style={{ fontSize: '9px' }}></i>
+                              </span>
+                              <span style={{ fontSize: '9px', color: '#b45309', fontWeight: 800, marginTop: '2px' }}>
+                                {row.unique_percentages && row.unique_percentages.length > 0 
+                                  ? `${Math.min(...row.unique_percentages)}% - ${Math.max(...row.unique_percentages)}%` 
+                                  : `${row.percentage}%`}
+                              </span>
+
+                              {/* Popover showing breakdown per insurance type */}
+                              {activePercentagePopover === row.month_key && (
+                                <div 
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    right: '50%',
+                                    transform: 'translateX(50%)',
+                                    zIndex: 1000,
+                                    marginTop: '6px',
+                                    background: '#1e293b',
+                                    color: '#fff',
+                                    borderRadius: '10px',
+                                    padding: '10px 14px',
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.35)',
+                                    minWidth: '240px',
+                                    textAlign: 'right',
+                                    fontSize: '11px',
+                                    fontFamily: "'Cairo', sans-serif"
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 900, color: '#38bdf8', borderBottom: '1px solid #334155', paddingBottom: '4px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>📋 تفاصيل النسب — {row.month_label}</span>
+                                    <button 
+                                      onClick={() => setActivePercentagePopover(null)} 
+                                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '12px' }}
+                                    >✕</button>
+                                  </div>
+                                  {(row.types_breakdown || []).map((tb, tIdx) => (
+                                    <div key={tIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderBottom: '1px dashed #334155' }}>
+                                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{tb.type_label}:</span>
+                                      <span style={{ color: '#facc15', fontWeight: 900 }}>
+                                        {tb.percentage}% 
+                                        <span style={{ color: '#94a3b8', fontSize: '9.5px', marginRight: '4px' }}>({tb.document_count} وثيقة)</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {row.effective_percentage ? (
+                                    <div style={{ marginTop: '8px', paddingTop: '4px', borderTop: '1px solid #334155', fontSize: '10px', color: '#a7f3d0', fontWeight: 800 }}>
+                                      متوسط نسبة العمولة الفعلي: {row.effective_percentage}%
+                                    </div>
+                                  ) : null}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div 
+                              style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}
+                              title={row.types_breakdown?.[0]?.type_label ? `${row.types_breakdown[0].type_label}: ${row.percentage}%` : `${row.percentage}%`}
+                            >
+                              <span style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#5b21b6', padding: '2px 8px', borderRadius: '20px', fontWeight: 800, fontSize: '11px' }}>
+                                {row.percentage}%
+                              </span>
+                              {row.types_breakdown?.[0]?.type_label && row.document_count > 0 && (
+                                <span style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '2px', maxWidth: '85px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {row.types_breakdown[0].type_label}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td style={{ ...td, padding: '6px 4px' }}>
@@ -4218,6 +4342,45 @@ export default function AgentMonthlyLedger() {
                 ✕
               </button>
             </div>
+
+            {/* Type Percentages Banner inside monthDocsModal */}
+            {monthDocsModal.row.types_breakdown && monthDocsModal.row.types_breakdown.length > 0 && (
+              <div style={{
+                padding: '10px 24px',
+                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(124, 58, 237, 0.08))',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+                fontSize: '11.5px',
+                fontFamily: "'Cairo', sans-serif"
+              }}>
+                <span style={{ fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <i className="fa-solid fa-percent"></i> النسب المعتمدة لهذا الشهر:
+                </span>
+                {monthDocsModal.row.types_breakdown.map((tb, idx) => (
+                  <span key={idx} style={{
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '3px 10px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <strong style={{ color: 'var(--text)' }}>{tb.type_label}:</strong>
+                    <span style={{ color: '#7c3aed', fontWeight: 900 }}>{tb.percentage}%</span>
+                    <span style={{ color: 'var(--muted)', fontSize: '10px' }}>({tb.document_count} وثيقة)</span>
+                  </span>
+                ))}
+                {monthDocsModal.row.effective_percentage ? (
+                  <span style={{ marginRight: 'auto', color: '#059669', fontWeight: 800 }}>
+                    متوسط نسبة العمولة: {monthDocsModal.row.effective_percentage}%
+                  </span>
+                ) : null}
+              </div>
+            )}
 
             {/* Summary Stat Chips Bar (Interactive Filter Buttons) */}
             {monthDocsSummary && (
