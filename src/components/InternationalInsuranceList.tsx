@@ -440,15 +440,19 @@ export default function InternationalInsuranceList({ isArchive = false }: { isAr
 
         if (data.status === 'completed') {
           clearInterval(interval);
-          showToast(
-            `تمت المزامنة بنجاح! إضافة: ${data.created ?? 0}، تحديث: ${data.updated ?? 0}، فشل: ${data.failed ?? 0}`,
-            'success'
-          );
-          fetchDocuments();
+          if (data.errors && data.errors.length > 0 && Number(data.created || 0) === 0 && Number(data.updated || 0) === 0) {
+            showToast(`فشلت المزامنة: ${data.errors[0]}`, 'error');
+          } else {
+            showToast(
+              `تمت المزامنة بنجاح! إضافة: ${data.created ?? 0}، تحديث: ${data.updated ?? 0}، فشل: ${data.failed ?? 0}`,
+              'success'
+            );
+            fetchDocuments();
+          }
           setIsSyncing(false);
         } else if (data.status === 'failed') {
           clearInterval(interval);
-          showToast(data.message || 'فشلت عملية المزامنة', 'error');
+          showToast(data.message || (data.errors && data.errors[0]) || 'فشلت عملية المزامنة', 'error');
           setIsSyncing(false);
         }
         // If still 'running', keep polling
