@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { getActiveBranch, getBranchHeaders, type Branch } from '../utils/branchContext';
 
 interface RevenueSource {
   name: string;
@@ -28,14 +29,42 @@ export default function RevenueManagement() {
   const [stats, setStats] = useState<RevenueStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Branch Context State
+  const [activeBranch, setActiveBranchState] = useState<Branch | null>(() => {
+    const b = getActiveBranch();
+    if (b) return b;
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (u?.branch_id && !u?.is_admin) {
+        return { id: u.branch_id, name: u.name || 'فرع المستخدم', code: '', status: 'نشط' } as Branch;
+      }
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    const handleBranchChanged = (e: any) => {
+      const b = e?.detail ?? getActiveBranch();
+      setActiveBranchState(b);
+    };
+    window.addEventListener('branchChanged', handleBranchChanged);
+    return () => window.removeEventListener('branchChanged', handleBranchChanged);
+  }, []);
+
   useEffect(() => {
     fetchRevenueData();
-  }, []);
+  }, [activeBranch]);
 
   const fetchRevenueData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/financial-statistics`);
+      const branchParam = activeBranch?.id ? `?branch_id=${activeBranch.id}` : '';
+      const response = await fetch(`${API_BASE_URL}/financial-statistics${branchParam}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...getBranchHeaders(),
+        },
+      });
       if (response.ok) {
         const data = await response.json();
 
@@ -79,12 +108,12 @@ export default function RevenueManagement() {
       }));
 
       await generatePremiumExcel({
-        title: 'شركة المدار الليبي للتأمين - تقرير الإيرادات والمقبوضات المالية',
-        subtitle: `إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل | إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل | الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل`,
+        title: `شركة المدار الليبي للتأمين - ${activeBranch ? `تقرير إيرادات ${activeBranch.name}` : 'تقرير الإيرادات والمقبوضات المالية'}`,
+        subtitle: `${activeBranch ? `الفرع: ${activeBranch.name} | ` : ''}إجمالي المقبوضات: ${stats.total_paid.toLocaleString()} د.ل | إجمالي الإيرادات: ${stats.total_revenue.toLocaleString()} د.ل | الأرصدة المعلقة: ${stats.total_outstanding.toLocaleString()} د.ل`,
         columns,
         data,
-        fileName: 'تقرير_إيرادات_المدار',
-        qrData: `تقرير الإيرادات - شركة المدار الليبي\nإجمالي: ${stats.total_revenue.toLocaleString()} د.ل\nالمقبوض: ${stats.total_paid.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
+        fileName: activeBranch ? `تقرير_إيرادات_${activeBranch.name}` : 'تقرير_إيرادات_المدار',
+        qrData: `تقرير الإيرادات - شركة المدار الليبي\nالفرع: ${activeBranch ? activeBranch.name : 'كافة الفروع'}\nإجمالي: ${stats.total_revenue.toLocaleString()} د.ل\nالمقبوض: ${stats.total_paid.toLocaleString()} د.ل\nبواسطة: ${currentUser.name || 'النظام'}`
       });
 
       showToast('تم تصدير التقرير الاحترافي بنجاح', 'success');
@@ -96,7 +125,13 @@ export default function RevenueManagement() {
   const handlePrintAgentsRevenue = async () => {
     try {
       showToast('جاري تجهيز تقرير إيرادات الوكلاء...', 'success');
-      const response = await fetch(`${API_BASE_URL}/financial-statistics/all-agents-revenue`);
+      const branchParam = activeBranch?.id ? `?branch_id=${activeBranch.id}` : '';
+      const response = await fetch(`${API_BASE_URL}/financial-statistics/all-agents-revenue${branchParam}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...getBranchHeaders(),
+        },
+      });
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       
@@ -116,10 +151,12 @@ export default function RevenueManagement() {
         </tr>
       `).join('');
 
+      const reportTitle = activeBranch ? `تقرير إيرادات وكلاء ${activeBranch.name}` : 'تقرير إيرادات جميع الوكلاء';
+
       printWindow.document.write(`
         <html dir="rtl">
         <head>
-          <title>تقرير إيرادات جميع الوكلاء</title>
+          <title>${reportTitle}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
             @media print { 
@@ -141,7 +178,7 @@ export default function RevenueManagement() {
           <div class="header">
             <div>
               <h1>شركة المدار الليبي للتأمين</h1>
-              <p style="margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #334155;">تقرير إيرادات جميع الوكلاء</p>
+              <p style="margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #334155;">${reportTitle}</p>
             </div>
             <img src="/img/logo.png" style="height: 70px;">
           </div>
@@ -292,7 +329,9 @@ export default function RevenueManagement() {
       }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '24px' }}>قسم الإيرادات المالية</h2>
-          <p style={{ margin: '5px 0 0', opacity: 0.8, fontSize: '14px' }}>متابعة تدفقات الأموال والتحصيلات من كافة الفروع</p>
+          <p style={{ margin: '5px 0 0', opacity: 0.8, fontSize: '14px' }}>
+            {activeBranch ? `متابعة تدفقات الأموال والتحصيلات لـ ${activeBranch.name}` : 'متابعة تدفقات الأموال والتحصيلات من كافة الفروع'}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={handlePrintAgentsRevenue} style={{ background: '#0ea5e9', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>

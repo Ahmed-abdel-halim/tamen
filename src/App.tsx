@@ -1505,6 +1505,13 @@ export default function App() {
           }
         } catch {}
 
+        try {
+          const token = localStorage.getItem('token');
+          if (token && !headers.has('Authorization')) {
+            headers.set('Authorization', `Bearer ${token}`);
+          }
+        } catch {}
+
         options.headers = headers;
         args[1] = options;
       }

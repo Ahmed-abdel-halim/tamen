@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { getActiveBranch, getBranchHeaders, type Branch } from '../utils/branchContext';
 import '../styles/ComprehensiveProductionReport.css';
 
 interface DocumentItem {
@@ -72,6 +73,30 @@ export const ComprehensiveProductionReport: React.FC = () => {
   const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState<boolean>(false);
   const agentDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Branch Context State
+  const [activeBranch, setActiveBranchState] = useState<Branch | null>(() => {
+    const b = getActiveBranch();
+    if (b) return b;
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (u?.branch_id && !u?.is_admin) {
+        return { id: u.branch_id, name: u.name || 'فرع المستخدم', code: '', status: 'نشط' } as Branch;
+      }
+    } catch {}
+    return null;
+  });
+
+  // Listen to branch switcher changes
+  useEffect(() => {
+    const handleBranchChanged = (e: any) => {
+      const b = e?.detail ?? getActiveBranch();
+      setActiveBranchState(b);
+      setSelectedAgentId('all');
+    };
+    window.addEventListener('branchChanged', handleBranchChanged);
+    return () => window.removeEventListener('branchChanged', handleBranchChanged);
+  }, []);
+
   // Data States
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [sections, setSections] = useState<ReportSection[]>([]);
@@ -135,20 +160,24 @@ export const ComprehensiveProductionReport: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch list of agents
+  // Fetch list of agents (scoped to active branch)
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const cached = sessionStorage.getItem('cached_agents_light');
+        const branchKey = activeBranch?.id ? `branch_${activeBranch.id}` : 'all';
+        const cacheKey = `cached_agents_light_${branchKey}`;
+        const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) setAgents(parsed);
         }
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/branches-agents?light=1`, {
+        const branchParam = activeBranch?.id ? `&branch_id=${activeBranch.id}` : '';
+        const res = await fetch(`${API_BASE_URL}/branches-agents?light=1${branchParam}`, {
           headers: {
             'Accept': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...getBranchHeaders(),
           },
         });
         if (res.ok) {
@@ -156,7 +185,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
           const list = Array.isArray(d) ? d : (d.data || []);
           setAgents(list);
           try {
-            sessionStorage.setItem('cached_agents_light', JSON.stringify(list));
+            sessionStorage.setItem(cacheKey, JSON.stringify(list));
           } catch (e) {}
         }
       } catch (e) {
@@ -164,7 +193,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
       }
     };
     fetchAgents();
-  }, []);
+  }, [activeBranch]);
 
   // Fetch report data
   const fetchReportData = async () => {
@@ -173,6 +202,9 @@ export const ComprehensiveProductionReport: React.FC = () => {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
 
+      if (activeBranch?.id) {
+        params.append('branch_id', activeBranch.id.toString());
+      }
       if (selectedAgentId && selectedAgentId !== 'all') {
         params.append('agent_id', selectedAgentId);
       }
@@ -197,6 +229,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
         headers: {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...getBranchHeaders(),
         },
       });
 
@@ -218,7 +251,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
           issue_fees: 0,
           total: 0,
         });
-        setAgentLabel(json.data.agent_label || 'جميع الوكلاء والفروع (الكل)');
+        setAgentLabel(json.data.agent_label || (activeBranch ? `كافة وكلاء ${activeBranch.name}` : 'جميع الوكلاء والفروع (الكل)'));
         setPeriodLabel(json.data.period_label || '');
       }
     } catch (error: any) {
@@ -233,7 +266,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
     setSectionPages({});
     setSectionSearch({});
     fetchReportData();
-  }, [periodType, selectedYear, selectedMonth, fromDate, toDate, selectedDocType, selectedAgentId, excludeCanceled]);
+  }, [periodType, selectedYear, selectedMonth, fromDate, toDate, selectedDocType, selectedAgentId, excludeCanceled, activeBranch]);
 
   // Handle Direct A4 Print with support for summary vs detailed modes
   const handlePrintA4 = (mode: 'summary' | 'detailed' = 'summary') => {
@@ -270,6 +303,10 @@ export const ComprehensiveProductionReport: React.FC = () => {
     } else if (periodType === 'range' && fromDate && toDate) {
       params.append('from_date', fromDate);
       params.append('to_date', toDate);
+    }
+
+    if (activeBranch?.id) {
+      params.append('branch_id', activeBranch.id.toString());
     }
 
     params.append('print_mode', mode);
@@ -547,7 +584,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
             >
               <span>
                 {selectedAgentId === 'all'
-                  ? 'جميع الوكلاء والفروع (الكل)'
+                  ? (activeBranch ? `كافة وكلاء ${activeBranch.name}` : 'جميع الوكلاء والفروع (الكل)')
                   : selectedAgentObj
                   ? `${selectedAgentObj.agency_name} (${selectedAgentObj.code || ''})`
                   : 'اختر الوكيل...'}
@@ -577,7 +614,7 @@ export const ComprehensiveProductionReport: React.FC = () => {
                     }}
                   >
                     <i className="fa-solid fa-users" />
-                    <span>جميع الوكلاء والفروع (الكل)</span>
+                    <span>{activeBranch ? `كافة وكلاء ${activeBranch.name}` : 'جميع الوكلاء والفروع (الكل)'}</span>
                   </div>
                   {agents
                     .filter(

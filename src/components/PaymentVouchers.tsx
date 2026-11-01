@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
 import { canEditFinancial, ReadOnlyNotice } from '../utils/financialPermissions';
+import { getActiveBranch, getBranchHeaders, type Branch } from '../utils/branchContext';
 
 interface BranchAgent {
   id: number;
@@ -106,10 +107,33 @@ export default function PaymentVouchers() {
     });
   }, [vouchers, filterDateFrom, filterDateTo, filterSearch, filterType, filterMethod, filterAgentId]);
 
+  // Branch Context State
+  const [activeBranch, setActiveBranchState] = useState<Branch | null>(() => {
+    const b = getActiveBranch();
+    if (b) return b;
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (u?.branch_id && !u?.is_admin) {
+        return { id: u.branch_id, name: u.name || 'فرع المستخدم', code: '', status: 'نشط' } as Branch;
+      }
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    const handleBranchChanged = (e: any) => {
+      const b = e?.detail ?? getActiveBranch();
+      setActiveBranchState(b);
+      setFilterAgentId('');
+    };
+    window.addEventListener('branchChanged', handleBranchChanged);
+    return () => window.removeEventListener('branchChanged', handleBranchChanged);
+  }, []);
+
   useEffect(() => {
     fetchAgents();
     fetchVouchers();
-  }, []);
+  }, [activeBranch]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -128,10 +152,16 @@ export default function PaymentVouchers() {
 
   const fetchAgents = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/branches-agents`);
+      const branchParam = activeBranch?.id ? `?branch_id=${activeBranch.id}` : '';
+      const response = await fetch(`${API_BASE_URL}/branches-agents${branchParam}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...getBranchHeaders(),
+        },
+      });
       if (response.ok) {
         const data = await response.json();
-        setAgents(data);
+        setAgents(Array.isArray(data) ? data : (data.data || []));
       }
     } catch (error) {
       console.error('Error fetching agents:', error);
@@ -142,10 +172,17 @@ export default function PaymentVouchers() {
   const fetchVouchers = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/payment-vouchers`);
+      const branchParam = activeBranch?.id ? `?branch_id=${activeBranch.id}` : '';
+      const response = await fetch(`${API_BASE_URL}/payment-vouchers${branchParam}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...getBranchHeaders(),
+        },
+      });
       if (response.ok) {
         const data = await response.json();
-        const mappedVouchers = data.map((v: any) => ({
+        const rawList = Array.isArray(data) ? data : (data.data || []);
+        const mappedVouchers = rawList.map((v: any) => ({
           id: v.id,
           voucher_number: v.voucher_number,
           agent_id: v.branch_agent_id,

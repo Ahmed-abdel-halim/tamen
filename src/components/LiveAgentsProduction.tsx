@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import { showToast } from './Toast';
 import { generatePremiumExcel } from '../utils/excelGenerator';
+import { getActiveBranch, getBranchHeaders, type Branch } from '../utils/branchContext';
 import CustomDateInput from './CustomDateInput';
 
 interface DocTypeSummary {
@@ -69,6 +70,28 @@ export default function LiveAgentsProduction() {
   const [expandedAgentId, setExpandedAgentId] = useState<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
+  // Branch Context State
+  const [activeBranch, setActiveBranchState] = useState<Branch | null>(() => {
+    const b = getActiveBranch();
+    if (b) return b;
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (u?.branch_id && !u?.is_admin) {
+        return { id: u.branch_id, name: u.name || 'فرع المستخدم', code: '', status: 'نشط' } as Branch;
+      }
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    const handleBranchChanged = (e: any) => {
+      const b = e?.detail ?? getActiveBranch();
+      setActiveBranchState(b);
+    };
+    window.addEventListener('branchChanged', handleBranchChanged);
+    return () => window.removeEventListener('branchChanged', handleBranchChanged);
+  }, []);
+
   const getDateRange = (p: PresetType): { from: string; to: string } => {
     const now = new Date();
     const fmt = (d: Date) => d.toISOString().split('T')[0];
@@ -106,7 +129,13 @@ export default function LiveAgentsProduction() {
         return;
       }
       const typeParam = selectedDocType && selectedDocType !== 'all' ? `&doc_type=${encodeURIComponent(selectedDocType)}` : '';
-      const response = await fetch(`${API_BASE_URL}/financial-statistics/live-agents-production?from_date=${from}&to_date=${to}${typeParam}&exclude_canceled=1`);
+      const branchParam = activeBranch?.id ? `&branch_id=${activeBranch.id}` : '';
+      const response = await fetch(`${API_BASE_URL}/financial-statistics/live-agents-production?from_date=${from}&to_date=${to}${typeParam}${branchParam}&exclude_canceled=1`, {
+        headers: {
+          'Accept': 'application/json',
+          ...getBranchHeaders(),
+        },
+      });
       if (response.ok) {
         const result: ProductionData = await response.json();
         setData(result);
@@ -125,13 +154,13 @@ export default function LiveAgentsProduction() {
     if (preset !== 'custom') {
       fetchData();
     }
-  }, [preset, selectedDocType]);
+  }, [preset, selectedDocType, activeBranch]);
 
   useEffect(() => {
     if (preset === 'custom' && customFrom && customTo) {
       fetchData();
     }
-  }, [customFrom, customTo, selectedDocType]);
+  }, [customFrom, customTo, selectedDocType, activeBranch]);
 
   const filteredAgents = (data?.agents || [])
     .filter(a =>
