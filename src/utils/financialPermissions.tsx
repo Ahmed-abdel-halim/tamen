@@ -35,7 +35,7 @@ export function getCurrentUserPermissions(): CurrentUserPermissions {
  * 3. يمتلك صلاحية قسم محددة ولم يتم تعيينه كـ 'المحاسب المالي (عرض فقط)' -> نعم
  * 4. إذا كان يمتلك فقط 'المحاسب المالي (عرض فقط)' -> لا (عرض واطلاع فقط بدون تعديل)
  */
-export function canEditFinancial(specificSectionPermission?: string): boolean {
+export function canEditFinancial(specificSectionPermission?: string | string[]): boolean {
   const { isAdmin, authorizedDocs } = getCurrentUserPermissions();
   if (isAdmin) return true;
 
@@ -50,11 +50,12 @@ export function canEditFinancial(specificSectionPermission?: string): boolean {
     authorizedDocs.includes('المحاسب المالي (عرض فقط)') ||
     authorizedDocs.includes('المحاسب المالي - عرض واطلاع فقط (يدخل بدون تعديل)');
 
+  if (hasReadOnlyAccountant) return false;
+
   // إذا كان يمتلك صلاحية فرعية محددة ولم يكن مخصصاً كحساب عرض فقط للمالية
-  if (specificSectionPermission && authorizedDocs.includes(specificSectionPermission)) {
-    if (!hasReadOnlyAccountant) {
-      return true;
-    }
+  if (specificSectionPermission) {
+    const perms = Array.isArray(specificSectionPermission) ? specificSectionPermission : [specificSectionPermission];
+    return perms.some(p => authorizedDocs.includes(p));
   }
 
   return false;
@@ -63,15 +64,24 @@ export function canEditFinancial(specificSectionPermission?: string): boolean {
 /**
  * هل المستخدم في وضع القراءة فقط لقسم المحاسب المالي؟
  */
-export function isFinancialReadOnly(): boolean {
-  return !canEditFinancial();
+export function isFinancialReadOnly(specificSectionPermission?: string | string[]): boolean {
+  return !canEditFinancial(specificSectionPermission);
 }
 
 /**
  * شريط تنبيه أنيق يظهر عند الدخول بوضع القراءة فقط
  */
-export function ReadOnlyNotice({ message }: { message?: string }) {
-  if (!isFinancialReadOnly()) return null;
+export function ReadOnlyNotice({ 
+  message, 
+  sectionPermission, 
+  canEdit 
+}: { 
+  message?: string; 
+  sectionPermission?: string | string[]; 
+  canEdit?: boolean;
+}) {
+  const isReadOnly = canEdit !== undefined ? !canEdit : isFinancialReadOnly(sectionPermission);
+  if (!isReadOnly) return null;
 
   return (
     <div 

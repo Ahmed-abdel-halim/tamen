@@ -43,7 +43,12 @@ interface ReconciliationSummary {
   unassociated_purchases_count: number;
 }
 
-export default function UnionReconciliationTab() {
+interface UnionReconciliationTabProps {
+  canEdit?: boolean;
+  onAddVoucher?: (requestNumber?: string, defaultAmount?: string) => void;
+}
+
+export default function UnionReconciliationTab({ canEdit = false, onAddVoucher }: UnionReconciliationTabProps) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
@@ -231,6 +236,28 @@ export default function UnionReconciliationTab() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', zIndex: 1, flexWrap: 'wrap' }}>
+          {canEdit && onAddVoucher && (
+            <button
+              onClick={() => onAddVoucher()}
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '11px 18px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)',
+                fontSize: '0.9rem'
+              }}
+            >
+              <i className="fa-solid fa-plus"></i> إضافة واصل جديد
+            </button>
+          )}
+
           <button
             onClick={() => fetchReconciliation(true)}
             disabled={refreshing || loading}
@@ -777,7 +804,29 @@ export default function UnionReconciliationTab() {
                           <i className="fa-solid fa-file-invoice"></i> الواصل
                         </button>
                       ) : (
-                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>لا يوجد</span>
+                        canEdit && onAddVoucher ? (
+                          <button
+                            onClick={() => onAddVoucher(row.request_number, row.amount_paid ? row.amount_paid.toString() : '')}
+                            style={{
+                              background: 'rgba(245, 158, 11, 0.12)',
+                              color: '#d97706',
+                              border: '1px dashed #f59e0b',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                            title="إضافة واصل لهذا الطلب"
+                          >
+                            <i className="fa-solid fa-plus"></i> إضافة واصل
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>لا يوجد</span>
+                        )
                       )}
                     </td>
                   </tr>

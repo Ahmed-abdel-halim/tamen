@@ -76,7 +76,17 @@ export default function ExpenseManagement({
   hideHeader?: boolean;
 }) {
   const navigate = useNavigate();
-  const canEdit = canEditFinancial('إدارة المصروفات');
+  const canEditExpenses = canEditFinancial(['المصروفات التشغيلية', 'إدارة المصروفات']);
+  const canEditUnion = canEditFinancial([
+    'رصيد الاتحاد (البطاقة البرتقالية)',
+    'رصيد الاتحاد',
+    'مطابقة رصيد الاتحاد (LIFO)',
+    'مطابقة رصيد الاتحاد',
+    'المطابقة والتحصيلات المالية',
+    'المصروفات التشغيلية',
+    'إدارة المصروفات'
+  ]);
+  const canEditIndemnities = canEditFinancial(['تسديد التعويضات', 'إدارة التعويضات', 'المصروفات التشغيلية', 'إدارة المصروفات']);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     monthly_total: 0,
@@ -139,6 +149,7 @@ export default function ExpenseManagement({
 
   // Union Balance States
   const [activeTab, setActiveTab] = useState<'expenses' | 'union' | 'indemnities'>(activeTabOverride);
+  const canEdit = activeTab === 'union' ? canEditUnion : (activeTab === 'indemnities' ? canEditIndemnities : canEditExpenses);
 
   const handlePrintUnionVoucher = (u: UnionPurchase) => {
     const printWindow = window.open('', '', 'width=1200,height=900');
@@ -1623,7 +1634,7 @@ export default function ExpenseManagement({
   };
 
 
-  const handleOpenUnionModal = (purchase: UnionPurchase | null = null) => {
+  const handleOpenUnionModal = (purchase: UnionPurchase | null = null, defaultRequestNumber?: string, defaultAmount?: string) => {
     if (!canEdit) {
       showToast('عذراً، تملك صلاحية العرض والاطلاع فقط ولا يمكنك إضافة أو تعديل رصيد الاتحاد', 'error');
       return;
@@ -1653,8 +1664,8 @@ export default function ExpenseManagement({
     } else {
       const today = new Date().toISOString().split('T')[0];
       setEditingUnionPurchase(null);
-      setRequestNumber('');
-      setAmountPaid('');
+      setRequestNumber(defaultRequestNumber || '');
+      setAmountPaid(defaultAmount || '');
       if (today >= '2026-08-01') {
         setCardPrice('20');
         setUnionFeePerCard('5');
@@ -1990,7 +2001,7 @@ export default function ExpenseManagement({
         </div>
       </div>
 
-      <ReadOnlyNotice message="وضع القراءة فقط: يمكنك تصفح المصروفات وسجل الاتحاد والتعويضات، استخدام الفلاتر، وتصدير التقارير وطباعتها. تعديل أو إضافة العمليات المالية مقيد بحسب صلاحياتك." />
+      <ReadOnlyNotice canEdit={canEdit} message="وضع القراءة فقط: يمكنك تصفح المصروفات وسجل الاتحاد والتعويضات، استخدام الفلاتر، وتصدير التقارير وطباعتها. تعديل أو إضافة العمليات المالية مقيد بحسب صلاحياتك." />
 
       {/* Expense/Indemnity Tab */}
       {(activeTab === 'expenses' || activeTab === 'indemnities') && (
@@ -2230,7 +2241,10 @@ export default function ExpenseManagement({
           </div>
 
           {unionSubTab === 'reconciliation' ? (
-            <UnionReconciliationTab />
+            <UnionReconciliationTab 
+              canEdit={canEdit} 
+              onAddVoucher={(reqNum, amount) => handleOpenUnionModal(null, reqNum, amount)} 
+            />
           ) : (
             <>
           <div className="users-breadcrumb no-print" style={{
@@ -2258,7 +2272,7 @@ export default function ExpenseManagement({
               </button>
               {canEdit && (
                 <button onClick={() => handleOpenUnionModal()} className="btn-primary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)' }}>
-                  <i className="fa-solid fa-plus"></i> طلب رصيد جديد
+                  <i className="fa-solid fa-plus"></i> إضافة واصل جديد (طلب رصيد)
                 </button>
               )}
             </div>
